@@ -1,0 +1,212 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { createMidtransPayment } from '@/lib/payment/midtrans';
+import { createXenditInvoice } from '@/lib/payment/xendit';
+import { createDuitkuClient } from '@/lib/payment/duitku';
+import { createTripayClient } from '@/lib/payment/tripay';
+
+// Helper to verify customer token
+async function verifyCustomerToken(request: NextRequest) {
+  try {
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (!token) return null;
+
+    const session = await prisma.customerSession.findFirst({
+      where: {
+        token,
+        verified: true,
+        expiresAt: { gte: new Date() },
+      },
+    });
+
+    if (!session) return null;
+
+    return await prisma.pppoeUser.findUnique({
+      where: { id: session.userId },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        email: true,
+        phone: true,
+      }
+    });
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return null;
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const pppoeUser = await verifyCustomerToken(request);
+    if (!pppoeUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { invoiceId, gateway } = body;
+
+    if (!invoiceId || !gateway) {
+      return NextResponse.json(
+        { error: 'Invoice ID dan gateway harus dipilih' },
+        { status: 400 }
+      );
+    }
+
+    // Get invoice
+    const invoice = await prisma.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        userId: pppoeUser.id,
+        status: 'PENDING'
+      }
+    });
+
+    if (!invoice) {
+      return NextResponse.json(
+        { error: 'Invoice tidak ditemukan atau sudah dibayar' },
+        { status: 404 }
+      );
+    }
+
+    // Get payment gateway config
+    const gatewayConfig = await prisma.paymentGateway.findFirst({
+      where: {
+        provider: gateway,
+        isActive: true
+      }
+    });
+
+    if (!gatewayConfig) {
+      return NextResponse.json(
+        { error: 'Payment gateway tidak tersedia' },
+        { status: 400 }
+      );
+    }
+
+    // Create payment
+    let paymentUrl: string | null = null;
+    const orderId = `${invoice.invoiceNumber}-${Date.now()}`;
+    const customerEmail = pppoeUser.email || `${pppoeUser.username}@customer.com`;
+
+    console.log('[Regenerate Payment] Creating payment for invoice:', invoice.invoiceNumber);
+    console.log('[Regenerate Payment] Gateway:', gateway);
+
+    try {
+      if (gateway === 'midtrans') {
+        const result = await createMidtransPayment({
+          orderId,
+          amount: invoice.amount,
+          customerName: pppoeUser.name,
+          customerEmail: customerEmail,
+          customerPhone: pppoeUser.phone,
+          invoiceToken: invoice.paymentToken || '',
+          items: [{
+            id: invoice.invoiceType || 'topup',
+            name: invoice.invoiceType === 'TOPUP' ? 'Top-Up Saldo' : 'Pembayaran Invoice',
+            price: invoice.amount,
+            quantity: 1
+          }]
+        });
+        paymentUrl = result.redirect_url;
+      } else if (gateway === 'xendit') {
+        const result = await createXenditInvoice({
+          externalId: orderId,
+          amount: invoice.amount,
+          payerEmail: customerEmail,
+          description: invoice.invoiceType === 'TOPUP' ? 'Top-Up Saldo' : 'Pembayaran Invoice',
+          customerName: pppoeUser.name,
+          customerPhone: pppoeUser.phone,
+          invoiceToken: invoice.paymentToken || ''
+        });
+        paymentUrl = result.invoiceUrl;
+      } else if (gateway === 'duitku') {
+        const duitku = createDuitkuClient(
+          gatewayConfig.duitkuMerchantCode || '',
+          gatewayConfig.duitkuApiKey || '',
+          `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/webhook`,
+          `${process.env.NEXT_PUBLIC_APP_URL}/customer`,
+          gatewayConfig.duitkuEnvironment === 'sandbox'
+        );
+
+        const result = await duitku.createInvoice({
+          invoiceId: orderId,
+          amount: invoice.amount,
+          customerName: pppoeUser.name,
+          customerEmail: customerEmail,
+          customerPhone: pppoeUser.phone,
+          description: invoice.invoiceType === 'TOPUP' ? 'Top-Up Saldo' : 'Pembayaran Invoice',
+          expiryMinutes: 1440,
+          paymentMethod: 'SP'
+        });
+
+        paymentUrl = result.paymentUrl;
+      } else if (gateway === 'tripay') {
+        const tripay = createTripayClient(
+          gatewayConfig.tripayMerchantCode || '',
+          gatewayConfig.tripayApiKey || '',
+          gatewayConfig.tripayPrivateKey || '',
+          gatewayConfig.tripayEnvironment === 'sandbox'
+        );
+
+        const result = await tripay.createTransaction({
+          method: 'QRIS',
+          merchantRef: orderId,
+          amount: invoice.amount,
+          customerName: pppoeUser.name,
+          customerEmail: customerEmail,
+          customerPhone: pppoeUser.phone,
+          orderItems: [{
+            name: invoice.invoiceType === 'TOPUP' ? 'Top-Up Saldo' : 'Pembayaran Invoice',
+            price: invoice.amount,
+            quantity: 1,
+          }],
+          returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/customer`,
+          expiredTime: 86400,
+        });
+
+        if (result.success && result.data) {
+          paymentUrl = result.data.checkout_url || result.data.pay_url || '';
+        } else {
+          throw new Error(result.message || 'Failed to create Tripay payment');
+        }
+      }
+
+      if (!paymentUrl) {
+        throw new Error('Payment URL tidak di-generate oleh payment gateway');
+      }
+
+      // Update invoice with payment link
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { paymentLink: paymentUrl }
+      });
+
+      console.log('[Regenerate Payment] Success! Payment URL:', paymentUrl);
+
+      return NextResponse.json({
+        success: true,
+        paymentUrl: paymentUrl,
+        message: 'Link pembayaran berhasil dibuat'
+      });
+
+    } catch (error: any) {
+      console.error('[Regenerate Payment] Error:', error);
+      return NextResponse.json(
+        { 
+          success: false,
+          error: `Gagal membuat pembayaran: ${error.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+  } catch (error: any) {
+    console.error('[Regenerate Payment] Error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Terjadi kesalahan' },
+      { status: 500 }
+    );
+  }
+}

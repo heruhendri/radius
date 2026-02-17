@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const agentId = searchParams.get('agentId');
+    const profileId = searchParams.get('profileId');
+
+    // Get all batches with their vouchers grouped
+    const batches = await prisma.hotspotVoucher.groupBy({
+      by: ['batchCode', 'profileId', 'agentId', 'createdAt'],
+      where: {
+        batchCode: { not: null },
+        ...(agentId && agentId !== 'all' ? { agentId } : {}),
+        ...(profileId && profileId !== 'all' ? { profileId } : {}),
+      },
+      _count: {
+        id: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Get voucher counts per batch by status
+    const rekapData = await Promise.all(
+      batches.map(async (batch: any) => {
+        // Count by status
+        const statusCounts = await prisma.hotspotVoucher.groupBy({
+          by: ['status'],
+          where: {
+            batchCode: batch.batchCode,
+          },
+          _count: {
+            id: true,
+          },
+        });
+
+        const waiting = statusCounts.find((s: any) => s.status === 'WAITING')?._count.id || 0;
+        const active = statusCounts.find((s: any) => s.status === 'ACTIVE')?._count.id || 0;
+        const expired = statusCounts.find((s: any) => s.status === 'EXPIRED')?._count.id || 0;
+
+        // Get profile info
+        const profile = await prisma.hotspotProfile.findUnique({
+          where: { id: batch.profileId },
+          select: { id: true, name: true },
+        });
+
+        // Get agent info if exists
+        let agent = null;
+        if (batch.agentId) {
+          agent = await prisma.agent.findUnique({
+            where: { id: batch.agentId },
+            select: { id: true, name: true, phone: true },
+          });
+        }
+
+        return {
+          batchCode: batch.batchCode,
+          createdAt: batch.createdAt.toISOString(),
+          agent,
+          profile: profile || { id: batch.profileId, name: 'Unknown' },
+          totalQty: batch._count.id,
+          stock: waiting,
+          sold: active + expired,
+        };
+      })
+    );
+
+    // Get all agents for filter
+    const agents = await prisma.agent.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+
+    // Get all profiles for filter
+    const profiles = await prisma.hotspotProfile.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+
+    return NextResponse.json({
+      rekap: rekapData,
+      agents,
+      profiles,
+    });
+  } catch (error) {
+    console.error('Rekap voucher error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch rekap voucher' },
+      { status: 500 }
+    );
+  }
+}

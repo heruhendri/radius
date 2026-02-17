@@ -1,0 +1,534 @@
+#!/bin/bash
+# ============================================================================
+# AIBILL RADIUS VPS Installer - PM2 & Build Module
+# ============================================================================
+# Step 7: Install PM2, build application, start with PM2
+# ============================================================================
+
+# Source common functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
+
+# ============================================================================
+# PM2 INSTALLATION
+# ============================================================================
+
+fix_node_permissions() {
+    print_info "Fixing Node.js execution permissions for ${APP_USER}..."
+    
+    # Set executable permissions on Node.js binaries
+    chmod 755 /usr/bin/node 2>/dev/null || true
+    chmod 755 /usr/bin/npm 2>/dev/null || true
+    chmod 755 /usr/bin/npx 2>/dev/null || true
+    
+    # If npm is a symlink, fix the target too
+    if [ -L "/usr/bin/npm" ]; then
+        NPM_TARGET=$(readlink -f /usr/bin/npm)
+        chmod 755 "$NPM_TARGET" 2>/dev/null || true
+    fi
+    
+    # Fix PM2 binary and modules
+    chmod 755 /usr/bin/pm2 2>/dev/null || true
+    chmod -R 755 /usr/lib/node_modules/pm2 2>/dev/null || true
+    
+    # Test if user can execute node using su -
+    if sudo su - ${APP_USER} -c 'node --version' &>/dev/null; then
+        print_success "Node.js executable by ${APP_USER}"
+    else
+        print_warning "Node.js test failed, but continuing..."
+    fi
+}
+
+install_pm2() {
+    print_info "Installing PM2 globally..."
+    
+    npm install -g pm2 || {
+        print_error "Failed to install PM2"
+        return 1
+    }
+    
+    print_success "PM2 installed: $(pm2 --version)"
+    
+    # Fix Node.js permissions BEFORE configuring PM2
+    fix_node_permissions
+    
+    # Setup PM2 for app user
+    print_info "Configuring PM2 for user: ${APP_USER}..."
+    
+    # Create PM2 directories for app user
+    mkdir -p /home/${APP_USER}/.pm2/logs
+    mkdir -p /home/${APP_USER}/.pm2/pids
+    chown -R ${APP_USER}:${APP_GROUP} /home/${APP_USER}/.pm2
+    
+    # Fix PM2 binary permission too
+    chmod 755 /usr/bin/pm2 2>/dev/null || true
+    if [ -L "/usr/bin/pm2" ]; then
+        PM2_TARGET=$(readlink -f /usr/bin/pm2)
+        chmod 755 "$PM2_TARGET" 2>/dev/null || true
+    fi
+    
+    print_success "PM2 configured for ${APP_USER}"
+}
+
+# ============================================================================
+# SWAP CONFIGURATION
+# ============================================================================
+
+check_and_create_swap() {
+    print_info "Checking memory and swap..."
+    
+    local TOTAL_MEM=$(free -m | awk 'NR==2{printf "%s", $2}')
+    local AVAILABLE_MEM=$(free -m | awk 'NR==2{printf "%s", $7}')
+    
+    print_info "System memory: ${TOTAL_MEM}MB total, ${AVAILABLE_MEM}MB available"
+    
+    if [ "$TOTAL_MEM" -lt "2000" ]; then
+        print_warning "Low memory system detected (< 2GB RAM)"
+        
+        if [ ! -f /swapfile ]; then
+            print_info "Creating 2GB swap file (one-time setup, 2-3 minutes)..."
+            
+            dd if=/dev/zero of=/swapfile bs=1M count=2048 status=progress 2>&1 | grep -v "records"
+            chmod 600 /swapfile
+            mkswap /swapfile
+            swapon /swapfile
+            echo '/swapfile none swap sw 0 0' >> /etc/fstab
+            
+            print_success "Swap file created and activated"
+            free -h
+        else
+            print_success "Swap file already exists"
+            swapon /swapfile 2>/dev/null || true
+        fi
+    else
+        print_success "Sufficient memory available"
+    fi
+}
+
+# ============================================================================
+# APPLICATION BUILD
+# ============================================================================
+
+build_application() {
+    print_step "Building Next.js application (5-10 minutes)"
+    
+    cd ${APP_DIR} || {
+        print_error "Failed to change to ${APP_DIR}"
+        return 1
+    }
+    
+    # Verify prerequisites
+    if [ ! -d "node_modules" ]; then
+        print_error "node_modules not found! Run install-app.sh first"
+        return 1
+    fi
+    
+    # Clean previous build
+    print_info "Cleaning previous build artifacts..."
+    rm -rf .next .turbo node_modules/.cache 2>/dev/null || true
+    print_success "Build cache cleared"
+    
+    # Build with optimizations
+    print_info "Starting Next.js build process..."
+    print_info "Building with Node.js memory limit: 1.5GB"
+    echo ""
+    
+    if NODE_OPTIONS="--max-old-space-size=1536 --max-semi-space-size=64" \
+       NEXT_TELEMETRY_DISABLED=1 \
+       PRISMA_HIDE_UPDATE_MESSAGE=true \
+       npm run build 2>&1 | tee /tmp/build.log; then
+        print_success "Build completed successfully!"
+    else
+        print_error "Build failed!"
+        echo ""
+        print_info "Build error details:"
+        echo "=========================================="
+        grep -i "error" /tmp/build.log | tail -20 || tail -30 /tmp/build.log
+        echo "=========================================="
+        echo ""
+        print_info "Common solutions:"
+        echo "  1. Ensure you have enough memory/swap"
+        echo "  2. Check full log: cat /tmp/build.log"
+        echo "  3. Try manual build: cd ${APP_DIR} && npm run build"
+        return 1
+    fi
+    
+    # Verify build output
+    if [ ! -d ".next" ]; then
+        print_error ".next directory not created! Build may have failed."
+        return 1
+    fi
+    
+    print_success ".next build directory verified"
+}
+
+# ============================================================================
+# PM2 CONFIGURATION
+# ============================================================================
+
+create_pm2_config() {
+    print_info "Creating PM2 ecosystem file..."
+    
+    cat > ${APP_DIR}/ecosystem.config.js <<'EOF'
+module.exports = {
+  apps: [
+    {
+      name: 'salfanet-radius',
+      script: 'npm',
+      args: 'start',
+      cwd: process.env.APP_DIR || '/var/www/salfanet-radius',
+      instances: 1,
+      exec_mode: 'cluster',
+      watch: false,
+      max_memory_restart: '400M',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3000,
+        TZ: 'Asia/Jakarta'
+      },
+      error_file: './logs/error.log',
+      out_file: './logs/out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      autorestart: true,
+      max_restarts: 10,
+      min_uptime: '10s'
+    },
+    {
+      name: 'salfanet-cron',
+      script: './cron-service.js',
+      cwd: process.env.APP_DIR || '/var/www/salfanet-radius',
+      instances: 1,
+      exec_mode: 'fork',
+      watch: false,
+      max_memory_restart: '150M',
+      env: {
+        NODE_ENV: 'production',
+        TZ: 'Asia/Jakarta'
+      },
+      error_file: './logs/cron-error.log',
+      out_file: './logs/cron-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      autorestart: true,
+      max_restarts: 5,
+      min_uptime: '10s',
+      restart_delay: 5000
+    }
+  ]
+};
+EOF
+
+    mkdir -p ${APP_DIR}/logs
+    print_success "PM2 ecosystem file created (salfanet-radius + salfanet-cron)"
+}
+
+check_port_conflict() {
+    print_info "Checking for port conflicts on port 3000..."
+    
+    # Check if port 3000 is in use
+    local PORT_CHECK=$(lsof -ti:3000 2>/dev/null || netstat -tlnp 2>/dev/null | grep :3000 | awk '{print $7}' | cut -d'/' -f1)
+    
+    if [ -n "$PORT_CHECK" ]; then
+        print_warning "Port 3000 is already in use by PID(s): $PORT_CHECK"
+        
+        # Show process details
+        echo ""
+        print_info "Process details:"
+        ps aux | grep -E "$PORT_CHECK|PID" | grep -v grep
+        echo ""
+        
+        read -p "Kill conflicting processes? [Y/n]: " KILL_CONFIRM
+        if [[ ! "$KILL_CONFIRM" =~ ^[Nn]$ ]]; then
+            kill_conflicting_processes
+        else
+            print_error "Cannot start application with port 3000 in use"
+            print_info "Please manually kill the process or change the application port"
+            return 1
+        fi
+    else
+        print_success "Port 3000 is available"
+    fi
+}
+
+kill_conflicting_processes() {
+    print_info "Killing processes using port 3000..."
+    
+    # Get all PIDs using port 3000
+    local PIDS=$(lsof -ti:3000 2>/dev/null)
+    
+    if [ -z "$PIDS" ]; then
+        # Try netstat method
+        PIDS=$(netstat -tlnp 2>/dev/null | grep :3000 | awk '{print $7}' | cut -d'/' -f1 | grep -v '-')
+    fi
+    
+    if [ -n "$PIDS" ]; then
+        for PID in $PIDS; do
+            print_info "Killing PID $PID..."
+            
+            # Force kill immediately with sudo (no graceful kill during install)
+            kill -9 $PID 2>/dev/null || sudo kill -9 $PID 2>/dev/null || true
+        done
+        
+        # Verify port is free
+        sleep 2
+        if lsof -ti:3000 >/dev/null 2>&1 || netstat -tlnp 2>/dev/null | grep -q :3000; then
+            print_error "Failed to free port 3000!"
+            print_info "Try manually: sudo lsof -ti:3000 | xargs sudo kill -9"
+            return 1
+        else
+            print_success "Port 3000 is now free"
+        fi
+    else
+        print_success "No processes to kill"
+    fi
+}
+
+cleanup_pm2_processes() {
+    print_info "Cleaning up old PM2 processes..."
+    
+    # Kill any processes on port 3000 first
+    print_info "Ensuring port 3000 is free..."
+    lsof -ti:3000 2>/dev/null | xargs -r kill -9 2>/dev/null || true
+    
+    # Cleanup root PM2 processes
+    pm2 delete salfanet-radius 2>/dev/null || true
+    pm2 delete salfanet-cron 2>/dev/null || true
+    pm2 kill 2>/dev/null || true
+    
+    # Cleanup app user PM2 processes using su - for proper environment
+    sudo su - ${APP_USER} -c 'pm2 delete salfanet-radius 2>/dev/null || true'
+    sudo su - ${APP_USER} -c 'pm2 delete salfanet-cron 2>/dev/null || true'
+    sudo su - ${APP_USER} -c 'pm2 kill 2>/dev/null || true'
+    
+    # Kill any Node processes that might be lingering
+    pkill -9 -f "node.*next-server" 2>/dev/null || true
+    pkill -9 -f "PM2.*salfanet" 2>/dev/null || true
+    
+    # Final check on port 3000
+    lsof -ti:3000 2>/dev/null | xargs -r kill -9 2>/dev/null || true
+    
+    # Wait for cleanup
+    sleep 2
+    
+    print_success "PM2 processes cleaned"
+}
+
+start_pm2_app() {
+    print_info "Starting applications (radius + cron) with PM2 as user: ${APP_USER}..."
+    
+    cd ${APP_DIR} || return 1
+    
+    # Ensure ownership is correct
+    chown -R ${APP_USER}:${APP_GROUP} ${APP_DIR}
+    
+    # Check and fix port conflicts
+    check_port_conflict || return 1
+    
+    # Cleanup old PM2 processes
+    cleanup_pm2_processes
+    
+    # Start both apps with PM2 as app user using su - for proper environment
+    print_info "Launching applications (radius + cron) as ${APP_USER}..."
+    if ! sudo su - ${APP_USER} -c "cd ${APP_DIR} && pm2 start ecosystem.config.js" 2>&1 | tee /tmp/pm2-start.log; then
+        print_error "PM2 start failed!"
+        cat /tmp/pm2-start.log
+        return 1
+    fi
+    
+    # Save PM2 configuration for app user
+    sudo su - ${APP_USER} -c 'pm2 save'
+    
+    # Setup PM2 startup for app user
+    print_info "Configuring PM2 startup for ${APP_USER}..."
+    
+    # Execute the startup command as root
+    sudo /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u ${APP_USER} --hp /home/${APP_USER}
+    
+    # Wait for app to stabilize
+    print_info "Waiting for applications to stabilize..."
+    sleep 5
+    
+    # Check if apps are running using su -
+    if sudo su - ${APP_USER} -c 'pm2 list' | grep -q "salfanet-radius.*online"; then
+        print_success "Applications started successfully!"
+        echo ""
+        print_info "Application status:"
+        sudo su - ${APP_USER} -c 'pm2 list'
+        echo ""
+        print_info "Application URLs:"
+        echo "  Main App: http://${VPS_IP}:3000"
+        echo "  Cron Service: Running in background"
+        echo ""
+        print_info "Monitor logs:"
+        echo "  sudo su - ${APP_USER} -c 'pm2 logs salfanet-radius'"
+        echo "  sudo su - ${APP_USER} -c 'pm2 logs salfanet-cron'"
+        echo ""
+        print_info "Restart apps:"
+        echo "  sudo su - ${APP_USER} -c 'pm2 restart salfanet-radius'"
+        echo "  sudo su - ${APP_USER} -c 'pm2 restart salfanet-cron'"
+        echo "  sudo su - ${APP_USER} -c 'pm2 restart all'"
+    else
+        print_error "Applications failed to start!"
+        echo ""
+        print_info "Recent logs:"
+        sudo su - ${APP_USER} -c 'pm2 logs --lines 30 --nostream'
+        echo ""
+        print_info "Troubleshooting commands:"
+        echo "  sudo su - ${APP_USER} -c 'pm2 logs'"
+        echo "  sudo su - ${APP_USER} -c 'pm2 restart all'"
+        echo "  lsof -i:3000"
+        echo "  cd ${APP_DIR} && sudo su - ${APP_USER} -c 'npm start'"
+        return 1
+    fi
+}
+
+start_cron_service() {
+    print_info "Cron service will be started via ecosystem.config.js"
+    
+    # Check if cron-service.js exists
+    if [ ! -f "${APP_DIR}/cron-service.js" ]; then
+        print_warning "cron-service.js not found (cron service will be skipped)"
+        return 0
+    fi
+    
+    print_success "Cron service configured in ecosystem.config.js"
+}
+
+run_post_install_fixes() {
+    print_step "Running post-installation fixes"
+    
+    cd ${APP_DIR} || return 1
+    
+    # Fix emoji encoding
+    if [ -f "prisma/seeds/fix-emoji.js" ]; then
+        print_info "Fixing emoji encoding..."
+        node prisma/seeds/fix-emoji.js && print_success "Emoji template fixed" || print_warning "Failed to fix emoji"
+    fi
+    
+    # Seed notification templates
+    if [ -f "prisma/seeds/seed-templates.js" ]; then
+        print_info "Seeding notification templates..."
+        node prisma/seeds/seed-templates.js && print_success "Notification templates seeded" || print_warning "Failed to seed templates"
+    fi
+    
+    # Update voucher template
+    if [ -f "prisma/seeds/seed-voucher.js" ]; then
+        print_info "Updating voucher template..."
+        node prisma/seeds/seed-voucher.js && print_success "Voucher template updated" || print_warning "Failed to update voucher"
+    fi
+    
+    # Enable FreeRADIUS REST module now that app is running
+    print_info "Enabling FreeRADIUS REST module..."
+    local FR_CONFIG_DIR="/etc/freeradius/3.0"
+    if [ ! -d "$FR_CONFIG_DIR" ]; then
+        FR_CONFIG_DIR="/etc/freeradius"
+    fi
+    
+    if [ -f "${FR_CONFIG_DIR}/mods-available/rest" ]; then
+        ln -sf ${FR_CONFIG_DIR}/mods-available/rest ${FR_CONFIG_DIR}/mods-enabled/rest
+        print_info "Restarting FreeRADIUS to apply REST module..."
+        systemctl restart freeradius 2>/dev/null && print_success "FreeRADIUS REST module enabled" || print_warning "Failed to restart FreeRADIUS"
+    fi
+    
+    print_success "Post-installation fixes completed"
+}
+
+create_deployment_script() {
+    print_info "Creating deployment script..."
+    
+    cat > ${APP_DIR}/deploy.sh <<'EOFSCRIPT'
+#!/bin/bash
+set -e
+
+echo "[*] Deploying AIBILL RADIUS..."
+
+APP_DIR="/var/www/salfanet-radius"
+APP_USER="salfanet"
+
+# Check if running as root
+if [ "$EUID" -ne 0 ]; then 
+    echo "[ERROR] This script must be run as root"
+    echo "Run with: sudo $0"
+    exit 1
+fi
+
+cd ${APP_DIR}
+
+# Pull latest code (if using git)
+if [ -d ".git" ]; then
+    echo ">> Pulling latest code..."
+    git pull origin main
+fi
+
+# Install dependencies
+echo ">> Installing dependencies..."
+npm install --production=false
+
+# Generate Prisma Client
+echo "[>] Generating Prisma Client..."
+npx prisma generate
+
+# Push database schema
+echo "[>] Updating database schema..."
+npx prisma db push --accept-data-loss
+
+# Build application
+echo "[>] Building application..."
+NODE_OPTIONS="--max-old-space-size=1536" npm run build
+
+# Fix ownership
+echo "[>] Fixing permissions..."
+chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
+
+# Restart PM2 as salfanet user
+echo "[>] Restarting application..."
+sudo su - ${APP_USER} -c 'pm2 restart all || pm2 start /var/www/salfanet-radius/ecosystem.config.js'
+sudo su - ${APP_USER} -c 'pm2 save'
+
+echo "[OK] Deployment completed!"
+echo ""
+echo ">> Application status:"
+sudo su - ${APP_USER} -c 'pm2 list'
+EOFSCRIPT
+
+    chmod +x ${APP_DIR}/deploy.sh
+    print_success "Deployment script created: ${APP_DIR}/deploy.sh"
+}
+
+install_pm2_and_build() {
+    print_step "Step 7: Install PM2, Build & Start Application"
+    
+    install_pm2
+    check_and_create_swap
+    create_pm2_config
+    build_application
+    start_pm2_app
+    start_cron_service
+    run_post_install_fixes
+    create_deployment_script
+    
+    print_success "PM2 installation and application deployment completed"
+    
+    echo ""
+    print_info "Application Status (as ${APP_USER}):"
+    sudo su - ${APP_USER} -c 'pm2 list'
+    echo ""
+    print_info "View logs:"
+    echo "  sudo su - ${APP_USER} -c 'pm2 logs salfanet-radius'"
+    echo "  sudo su - ${APP_USER} -c 'pm2 logs salfanet-cron'"
+    echo ""
+    print_info "Restart application:"
+    echo "  sudo su - ${APP_USER} -c 'pm2 restart salfanet-radius'"
+    echo "  sudo su - ${APP_USER} -c 'pm2 restart all'"
+    
+    return 0
+}
+
+# Main execution if run directly
+if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
+    check_root
+    check_directory
+    
+    install_pm2_and_build
+fi

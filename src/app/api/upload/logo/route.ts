@@ -1,0 +1,68 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { writeFile, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
+import path from 'path';
+import { nanoid } from 'nanoid';
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json(
+        { success: false, error: 'No file provided' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid file type. Only PNG, JPG, SVG, and WebP are allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { success: false, error: 'File size too large. Maximum 2MB allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Create uploads directory if not exists
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'logos');
+    if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true });
+    }
+
+    // Generate unique filename
+    const extension = file.name.split('.').pop();
+    const filename = `logo-${nanoid(10)}.${extension}`;
+    const filepath = path.join(uploadsDir, filename);
+
+    // Convert file to buffer and save
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    await writeFile(filepath, buffer);
+
+    // Return API URL (served via API route)
+    const logoUrl = `/api/uploads/logos/${filename}`;
+
+    return NextResponse.json({
+      success: true,
+      url: logoUrl,
+      filename,
+    });
+  } catch (error: any) {
+    console.error('Upload logo error:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to upload file' },
+      { status: 500 }
+    );
+  }
+}

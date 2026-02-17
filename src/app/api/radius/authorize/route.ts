@@ -1,0 +1,174 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+/**
+ * RADIUS Authorize Hook
+ * Called BEFORE authentication to check if voucher is allowed to login
+ * 
+ * This prevents expired vouchers from authenticating
+ * Returns reject if:
+ * 1. Voucher is expired
+ * 2. Voucher status is EXPIRED
+ * 3. Voucher has expiresAt in the past
+ * 
+ * FreeRADIUS will log the rejection in radpostauth table
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { username } = body;
+
+    if (!username) {
+      return NextResponse.json({
+        success: false,
+        action: "ignore",
+        message: "No username provided"
+      });
+    }
+
+    // Check if this is a hotspot voucher
+    const voucher = await prisma.hotspotVoucher.findUnique({
+      where: { code: username },
+      include: { profile: true },
+    });
+
+    // If not a voucher, check if it's a PPPoE user
+    if (!voucher) {
+      const pppoeUser = await prisma.pppoeUser.findUnique({
+        where: { username },
+        select: { 
+          id: true,
+          username: true, 
+          status: true, 
+          expiredAt: true,
+          name: true,
+        },
+      });
+
+      // Check if PPPoE user is blocked or stop (reject login)
+      // NOTE: isolated users are NOT rejected - they login with restricted access
+      if (pppoeUser && (pppoeUser.status === 'blocked' || pppoeUser.status === 'stop')) {
+        console.log(`[AUTHORIZE] REJECT: PPPoE user ${username} is ${pppoeUser.status}`);
+        
+        const message = pppoeUser.status === 'blocked' 
+          ? 'Akun Diblokir - Hubungi Admin' 
+          : 'Langganan Dihentikan - Hubungi Admin';
+        
+        await logRejection(username, message);
+        
+        return NextResponse.json({
+          "control:Auth-Type": "Reject",
+          "reply:Reply-Message": message
+        }, { status: 200 });
+      }
+
+      // PPPoE user is active or not found, allow to continue to normal auth
+      return NextResponse.json({
+        success: true,
+        action: "allow",
+        message: pppoeUser ? `PPPoE user ${pppoeUser.status}` : "Not a voucher or PPPoE user"
+      });
+    }
+
+    const now = new Date();
+
+    // Check 1: Voucher status is EXPIRED
+    if (voucher.status === 'EXPIRED') {
+      console.log(`[AUTHORIZE] REJECT: Voucher ${username} is EXPIRED (status)`);
+      
+      // Log rejection to radpostauth with descriptive reply
+      await logRejection(username, 'Kode Voucher Kadaluarsa');
+      
+      // Return with control attributes for FreeRADIUS
+      return NextResponse.json({
+        "control:Auth-Type": "Reject",
+        "reply:Reply-Message": "Kode Voucher Kadaluarsa"
+      }, { status: 200 }); // Return 200 but with Reject auth type
+    }
+
+    // Check 2: Voucher has expiresAt in the past
+    if (voucher.expiresAt && now > voucher.expiresAt) {
+      console.log(`[AUTHORIZE] REJECT: Voucher ${username} expired at ${voucher.expiresAt.toISOString()}`);
+      
+      // Auto-update status to EXPIRED
+      await prisma.hotspotVoucher.update({
+        where: { id: voucher.id },
+        data: { status: "EXPIRED" },
+      });
+
+      // Log rejection to radpostauth with time info
+      await logRejection(username, 'Kode Voucher Kadaluarsa');
+      
+      return NextResponse.json({
+        "control:Auth-Type": "Reject",
+        "reply:Reply-Message": "Kode Voucher Kadaluarsa"
+      }, { status: 200 });
+    }
+
+    // Check 3: If voucher has active session and it's expired
+    // (Session timeout exceeded)
+    if (voucher.firstLoginAt && voucher.expiresAt) {
+      const activeSession = await prisma.radacct.findFirst({
+        where: {
+          username: voucher.code,
+          acctstoptime: null, // Still active
+        },
+        orderBy: { acctstarttime: 'desc' }
+      });
+
+      if (activeSession && now > voucher.expiresAt) {
+        console.log(`[AUTHORIZE] REJECT: Session for ${username} exceeded time limit`);
+        
+        // Log rejection to radpostauth
+        await logRejection(username, 'Waktu Habis - Voucher Kadaluarsa');
+        
+        return NextResponse.json({
+          "control:Auth-Type": "Reject",
+          "reply:Reply-Message": "Waktu Habis - Voucher Kadaluarsa"
+        }, { status: 200 });
+      }
+    }
+
+    // Voucher is valid, allow authentication to proceed
+    console.log(`[AUTHORIZE] ALLOW: Voucher ${username} is valid (status: ${voucher.status})`);
+    
+    return NextResponse.json({
+      success: true,
+      action: "allow",
+      status: voucher.status,
+      expiresAt: voucher.expiresAt,
+    });
+
+  } catch (error: any) {
+    console.error("[AUTHORIZE] Error:", error);
+    
+    // Don't block authentication on errors, let it proceed
+    return NextResponse.json({
+      success: true,
+      action: "allow",
+      message: "Error but allowing",
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Log authentication rejection to radpostauth table
+ * This shows up in FreeRADIUS logs and can be queried
+ */
+async function logRejection(username: string, replyMessage: string) {
+  try {
+    await prisma.radpostauth.create({
+      data: {
+        username: username,
+        pass: replyMessage, // Store rejection reason in pass field
+        reply: 'Access-Reject',
+        authdate: new Date(),
+      },
+    });
+    
+    console.log(`[AUTHORIZE] Logged rejection for ${username}: ${replyMessage}`);
+  } catch (error) {
+    console.error('[AUTHORIZE] Failed to log rejection:', error);
+  }
+}

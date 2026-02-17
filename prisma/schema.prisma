@@ -1,0 +1,1493 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model agentSale {
+  id            String   @id
+  agentId       String
+  voucherCode   String
+  profileName   String
+  amount        Int
+  createdAt     DateTime @default(now())
+  paymentStatus String   @default("UNPAID") // UNPAID, PAID
+  paymentDate   DateTime?
+  paymentMethod String?  // CASH, TRANSFER, etc
+  paymentNote   String?  @db.Text
+  paidAmount    Int      @default(0)
+  agents        agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([createdAt])
+  @@index([paymentStatus])
+  @@map("agent_sales")
+}
+
+model agentDeposit {
+  id              String   @id
+  agentId         String
+  amount          Int
+  status          String   @default("PENDING") // PENDING, PAID, EXPIRED, FAILED
+  paymentGateway  String?  // midtrans, xendit, duitku
+  paymentToken    String?  @unique
+  paymentUrl      String?  @db.Text
+  transactionId   String?
+  paidAt          DateTime?
+  expiredAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  agent           agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([status])
+  @@index([paymentToken])
+  @@map("agent_deposits")
+}
+
+model agent {
+  id          String               @id
+  name        String
+  phone       String               @unique
+  email       String?
+  address     String?
+  isActive    Boolean              @default(true)
+  balance     Int                  @default(0)     // Saldo agent untuk generate voucher
+  minBalance  Int                  @default(0)     // Min saldo untuk generate voucher
+  routerId    String?              // Router/NAS yang ditangani agent ini
+  router      router?              @relation(fields: [routerId], references: [id], onDelete: SetNull)
+  lastLogin   DateTime?            // Waktu login terakhir agent
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  sales       agentSale[]
+  deposits    agentDeposit[]
+  vouchers    hotspotVoucher[]
+  notifications agentNotification[]
+
+  @@index([phone])
+  @@index([routerId])
+  @@map("agents")
+}
+
+model company {
+  id                   String   @id
+  name                 String
+  address              String?
+  phone                String?
+  email                String?
+  logo                 String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  adminPhone           String?
+  baseUrl              String?  @default("http://localhost:3000")
+  timezone             String?  @default("Asia/Jakarta")
+  bankAccounts         Json?    // Array of bank account objects: [{bankName, accountNumber, accountName}]
+  poweredBy            String?  @default("SALFANET RADIUS")
+  
+  // Footer settings for different portals
+  footerAdmin          String?  @db.Text // Footer for admin login page
+  footerCustomer       String?  @db.Text // Footer for customer login page
+  footerTechnician     String?  @db.Text // Footer for technician login page
+  
+  invoiceGenerateDays  Int?     @default(7) // Days before expiry to generate invoice
+  gracePeriodDays      Int?     @default(0) // Grace period days after expiry user can still online
+
+  // Isolation settings
+  isolationEnabled             Boolean? @default(true) // Enable/disable auto isolation
+  isolationIpPool              String?  @default("192.168.200.0/24") @db.VarChar(100) // IP pool for isolated users
+  isolationRateLimit           String?  @default("64k/64k") @db.VarChar(50) // Rate limit for isolated users
+  isolationRedirectUrl         String?  @db.Text // URL to redirect isolated users
+  isolationMessage             String?  @db.Text // Custom message for isolated users (deprecated - use templates)
+  isolationAllowDns            Boolean? @default(true) // Allow DNS for isolated users
+  isolationAllowPayment        Boolean? @default(true) // Allow access to payment page
+  isolationNotifyWhatsapp      Boolean? @default(true) // Send WhatsApp notification when isolated
+  isolationNotifyEmail         Boolean? @default(false) // Send Email notification when isolated
+  isolationWhatsappTemplateId  String?  @db.VarChar(191) // WhatsApp template ID
+  isolationEmailTemplateId     String?  @db.VarChar(191) // Email template ID
+  isolationHtmlTemplateId      String?  @db.VarChar(191) // HTML page template ID
+
+  // PPPoE Renewal settings
+  pppoeRenewalAnytime          Boolean? @default(false) // Allow renewal anytime
+  pppoeRenewalDaysBefore       Int?     @default(7) // Days before expiry to allow renewal
+
+  @@map("companies")
+}
+
+model isolationTemplate {
+  id         String   @id
+  type       isolationTemplate_type
+  name       String   @db.VarChar(255)
+  subject    String?  @db.VarChar(500) // Email subject only
+  message    String   @db.Text
+  variables  Json?    // Available variables for this template
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+  @@map("isolation_templates")
+}
+
+enum isolationTemplate_type {
+  whatsapp
+  email
+  html_page
+}
+
+model hotspotProfile {
+  id                  String                        @id
+  name                String                        @unique
+  sharedUsers         Int                           @default(1)
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime                      @updatedAt
+  agentAccess         Boolean                       @default(true)
+  costPrice           Int
+  eVoucherAccess      Boolean                       @default(true)
+  groupProfile        String?
+  isActive            Boolean                       @default(true)
+  resellerFee         Int                           @default(0)
+  sellingPrice        Int
+  speed               String
+  validityUnit        hotspot_profiles_validityUnit
+  validityValue       Int
+  usageQuota          BigInt?                       // Kuota data dalam bytes (null = unlimited)
+  usageDuration       Int?                          // Durasi penggunaan (null = unlimited)
+  usageDurationUnit   hotspot_profiles_validityUnit @default(HOURS) // Unit durasi: MINUTES, HOURS, DAYS
+  vouchers            hotspotVoucher[]
+  orders              voucherOrder[]
+
+  @@map("hotspot_profiles")
+}
+
+model hotspotVoucher {
+  id           String                  @id
+  code         String                  @unique
+  password     String?                 // Separate password for username != password mode
+  profileId    String
+  routerId     String?                 // Router/NAS that this voucher belongs to
+  agentId      String?                 // Agent who created/owns this voucher
+  voucherType  String                  @default("same") // "same" = username=password, "different" = separate password
+  codeType     String                  @default("alphanumeric") // Code combination type
+  status       hotspot_vouchers_status @default(WAITING)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  batchCode    String?
+  expiresAt    DateTime?
+  firstLoginAt DateTime?
+  lastUsedBy   String?
+  orderId      String?
+  order        voucherOrder?           @relation(fields: [orderId], references: [id])
+  profile      hotspotProfile          @relation(fields: [profileId], references: [id])
+  router       router?                 @relation(fields: [routerId], references: [id])
+  agent        agent?                  @relation(fields: [agentId], references: [id])
+
+  @@index([batchCode])
+  @@index([orderId])
+  @@index([profileId], map: "hotspot_vouchers_profileId_fkey")
+  @@index([routerId])
+  @@index([agentId])
+  @@index([status])
+  @@map("hotspot_vouchers")
+}
+
+model invoice {
+  id               String          @id
+  invoiceNumber    String          @unique
+  userId           String?
+  amount           Int
+  status           invoices_status @default(PENDING)
+  dueDate          DateTime
+  paidAt           DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  paymentLink      String?
+  paymentToken     String?         @unique
+  customerName     String?
+  customerPhone    String?
+  customerEmail    String?         // Customer email for email reminders
+  customerUsername String?
+  sentReminders    String?         @db.Text // JSON array of sent reminder days, e.g., "[-7, -5, -3]"
+  
+  // NEW: Invoice type and tax fields
+  invoiceType      InvoiceType     @default(MONTHLY)
+  baseAmount       Int?            // Amount before tax
+  taxRate          Decimal?        @db.Decimal(5,2) // Tax percentage
+  additionalFees   Json?           // [{name: string, amount: number}]
+  
+  user             pppoeUser?           @relation(fields: [userId], references: [id])
+  payments         payment[]
+  manualPayments   manualPayment[]
+  registration     registrationRequest?
+
+  @@index([userId], map: "invoices_userId_fkey")
+  @@index([status])
+  @@index([dueDate])
+  @@index([invoiceType])
+  @@map("invoices")
+}
+
+enum InvoiceType {
+  MONTHLY      // Tagihan bulanan regular
+  INSTALLATION // Biaya pemasangan
+  ADDON        // Biaya tambahan
+  TOPUP        // Top up saldo (prepaid)
+  RENEWAL      // Perpanjangan (prepaid)
+}
+
+model vpnServer {
+  id          String      @id @default(uuid())
+  name        String
+  host        String
+  username    String
+  password    String
+  apiPort     Int         @default(8728)
+  subnet      String
+  l2tpEnabled Boolean     @default(false)
+  sstpEnabled Boolean     @default(false)
+  pptpEnabled Boolean     @default(false)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  vpnClients  vpnClient[]
+
+  @@map("vpn_servers")
+}
+
+model vpnClient {
+  id             String     @id @default(uuid())
+  name           String
+  vpnServerId    String
+  vpnIp          String
+  username       String     @unique
+  password       String
+  vpnType        String     @default("L2TP")
+  description    String?    @db.Text
+  winboxPort     Int?
+  apiUsername    String?
+  apiPassword    String?
+  isActive       Boolean    @default(true)
+  isRadiusServer Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  vpnServer      vpnServer  @relation(fields: [vpnServerId], references: [id], onDelete: Cascade)
+  routers        router[]
+
+  @@unique([vpnServerId, vpnIp])
+  @@map("vpn_clients")
+}
+
+model router {
+  id             String             @id
+  name           String
+  nasname        String             // NAS IP Address (can be same for multiple NAS with different ports)
+  shortname      String
+  type           String             @default("mikrotik")
+  ipAddress      String
+  username       String
+  password       String
+  port           Int                @default(8728)
+  apiPort        Int                @default(8729)
+  secret         String             @default("secret123")
+  ports          Int                @default(1812)
+  server         String?
+  community      String?
+  description    String?
+  latitude       Float?             // GPS latitude for map display
+  longitude      Float?             // GPS longitude for map display
+  vpnClientId    String?            // Optional: Connect via VPN Client
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  users          pppoeUser[]
+  networkServers networkServer[]
+  vouchers       hotspotVoucher[]
+  agents         agent[]            // Agents assigned to this router
+  oltRouters     networkOLTRouter[] // OLT router assignments
+  vpnClient      vpnClient?         @relation(fields: [vpnClientId], references: [id], onDelete: SetNull)
+
+  @@unique([nasname, ports, secret]) // Allow same IP with different port/secret
+  @@index([nasname])
+  @@index([shortname])
+  @@index([vpnClientId])
+  @@map("nas")
+}
+
+model paymentGateway {
+  id                  String       @id
+  name                String
+  isActive            Boolean      @default(false)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  midtransClientKey   String?
+  midtransEnvironment String       @default("sandbox")
+  midtransServerKey   String?
+  provider            String       @unique
+  xenditApiKey        String?
+  xenditEnvironment   String       @default("sandbox")
+  xenditWebhookToken  String?
+  duitkuMerchantCode  String?
+  duitkuApiKey        String?  // API Key untuk signature
+  duitkuEnvironment   String       @default("sandbox")
+  tripayMerchantCode  String?
+  tripayApiKey        String?
+  tripayPrivateKey    String?
+  tripayEnvironment   String       @default("sandbox")
+  payments            payment[]
+  logs                webhookLog[]
+
+  @@map("payment_gateways")
+}
+
+model payment {
+  id      String          @id
+  invoiceId String
+  amount  Int
+  method  String
+  gatewayId String?
+  status  String
+  paidAt  DateTime        @default(now())
+  createdAt DateTime      @default(now())
+  gateway paymentGateway? @relation(fields: [gatewayId], references: [id])
+  invoice invoice         @relation(fields: [invoiceId], references: [id])
+
+  @@index([gatewayId], map: "payments_gatewayId_fkey")
+  @@index([invoiceId], map: "payments_invoiceId_fkey")
+  @@map("payments")
+}
+
+model registrationRequest {
+  id              String    @id
+  name            String
+  phone           String    @unique
+  email           String?
+  latitude        Float?
+  longitude       Float?
+  address         String
+  profileId       String
+  installationFee Decimal   @default(0) @db.Decimal(10, 2)
+  notes           String?   @db.Text
+  status          String    @default("PENDING")
+  rejectionReason String?   @db.Text
+  invoiceId       String?   @unique
+  pppoeUserId     String?   @unique
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  profile         pppoeProfile @relation(fields: [profileId], references: [id])
+  invoice         invoice?     @relation(fields: [invoiceId], references: [id])
+  pppoeUser       pppoeUser?   @relation(fields: [pppoeUserId], references: [id])
+
+  @@index([profileId])
+  @@index([status])
+  @@index([phone])
+  @@map("registration_requests")
+}
+
+model pppoeProfile {
+  id             String                      @id
+  name           String                      @unique
+  price          Int
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  description    String?
+  downloadSpeed  Int
+  uploadSpeed    Int
+  rateLimit      String?                     // Store complex MikroTik rate limit formats
+  groupName      String
+  isActive       Boolean                     @default(true)
+  lastSyncAt     DateTime?
+  syncedToRadius Boolean                     @default(false)
+  validityUnit   pppoe_profiles_validityUnit @default(MONTHS)
+  validityValue  Int                         @default(1)
+  sharedUser     Boolean                     @default(true) // Only one device per username
+  users          pppoeUser[]
+  registrations  registrationRequest[]
+
+  @@index([groupName])
+  @@map("pppoe_profiles")
+}
+
+model pppoeArea {
+  id          String      @id
+  name        String      @unique
+  description String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  users       pppoeUser[]
+
+  @@map("pppoe_areas")
+}
+
+model pppoeUser {
+  id               String         @id
+  username         String         @unique
+  customerId       String?        @unique @map("customer_id") @db.VarChar(8)
+  password         String
+  profileId        String
+  areaId           String?
+  status           String         @default("active")
+  ipAddress        String?
+  macAddress       String?
+  comment          String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  expiredAt        DateTime?      // PREPAID: expiry date, POSTPAID: null
+  address          String?
+  latitude         Float?
+  longitude        Float?
+  email            String?
+  lastSyncAt       DateTime?
+  name             String
+  phone            String
+  syncedToRadius   Boolean        @default(false)
+  routerId         String?
+  subscriptionType SubscriptionType @default(POSTPAID)
+  lastPaymentDate  DateTime?
+  
+  // NEW: Billing configuration fields
+  billingDay           Int?       @default(1) // 1-31, untuk POSTPAID (default: tanggal 1)
+  autoIsolationEnabled Boolean    @default(true) // Allow auto isolation
+  balance              Int        @default(0) // Saldo deposit (prepaid)
+  autoRenewal          Boolean    @default(false) // Auto renew from balance
+  connectionType       ConnectionType @default(PPPOE)
+  fcmTokens            String?    @db.Text // FCM tokens for push notifications (JSON array)
+  
+  invoices         invoice[]
+  manualPayments   manualPayment[]
+  tickets          ticket[]
+  profile          pppoeProfile   @relation(fields: [profileId], references: [id])
+  area             pppoeArea?     @relation(fields: [areaId], references: [id])
+  router           router?        @relation(fields: [routerId], references: [id])
+  sessions         sessions[]
+  registration     registrationRequest?
+  odpAssignment    odpCustomerAssignment?
+
+  @@index([profileId], map: "pppoe_users_profileId_fkey")
+  @@index([routerId], map: "pppoe_users_routerId_fkey")
+  @@index([areaId])
+  @@index([status])
+  @@index([username])
+  @@index([subscriptionType])
+  @@index([billingDay])
+  @@index([autoRenewal])
+  @@map("pppoe_users")
+}
+
+enum ConnectionType {
+  PPPOE
+  HOTSPOT
+  STATIC_IP
+}
+
+model radacct {
+  radacctid           BigInt    @id @default(autoincrement())
+  acctsessionid       String    @db.VarChar(64)
+  acctuniqueid        String    @unique @db.VarChar(32)
+  username            String    @db.VarChar(64)
+  groupname           String    @default("") @db.VarChar(64)
+  realm               String?   @db.VarChar(64)
+  nasipaddress        String    @db.VarChar(15)
+  nasportid           String?   @db.VarChar(32)
+  nasporttype         String?   @db.VarChar(32)
+  acctstarttime       DateTime?
+  acctupdatetime      DateTime?
+  acctstoptime        DateTime?
+  acctinterval        Int?
+  acctsessiontime     Int?      @db.UnsignedInt
+  acctauthentic       String?   @db.VarChar(32)
+  connectinfo_start   String?   @db.VarChar(50)
+  connectinfo_stop    String?   @db.VarChar(50)
+  acctinputoctets     BigInt?
+  acctoutputoctets    BigInt?
+  calledstationid     String    @db.VarChar(50)
+  callingstationid    String    @db.VarChar(50)
+  acctterminatecause  String    @db.VarChar(32)
+  servicetype         String?   @db.VarChar(32)
+  framedprotocol      String?   @db.VarChar(32)
+  framedipaddress     String    @db.VarChar(15)
+  framedipv6address   String    @default("") @db.VarChar(45)
+  framedipv6prefix    String    @default("") @db.VarChar(45)
+  framedinterfaceid   String    @default("") @db.VarChar(44)
+  delegatedipv6prefix String    @default("") @db.VarChar(45)
+
+  @@index([acctinterval])
+  @@index([acctsessionid])
+  @@index([acctsessiontime])
+  @@index([acctstarttime])
+  @@index([acctstoptime])
+  @@index([framedipaddress])
+  @@index([nasipaddress])
+  @@index([username])
+}
+
+model radcheck {
+  id        Int    @id @default(autoincrement())
+  username  String @db.VarChar(64)
+  attribute String @db.VarChar(64)
+  op        String @default(":=") @db.Char(2)
+  value     String @db.VarChar(253)
+
+  @@unique([username, attribute])
+  @@index([username])
+}
+
+model radgroupcheck {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  groupname String @db.VarChar(64)
+  attribute String @db.VarChar(64)
+  op        String @default("==") @db.Char(2)
+  value     String @db.VarChar(253)
+
+  @@index([groupname])
+}
+
+model radgroupreply {
+  id        Int    @id @default(autoincrement())
+  groupname String @db.VarChar(64)
+  attribute String @db.VarChar(64)
+  op        String @default(":=") @db.Char(2)
+  value     String @db.VarChar(253)
+
+  @@index([groupname])
+}
+
+model radpostauth {
+  id       Int      @id @default(autoincrement())
+  username String   @db.VarChar(64)
+  pass     String   @db.VarChar(64)
+  reply    String   @db.VarChar(32)
+  authdate DateTime @default(now())
+
+  @@index([authdate])
+  @@index([username])
+}
+
+model radreply {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  username  String @db.VarChar(64)
+  attribute String @db.VarChar(64)
+  op        String @default("=") @db.Char(2)
+  value     String @db.VarChar(253)
+
+  @@index([username])
+}
+
+model radusergroup {
+  id        Int    @id @default(autoincrement())
+  username  String @db.VarChar(64)
+  groupname String @db.VarChar(64)
+  priority  Int    @default(1)
+
+  @@unique([username, groupname])
+  @@index([groupname])
+  @@index([username])
+}
+
+model sessions {
+  id            String      @id
+  username      String
+  userId        String?
+  nasIpAddress  String
+  sessionId     String      @unique
+  startTime     DateTime    @default(now())
+  stopTime      DateTime?
+  uploadBytes   BigInt      @default(0)
+  downloadBytes BigInt      @default(0)
+  createdAt     DateTime    @default(now())
+  user          pppoeUser?  @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "sessions_userId_fkey")
+}
+
+model users {
+  id        String     @id
+  email     String     @unique
+  password  String
+  name      String
+  role      users_role @default(ADMIN)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model voucherOrder {
+  id        String                @id
+  orderNumber String              @unique
+  profileId String
+  quantity  Int                   @default(1)
+  customerName String
+  customerPhone String
+  customerEmail String?
+  totalAmount Int
+  status    voucher_orders_status @default(PENDING)
+  paymentToken String?             @unique
+  paymentLink String?
+  paidAt    DateTime?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  vouchers  hotspotVoucher[]
+  profile   hotspotProfile        @relation(fields: [profileId], references: [id])
+
+  @@index([orderNumber])
+  @@index([profileId], map: "voucher_orders_profileId_fkey")
+  @@index([status])
+  @@map("voucher_orders")
+}
+
+model voucherTemplate {
+  id           String   @id
+  name         String
+  htmlTemplate String   @db.Text
+  isDefault    Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("voucher_templates")
+}
+
+model webhookLog {
+  id            String          @id
+  gateway       String
+  gatewayId     String?
+  orderId       String
+  status        String
+  transactionId String?
+  amount        Int?
+  payload       String?         @db.Text
+  response      String?         @db.Text
+  success       Boolean         @default(true)
+  errorMessage  String?         @db.Text
+  createdAt     DateTime        @default(now())
+  paymentGateway paymentGateway? @relation(fields: [gatewayId], references: [id])
+
+  @@index([createdAt])
+  @@index([gatewayId], map: "webhook_logs_gatewayId_fkey")
+  @@index([gateway])
+  @@index([orderId])
+  @@map("webhook_logs")
+}
+
+model whatsapp_history {
+  id           String   @id
+  phone        String
+  message      String   @db.Text
+  status       String
+  response     String?  @db.Text
+  providerName String?
+  providerType String?
+  sentAt       DateTime @default(now())
+}
+
+model whatsapp_providers {
+  id           String   @id
+  name         String
+  type         String
+  apiKey       String
+  apiUrl       String
+  senderNumber String?
+  isActive     Boolean  @default(true)
+  priority     Int      @default(0)
+  description  String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model whatsapp_templates {
+  id        String   @id
+  name      String
+  type      String   @unique
+  message   String   @db.Text
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model whatsapp_reminder_settings {
+  id           String   @id
+  enabled      Boolean  @default(true)
+  reminderDays String   @db.Text // JSON array: "[-7, -5, -3, 0]" where 0 = H-day, -3 = H-3, etc
+  reminderTime String   @default("09:00") // Time in HH:mm format (WIB)
+  otpEnabled   Boolean  @default(true) // Enable/disable customer OTP login
+  otpExpiry    Int      @default(5) // OTP expiry in minutes
+  batchSize    Int      @default(10) // Number of messages per batch
+  batchDelay   Int      @default(60) // Delay between batches in seconds
+  randomize    Boolean  @default(true) // Randomize message order to avoid pattern detection
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model customerSession {
+  id        String   @id @default(cuid())
+  userId    String   // pppoeUser.id
+  phone     String
+  otpCode   String?
+  otpExpiry DateTime?
+  token     String?  @unique
+  expiresAt DateTime?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([phone])
+  @@index([token])
+  @@index([userId])
+  @@map("customer_sessions")
+}
+
+model transactionCategory {
+  id           String        @id
+  name         String        @unique
+  type         category_type // INCOME or EXPENSE
+  description  String?       @db.Text
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions transaction[]
+
+  @@index([type])
+  @@map("transaction_categories")
+}
+
+model transaction {
+  id          String                @id
+  categoryId  String
+  type        transaction_type      // INCOME or EXPENSE
+  amount      Int
+  description String                @db.Text
+  date        DateTime              @default(now())
+  reference   String?               // Invoice number, payment ID, etc
+  notes       String?               @db.Text
+  createdBy   String?               // Admin user ID
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  category    transactionCategory   @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId])
+  @@index([type])
+  @@index([date])
+  @@map("transactions")
+}
+
+model cronHistory {
+  id          String    @id
+  jobType     String    // voucher_sync, agent_sales, invoice_generate, invoice_reminder, notification_check
+  status      String    // running, success, error
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  duration    Int?      // milliseconds
+  result      String?   @db.Text
+  error       String?   @db.Text
+
+  @@index([jobType])
+  @@index([status])
+  @@index([startedAt])
+  @@map("cron_history")
+}
+
+enum hotspot_vouchers_status {
+  WAITING
+  ACTIVE
+  EXPIRED
+  SOLD
+}
+
+enum invoices_status {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum users_role {
+  ADMIN
+  AGENT
+  USER
+}
+
+enum voucher_orders_status {
+  PENDING
+  PAID
+  CANCELLED
+  EXPIRED
+}
+
+enum pppoe_profiles_validityUnit {
+  MINUTES
+  HOURS
+  DAYS
+  MONTHS
+}
+
+enum hotspot_profiles_validityUnit {
+  MINUTES
+  HOURS
+  DAYS
+  MONTHS
+}
+
+enum category_type {
+  INCOME
+  EXPENSE
+}
+
+enum transaction_type {
+  INCOME
+  EXPENSE
+}
+
+// Network Map Models
+model networkServer {
+  id        String   @id
+  name      String
+  ipAddress String
+  latitude  Float
+  longitude Float
+  status    String   @default("active")
+  routerId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  router    router?  @relation(fields: [routerId], references: [id])
+
+  @@index([routerId])
+  @@map("network_servers")
+}
+
+model networkOLT {
+  id         String             @id
+  name       String
+  ipAddress  String
+  latitude   Float
+  longitude  Float
+  status     String             @default("active")
+  followRoad Boolean            @default(false)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  routers    networkOLTRouter[]
+  odcs       networkODC[]
+  odps       networkODP[]
+
+  @@map("network_olts")
+}
+
+model networkOLTRouter {
+  id        String   @id
+  oltId     String
+  routerId  String
+  uplinkPort String?
+  priority  Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  olt       networkOLT @relation(fields: [oltId], references: [id], onDelete: Cascade)
+  router    router     @relation(fields: [routerId], references: [id], onDelete: Cascade)
+
+  @@unique([oltId, routerId])
+  @@index([oltId])
+  @@index([routerId])
+  @@map("network_olt_routers")
+}
+
+model networkODC {
+  id         String       @id
+  name       String
+  latitude   Float
+  longitude  Float
+  oltId      String
+  ponPort    Int
+  portCount  Int          @default(8)
+  status     String       @default("active")
+  followRoad Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  olt        networkOLT   @relation(fields: [oltId], references: [id], onDelete: Cascade)
+  odps       networkODP[]
+
+  @@index([oltId])
+  @@map("network_odcs")
+}
+
+model networkODP {
+  id          String       @id
+  name        String
+  latitude    Float
+  longitude   Float
+  status      String       @default("active")
+  followRoad  Boolean      @default(false)
+  portCount   Int          @default(8)
+  oltId       String?
+  ponPort     Int?
+  odcId       String?
+  parentOdpId String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  olt         networkOLT?  @relation(fields: [oltId], references: [id], onDelete: SetNull)
+  odc         networkODC?  @relation(fields: [odcId], references: [id], onDelete: SetNull)
+  parentOdp   networkODP?  @relation("ODPHierarchy", fields: [parentOdpId], references: [id])
+  childOdps   networkODP[] @relation("ODPHierarchy")
+  customers   odpCustomerAssignment[]
+
+  @@index([oltId])
+  @@index([odcId])
+  @@index([parentOdpId])
+  @@map("network_odps")
+}
+
+model odpCustomerAssignment {
+  id         String      @id
+  customerId String      @unique
+  odpId      String
+  portNumber Int
+  distance   Float?      // Distance in km from customer to ODP
+  notes      String?     @db.Text
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  customer   pppoeUser   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  odp        networkODP  @relation(fields: [odpId], references: [id], onDelete: Cascade)
+
+  @@unique([odpId, portNumber])
+  @@index([customerId])
+  @@index([odpId])
+  @@map("odp_customer_assignments")
+}
+
+model mapSettings {
+  id            String   @id
+  osrmApiUrl    String   @default("http://router.project-osrm.org")
+  followRoad    Boolean  @default(false)
+  defaultLat    Float    @default(-7.071273611475302)
+  defaultLon    Float    @default(108.04475042198051)
+  defaultZoom   Int      @default(13)
+  mapTheme      String   @default("default")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("map_settings")
+}
+
+model genieacsSettings {
+  id        String   @id
+  host      String   // e.g. http://localhost:7557
+  username  String
+  password  String   // Will be encrypted
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("genieacs_settings")
+}
+
+model notification {
+  id        String   @id @default(cuid())
+  type      String   // 'invoice_overdue', 'new_registration', 'payment_received', 'user_expired', 'system_alert'
+  title     String
+  message   String   @db.Text
+  link      String?  // Optional link to related resource
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model agentNotification {
+  id        String   @id @default(cuid())
+  agentId   String
+  agent     agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  type      String   // 'voucher_generated', 'deposit_success', 'low_balance', 'voucher_sold'
+  title     String
+  message   String   @db.Text
+  link      String?  // Optional link to related resource
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@index([agentId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("agent_notifications")
+}
+
+model adminUser {
+  id              String           @id @default(cuid())
+  username        String           @unique
+  email           String?          @unique
+  password        String           // bcrypt hashed
+  name            String
+  role            AdminRole        @default(CUSTOMER_SERVICE)
+  isActive        Boolean          @default(true)
+  phone           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  lastLogin       DateTime?
+  userPermissions userPermission[]
+  
+  @@index([username])
+  @@index([email])
+  @@index([role])
+  @@map("admin_users")
+}
+
+// Permission master list
+model permission {
+  id              String           @id @default(cuid())
+  key             String           @unique // e.g., "invoices.view", "users.create"
+  name            String           // Display name
+  description     String?          @db.Text
+  category        String           // Group: INVOICES, USERS, NETWORK, etc.
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  rolePermissions rolePermission[]
+  userPermissions userPermission[]
+  
+  @@index([category])
+  @@index([key])
+  @@map("permissions")
+}
+
+// Default permissions per role (templates)
+model rolePermission {
+  id           String     @id @default(cuid())
+  role         AdminRole
+  permissionId String
+  permission   permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  
+  @@unique([role, permissionId])
+  @@index([role])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+// Custom permissions per user (overrides role template)
+model userPermission {
+  id           String     @id @default(cuid())
+  userId       String
+  permissionId String
+  user         adminUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  
+  @@unique([userId, permissionId])
+  @@index([userId])
+  @@index([permissionId])
+  @@map("user_permissions")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  FINANCE
+  CUSTOMER_SERVICE
+  TECHNICIAN
+  MARKETING
+  VIEWER
+}
+
+enum SubscriptionType {
+  POSTPAID   // Pascabayar
+  PREPAID    // Prabayar
+}
+
+enum ManualPaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model manualPayment {
+  id              String              @id @default(cuid())
+  userId          String
+  invoiceId       String
+  amount          Decimal             @db.Decimal(10, 2)
+  paymentDate     DateTime
+  bankName        String              // Bank yang digunakan untuk transfer
+  accountName     String              // Nama pengirim
+  receiptImage    String?             // Path to uploaded receipt image
+  notes           String?             @db.Text
+  status          ManualPaymentStatus @default(PENDING)
+  approvedBy      String?             // Admin user ID who approved/rejected
+  approvedAt      DateTime?
+  rejectionReason String?             @db.Text
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  user            pppoeUser           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice         invoice             @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([invoiceId])
+  @@index([status])
+  @@index([paymentDate])
+  @@map("manual_payments")
+}
+
+model backupHistory {
+  id          String   @id @default(cuid())
+  filename    String
+  filepath    String?  // Local path
+  filesize    BigInt   // bytes
+  type        String   // 'auto' | 'manual'
+  status      String   // 'success' | 'failed'
+  method      String   @default("local") // 'local' | 'telegram' | 'both'
+  error       String?  @db.Text
+  createdAt   DateTime @default(now())
+  
+  @@index([createdAt])
+  @@index([type])
+  @@index([status])
+  @@map("backup_history")
+}
+
+model telegramBackupSettings {
+  id              String   @id @default(cuid())
+  enabled         Boolean  @default(false)
+  botToken        String
+  chatId          String
+  backupTopicId   String
+  healthTopicId   String?
+  schedule        String   @default("daily") // 'daily', '12h', '6h', 'weekly'
+  scheduleTime    String   @default("02:00") // HH:mm
+  keepLastN       Int      @default(7)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("telegram_backup_settings")
+}
+
+model activityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  username    String
+  userRole    String?
+  action      String
+  description String   @db.Text
+  module      String   // 'pppoe', 'hotspot', 'voucher', 'invoice', 'payment', 'agent', 'session', 'transaction', 'system', etc
+  status      String   @default("success") // 'success', 'warning', 'error'
+  ipAddress   String?
+  metadata    String?  @db.Text // JSON string for additional data
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([module])
+  @@index([status])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model emailSettings {
+  id              String   @id @default(cuid())
+  enabled         Boolean  @default(false)
+  smtpHost        String   @default("smtp.gmail.com")
+  smtpPort        Int      @default(587)
+  smtpSecure      Boolean  @default(false) // true for 465, false for other ports
+  smtpUser        String   // Gmail address
+  smtpPassword    String   // App password
+  fromEmail       String   // Sender email
+  fromName        String   @default("RADIUS Notification")
+  
+  // Notification settings
+  notifyNewUser   Boolean  @default(true)
+  notifyExpired   Boolean  @default(true)
+  notifyInvoice   Boolean  @default(true)
+  notifyPayment   Boolean  @default(true)
+  
+  // Invoice reminder settings
+  reminderEnabled Boolean  @default(true)
+  reminderTime    String   @default("09:00") // Format: HH:mm
+  reminderDays    String   @default("7,3,1") // Days before due date, comma-separated
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("email_settings")
+}
+
+model emailHistory {
+  id          String   @id @default(cuid())
+  toEmail     String
+  toName      String?
+  subject     String
+  body        String   @db.Text
+  status      String   // 'sent', 'failed'
+  error       String?  @db.Text
+  sentAt      DateTime @default(now())
+  
+  @@index([toEmail])
+  @@index([status])
+  @@index([sentAt])
+  @@map("email_history")
+}
+
+model emailTemplate {
+  id          String   @id @default(cuid())
+  name        String   // Display name
+  type        String   @unique // new-user, expiration-reminder, invoice-reminder, payment-confirmation
+  subject     String   // Email subject with variables
+  htmlBody    String   @db.Text // HTML email body with variables
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([type])
+  @@index([isActive])
+  @@map("email_templates")
+}
+
+model genieacsVirtualParameter {
+  id            String   @id @default(cuid())
+  name          String
+  parameter     String   @unique // Target parameter path exposed to ACS
+  expression    String   @db.Text // GenieACS virtual parameter script/expression
+  displayType   String   @default("card") // card, badge, meter, list
+  displayOrder  Int      @default(0) // Sort order for display
+  icon          String?  // Icon name (lucide-react)
+  color         String?  // Color theme: blue, green, red, purple, orange, etc
+  category      String?  // Group category
+  unit          String?  // Unit of measurement (dBm, °C, MB, etc)
+  showInSummary Boolean  @default(true) // Show in device summary
+  description   String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([category])
+  @@index([displayOrder])
+  @@map("genieacs_virtual_parameters")
+}
+
+model parameterDisplayConfig {
+  id              Int      @id @default(autoincrement())
+  configType      ConfigType
+  section         String   @db.VarChar(100) // Section name (e.g., device_info, connection_info, optical_info)
+  parameterName   String   // Parameter name (e.g., serialNumber, rxPower)
+  label           String   // Display label
+  parameterPaths  Json     // Array of parameter paths to try
+  enabled         Boolean  @default(true)
+  displayOrder    Int      @default(0)
+  columnWidth     String?  @db.VarChar(50) // Column width for table (e.g., 150px, 20%)
+  format          String?  @db.VarChar(50) // Value format (e.g., dBm, °C, bytes, date)
+  colorCoding     Json?    // Color coding rules for values
+  icon            String?  @db.VarChar(50) // Icon name from lucide-react
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([configType, section, parameterName])
+  @@index([configType])
+  @@index([section])
+  @@index([enabled])
+  @@map("parameter_display_config")
+}
+
+enum ConfigType {
+  DEVICE_LIST
+  DEVICE_DETAIL
+}
+
+// Inventory Management Models
+model inventoryCategory {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  description String?         @db.Text
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  items       inventoryItem[]
+
+  @@map("inventory_categories")
+}
+
+model inventorySupplier {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?         @db.Text
+  notes       String?         @db.Text
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  items       inventoryItem[]
+
+  @@map("inventory_suppliers")
+}
+
+model inventoryItem {
+  id              String              @id @default(cuid())
+  sku             String              @unique // Stock Keeping Unit
+  name            String
+  description     String?             @db.Text
+  categoryId      String?
+  supplierId      String?
+  unit            String              @default("pcs") // Unit of measurement (pcs, box, meter, etc)
+  minimumStock    Int                 @default(0) // Alert when stock below this
+  currentStock    Int                 @default(0)
+  purchasePrice   Int                 @default(0) // Harga beli
+  sellingPrice    Int                 @default(0) // Harga jual
+  location        String?             // Storage location
+  notes           String?             @db.Text
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  category        inventoryCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  supplier        inventorySupplier?  @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  movements       inventoryMovement[]
+
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([sku])
+  @@map("inventory_items")
+}
+
+model inventoryMovement {
+  id            String        @id @default(cuid())
+  itemId        String
+  movementType  String        // IN (masuk), OUT (keluar), ADJUSTMENT (penyesuaian)
+  quantity      Int
+  previousStock Int
+  newStock      Int
+  referenceNo   String?       // Nomor referensi (PO, DO, invoice, etc)
+  notes         String?       @db.Text
+  userId        String?       // User yang melakukan transaksi
+  userName      String?       // Nama user
+  createdAt     DateTime      @default(now())
+  item          inventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([movementType])
+  @@index([createdAt])
+  @@map("inventory_movements")
+}
+
+// Work Order & Technician Management Models
+model technician {
+  id            String         @id @default(cuid())
+  name          String
+  phoneNumber   String         @unique
+  email         String?
+  isActive      Boolean        @default(true)
+  requireOtp    Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  lastLoginAt   DateTime?
+  otpTokens     technicianOtp[]
+  workOrders    workOrder[]
+
+  @@index([phoneNumber])
+  @@index([isActive])
+  @@map("technicians")
+}
+
+model technicianOtp {
+  id            String      @id @default(cuid())
+  technicianId  String
+  phoneNumber   String
+  otpCode       String
+  isUsed        Boolean     @default(false)
+  expiresAt     DateTime
+  createdAt     DateTime    @default(now())
+  technician    technician  @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+
+  @@index([technicianId])
+  @@index([phoneNumber])
+  @@index([otpCode])
+  @@index([expiresAt])
+  @@map("technician_otps")
+}
+
+model workOrder {
+  id              String      @id @default(cuid())
+  technicianId    String?
+  customerName    String
+  customerPhone   String
+  customerAddress String      @db.Text
+  issueType       String      // CONNECTION, SLOW_SPEED, NO_INTERNET, DEVICE_ISSUE, etc
+  description     String      @db.Text
+  priority        String      @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status          String      @default("OPEN") // OPEN, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
+  scheduledDate   DateTime?
+  estimatedHours  Float?
+  notes           String?     @db.Text
+  technicianNotes String?     @db.Text
+  completedAt     DateTime?
+  assignedAt      DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  technician      technician? @relation(fields: [technicianId], references: [id], onDelete: SetNull)
+
+  @@index([technicianId])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+  @@map("work_orders")
+}
+
+
+
+model ticket {
+  id              String          @id @default(cuid())
+  ticketNumber    String          @unique
+  customerId      String?
+  customerName    String
+  customerEmail   String?
+  customerPhone   String
+  subject         String
+  description     String          @db.Text
+  categoryId      String?
+  priority        String          @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status          String          @default("OPEN") // OPEN, IN_PROGRESS, WAITING_CUSTOMER, RESOLVED, CLOSED
+  assignedToId    String?
+  assignedToType  String?         // ADMIN, TECHNICIAN
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  closedAt        DateTime?
+  resolvedAt      DateTime?
+  lastResponseAt  DateTime?
+  customer        pppoeUser?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  category        ticketCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  messages        ticketMessage[]
+
+  @@index([ticketNumber])
+  @@index([customerId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([priority])
+  @@index([assignedToId])
+  @@index([createdAt])
+  @@map("tickets")
+}
+
+model ticketMessage {
+  id            String    @id @default(cuid())
+  ticketId      String
+  senderType    String    // CUSTOMER, ADMIN, TECHNICIAN, SYSTEM
+  senderId      String?
+  senderName    String
+  message       String    @db.Text
+  isInternal    Boolean   @default(false)
+  attachments   String?   @db.Text // JSON array of file paths
+  createdAt     DateTime  @default(now())
+  ticket        ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([createdAt])
+  @@map("ticket_messages")
+}
+
+model ticketCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?  @db.Text
+  color       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tickets     ticket[]
+
+  @@map("ticket_categories")
+}
