@@ -239,44 +239,51 @@ enum InvoiceType {
 }
 
 model vpnServer {
-  id          String      @id @default(uuid())
-  name        String
-  host        String
-  username    String
-  password    String
-  apiPort     Int         @default(8728)
-  subnet      String
-  l2tpEnabled Boolean     @default(false)
-  sstpEnabled Boolean     @default(false)
-  pptpEnabled Boolean     @default(false)
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id             String      @id @default(uuid())
+  name           String
+  host           String
+  username       String
+  password       String
+  apiPort        Int         @default(8728)
+  subnet         String
+  l2tpEnabled    Boolean     @default(false)
+  sstpEnabled    Boolean     @default(false)
+  pptpEnabled    Boolean     @default(false)
+  wgEnabled      Boolean     @default(false)
+  wgPublicKey    String?     @db.Text
+  wgPort         Int?        @default(51820)
+  openVpnEnabled Boolean     @default(false)
+  openVpnPort    Int?        @default(1194)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  vpnClients  vpnClient[]
+  vpnClients     vpnClient[]
 
   @@map("vpn_servers")
 }
 
 model vpnClient {
-  id             String     @id @default(uuid())
-  name           String
-  vpnServerId    String
-  vpnIp          String
-  username       String     @unique
-  password       String
-  vpnType        String     @default("L2TP")
-  description    String?    @db.Text
-  winboxPort     Int?
-  apiUsername    String?
-  apiPassword    String?
-  isActive       Boolean    @default(true)
-  isRadiusServer Boolean    @default(false)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id               String     @id @default(uuid())
+  name             String
+  vpnServerId      String
+  vpnIp            String
+  username         String     @unique
+  password         String
+  vpnType          String     @default("L2TP")
+  description      String?    @db.Text
+  winboxPort       Int?
+  apiUsername      String?
+  apiPassword      String?
+  clientPublicKey  String?    @db.Text
+  clientPrivateKey String?    @db.Text
+  isActive         Boolean    @default(true)
+  isRadiusServer   Boolean    @default(false)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
-  vpnServer      vpnServer  @relation(fields: [vpnServerId], references: [id], onDelete: Cascade)
-  routers        router[]
+  vpnServer        vpnServer  @relation(fields: [vpnServerId], references: [id], onDelete: Cascade)
+  routers          router[]
 
   @@unique([vpnServerId, vpnIp])
   @@map("vpn_clients")
@@ -996,6 +1003,24 @@ model notification {
   @@map("notifications")
 }
 
+model pushBroadcast {
+  id            String   @id @default(cuid())
+  title         String
+  body          String   @db.Text
+  type          String   @default("broadcast") // broadcast | tagihan | info | custom
+  targetType    String   @default("all") // all | area | status | selected
+  targetIds     String?  @db.Text // JSON array of user/area IDs for targeted sends
+  sentCount     Int      @default(0)
+  failedCount   Int      @default(0)
+  sentBy        String?  // admin username
+  data          String?  @db.Text // JSON extra data
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([type])
+  @@map("push_broadcasts")
+}
+
 model agentNotification {
   id        String   @id @default(cuid())
   agentId   String
@@ -1106,8 +1131,9 @@ model manualPayment {
   invoiceId       String
   amount          Decimal             @db.Decimal(10, 2)
   paymentDate     DateTime
-  bankName        String              // Bank yang digunakan untuk transfer
-  accountName     String              // Nama pengirim
+  bankName        String              // Bank/E-Wallet yang digunakan (BCA, BNI, Mandiri, DANA, GoPay, dll)
+  accountNumber   String?             // Nomor rekening atau nomor e-wallet pengirim
+  accountName     String              // Nama lengkap pengirim sesuai rekening/e-wallet
   receiptImage    String?             // Path to uploaded receipt image
   notes           String?             @db.Text
   status          ManualPaymentStatus @default(PENDING)

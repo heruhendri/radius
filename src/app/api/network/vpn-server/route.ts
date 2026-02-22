@@ -27,6 +27,11 @@ export async function GET() {
         l2tpEnabled: true,
         sstpEnabled: true,
         pptpEnabled: true,
+        wgEnabled: true,
+        wgPublicKey: true,
+        wgPort: true,
+        openVpnEnabled: true,
+        openVpnPort: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -65,6 +70,11 @@ export async function POST(request: Request) {
         password: data.password, // TODO: Encrypt password
         apiPort: parseInt(data.apiPort) || 8728,
         subnet: data.subnet || '10.20.30.0/24',
+        l2tpEnabled: !!data.l2tpEnabled,
+        sstpEnabled: !!data.sstpEnabled,
+        pptpEnabled: !!data.pptpEnabled,
+        wgEnabled: !!data.wgEnabled,
+        openVpnEnabled: !!data.openVpnEnabled,
       },
     })
 
@@ -98,6 +108,11 @@ export async function PUT(request: Request) {
       username: data.username,
       apiPort: parseInt(data.apiPort) || 8728,
       subnet: data.subnet,
+      l2tpEnabled: !!data.l2tpEnabled,
+      sstpEnabled: !!data.sstpEnabled,
+      pptpEnabled: !!data.pptpEnabled,
+      wgEnabled: !!data.wgEnabled,
+      openVpnEnabled: !!data.openVpnEnabled,
     }
 
     // Only update password if provided

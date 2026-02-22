@@ -16,6 +16,8 @@ interface VpnServer {
   l2tpEnabled: boolean
   sstpEnabled: boolean
   pptpEnabled: boolean
+  wgEnabled: boolean
+  openVpnEnabled: boolean
   isActive: boolean
 }
 
@@ -63,6 +65,11 @@ export default function VpnServerPage() {
     password: '',
     apiPort: '8728',
     subnet: '10.20.30.0/24',
+    l2tpEnabled: false,
+    sstpEnabled: false,
+    pptpEnabled: false,
+    wgEnabled: false,
+    openVpnEnabled: false,
   });
 
   useEffect(() => {
@@ -280,14 +287,14 @@ export default function VpnServerPage() {
   const handleAdd = () => {
     setEditingServer(null);
     setTestResult(null);
-    setFormData({ name: '', host: '', username: 'admin', password: '', apiPort: '8728', subnet: '10.20.30.0/24' });
+    setFormData({ name: '', host: '', username: 'admin', password: '', apiPort: '8728', subnet: '10.20.30.0/24', l2tpEnabled: false, sstpEnabled: false, pptpEnabled: false, wgEnabled: false, openVpnEnabled: false });
     setShowModal(true);
   }
 
   const handleEdit = (server: VpnServer) => {
     setEditingServer(server)
     setTestResult(null)
-    setFormData({ name: server.name, host: server.host, username: server.username, password: '', apiPort: server.apiPort.toString(), subnet: server.subnet })
+    setFormData({ name: server.name, host: server.host, username: server.username, password: '', apiPort: server.apiPort.toString(), subnet: server.subnet, l2tpEnabled: server.l2tpEnabled, sstpEnabled: server.sstpEnabled, pptpEnabled: server.pptpEnabled, wgEnabled: server.wgEnabled, openVpnEnabled: server.openVpnEnabled })
     setShowModal(true)
   }
 
@@ -327,31 +334,23 @@ export default function VpnServerPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!editingServer && !testResult?.success) {
-      showError(t('network.testConnectionRequired'), t('network.testConnectionRequired'));
-      return;
-    }
-
     try {
       if (!editingServer) {
-        const setupResponse = await fetch('/api/network/vpn-server/setup', {
+        // Save new server to DB (use Auto Setup button to configure MikroTik protocols)
+        const response = await fetch('/api/network/vpn-server', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: formData.name, host: formData.host, username: formData.username, password: formData.password, apiPort: formData.apiPort, subnet: formData.subnet }),
+          body: JSON.stringify({ ...formData }),
         })
 
-        const setupResult = await setupResponse.json()
+        const result = await response.json()
 
-        if (setupResult.success) {
-          const protocols = [];
-          if (setupResult.l2tp) protocols.push('L2TP/IPSec');
-          if (setupResult.sstp) protocols.push('SSTP');
-          if (setupResult.pptp) protocols.push('PPTP');
-          showSuccess(t('network.vpnServerConfigured') + '\n\n' + t('network.protocolsEnabled').replace('{protocols}', protocols.join(', ')), t('network.vpnServerConfigured'));
+        if (response.ok) {
+          showSuccess(t('network.vpnServerUpdated') || 'VPN Server berhasil disimpan');
           setShowModal(false)
           loadServers()
         } else {
-          showError(setupResult.message, t('network.setupComplete'));
+          showError(result.error || t('common.error'));
         }
       } else {
         const response = await fetch('/api/network/vpn-server', {
@@ -501,7 +500,7 @@ export default function VpnServerPage() {
 
   // Stats calculations
   const totalServers = servers.length;
-  const activeServers = servers.filter(s => s.l2tpEnabled || s.sstpEnabled || s.pptpEnabled).length;
+  const activeServers = servers.filter(s => s.l2tpEnabled || s.sstpEnabled || s.pptpEnabled || s.wgEnabled || s.openVpnEnabled).length;
   const l2tpServers = servers.filter(s => s.l2tpEnabled).length;
   const sstpServers = servers.filter(s => s.sstpEnabled).length;
 
@@ -664,7 +663,17 @@ export default function VpnServerPage() {
                             PPTP
                           </span>
                         )}
-                        {!server.l2tpEnabled && !server.sstpEnabled && !server.pptpEnabled && (
+                        {server.wgEnabled && (
+                          <span className="px-3 py-1.5 bg-teal-500/20 text-teal-400 border border-teal-500/40 text-xs font-bold rounded-lg shadow-[0_0_15px_rgba(20,184,166,0.2)]">
+                            WireGuard
+                          </span>
+                        )}
+                        {server.openVpnEnabled && (
+                          <span className="px-3 py-1.5 bg-orange-500/20 text-orange-400 border border-orange-500/40 text-xs font-bold rounded-lg shadow-[0_0_15px_rgba(249,115,22,0.2)]">
+                            OpenVPN
+                          </span>
+                        )}
+                        {!server.l2tpEnabled && !server.sstpEnabled && !server.pptpEnabled && !server.wgEnabled && !server.openVpnEnabled && (
                           <span className="px-3 py-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/40 text-xs font-bold rounded-lg">
                             {t('network.notConfigured')}
                           </span>
@@ -846,6 +855,30 @@ export default function VpnServerPage() {
                       placeholder={t('network.vpnSubnetPlaceholder')}
                       required
                     />
+                  </div>
+
+                  {/* Protocol Toggles */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#00f7ff] mb-3">Protokol VPN</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { key: 'l2tpEnabled', label: 'L2TP/IPSec', color: 'green' },
+                        { key: 'sstpEnabled', label: 'SSTP', color: 'blue' },
+                        { key: 'pptpEnabled', label: 'PPTP', color: 'purple' },
+                        { key: 'wgEnabled', label: 'WireGuard', color: 'teal' },
+                        { key: 'openVpnEnabled', label: 'OpenVPN', color: 'orange' },
+                      ].map(({ key, label, color }) => (
+                        <label key={key} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${(formData as any)[key] ? `bg-${color}-500/20 border-${color}-500/40` : 'bg-slate-900/50 border-slate-700/50 hover:border-slate-600'}`}>
+                          <input
+                            type="checkbox"
+                            checked={(formData as any)[key]}
+                            onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
+                            className="w-4 h-4 rounded accent-[#00f7ff]"
+                          />
+                          <span className={`text-sm font-medium ${(formData as any)[key] ? 'text-white' : 'text-gray-400'}`}>{label}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Test Result */}
