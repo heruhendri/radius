@@ -163,7 +163,7 @@ export default function AgentPage() {
 
   const handleDelete = async () => {
     if (!deleteAgentId) return;
-    const confirmed = await showConfirm('Delete this agent and all history?');
+    const confirmed = await showConfirm(t('hotspot.deleteAgentConfirm'));
     if (!confirmed) { setDeleteAgentId(null); return; }
     try {
       const res = await fetch(`/api/hotspot/agents?id=${deleteAgentId}`, { method: 'DELETE' });
@@ -203,7 +203,7 @@ export default function AgentPage() {
 
   const handleBulkDelete = async () => {
     if (selectedAgents.length === 0) return;
-    const confirmed = await showConfirm(`Delete ${selectedAgents.length} agent(s)?`);
+    const confirmed = await showConfirm(t('hotspot.deleteAgentsConfirm', { count: selectedAgents.length }));
     if (!confirmed) return;
     try {
       const results = await Promise.all(
@@ -265,7 +265,7 @@ export default function AgentPage() {
       await showError(t('common.invalidAmount'));
       return;
     }
-    const confirmed = await showConfirm(`${balanceType === 'add' ? 'Add' : 'Subtract'} Rp ${formatCurrency(amount)}?`);
+    const confirmed = await showConfirm(t('hotspot.agentBalanceConfirm', { action: balanceType === 'add' ? t('common.add') : t('common.subtract'), amount: formatCurrency(amount), name: selectedAgentForBalance.name }));
     if (!confirmed) return;
     try {
       const res = await fetch('/api/hotspot/agents/balance', {
@@ -339,7 +339,7 @@ export default function AgentPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -350,7 +350,7 @@ export default function AgentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -361,11 +361,11 @@ export default function AgentPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <Users className="w-5 h-5 text-[#00f7ff]" />
               {t('agent.title')}
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('agent.subtitle')}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('agent.subtitle')}</p>
           </div>
           <div className="flex gap-2">
             {selectedAgents.length > 0 && (
@@ -435,8 +435,79 @@ export default function AgentPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3">
+          {agents.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-xs">{t('agent.noAgentsFound')}</div>
+          ) : (
+            agents.map((agent) => (
+              <div key={agent.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedAgents.includes(agent.id)}
+                      onChange={() => toggleSelectAgent(agent.id)}
+                      className="w-3.5 h-3.5 rounded border-border text-primary focus:ring-primary"
+                    />
+                    <div>
+                      <div className="font-medium text-sm text-foreground">{agent.name}</div>
+                      {agent.email && <div className="text-[10px] text-muted-foreground">{agent.email}</div>}
+                    </div>
+                  </div>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${agent.isActive ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+                    {agent.isActive ? t('common.active') : t('common.inactive')}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">{t('common.phone')}</div>
+                    <div>{agent.phone}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">{t('agent.router')}</div>
+                    <div>{agent.router ? agent.router.name : <span className="italic text-muted-foreground">{t('agent.notAssigned')}</span>}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">{t('hotspot.stockLabel')}</div>
+                    <div className="font-medium text-primary">{agent.voucherStock || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">{t('agent.balance')}</div>
+                    <div className="font-semibold text-success">{formatCurrency(agent.balance)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">{currentMonthName}</div>
+                    <div className="font-medium">{formatCurrency(agent.stats.currentMonth.total)}</div>
+                    <div className="text-[9px] text-muted-foreground">{agent.stats.currentMonth.count} vcr</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">{t('agent.allTime')}</div>
+                    <div className="font-medium">{formatCurrency(agent.stats.allTime.total)}</div>
+                    <div className="text-[9px] text-muted-foreground">{agent.stats.allTime.count} vcr</div>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-1 border-t border-border pt-2">
+                  <button onClick={() => openBalanceModal(agent)} className="p-2 text-primary hover:bg-primary/10 rounded" title="Balance">
+                    <Wallet className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleViewHistory(agent)} className="p-2 text-accent hover:bg-accent/10 rounded" title="History">
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleEdit(agent)} className="p-2 text-muted-foreground hover:bg-muted rounded" title="Edit">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setDeleteAgentId(agent.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Delete">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Table - Desktop */}
+        <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted border-b border-border">
@@ -452,8 +523,8 @@ export default function AgentPage() {
                   <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase">{t('common.name')}</th>
                   <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden sm:table-cell">{t('common.phone')}</th>
                   <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden md:table-cell">{t('agent.router')}</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase">Stock</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden lg:table-cell">Login Terakhir</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase">{t('hotspot.stockLabel')}</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden lg:table-cell">{t('hotspot.lastLoginLabel')}</th>
                   <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase">{t('agent.balance')}</th>
                   <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase">
                     <div>{currentMonthName}</div>
@@ -496,7 +567,7 @@ export default function AgentPage() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="font-medium text-xs text-primary">{agent.voucherStock || 0}</div>
-                        <div className="text-[9px] text-muted-foreground">voucher</div>
+                        <div className="text-[9px] text-muted-foreground">{t('hotspot.voucherLabel')}</div>
                       </td>
                       <td className="px-3 py-2 hidden lg:table-cell">
                         {agent.lastLogin ? (
@@ -505,7 +576,7 @@ export default function AgentPage() {
                             <div className="text-[9px] text-muted-foreground">{formatDate(agent.lastLogin).split(',')[1]}</div>
                           </div>
                         ) : (
-                          <span className="text-[10px] text-muted-foreground italic">Belum login</span>
+                          <span className="text-[10px] text-muted-foreground italic">{t('hotspot.notLoggedIn')}</span>
                         )}
                       </td>
                       <td className="px-3 py-2">
@@ -627,8 +698,8 @@ export default function AgentPage() {
             <div className="w-14 h-14 bg-[#ff4466]/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-[#ff4466]/50">
               <Trash2 className="w-7 h-7 text-[#ff6b8a]" />
             </div>
-            <h2 className="text-base font-bold text-white mb-2">{t('agent.deleteAgent')}</h2>
-            <p className="text-xs text-[#e0d0ff]/70">{t('agent.deleteConfirm')}</p>
+            <h2 className="text-base font-bold text-foreground mb-2">{t('agent.deleteAgent')}</h2>
+            <p className="text-xs text-muted-foreground">{t('agent.deleteConfirm')}</p>
           </ModalBody>
           <ModalFooter className="justify-center">
             <ModalButton variant="secondary" onClick={() => setDeleteAgentId(null)}>{t('common.cancel')}</ModalButton>
@@ -644,7 +715,7 @@ export default function AgentPage() {
           </ModalHeader>
           <ModalBody className="space-y-4">
             <div className="bg-[#bc13fe]/10 rounded-lg p-3 border border-[#bc13fe]/30">
-              <p className="text-[10px] text-[#e0d0ff]/70">{t('agent.currentBalance')}</p>
+              <p className="text-[10px] text-muted-foreground">{t('agent.currentBalance')}</p>
               <p className="text-lg font-bold text-[#00f7ff] drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]">{selectedAgentForBalance && formatCurrency(selectedAgentForBalance.balance)}</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -666,7 +737,7 @@ export default function AgentPage() {
             {balanceAmount && selectedAgentForBalance && !isNaN(parseInt(balanceAmount)) && (
               <div className="bg-[#0a0520] rounded-lg p-2 text-xs border border-[#bc13fe]/30">
                 <div className="flex justify-between">
-                  <span className="text-[#e0d0ff]/70">{t('agent.newBalance')}:</span>
+                  <span className="text-muted-foreground">{t('agent.newBalance')}:</span>
                   <span className="font-bold text-[#00f7ff]">{formatCurrency(balanceType === 'add' ? selectedAgentForBalance.balance + parseInt(balanceAmount) : selectedAgentForBalance.balance - parseInt(balanceAmount))}</span>
                 </div>
               </div>
@@ -695,17 +766,17 @@ export default function AgentPage() {
                   ← {t('common.back')}
                 </button>
                 <div className="bg-[#00f7ff]/10 rounded-lg p-3 border border-[#00f7ff]/30">
-                  <p className="text-xs font-semibold text-[#e0d0ff]">
+                  <p className="text-xs font-semibold text-foreground">
                     {new Date(selectedMonthDetail.year, selectedMonthDetail.month).toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
                   </p>
                   <div className="grid grid-cols-2 gap-3 mt-2">
                     <div>
-                      <p className="text-[10px] text-[#e0d0ff]/60">{t('agent.totalSales')}</p>
+                      <p className="text-[10px] text-muted-foreground">{t('agent.totalSales')}</p>
                       <p className="text-sm font-bold text-[#00ff88]">{formatCurrency(selectedMonthDetail.total)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-[#e0d0ff]/60">{t('agent.vouchers')}</p>
-                      <p className="text-sm font-bold text-[#e0d0ff]">{selectedMonthDetail.count}</p>
+                      <p className="text-[10px] text-muted-foreground">{t('agent.vouchers')}</p>
+                      <p className="text-sm font-bold text-foreground">{selectedMonthDetail.count}</p>
                     </div>
                   </div>
                 </div>
@@ -714,8 +785,8 @@ export default function AgentPage() {
                     <div key={sale.id} className="border border-[#bc13fe]/30 rounded-lg p-2 hover:bg-[#bc13fe]/10 transition-colors">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-medium text-xs text-[#e0d0ff]">{sale.voucherCode}</p>
-                          <p className="text-[10px] text-[#e0d0ff]/50">{sale.profileName}</p>
+                          <p className="font-medium text-xs text-foreground">{sale.voucherCode}</p>
+                          <p className="text-[10px] text-muted-foreground">{sale.profileName}</p>
                           <p className="text-[9px] text-[#e0d0ff]/40 mt-0.5">{formatDate(sale.createdAt)}</p>
                         </div>
                         <p className="font-semibold text-xs text-[#00ff88]">{formatCurrency(sale.amount)}</p>
@@ -727,7 +798,7 @@ export default function AgentPage() {
             ) : (
               <div className="space-y-2">
                 {monthlyHistory.length === 0 ? (
-                  <p className="text-center text-[#e0d0ff]/50 text-xs py-6">{t('agent.noHistory')}</p>
+                  <p className="text-center text-muted-foreground text-xs py-6">{t('agent.noHistory')}</p>
                 ) : (
                   monthlyHistory.map((month) => (
                     <button
@@ -737,8 +808,8 @@ export default function AgentPage() {
                     >
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="font-medium text-xs text-[#e0d0ff]">{month.monthName}</p>
-                          <p className="text-[10px] text-[#e0d0ff]/50">{month.count} vouchers</p>
+                          <p className="font-medium text-xs text-foreground">{month.monthName}</p>
+                          <p className="text-[10px] text-muted-foreground">{month.count} vouchers</p>
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-xs text-[#00ff88]">{formatCurrency(month.total)}</p>
@@ -762,34 +833,34 @@ export default function AgentPage() {
             <div className="w-14 h-14 bg-[#ff4466]/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-[#ff4466]/50">
               <Trash2 className="w-7 h-7 text-[#ff6b8a]" />
             </div>
-            <h2 className="text-base font-bold text-white mb-2">Delete Multiple Agents</h2>
-            <p className="text-xs text-[#e0d0ff]/70">Are you sure you want to delete {selectedAgents.length} agent(s)? This action cannot be undone.</p>
+            <h2 className="text-base font-bold text-foreground mb-2">{t('hotspot.deleteMultipleAgents')}</h2>
+            <p className="text-xs text-muted-foreground">{t('hotspot.deleteAgentsBtn', { count: selectedAgents.length })}</p>
           </ModalBody>
           <ModalFooter className="justify-center">
             <ModalButton variant="secondary" onClick={() => setBulkDeleteOpen(false)}>{t('common.cancel')}</ModalButton>
-            <ModalButton variant="danger" onClick={handleBulkDelete}>Delete {selectedAgents.length} Agent(s)</ModalButton>
+            <ModalButton variant="danger" onClick={handleBulkDelete}>{t('hotspot.deleteAgentsBtn', { count: selectedAgents.length })}</ModalButton>
           </ModalFooter>
         </SimpleModal>
 
         {/* Bulk Status Change Modal */}
         <SimpleModal isOpen={bulkStatusOpen} onClose={() => setBulkStatusOpen(false)} size="sm">
           <ModalHeader>
-            <ModalTitle>Change Agent Status</ModalTitle>
-            <ModalDescription>Set status for {selectedAgents.length} selected agent(s)</ModalDescription>
+            <ModalTitle>{t('hotspot.changeAgentStatus')}</ModalTitle>
+            <ModalDescription>{t('hotspot.setStatusForAgents', { count: selectedAgents.length })}</ModalDescription>
           </ModalHeader>
           <ModalBody>
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setBulkStatusValue(true)} className={`px-3 py-3 rounded-lg border-2 text-xs font-medium transition-all ${bulkStatusValue ? 'border-[#00ff88] bg-[#00ff88]/10 text-[#00ff88] shadow-[0_0_15px_rgba(0,255,136,0.3)]' : 'border-[#bc13fe]/30 hover:border-[#00ff88]/50 text-[#e0d0ff]'}`}>
+              <button type="button" onClick={() => setBulkStatusValue(true)} className={`px-3 py-3 rounded-lg border-2 text-xs font-medium transition-all ${bulkStatusValue ? 'border-[#00ff88] bg-[#00ff88]/10 text-[#00ff88] shadow-[0_0_15px_rgba(0,255,136,0.3)]' : 'border-[#bc13fe]/30 hover:border-[#00ff88]/50 text-foreground'}`}>
                 ✓ {t('common.active')}
               </button>
-              <button type="button" onClick={() => setBulkStatusValue(false)} className={`px-3 py-3 rounded-lg border-2 text-xs font-medium transition-all ${!bulkStatusValue ? 'border-[#ff4466] bg-[#ff4466]/10 text-[#ff6b8a] shadow-[0_0_15px_rgba(255,68,102,0.3)]' : 'border-[#bc13fe]/30 hover:border-[#ff4466]/50 text-[#e0d0ff]'}`}>
+              <button type="button" onClick={() => setBulkStatusValue(false)} className={`px-3 py-3 rounded-lg border-2 text-xs font-medium transition-all ${!bulkStatusValue ? 'border-[#ff4466] bg-[#ff4466]/10 text-[#ff6b8a] shadow-[0_0_15px_rgba(255,68,102,0.3)]' : 'border-[#bc13fe]/30 hover:border-[#ff4466]/50 text-foreground'}`}>
                 ✗ {t('common.inactive')}
               </button>
             </div>
           </ModalBody>
           <ModalFooter>
             <ModalButton variant="secondary" onClick={() => setBulkStatusOpen(false)}>{t('common.cancel')}</ModalButton>
-            <ModalButton variant={bulkStatusValue ? 'success' : 'danger'} onClick={handleBulkStatusChange}>Update Status</ModalButton>
+            <ModalButton variant={bulkStatusValue ? 'success' : 'danger'} onClick={handleBulkStatusChange}>{t('hotspot.updateStatus')}</ModalButton>
           </ModalFooter>
         </SimpleModal>
       </div>

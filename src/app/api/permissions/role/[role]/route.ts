@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getRolePermissions } from '@/lib/permissions';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getRolePermissions } from '@/server/auth/permissions';
 import { AdminRole } from '@prisma/client';
 
 /**

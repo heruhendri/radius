@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Upload, DollarSign, CreditCard, Smartphone, Banknote, Loader2 } from 'lucide-react';
 import { CyberCard, CyberButton } from '@/components/cyberpunk';
-import Swal from 'sweetalert2';
+import { showSuccess, showError } from '@/lib/sweetalert';
 import { useTranslation } from '@/hooks/useTranslation';
 
 export default function TopUpRequestPage() {
@@ -23,26 +23,12 @@ export default function TopUpRequestPage() {
 
     const amount = parseInt(formData.amount);
     if (isNaN(amount) || amount < 10000) {
-      Swal.fire({
-        icon: 'error',
-        title: t('customer.invalidAmount'),
-        text: t('customer.minimumTopup'),
-        background: '#0f0624',
-        color: '#fff',
-        confirmButtonColor: '#00f7ff'
-      });
+      showError(t('customer.minimumTopup'), t('customer.invalidAmount'));
       return;
     }
 
     if (!formData.proofFile && formData.paymentMethod !== 'CASH') {
-      Swal.fire({
-        icon: 'error',
-        title: t('customer.proofRequired'),
-        text: t('customer.uploadProofRequired'),
-        background: '#0f0624',
-        color: '#fff',
-        confirmButtonColor: '#00f7ff'
-      });
+      showError(t('customer.uploadProofRequired'), t('customer.proofRequired'));
       return;
     }
 
@@ -57,8 +43,10 @@ export default function TopUpRequestPage() {
         data.append('proof', formData.proofFile);
       }
 
+      const token = localStorage.getItem('customer_token');
       const response = await fetch('/api/customer/topup-request', {
         method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: data,
       });
 
@@ -67,29 +55,14 @@ export default function TopUpRequestPage() {
         throw new Error(error.message || t('customer.requestFailed'));
       }
 
-      await Swal.fire({
-        icon: 'success',
-        title: t('customer.requestSent'),
-        html: `
-          <p class="text-white">${t('customer.topupRequestSentMsg')} <strong class="text-[#00f7ff]">Rp ${amount.toLocaleString('id-ID')}</strong> ${t('customer.sentToAdmin')}.</p>
-          <p class="text-sm text-gray-400 mt-2">${t('customer.waitAdminConfirmation')}</p>
-        `,
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#00f7ff',
-        background: '#0f0624',
-        color: '#fff'
-      });
+      showSuccess(
+        `${t('customer.topupRequestSentMsg')} Rp ${amount.toLocaleString('id-ID')} ${t('customer.sentToAdmin')}. ${t('customer.waitAdminConfirmation')}`,
+        t('customer.requestSent')
+      );
 
       router.push('/customer');
     } catch (error: any) {
-      Swal.fire({
-        icon: 'error',
-        title: t('common.failed'),
-        text: error.message || t('customer.requestError'),
-        background: '#0f0624',
-        color: '#fff',
-        confirmButtonColor: '#00f7ff'
-      });
+      showError(error.message || t('customer.requestError'), t('common.failed'));
     } finally {
       setSubmitting(false);
     }
@@ -100,28 +73,14 @@ export default function TopUpRequestPage() {
     if (file) {
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        Swal.fire({
-          icon: 'error',
-          title: t('customer.fileTooLarge'),
-          text: t('customer.maxFileSize'),
-          background: '#0f0624',
-          color: '#fff',
-          confirmButtonColor: '#00f7ff'
-        });
+        showError(t('customer.maxFileSize'), t('customer.fileTooLarge'));
         e.target.value = '';
         return;
       }
 
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        Swal.fire({
-          icon: 'error',
-          title: t('customer.invalidFileType'),
-          text: t('customer.onlyImageAllowed'),
-          background: '#0f0624',
-          color: '#fff',
-          confirmButtonColor: '#00f7ff'
-        });
+        showError(t('customer.onlyImageAllowed'), t('customer.invalidFileType'));
         e.target.value = '';
         return;
       }
@@ -131,42 +90,38 @@ export default function TopUpRequestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-[#1a0f35] to-slate-900 relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#bc13fe]/15 rounded-full blur-[120px] animate-pulse"></div>
-        <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-[#00f7ff]/15 rounded-full blur-[100px] animate-pulse delay-700"></div>
-        <div className="absolute bottom-0 left-1/2 w-[600px] h-[400px] bg-[#ff44cc]/10 rounded-full blur-[150px] animate-pulse delay-1000"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
-      </div>
-
-      <div className="max-w-2xl mx-auto py-8 px-4 relative z-10">
-        {/* Header */}
+    <div className="py-6 px-4 md:px-6">
+      {/* Back + Page Header */}
+      <div className="mb-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-sm text-[#00f7ff] hover:text-[#00f7ff]/80 mb-6 transition-colors"
+          className="flex items-center gap-2 text-sm text-[#00f7ff] hover:text-[#00f7ff]/80 mb-4 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {t('nav.backToDashboard')}
         </button>
 
-        <CyberCard className="p-6 mb-6 bg-gradient-to-r from-[#bc13fe]/20 to-[#00f7ff]/20">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-[#bc13fe]/30 rounded-xl border border-[#bc13fe]/50 shadow-[0_0_15px_rgba(188,19,254,0.4)]">
-              <DollarSign className="w-8 h-8 text-[#bc13fe]" />
+        <CyberCard className="p-5 bg-gradient-to-r from-[#bc13fe]/20 to-[#00f7ff]/20">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-[#bc13fe]/30 rounded-xl border border-[#bc13fe]/50 shadow-[0_0_15px_rgba(188,19,254,0.4)] shrink-0">
+              <DollarSign className="w-7 h-7 text-[#bc13fe]" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] to-white mb-2 drop-shadow-[0_0_20px_rgba(0,247,255,0.5)]">
+              <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] to-white drop-shadow-[0_0_20px_rgba(0,247,255,0.5)]">
                 {t('customer.topupRequest')}
               </h1>
-              <p className="text-[#e0d0ff]/70 text-sm">
+              <p className="text-[#e0d0ff]/70 text-sm mt-0.5">
                 {t('customer.topupRequestDesc')}
               </p>
             </div>
           </div>
         </CyberCard>
+      </div>
 
-        {/* Form */}
+      {/* Two-column layout on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Form — takes 2/3 on desktop */}
+        <div className="lg:col-span-2">
         <CyberCard className="p-6 bg-card/80 backdrop-blur-xl border-2 border-[#bc13fe]/30">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Amount */}
@@ -321,16 +276,19 @@ export default function TopUpRequestPage() {
             </div>
           </form>
         </CyberCard>
+        </div>
 
-        {/* Info */}
-        <div className="mt-6 bg-[#00f7ff]/10 border-2 border-[#00f7ff]/30 rounded-xl p-4">
-          <h3 className="text-sm font-bold text-[#00f7ff] mb-2">ℹ️ {t('customer.importantInfo')}:</h3>
-          <ul className="text-xs text-[#e0d0ff]/70 space-y-1">
-            <li>• {t('customer.infoProcessTime')}</li>
-            <li>• {t('customer.infoProofClear')}</li>
-            <li>• {t('customer.infoBalanceAuto')}</li>
-            <li>• {t('customer.infoContactAdmin')}</li>
-          </ul>
+        {/* Info panel — 1/3 on desktop, full-width below form on mobile */}
+        <div className="lg:col-span-1">
+          <div className="bg-[#00f7ff]/10 border-2 border-[#00f7ff]/30 rounded-xl p-5">
+            <h3 className="text-sm font-bold text-[#00f7ff] mb-3">ℹ️ {t('customer.importantInfo')}:</h3>
+            <ul className="text-xs text-[#e0d0ff]/70 space-y-2">
+              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">•</span>{t('customer.infoProcessTime')}</li>
+              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">•</span>{t('customer.infoProofClear')}</li>
+              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">•</span>{t('customer.infoBalanceAuto')}</li>
+              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">•</span>{t('customer.infoContactAdmin')}</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

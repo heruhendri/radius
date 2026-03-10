@@ -7,7 +7,7 @@ import {
     Cpu, HardDrive, Clock, CheckCircle, XCircle, AlertTriangle,
     Zap, Loader2, Terminal
 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface RadiusStatus {
     running: boolean;
@@ -26,10 +26,12 @@ interface RadiusStatus {
 
 export default function FreeRADIUSStatusPage() {
     const { t } = useTranslation();
+    const { addToast, confirm } = useToast();
     const [status, setStatus] = useState<RadiusStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [showDebugInfo, setShowDebugInfo] = useState(false);
 
     const fetchStatus = useCallback(async () => {
         try {
@@ -66,44 +68,29 @@ export default function FreeRADIUSStatusPage() {
 
         const msg = actionMessages[action];
 
-        const result = await Swal.fire({
+        if (!await confirm({
             title: msg.title,
-            text: action === 'stop' ? t('radius.warningStop') : t('radius.warningRestart'),
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: msg.confirmText,
-            confirmButtonColor: action === 'stop' ? '#ef4444' : '#0d9488',
-            cancelButtonText: t('common.cancel')
-        });
-
-        if (result.isConfirmed) {
-            setActionLoading(action);
+            message: action === 'stop' ? t('radius.warningStop') : t('radius.warningRestart'),
+            confirmText: msg.confirmText,
+            cancelText: t('common.cancel'),
+            variant: action === 'stop' ? 'danger' : 'warning',
+        })) return;
+        setActionLoading(action);
             try {
                 const response = await fetch(`/api/freeradius/${action}`, { method: 'POST' });
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: t('common.success'),
-                        text: msg.successText || data.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
+                    addToast({ type: 'success', title: t('common.success'), description: msg.successText || data.message, duration: 2000 });
                     setTimeout(fetchStatus, 2000);
                 } else {
                     throw new Error(data.error || 'Action failed');
                 }
             } catch (error: any) {
-                Swal.fire({
-                    icon: 'error',
-                    title: t('common.error'),
-                    text: error.message || 'Failed to execute action'
-                });
+                addToast({ type: 'error', title: t('common.error'), description: error.message || 'Failed to execute action' });
             } finally {
                 setActionLoading(null);
             }
-        }
     };
 
     if (loading) {
@@ -119,7 +106,7 @@ export default function FreeRADIUSStatusPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                    <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                         <Server className="w-6 h-6 text-primary" />
                         {t('radius.statusTitle')}
                     </h1>
@@ -311,27 +298,17 @@ export default function FreeRADIUSStatusPage() {
                     {t('radius.debugDesc')}
                 </p>
                 <button
-                    onClick={() => {
-                        Swal.fire({
-                            icon: 'info',
-                            title: t('radius.debugMode'),
-                            html: `
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Debug mode feature coming soon.<br/>
-                  For now, run manually on your server:
-                </p>
-                <code class="bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg text-sm">
-                  systemctl stop freeradius && freeradius -X
-                </code>
-              `,
-                            confirmButtonColor: '#0d9488'
-                        });
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-foreground rounded-lg transition-colors"
-                >
+                    onClick={() => setShowDebugInfo(!showDebugInfo)}                    
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-foreground rounded-lg transition-colors">
                     <Terminal className="w-4 h-4" />
                     {t('radius.runDebug')}
                 </button>
+                {showDebugInfo && (
+                  <div className="mt-3 p-3 bg-gray-800 border border-gray-600 rounded text-sm">
+                    <p className="mb-2 text-gray-400 text-xs">Debug mode feature coming soon. For now, run manually on your server:</p>
+                    <code className="block bg-gray-900 px-3 py-2 rounded text-green-400 text-xs">systemctl stop freeradius &amp;&amp; freeradius -X</code>
+                  </div>
+                )}
             </div>
         </div>
     );

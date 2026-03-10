@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
   Mail,
@@ -19,9 +20,10 @@ import {
   FileText,
   Settings as SettingsIcon,
   Clock,
-  Calendar
+  Calendar,
+  X
 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import { showSuccess, showError } from '@/lib/sweetalert';
 
 interface EmailSettings {
@@ -131,7 +133,7 @@ const templateConfig = {
     variables: ['{{customerName}}', '{{customerUsername}}', '{{message}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}'],
   },
   'invoice-created': {
-    title: '📄 Notifikasi Invoice Baru',
+    title: '🔄 Notifikasi Invoice Baru',
     description: 'Dikirim saat invoice baru dibuat oleh sistem',
     variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{phone}}', '{{email}}', '{{address}}', '{{invoiceNumber}}', '{{amount}}', '{{dueDate}}', '{{paymentLink}}', '{{paymentToken}}', '{{baseUrl}}', '{{bankAccounts}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}', '{{companyAddress}}'],
   },
@@ -206,6 +208,7 @@ const templateTypes = Object.keys(templateConfig) as (keyof typeof templateConfi
 
 export default function EmailSettingsPage() {
   const { t } = useTranslation();
+  const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<'settings' | 'templates' | 'reminders' | 'history'>('settings');
 
   const [settings, setSettings] = useState<EmailSettings>({
@@ -321,38 +324,20 @@ export default function EmailSettingsPage() {
       const data = await response.json();
 
       if (response.ok) {
-        await Swal.fire({
-          icon: 'success',
-          title: t('emailSettings.messages.saved'),
-          text: t('emailSettings.messages.savedDesc'),
-          confirmButtonColor: '#14b8a6',
-        });
+        addToast({ type: 'success', title: t('emailSettings.messages.saved'), description: t('emailSettings.messages.savedDesc') });
         fetchSettings();
       } else {
         // Handle unauthorized error - redirect to login
         if (response.status === 401) {
-          await Swal.fire({
-            icon: 'warning',
-            title: t('emailSettings.messages.sessionExpired'),
-            text: t('emailSettings.messages.sessionExpiredDesc'),
-            confirmButtonColor: '#14b8a6',
-          });
+          addToast({ type: 'warning', title: t('emailSettings.messages.sessionExpired'), description: t('emailSettings.messages.sessionExpiredDesc') });
           window.location.href = '/admin/login';
           return;
         }
 
-        await Swal.fire({
-          icon: 'error',
-          title: t('emailSettings.test.failed'),
-          text: data.error || t('emailSettings.messages.saveFailed'),
-        });
+        addToast({ type: 'error', title: t('emailSettings.test.failed'), description: data.error || t('emailSettings.messages.saveFailed') });
       }
     } catch (error: any) {
-      await Swal.fire({
-        icon: 'error',
-        title: 'Error!',
-        text: error.message,
-      });
+      addToast({ type: 'error', title: 'Error!', description: error.message });
     } finally {
       setSaving(false);
     }
@@ -360,11 +345,7 @@ export default function EmailSettingsPage() {
 
   const handleTest = async () => {
     if (!testEmail) {
-      await Swal.fire({
-        icon: 'warning',
-        title: t('emailSettings.test.title'),
-        text: t('emailSettings.test.emailRequired'),
-      });
+      addToast({ type: 'warning', title: t('emailSettings.test.title'), description: t('emailSettings.test.emailRequired') });
       return;
     }
 
@@ -380,25 +361,12 @@ export default function EmailSettingsPage() {
       const data = await response.json();
 
       if (data.success) {
-        await Swal.fire({
-          icon: 'success',
-          title: t('emailSettings.test.success'),
-          html: t('emailSettings.test.successDesc').replace('{email}', testEmail),
-          confirmButtonColor: '#14b8a6',
-        });
+        addToast({ type: 'success', title: t('emailSettings.test.success'), description: t('emailSettings.test.successDesc').replace('{email}', testEmail) });
       } else {
-        await Swal.fire({
-          icon: 'error',
-          title: t('emailSettings.test.failed'),
-          html: `<div class="text-left"><strong>Error:</strong><br><code class="text-xs">${data.error}</code></div>`,
-        });
+        addToast({ type: 'error', title: t('emailSettings.test.failed'), description: data.error });
       }
     } catch (error: any) {
-      await Swal.fire({
-        icon: 'error',
-        title: 'Error!',
-        text: error.message,
-      });
+      addToast({ type: 'error', title: 'Error!', description: error.message });
     } finally {
       setTesting(false);
     }
@@ -422,11 +390,11 @@ export default function EmailSettingsPage() {
         showSuccess('Template updated successfully!');
         fetchTemplates();
       } else {
-        showError(data.error || 'Failed to update template');
+        showError(data.error || t('settings.failedUpdateTemplate'));
       }
     } catch (error) {
       console.error('Update template error:', error);
-      showError('Failed to update template');
+      showError(t('settings.failedUpdateTemplate'));
     } finally {
       setSavingTemplate(null);
     }
@@ -434,7 +402,7 @@ export default function EmailSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
         <Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
       </div>
@@ -442,61 +410,61 @@ export default function EmailSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">
             <Mail className="w-6 h-6 text-[#00f7ff] inline mr-2" />
             {t('emailSettings.title')}
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {t('emailSettings.subtitle')}
           </p>
         </div>
 
         {/* Tabs */}
         <div className="border-b border-border">
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-1 sm:gap-2">
             <button
               onClick={() => setActiveTab('settings')}
-              className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === 'settings'
+              className={`pb-2 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-colors ${activeTab === 'settings'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
             >
-              <SettingsIcon className="w-4 h-4 inline mr-1.5" />
+              <SettingsIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
               {t('emailSettings.tabs.settings')}
             </button>
             <button
               onClick={() => setActiveTab('templates')}
-              className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === 'templates'
+              className={`pb-2 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-colors ${activeTab === 'templates'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
             >
-              <FileText className="w-4 h-4 inline mr-1.5" />
+              <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
               {t('emailSettings.tabs.templates')}
             </button>
             <button
               onClick={() => setActiveTab('reminders')}
-              className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === 'reminders'
+              className={`pb-2 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-colors ${activeTab === 'reminders'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
             >
-              <Clock className="w-4 h-4 inline mr-1.5" />
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
               {t('emailSettings.tabs.reminders')}
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === 'history'
+              className={`pb-2 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-colors ${activeTab === 'history'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
             >
-              <Calendar className="w-4 h-4 inline mr-1.5" />
+              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
               {t('emailSettings.tabs.history')}
             </button>
           </div>
@@ -1020,26 +988,24 @@ function TemplatesTab({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Template Type Tabs - Responsive with horizontal scroll on mobile */}
+      {/* Template Type Tabs - Responsive with flex-wrap on mobile */}
       <div className="bg-card rounded-lg border border-border">
         <div className="border-b border-border px-2 sm:px-4 py-2">
-          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
-            <div className="flex gap-1.5 sm:gap-2 min-w-max sm:flex-wrap sm:min-w-0">
-              {templateTypes.map((type) => {
-                return (
-                  <button
-                    key={type}
-                    onClick={() => setActiveTemplateTab(type)}
-                    className={`flex-shrink-0 px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-medium rounded transition-colors whitespace-nowrap ${activeTemplateTab === type
-                      ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-violet-200'
-                      : 'bg-muted text-muted-foreground dark:text-muted-foreground hover:bg-muted'
-                      }`}
-                  >
-                    {getTemplateTitle(type)}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            {templateTypes.map((type) => {
+              return (
+                <button
+                  key={type}
+                  onClick={() => setActiveTemplateTab(type)}
+                  className={`px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-medium rounded transition-colors ${activeTemplateTab === type
+                    ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-violet-200'
+                    : 'bg-muted text-muted-foreground dark:text-muted-foreground hover:bg-muted'
+                    }`}
+                >
+                  {getTemplateTitle(type)}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -1083,7 +1049,7 @@ function TemplatesTab({
             <div className="flex justify-end p-4 border-t dark:border-gray-700">
               <button
                 onClick={() => setShowPreview(false)}
-                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-gray-500 hover:bg-muted text-foreground rounded-lg transition-colors"
               >
                 {t('common.close')}
               </button>
@@ -1097,6 +1063,7 @@ function TemplatesTab({
 
 // Template Editor Component
 function TemplateEditor({ type, template, config, savingTemplate, handleUpdateTemplate, onPreview }: any) {
+  const { t } = useTranslation();
   const [subject, setSubject] = useState('');
   const [htmlBody, setHtmlBody] = useState('');
 
@@ -1144,8 +1111,8 @@ function TemplateEditor({ type, template, config, savingTemplate, handleUpdateTe
       {!template ? (
         <div className="text-center py-12 sm:py-16 text-muted-foreground">
           <FileText className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" />
-          <p className="text-sm sm:text-base">Template belum dibuat</p>
-          <p className="text-xs sm:text-sm mt-1">Refresh halaman untuk membuat template default</p>
+          <p className="text-sm sm:text-base">{t('settings.templateNotCreated')}</p>
+          <p className="text-xs sm:text-sm mt-1">{t('settings.refreshForDefault')}</p>
         </div>
       ) : (
         <>
@@ -1257,6 +1224,7 @@ function RemindersTab({
   saving,
   handleSave,
 }: any) {
+  const { t } = useTranslation();
   const [reminderDaysArray, setReminderDaysArray] = useState<string[]>(
     settings.reminderDays ? settings.reminderDays.split(',') : ['7', '3', '1']
   );
@@ -1292,7 +1260,7 @@ function RemindersTab({
         <div className="flex gap-3">
           <Info className="w-5 h-5 text-primary dark:text-primary flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-900 dark:text-blue-100">
-            <p className="font-medium mb-1">Pengaturan Reminder Invoice</p>
+            <p className="font-medium mb-1">{t('settings.invoiceReminderSettings')}</p>
             <p className="text-xs text-blue-700 dark:text-blue-300">
               Sistem akan mengirim email reminder otomatis ke customer berdasarkan jadwal yang ditentukan sebelum invoice jatuh tempo.
             </p>
@@ -1361,7 +1329,7 @@ function RemindersTab({
                   className="w-24 px-3 py-2 text-sm bg-card border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-50 disabled:text-muted-foreground disabled:cursor-not-allowed"
                   placeholder="Hari"
                 />
-                <span className="text-sm text-muted-foreground dark:text-muted-foreground">hari sebelum jatuh tempo</span>
+                <span className="text-sm text-muted-foreground dark:text-muted-foreground">{t('settings.daysBeforeDue')}</span>
                 {reminderDaysArray.length > 1 && (
                   <button
                     type="button"
@@ -1440,12 +1408,15 @@ function RemindersTab({
 
 // History Tab Component
 function HistoryTab() {
+  const { t } = useTranslation();
+  const { addToast } = useToast();
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [viewingEmail, setViewingEmail] = useState<any | null>(null);
   const itemsPerPage = 20;
 
   useEffect(() => {
@@ -1477,49 +1448,14 @@ function HistoryTab() {
       }
     } catch (error) {
       console.error('Failed to fetch email history:', error);
-      Swal.fire('Error', 'Failed to fetch email history', 'error');
+      addToast({ type: 'error', title: 'Error', description: 'Failed to fetch email history' });
     } finally {
       setLoading(false);
     }
   };
 
   const viewEmailBody = (email: any) => {
-    Swal.fire({
-      title: email.subject,
-      html: `
-        <div class="text-left space-y-3 text-sm">
-          <div class="flex gap-2">
-            <span class="font-semibold text-gray-400 min-w-[60px]">To:</span>
-            <span class="text-gray-200">${email.toEmail}${email.toName ? ` <span class="text-purple-400">(${email.toName})</span>` : ''}</span>
-          </div>
-          <div class="flex gap-2">
-            <span class="font-semibold text-gray-400 min-w-[60px]">Status:</span>
-            <span class="${email.status === 'sent' ? 'text-green-400' : 'text-red-400'} font-medium">${email.status.toUpperCase()}</span>
-          </div>
-          ${email.error ? `
-          <div class="flex gap-2">
-            <span class="font-semibold text-gray-400 min-w-[60px]">Error:</span>
-            <span class="text-red-400">${email.error}</span>
-          </div>` : ''}
-          <div class="mt-4 pt-4 border-t border-gray-700">
-            <div class="font-semibold text-gray-400 mb-2">Email Content:</div>
-            <div class="max-h-96 overflow-y-auto bg-gray-800 border border-gray-700 p-4 rounded text-gray-200" style="max-height: 400px;">
-              ${email.body}
-            </div>
-          </div>
-        </div>
-      `,
-      width: '800px',
-      background: '#1e1b2e',
-      color: '#e0d0ff',
-      showCloseButton: true,
-      showConfirmButton: false,
-      customClass: {
-        popup: 'border border-[#bc13fe]/30',
-        title: 'text-xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent',
-        closeButton: 'text-gray-400 hover:text-white transition-colors'
-      }
-    });
+    setViewingEmail(email);
   };
 
   const filteredHistory = history.filter((item) => {
@@ -1533,6 +1469,7 @@ function HistoryTab() {
   });
 
   return (
+    <>
     <div className="space-y-4">
       {/* Filters */}
       <div className="bg-card rounded-lg border border-border p-4">
@@ -1560,9 +1497,9 @@ function HistoryTab() {
             }}
             className="px-4 py-2 text-sm border border-border rounded-lg bg-card focus:ring-2 focus:ring-primary focus:border-transparent"
           >
-            <option value="all">All Status</option>
-            <option value="sent">Sent</option>
-            <option value="failed">Failed</option>
+            <option value="all">{t('settings.allStatusFilter')}</option>
+            <option value="sent">{t('settings.sentFilter')}</option>
+            <option value="failed">{t('settings.failedFilter')}</option>
           </select>
 
           {/* Refresh Button */}
@@ -1586,11 +1523,63 @@ function HistoryTab() {
         ) : filteredHistory.length === 0 ? (
           <div className="text-center py-12">
             <Mail className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">No email history found</p>
+            <p className="text-sm text-muted-foreground">{t('settings.noEmailHistory')}</p>
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="block md:hidden space-y-3 p-4">
+              {filteredHistory.map((email) => (
+                <div key={email.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    {email.status === 'sent' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 dark:bg-green-900/30 text-green-800 dark:text-success">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Sent
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-destructive/20 dark:bg-red-900/30 text-red-800 dark:text-destructive">
+                        <XCircle className="w-3 h-3" />
+                        Failed
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {email.sentAt ? new Date(email.sentAt).toLocaleString('id-ID', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }) : '-'}
+                    </span>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div>
+                      <span className="text-muted-foreground text-xs">Recipient</span>
+                      <p className="text-foreground font-medium truncate">{email.toEmail}</p>
+                      {email.toName && (
+                        <p className="text-muted-foreground text-xs">{email.toName}</p>
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Subject</span>
+                      <p className="text-foreground truncate">{email.subject}</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-border">
+                    <button
+                      onClick={() => viewEmailBody(email)}
+                      className="text-primary hover:text-primary-dark font-medium text-xs"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-muted border-b border-border">
                   <tr>
@@ -1689,5 +1678,28 @@ function HistoryTab() {
         )}
       </div>
     </div>
+
+    {/* Email Detail Modal */}
+    {viewingEmail && createPortal(
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setViewingEmail(null)}>
+        <div className="bg-[#1e1b2e] border border-[#bc13fe]/30 rounded-lg max-w-3xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between p-5 border-b border-[#bc13fe]/20">
+            <h2 className="text-lg font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent truncate pr-4">{viewingEmail.subject}</h2>
+            <button onClick={() => setViewingEmail(null)} className="text-muted-foreground hover:text-foreground transition-colors"><X className="w-5 h-5" /></button>
+          </div>
+          <div className="p-5 overflow-y-auto flex-1 space-y-3 text-sm">
+            <div className="flex gap-2"><span className="font-semibold text-gray-400 min-w-[60px]">To:</span><span className="text-gray-200">{viewingEmail.toEmail}{viewingEmail.toName && <span className="text-purple-400"> ({viewingEmail.toName})</span>}</span></div>
+            <div className="flex gap-2"><span className="font-semibold text-gray-400 min-w-[60px]">Status:</span><span className={viewingEmail.status === 'sent' ? 'text-green-400 font-medium' : 'text-red-400 font-medium'}>{viewingEmail.status.toUpperCase()}</span></div>
+            {viewingEmail.error && <div className="flex gap-2"><span className="font-semibold text-gray-400 min-w-[60px]">Error:</span><span className="text-red-400">{viewingEmail.error}</span></div>}
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <div className="font-semibold text-gray-400 mb-2">Email Content:</div>
+              <div className="max-h-96 overflow-y-auto bg-gray-800 border border-gray-700 p-4 rounded text-gray-200" dangerouslySetInnerHTML={{ __html: viewingEmail.body }} />
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 }

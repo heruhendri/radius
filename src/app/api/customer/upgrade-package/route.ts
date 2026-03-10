@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { nanoid } from 'nanoid';
 import crypto from 'crypto';
+import { sendPushToUser } from '@/server/services/notifications/push-templates.service';
+import { rateLimit } from '@/server/middleware/rate-limit';
+import { nowWIB } from '@/lib/timezone';
 
 // Helper to verify customer token using CustomerSession
 async function verifyCustomerToken(request: NextRequest) {
@@ -39,6 +42,9 @@ async function verifyCustomerToken(request: NextRequest) {
 
 // POST - Create invoice for package upgrade
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await rateLimit(request, { max: 5, windowMs: 60 * 1000 });
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const user = await verifyCustomerToken(request);
 
@@ -74,10 +80,13 @@ export async function POST(request: NextRequest) {
     // Check if user already on this package
     if (user.profileId === packageId) {
       return NextResponse.json(
-        { success: false, error: 'You are already on this package' },
+        { success: false, error: 'Anda sudah menggunakan paket ini' },
         { status: 400 }
       );
     }
+
+    const isUpgrade = package_data.price > (user.profile?.price || 0);
+    const actionLabel = isUpgrade ? 'Upgrade Paket' : 'Ganti Paket';
 
     // Get company settings for payment gateway
     const company = await prisma.company.findFirst();
@@ -134,12 +143,12 @@ export async function POST(request: NextRequest) {
         additionalFees: {
           items: [
             {
-              description: `Upgrade Paket ke ${package_data.name}`,
+              description: `${actionLabel} ke ${package_data.name}`,
               quantity: 1,
               unitPrice: package_data.price,
               amount: package_data.price,
               metadata: {
-                type: 'package_upgrade',
+                type: 'package_change',
                 newPackageId: packageId,
                 newPackageName: package_data.name,
                 oldPackageId: user.profileId,
@@ -168,7 +177,7 @@ export async function POST(request: NextRequest) {
         username: user.username,
         module: 'customer_upgrade',
         action: 'package_upgrade_request',
-        description: `Customer requested package upgrade to ${package_data.name}`,
+        description: `Customer requested package change to ${package_data.name}`,
         metadata: JSON.stringify({ 
           invoiceId: invoice.id, 
           packageId, 
@@ -178,6 +187,41 @@ export async function POST(request: NextRequest) {
         ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
       }
     });
+
+    // ============================================
+    // CREATE ADMIN NOTIFICATION
+    // ============================================
+    try {
+      const oldPackageName = user.profile?.name || 'Paket Lama';
+      await prisma.notification.create({
+        data: {
+          type: 'package_change_request',
+          title: 'Permintaan Ganti Paket',
+          message: `${user.name || user.username} mengajukan ganti paket: ${oldPackageName} \u2192 ${package_data.name} (Rp ${package_data.price.toLocaleString('id-ID')})`,
+          link: `/admin/invoices`,
+          createdAt: nowWIB(),
+        },
+      });
+    } catch (notifErr) {
+      console.error('[Upgrade Package] Admin notification error:', notifErr);
+    }
+
+    // ============================================
+    // FCM PUSH TO CUSTOMER: invoice created
+    // ============================================
+    try {
+      await sendPushToUser(user.id, 'package-change-invoice', {
+        customerName: user.name,
+        username: user.username,
+        invoiceNumber: invoice.invoiceNumber,
+        amount: package_data.price,
+        profileName: package_data.name,
+        companyName: company?.name || '',
+        companyPhone: company?.phone || '',
+      });
+    } catch (pushErr) {
+      console.error('[Upgrade Package] FCM push error:', pushErr);
+    }
 
     return NextResponse.json({
       success: true,

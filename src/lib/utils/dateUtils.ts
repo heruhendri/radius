@@ -1,8 +1,14 @@
 /**
  * DEPRECATED: This file is replaced by @/lib/timezone.ts
- * All dates in database are stored as UTC
- * Use timezone.ts for proper UTC ↔ WIB conversion
- * 
+ *
+ * ⚠️ TZ NOTE (corrected): Dates in database are NOT stored as UTC.
+ * - Application-set dates (written via Prisma new Date()): stored as UTC components in MySQL DATETIME.
+ *   Read back by Prisma correctly (appends Z → same UTC epoch). No TZ correction needed.
+ * - FreeRADIUS-written dates (acctstarttime etc.) and MySQL CURRENT_TIMESTAMP fields:
+ *   stored as WIB wall clock. Prisma appends Z → reads as WIB-as-UTC (7h offset from real UTC).
+ *   Comparisons/arithmetic MUST use nowWIB() or subtract TZ_OFFSET_MS.
+ * Use timezone.ts for proper WIB-as-UTC conversion.
+ *
  * This file is kept for backward compatibility
  */
 

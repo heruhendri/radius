@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+﻿import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
@@ -38,13 +38,13 @@ async function main() {
     const company = await prisma.company.create({
       data: {
         id: randomUUID(),
-        name: 'AIBILL RADIUS - Local Dev',
+        name: 'SALFANET RADIUS - Local Dev',
         address: 'Local Development',
         phone: '+62 82214535152',
         email: 'admin@localhost',
         timezone: 'Asia/Jakarta',
         baseUrl: 'http://localhost:3000',
-        poweredBy: 'AIBILL RADIUS',
+        poweredBy: 'SALFANET RADIUS',
         invoiceGenerateDays: 7,
         gracePeriodDays: 0,
         isolationEnabled: true,

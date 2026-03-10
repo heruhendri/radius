@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
     Database, Plus, Trash2, Search, Edit2, Check, X,
     Loader2, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface RadCheckItem {
     id: number;
@@ -18,6 +19,7 @@ interface RadCheckItem {
 
 export default function RadCheckPage() {
     const { t } = useTranslation();
+    const { addToast, confirm } = useToast();
     const [items, setItems] = useState<RadCheckItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -59,34 +61,30 @@ export default function RadCheckPage() {
     }, [page, search]);
 
     const handleDelete = async (id: number) => {
-        const result = await Swal.fire({
+        if (await confirm({
             title: t('radius.deleteConfirm'),
-            text: t('radius.deleteWarning'),
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            confirmButtonText: t('common.yes'),
-            cancelButtonText: t('common.cancel')
-        });
-
-        if (result.isConfirmed) {
+            message: t('radius.deleteWarning'),
+            confirmText: t('common.yes'),
+            cancelText: t('common.cancel'),
+            variant: 'danger',
+        })) {
             try {
                 const res = await fetch(`/api/freeradius/radcheck?id=${id}`, { method: 'DELETE' });
                 if (res.ok) {
-                    Swal.fire('Deleted!', 'Item has been deleted.', 'success');
+                    addToast({ type: 'success', title: 'Deleted!', description: 'Item has been deleted.' });
                     fetchItems();
                 } else {
                     throw new Error('Failed to delete');
                 }
             } catch (err) {
-                Swal.fire('Error', 'Failed to delete item', 'error');
+                addToast({ type: 'error', title: 'Error', description: 'Failed to delete item' });
             }
         }
     };
 
     const handleAdd = async () => {
         if (!newItem.username || !newItem.value) {
-            Swal.fire('Error', t('radius.requiredFields'), 'error');
+            addToast({ type: 'error', title: 'Error', description: t('radius.requiredFields') });
             return;
         }
 
@@ -98,7 +96,7 @@ export default function RadCheckPage() {
             });
 
             if (res.ok) {
-                Swal.fire(t('common.success'), t('radius.createSuccess'), 'success');
+                addToast({ type: 'success', title: t('common.success'), description: t('radius.createSuccess') });
                 setShowAdd(false);
                 setNewItem({ username: '', attribute: 'Cleartext-Password', op: ':=', value: '' });
                 fetchItems();
@@ -106,7 +104,7 @@ export default function RadCheckPage() {
                 throw new Error('Failed to create');
             }
         } catch (err) {
-            Swal.fire('Error', 'Failed to create item', 'error');
+            addToast({ type: 'error', title: 'Error', description: 'Failed to create item' });
         }
     };
 
@@ -115,7 +113,7 @@ export default function RadCheckPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                    <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                         <Database className="w-6 h-6 text-primary" />
                         {t('radius.radCheckTitle')}
                     </h1>
@@ -151,8 +149,51 @@ export default function RadCheckPage() {
                     </div>
                 </div>
 
-                {/* Table */}
-                <div className="overflow-x-auto">
+                {/* Mobile Card View */}
+                <div className="block md:hidden space-y-3 p-4">
+                    {loading ? (
+                        <div className="flex justify-center py-8">
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                        </div>
+                    ) : items.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground text-sm">{t('radius.noRecords')}</div>
+                    ) : (
+                        items.map((item) => (
+                            <div key={item.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-foreground">{item.username}</span>
+                                    <button
+                                        onClick={() => handleDelete(item.id)}
+                                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-1.5 text-xs">
+                                    <div>
+                                        <span className="text-muted-foreground">ID</span>
+                                        <p className="font-mono text-xs">{item.id}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-muted-foreground">{t('radius.op')}</span>
+                                        <p className="font-mono text-xs text-primary">{item.op}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="text-muted-foreground">Attribute</span>
+                                        <p className="font-mono text-xs text-muted-foreground">{item.attribute}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="text-muted-foreground">{t('radius.value')}</span>
+                                        <p className="font-mono text-xs bg-muted/20 px-1.5 py-0.5 rounded">{item.value}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="overflow-x-auto hidden md:block">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
                             <tr>
@@ -226,8 +267,8 @@ export default function RadCheckPage() {
             </div>
 
             {/* Add Item Modal/Panel - Simplified inline for now */}
-            {showAdd && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            {showAdd && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-2.5 sm:p-4">
                     <div className="bg-card w-full max-w-lg rounded-xl border border-border shadow-xl p-6">
                         <h3 className="text-lg font-bold mb-4">{t('radius.addAttribute')}</h3>
                         <div className="space-y-4">
@@ -278,7 +319,8 @@ export default function RadCheckPage() {
                             <button onClick={handleAdd} className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg">{t('common.save')}</button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

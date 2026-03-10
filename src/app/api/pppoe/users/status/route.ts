@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { disconnectPPPoEUser } from '@/lib/services/coaService';
-import { logActivity } from '@/lib/activity-log';
+﻿import { NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { disconnectPPPoEUser } from '@/server/services/radius/coa-handler.service';
+import { logActivity } from '@/server/services/activity-log.service';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/server/auth/config';
+import { redisDel, RedisKeys } from '@/server/cache/redis';
 
 export async function PUT(request: Request) {
   try {
@@ -58,6 +59,9 @@ export async function PUT(request: Request) {
       where: { id: userId },
       data: { status },
     });
+
+    // Invalidate Redis auth cache so RADIUS picks up new status immediately
+    await redisDel(RedisKeys.radiusAuth(currentUser.username));
 
     // Use current user data for RADIUS operations
     const user = currentUser;
@@ -205,7 +209,7 @@ export async function PUT(request: Request) {
     // Create notification for status change (only if status actually changed)
     if (oldStatus !== status) {
       try {
-        const { NotificationService } = await import('@/lib/notifications');
+        const { NotificationService } = await import('@/server/services/notifications/dispatcher.service');
         
         if (status === 'isolated') {
           await NotificationService.notifyUserIsolated({

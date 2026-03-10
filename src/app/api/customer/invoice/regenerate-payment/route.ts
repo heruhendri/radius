@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { createMidtransPayment } from '@/lib/payment/midtrans';
-import { createXenditInvoice } from '@/lib/payment/xendit';
-import { createDuitkuClient } from '@/lib/payment/duitku';
-import { createTripayClient } from '@/lib/payment/tripay';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { createMidtransPayment } from '@/server/services/payment/midtrans.service';
+import { createXenditInvoice } from '@/server/services/payment/xendit.service';
+import { createDuitkuClient } from '@/server/services/payment/duitku.service';
+import { createTripayClient } from '@/server/services/payment/tripay.service';
 
 // Helper to verify customer token
 async function verifyCustomerToken(request: NextRequest) {
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
           customerPhone: pppoeUser.phone,
           description: invoice.invoiceType === 'TOPUP' ? 'Top-Up Saldo' : 'Pembayaran Invoice',
           expiryMinutes: 1440,
-          paymentMethod: 'SP'
+          paymentMethod: 'SP', // Default QRIS
         });
 
         paymentUrl = result.paymentUrl;

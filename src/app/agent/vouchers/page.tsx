@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 import { showSuccess, showError } from '@/lib/sweetalert';
-import { formatWIB } from '@/lib/timezone';
+import { format } from 'date-fns';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -52,6 +52,7 @@ export default function AgentVouchersPage() {
   const [filterProfile, setFilterProfile] = useState('');
   const [searchCode, setSearchCode] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
 
   // WhatsApp functionality
@@ -71,12 +72,12 @@ export default function AgentVouchersPage() {
     loadVouchers(agentData.id);
   }, [router]);
 
-  const loadVouchers = async (agentId: string, page = 1, status = '', profileId = '', search = '') => {
+  const loadVouchers = async (agentId: string, page = 1, status = '', profileId = '', search = '', limit = 20) => {
     try {
       const params = new URLSearchParams({
         agentId,
         page: page.toString(),
-        limit: '20',
+        limit: limit.toString(),
       });
       if (status) params.append('status', status);
       if (profileId) params.append('profileId', profileId);
@@ -100,14 +101,22 @@ export default function AgentVouchersPage() {
   const handleFilter = () => {
     setCurrentPage(1);
     if (agent) {
-      loadVouchers(agent.id, 1, filterStatus, filterProfile, searchCode);
+      loadVouchers(agent.id, 1, filterStatus, filterProfile, searchCode, perPage);
     }
   };
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
     if (agent) {
-      loadVouchers(agent.id, newPage, filterStatus, filterProfile, searchCode);
+      loadVouchers(agent.id, newPage, filterStatus, filterProfile, searchCode, perPage);
+    }
+  };
+
+  const handlePerPageChange = (newPerPage: number) => {
+    setPerPage(newPerPage);
+    setCurrentPage(1);
+    if (agent) {
+      loadVouchers(agent.id, 1, filterStatus, filterProfile, searchCode, newPerPage);
     }
   };
 
@@ -117,7 +126,7 @@ export default function AgentVouchersPage() {
     setSearchCode('');
     setCurrentPage(1);
     if (agent) {
-      loadVouchers(agent.id, 1, '', '', '');
+      loadVouchers(agent.id, 1, '', '', '', perPage);
     }
   };
 
@@ -188,7 +197,7 @@ export default function AgentVouchersPage() {
         <div className="min-h-[50vh] flex items-center justify-center">
           <div className="text-center">
             <div className="w-10 h-10 border-4 border-[#00f7ff] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-            <p className="text-[#e0d0ff]/70">Loading...</p>
+            <p className="text-slate-500 dark:text-[#e0d0ff]/70">Loading...</p>
           </div>
         </div>
       </div>
@@ -198,12 +207,12 @@ export default function AgentVouchersPage() {
   return (
     <div className="p-4 lg:p-6">
       {/* Vouchers List */}
-      <div className="bg-[#0a0520]/80 backdrop-blur-xl rounded-2xl border-2 border-[#bc13fe]/30 overflow-hidden shadow-[0_0_30px_rgba(188,19,254,0.15)]">
-        <div className="px-5 py-4 border-b border-[#bc13fe]/20">
+      <div className="bg-white/80 dark:bg-[#0a0520]/80 backdrop-blur-xl rounded-2xl border-2 border-purple-300 dark:border-[#bc13fe]/30 overflow-hidden shadow-[0_0_30px_rgba(188,19,254,0.15)]">
+        <div className="px-5 py-4 border-b border-purple-200 dark:border-[#bc13fe]/20">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-base font-bold text-white">{t('agent.portal.voucherList')}</h2>
-              <p className="text-xs text-[#e0d0ff]/60 mt-0.5">{t('agent.portal.total')}: {pagination.total} {t('agent.portal.voucher').toLowerCase()}</p>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">{t('agent.portal.voucherList')}</h2>
+              <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60 mt-0.5">{t('agent.portal.total')}: {pagination.total} {t('agent.portal.voucher').toLowerCase()}</p>
             </div>
             {selectedVouchers.length > 0 && (
               <button
@@ -219,20 +228,20 @@ export default function AgentVouchersPage() {
           {/* Filter Controls */}
           <div className="flex flex-wrap gap-2 items-center">
             <div className="relative flex-1 min-w-[150px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#e0d0ff]/50" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-[#e0d0ff]/50" />
               <input
                 type="text"
                 placeholder={t('agent.portal.searchVoucher') + '...'}
                 value={searchCode}
                 onChange={(e) => setSearchCode(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
-                className="w-full pl-9 pr-3 py-2 text-xs bg-[#0a0520] border-2 border-[#bc13fe]/30 rounded-lg text-white focus:border-[#00f7ff] outline-none"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-white focus:border-[#00f7ff] outline-none"
               />
             </div>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 text-xs bg-[#0a0520] border-2 border-[#bc13fe]/30 rounded-lg text-white min-w-[100px] outline-none"
+              className="px-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-white min-w-[100px] outline-none"
             >
               <option value="">{t('agent.portal.allStatus')}</option>
               <option value="WAITING">{t('agent.portal.waiting')}</option>
@@ -242,7 +251,7 @@ export default function AgentVouchersPage() {
             <select
               value={filterProfile}
               onChange={(e) => setFilterProfile(e.target.value)}
-              className="px-3 py-2 text-xs bg-[#0a0520] border-2 border-[#bc13fe]/30 rounded-lg text-white min-w-[120px] outline-none"
+              className="px-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-white min-w-[120px] outline-none"
             >
               <option value="">{t('agent.portal.allPackages')}</option>
               {profiles.map((p) => (
@@ -259,84 +268,99 @@ export default function AgentVouchersPage() {
             {(filterStatus || filterProfile || searchCode) && (
               <button
                 onClick={handleClearFilter}
-                className="px-3 py-2 text-xs text-[#e0d0ff]/70 hover:bg-[#bc13fe]/10 rounded-lg transition"
+                className="px-3 py-2 text-xs text-slate-500 dark:text-[#e0d0ff]/70 hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10 rounded-lg transition"
               >
                 {t('agent.portal.reset')}
               </button>
             )}
+            <div className="flex items-center gap-1 ml-auto">
+              <span className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">Per halaman:</span>
+              <select
+                value={perPage}
+                onChange={(e) => handlePerPageChange(parseInt(e.target.value))}
+                className="px-2 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-white outline-none"
+              >
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={250}>250</option>
+                <option value={500}>500</option>
+                <option value={1000}>1000</option>
+              </select>
+            </div>
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[#0a0520]/50">
+            <thead className="bg-slate-50 dark:bg-[#0a0520]/50">
               <tr>
                 <th className="px-4 py-3 w-10">
                   <input
                     type="checkbox"
                     checked={selectedVouchers.length > 0 && selectedVouchers.length === vouchers.filter(v => v.status === 'WAITING').length}
                     onChange={handleSelectAll}
-                    className="rounded border-[#bc13fe]/50 bg-[#0a0520]"
+                    className="rounded border-purple-400 dark:border-[#bc13fe]/50 bg-[#0a0520]"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.voucherCode')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.batch')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.package')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.router')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.status')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.firstUsed')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.expired')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.created')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.voucherCode')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.batch')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.package')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.router')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.status')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.firstUsed')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.expired')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.created')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#bc13fe]/10">
+            <tbody className="divide-y divide-slate-200 dark:divide-[#bc13fe]/10">
               {vouchers.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-sm text-[#e0d0ff]/60">
+                  <td colSpan={9} className="px-4 py-10 text-center text-sm text-slate-500 dark:text-[#e0d0ff]/60">
                     {t('agent.portal.noVouchers')}
                   </td>
                 </tr>
               ) : (
                 vouchers.map((voucher) => (
-                  <tr key={voucher.id} className="hover:bg-[#bc13fe]/5 transition">
+                  <tr key={voucher.id} className="hover:bg-purple-50/50 dark:hover:bg-[#bc13fe]/5 transition">
                     <td className="px-4 py-3">
                       {voucher.status === 'WAITING' && (
                         <input
                           type="checkbox"
                           checked={selectedVouchers.includes(voucher.id)}
                           onChange={() => handleSelectVoucher(voucher.id)}
-                          className="rounded border-[#bc13fe]/50 bg-[#0a0520]"
+                          className="rounded border-purple-400 dark:border-[#bc13fe]/50 bg-[#0a0520]"
                         />
                       )}
                     </td>
-                    <td className="px-4 py-3 font-mono font-bold text-sm text-white">{voucher.code}</td>
-                    <td className="px-4 py-3 text-xs text-[#e0d0ff]/60">{voucher.batchCode || '-'}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-sm text-slate-900 dark:text-white">{voucher.code}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500 dark:text-[#e0d0ff]/60">{voucher.batchCode || '-'}</td>
                     <td className="px-4 py-3 text-xs text-white">{voucher.profileName}</td>
-                    <td className="px-4 py-3 text-xs text-[#e0d0ff]/60">{voucher.routerName || '-'}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500 dark:text-[#e0d0ff]/60">{voucher.routerName || '-'}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold ${voucher.status === 'ACTIVE'
-                          ? 'bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/40 shadow-[0_0_10px_rgba(0,255,136,0.2)]'
+                          ? 'bg-[#00ff88]/20 text-[#00ff88] border border-emerald-300 dark:border-[#00ff88]/40 shadow-[0_0_10px_rgba(0,255,136,0.2)]'
                           : voucher.status === 'EXPIRED'
                             ? 'bg-[#ff4466]/20 text-[#ff6b8a] border border-[#ff4466]/40'
                             : voucher.status === 'SOLD'
-                              ? 'bg-[#00f7ff]/20 text-[#00f7ff] border border-[#00f7ff]/40'
-                              : 'bg-[#ff44cc]/20 text-[#ff44cc] border border-[#ff44cc]/40'
+                              ? 'bg-[#00f7ff]/20 text-[#00f7ff] border border-cyan-300 dark:border-[#00f7ff]/40'
+                              : 'bg-[#ff44cc]/20 text-[#ff44cc] border border-pink-300 dark:border-[#ff44cc]/40'
                         }`}>
                         {voucher.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#e0d0ff]/60">
-                      {voucher.firstLoginAt ? formatWIB(new Date(voucher.firstLoginAt), 'dd MMM yyyy HH:mm') : '-'}
+                    <td className="px-4 py-3 text-xs text-slate-500 dark:text-[#e0d0ff]/60">
+                      {voucher.firstLoginAt ? format(new Date(voucher.firstLoginAt), 'dd MMM yyyy HH:mm') : '-'}
                     </td>
                     <td className="px-4 py-3 text-xs">
                       {voucher.expiresAt ? (
-                        <span className={new Date(voucher.expiresAt) < new Date() ? 'text-[#ff6b8a]' : 'text-[#e0d0ff]/60'}>
-                          {formatWIB(new Date(voucher.expiresAt), 'dd MMM yyyy HH:mm')}
+                        <span className={new Date(voucher.expiresAt) < new Date() ? 'text-[#ff6b8a]' : 'text-slate-500 dark:text-[#e0d0ff]/60'}>
+                          {format(new Date(voucher.expiresAt as string), 'dd MMM yyyy HH:mm')}
                         </span>
                       ) : '-'}
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#e0d0ff]/60">
-                      {voucher.createdAt ? formatWIB(new Date(voucher.createdAt), 'dd MMM yyyy HH:mm') : '-'}
+                    <td className="px-4 py-3 text-xs text-slate-500 dark:text-[#e0d0ff]/60">
+                      {voucher.createdAt ? format(new Date(voucher.createdAt), 'dd MMM yyyy HH:mm') : '-'}
                     </td>
                   </tr>
                 ))
@@ -345,22 +369,31 @@ export default function AgentVouchersPage() {
           </table>
         </div>
 
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className="px-5 py-3 border-t border-[#bc13fe]/20 flex items-center justify-between">
-            <p className="text-xs text-[#e0d0ff]/60">
-              Menampilkan {((currentPage - 1) * pagination.limit) + 1} - {Math.min(currentPage * pagination.limit, pagination.total)} dari {pagination.total}
-            </p>
+        {/* Pagination — always visible */}
+        <div className="px-5 py-3 border-t border-purple-200 dark:border-[#bc13fe]/20 flex items-center justify-between flex-wrap gap-2">
+          <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">
+            {pagination.total === 0
+              ? 'Tidak ada voucher'
+              : `Menampilkan ${((currentPage - 1) * pagination.limit) + 1}–${Math.min(currentPage * pagination.limit, pagination.total)} dari ${pagination.total} voucher`}
+          </p>
+          {pagination.totalPages > 1 && (
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className="px-2 py-1 text-xs rounded hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10 disabled:opacity-40 disabled:cursor-not-allowed text-slate-500 dark:text-[#e0d0ff]/70"
+              >
+                «
+              </button>
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded hover:bg-[#bc13fe]/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 rounded hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="h-4 w-4 text-[#e0d0ff]" />
               </button>
               {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                let pageNum;
+                let pageNum: number;
                 if (pagination.totalPages <= 5) {
                   pageNum = i + 1;
                 } else if (currentPage <= 3) {
@@ -375,8 +408,8 @@ export default function AgentVouchersPage() {
                     key={pageNum}
                     onClick={() => handlePageChange(pageNum)}
                     className={`px-3 py-1 text-xs rounded-lg transition ${currentPage === pageNum
-                        ? 'bg-gradient-to-r from-[#bc13fe] to-[#00f7ff] text-white font-bold'
-                        : 'text-[#e0d0ff]/70 hover:bg-[#bc13fe]/10'
+                        ? 'bg-gradient-to-r from-[#bc13fe] to-[#00f7ff] text-white font-bold shadow-[0_0_10px_rgba(188,19,254,0.3)]'
+                        : 'text-slate-500 dark:text-[#e0d0ff]/70 hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10'
                       }`}
                   >
                     {pageNum}
@@ -386,43 +419,50 @@ export default function AgentVouchersPage() {
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === pagination.totalPages}
-                className="p-1.5 rounded hover:bg-[#bc13fe]/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 rounded hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="h-4 w-4 text-[#e0d0ff]" />
               </button>
+              <button
+                onClick={() => handlePageChange(pagination.totalPages)}
+                disabled={currentPage === pagination.totalPages}
+                className="px-2 py-1 text-xs rounded hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10 disabled:opacity-40 disabled:cursor-not-allowed text-slate-500 dark:text-[#e0d0ff]/70"
+              >
+                »
+              </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* WhatsApp Dialog */}
       {showWhatsAppDialog && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#1a0f35] border-2 border-[#00ff88]/50 rounded-2xl shadow-[0_0_50px_rgba(0,255,136,0.3)] max-w-sm w-full">
-            <div className="px-5 py-4 border-b border-[#00ff88]/20">
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
+          <div className="bg-white dark:bg-[#1a0f35] border-2 border-emerald-300 dark:border-[#00ff88]/50 rounded-2xl shadow-[0_0_50px_rgba(0,255,136,0.3)] max-w-sm w-full">
+            <div className="px-5 py-4 border-b border-emerald-200 dark:border-[#00ff88]/20">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <MessageCircle className="h-5 w-5 text-[#00ff88]" />
                 Kirim Voucher via WhatsApp
               </h2>
-              <p className="text-xs text-[#e0d0ff]/60 mt-0.5">Kirim {selectedVouchers.length} voucher ke customer</p>
+              <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60 mt-0.5">Kirim {selectedVouchers.length} voucher ke customer</p>
             </div>
 
             <div className="p-5">
-              <label className="block text-xs font-medium text-[#e0d0ff] mb-1.5">Nomor WhatsApp</label>
+              <label className="block text-xs font-medium text-slate-700 dark:text-[#e0d0ff] mb-1.5">Nomor WhatsApp</label>
               <input
                 type="tel"
                 placeholder="628123456789"
                 value={whatsappPhone}
                 onChange={(e) => setWhatsappPhone(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm bg-[#0a0520] border-2 border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
+                className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
               />
-              <p className="text-xs text-[#e0d0ff]/50 mt-1">Masukkan nomor dengan kode negara</p>
+              <p className="text-xs text-slate-400 dark:text-[#e0d0ff]/50 mt-1">Masukkan nomor dengan kode negara</p>
             </div>
 
-            <div className="px-5 py-4 border-t border-[#bc13fe]/20 flex gap-2 justify-end">
+            <div className="px-5 py-4 border-t border-purple-200 dark:border-[#bc13fe]/20 flex gap-2 justify-end">
               <button
                 onClick={() => { setShowWhatsAppDialog(false); setWhatsappPhone(''); }}
-                className="px-4 py-2 text-sm text-[#e0d0ff]/70 hover:bg-[#bc13fe]/10 rounded-xl transition"
+                className="px-4 py-2 text-sm text-slate-500 dark:text-[#e0d0ff]/70 hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10 rounded-xl transition"
               >
                 Batal
               </button>
@@ -444,3 +484,4 @@ export default function AgentVouchersPage() {
     </div>
   );
 }
+

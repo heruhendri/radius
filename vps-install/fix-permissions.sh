@@ -1,6 +1,6 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ============================================================================
-# AIBILL RADIUS - Fix Permissions Script
+# SALFANET RADIUS - Fix Permissions Script
 # ============================================================================
 # Fix ownership and permissions untuk menjalankan PM2 tanpa sudo
 # ============================================================================
@@ -17,7 +17,7 @@ APP_USER="salfanet"
 APP_GROUP="salfanet"
 
 echo -e "${CYAN}============================================${NC}"
-echo -e "${CYAN}AIBILL RADIUS - Fix Permissions${NC}"
+echo -e "${CYAN}SALFANET RADIUS - Fix Permissions${NC}"
 echo -e "${CYAN}============================================${NC}"
 echo ""
 

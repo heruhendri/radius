@@ -1,9 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
 
 // GET - List all categories
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+
+    // Allow customer Bearer token as fallback
+    if (!session) {
+      const bearerToken = req.headers.get('authorization')?.replace('Bearer ', '');
+      if (bearerToken) {
+        const customerSession = await prisma.customerSession.findFirst({
+          where: { token: bearerToken, verified: true, expiresAt: { gte: new Date() } },
+          select: { userId: true },
+        });
+        if (!customerSession) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+      } else {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
     const { searchParams } = new URL(req.url);
     const isActiveParam = searchParams.get('isActive');
 

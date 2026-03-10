@@ -1,11 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { requireAdmin } from '@/lib/auth';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication
-    await requireAdmin(request);
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     // Get isolated users
     const isolatedUsers = await prisma.pppoeUser.findMany({
@@ -23,6 +27,10 @@ export async function GET(request: NextRequest) {
         status: true,
         expiredAt: true,
         createdAt: true,
+        customerId: true,
+        area: {
+          select: { name: true }
+        },
         profile: {
           select: {
             name: true,
@@ -41,7 +49,11 @@ export async function GET(request: NextRequest) {
             amount: true,
             invoiceNumber: true,
             dueDate: true,
-          }
+            status: true,
+            paymentLink: true,
+            paymentToken: true,
+          },
+          orderBy: { createdAt: 'desc' },
         }
       },
       orderBy: {
@@ -86,6 +98,8 @@ export async function GET(request: NextRequest) {
         status: user.status,
         expiredAt: user.expiredAt,
         createdAt: user.createdAt,
+        customerId: user.customerId || null,
+        areaName: user.area?.name || null,
         profileName: user.profile?.name,
         profilePrice: user.profile?.price,
         unpaidInvoicesCount: user.invoices.length,

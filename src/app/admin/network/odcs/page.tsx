@@ -180,7 +180,7 @@ export default function ODCsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -191,7 +191,7 @@ export default function ODCsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       {/* Neon Cyberpunk Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
@@ -203,11 +203,11 @@ export default function ODCsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
               <HardDrive className="h-6 w-6 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.6)]" />
               ODC Management
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-2">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Manage Optical Distribution Cabinets (ODC) for FTTH network
             </p>
           </div>
@@ -221,7 +221,7 @@ export default function ODCsPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
           <div className="bg-card rounded-lg border border-border p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -275,8 +275,90 @@ export default function ODCsPage() {
           </div>
         </div>
 
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3">
+          {filteredOdcs.length === 0 ? (
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-4 text-center text-muted-foreground text-xs">
+              No ODCs found. Click &quot;Add ODC&quot; to create one.
+            </div>
+          ) : (
+            filteredOdcs.map((odc) => (
+              <div key={odc.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <HardDrive className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-medium">{odc.name}</span>
+                  </div>
+                  <span
+                    className={`px-1.5 py-0.5 text-[10px] rounded font-medium ${odc.status === 'active'
+                      ? 'bg-success/20 text-success dark:bg-green-900/30'
+                      : 'bg-destructive/20 text-destructive dark:bg-red-900/30'
+                    }`}
+                  >
+                    {odc.status}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">OLT</span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Server className="h-3 w-3 text-primary" />
+                      <span className="text-xs">{odc.olt?.name}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">PON Port</span>
+                    <p className="mt-0.5">
+                      <span className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">
+                        PON {odc.ponPort}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">Ports / ODPs</span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="px-1.5 py-0.5 text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-900/30 rounded">
+                        {odc.portCount} ports
+                      </span>
+                      <span className="px-1.5 py-0.5 text-[10px] bg-primary/20 text-primary rounded">
+                        {odc._count?.odps || 0} ODPs
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">Location</span>
+                    <a
+                      href={`https://www.google.com/maps?q=${odc.latitude},${odc.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline text-[10px] mt-0.5"
+                    >
+                      <MapPin className="h-3 w-3" />
+                      {odc.latitude.toFixed(6)}, {odc.longitude.toFixed(6)}
+                    </a>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-1 border-t border-border pt-2">
+                  <button
+                    onClick={() => handleEdit(odc)}
+                    className="p-2 text-muted-foreground hover:bg-muted rounded"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(odc)}
+                    className="p-2 text-destructive hover:bg-destructive/10 rounded"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
         {/* Table */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
           <div className="px-3 py-2 border-b border-border">
             <span className="text-xs font-medium">ODC List</span>
           </div>
@@ -379,30 +461,30 @@ export default function ODCsPage() {
         <SimpleModal isOpen={isDialogOpen} onClose={() => { setIsDialogOpen(false); setEditingOdc(null); resetForm(); }} size="lg">
           <ModalHeader>
             <ModalTitle>{editingOdc ? 'Edit ODC' : 'Add ODC'}</ModalTitle>
-            <ModalDescription>Configure Optical Distribution Cabinet</ModalDescription>
+            <ModalDescription>{t('network.configureOdc')}</ModalDescription>
           </ModalHeader>
           <form onSubmit={handleSubmit}>
             <ModalBody className="space-y-4">
               <div>
-                <ModalLabel required>Name</ModalLabel>
+                <ModalLabel required>{t('common.name')}</ModalLabel>
                 <ModalInput type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required placeholder="ODC-01" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <ModalLabel required>OLT</ModalLabel>
+                  <ModalLabel required>{t('network.oltSelectLabel')}</ModalLabel>
                   <ModalSelect value={formData.oltId} onChange={(e) => setFormData({ ...formData, oltId: e.target.value })} required>
                     <option value="" className="bg-[#0a0520]">Select OLT</option>
                     {olts.map(olt => (<option key={olt.id} value={olt.id} className="bg-[#0a0520]">{olt.name}</option>))}
                   </ModalSelect>
                 </div>
                 <div>
-                  <ModalLabel required>PON Port</ModalLabel>
+                  <ModalLabel required>{t('network.ponPort')}</ModalLabel>
                   <ModalInput type="number" value={formData.ponPort} onChange={(e) => setFormData({ ...formData, ponPort: e.target.value })} required min={1} placeholder="1" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <ModalLabel>Port Count</ModalLabel>
+                  <ModalLabel>{t('network.portCount')}</ModalLabel>
                   <ModalInput type="number" value={formData.portCount} onChange={(e) => setFormData({ ...formData, portCount: e.target.value })} min={1} placeholder="8" />
                 </div>
                 <div>
@@ -433,7 +515,7 @@ export default function ODCsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="followRoad" checked={formData.followRoad} onChange={(e) => setFormData({ ...formData, followRoad: e.target.checked })} className="w-3 h-3 rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]" />
-                <label htmlFor="followRoad" className="text-xs text-[#e0d0ff]">Follow road path on map</label>
+                <label htmlFor="followRoad" className="text-xs text-foreground">Follow road path on map</label>
               </div>
             </ModalBody>
             <ModalFooter>

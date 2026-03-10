@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
   Shield,
@@ -39,6 +39,7 @@ interface IsolationSettings {
 export default function IsolationSettingsPage() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { addToast, confirm } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<IsolationSettings>({
@@ -98,58 +99,44 @@ export default function IsolationSettingsPage() {
       const data = await response.json();
 
       if (data.success) {
-        await Swal.fire({
-          icon: 'success',
-          title: t('common.success'),
-          text: t('isolation.settingsSaved'),
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        addToast({ type: 'success', title: t('common.success'), description: t('isolation.settingsSaved'), duration: 2000 });
         fetchSettings();
       } else {
         throw new Error(data.error);
       }
     } catch (error: any) {
-      Swal.fire({
-        icon: 'error',
-        title: t('common.failed'),
-        text: error.message || t('isolation.failedSave'),
-      });
+      addToast({ type: 'error', title: t('common.failed'), description: error.message || t('isolation.failedSave') });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleReset = () => {
-    Swal.fire({
+  const handleReset = async () => {
+    if (!await confirm({
       title: t('isolation.resetToDefault') + '?',
-      text: t('common.confirmReset') || 'Settings will be restored to default values',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: t('common.yes') + ', Reset',
-      cancelButtonText: t('common.cancel'),
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setSettings({
-          isolationEnabled: true,
-          isolationIpPool: '192.168.200.0/24',
-          isolationRateLimit: '64k/64k',
-          isolationRedirectUrl: settings.baseUrl ? `${settings.baseUrl}/isolated` : '',
-          isolationMessage: 'Akun Anda telah diisolir karena masa berlangganan habis. Silakan lakukan pembayaran untuk mengaktifkan kembali layanan.',
-          isolationAllowDns: true,
-          isolationAllowPayment: true,
-          isolationNotifyWhatsapp: true,
-          isolationNotifyEmail: false,
-          gracePeriodDays: 0,
-          baseUrl: settings.baseUrl,
-        });
-      }
+      message: t('common.confirmReset') || 'Settings will be restored to default values',
+      confirmText: t('common.yes') + ', Reset',
+      cancelText: t('common.cancel'),
+      variant: 'warning',
+    })) return;
+    setSettings({
+      isolationEnabled: true,
+      isolationIpPool: '192.168.200.0/24',
+      isolationRateLimit: '64k/64k',
+      isolationRedirectUrl: settings.baseUrl ? `${settings.baseUrl}/isolated` : '',
+      isolationMessage: 'Akun Anda telah diisolir karena masa berlangganan habis. Silakan lakukan pembayaran untuk mengaktifkan kembali layanan.',
+      isolationAllowDns: true,
+      isolationAllowPayment: true,
+      isolationNotifyWhatsapp: true,
+      isolationNotifyEmail: false,
+      gracePeriodDays: 0,
+      baseUrl: settings.baseUrl,
     });
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
         <Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
       </div>
@@ -157,16 +144,16 @@ export default function IsolationSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 space-y-4">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] mb-1">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] mb-1">
             <Shield className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] inline mr-2" />
             {t('isolation.title')}
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {t('isolation.subtitle')}
           </p>
         </div>
@@ -228,7 +215,7 @@ export default function IsolationSettingsPage() {
                   max="30"
                   value={settings.gracePeriodDays}
                   onChange={(e) => setSettings({ ...settings, gracePeriodDays: parseInt(e.target.value) })}
-                  className="w-20 px-2.5 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-inputdark:text-white"
+                  className="w-20 px-2.5 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-input dark:text-foreground"
                 />
                 <span className="text-xs text-muted-foreground dark:text-muted-foreground">{t('isolation.days')}</span>
               </div>
@@ -258,7 +245,7 @@ export default function IsolationSettingsPage() {
                 value={settings.isolationIpPool}
                 onChange={(e) => setSettings({ ...settings, isolationIpPool: e.target.value })}
                 placeholder="192.168.200.0/24"
-                className="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-inputdark:text-white"
+                className="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-input dark:text-foreground"
               />
               <p className="text-[10px] text-muted-foreground mt-0.5">
                 {t('isolation.ipPoolHint')}
@@ -276,7 +263,7 @@ export default function IsolationSettingsPage() {
                 value={settings.isolationRateLimit}
                 onChange={(e) => setSettings({ ...settings, isolationRateLimit: e.target.value })}
                 placeholder="64k/64k"
-                className="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-inputdark:text-white"
+                className="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-input dark:text-foreground"
               />
               <p className="text-[10px] text-muted-foreground mt-0.5">
                 {t('isolation.rateLimitHint')}
@@ -356,7 +343,7 @@ export default function IsolationSettingsPage() {
                 value={settings.isolationRedirectUrl}
                 onChange={(e) => setSettings({ ...settings, isolationRedirectUrl: e.target.value })}
                 placeholder={`${settings.baseUrl}/isolated`}
-                className="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-inputdark:text-white"
+                className="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-input dark:text-foreground"
               />
               <p className="text-[10px] text-muted-foreground mt-0.5">
                 {t('isolation.redirectUrlHint')}
@@ -373,7 +360,7 @@ export default function IsolationSettingsPage() {
                 value={settings.isolationMessage}
                 onChange={(e) => setSettings({ ...settings, isolationMessage: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-inputdark:text-white"
+                className="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-input dark:text-foreground"
                 placeholder={t('isolation.customMessagePlaceholder')}
               />
               <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -483,7 +470,7 @@ export default function IsolationSettingsPage() {
             </ol>
             <p className="mt-2">
               <a 
-                href="/docs/ISOLATION_SYSTEM.md" 
+                href="/docs/isolation" 
                 target="_blank"
                 className="text-amber-800 dark:text-amber-300 underline hover:text-amber-900"
               >

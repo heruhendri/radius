@@ -97,3 +97,9 @@ build-error.log
 # System files  
 .git/
 .github-cache/
+
+# Firebase service account (jangan di-commit)
+*firebase-service-account*.json
+salfanet-radius-firebase-adminsdk*.json
+google-services.json
+

@@ -63,6 +63,13 @@ export default function BalanceManagementPage() {
     note: '',
   });
 
+  const paymentMethodLabel = (method: string) => {
+    if (method === 'CASH') return t('pppoe.cash');
+    if (method === 'TRANSFER') return t('pppoe.bankTransfer');
+    if (method === 'EWALLET') return t('pppoe.eWallet');
+    return method;
+  };
+
   const exportToCSV = () => {
     if (transactions.length === 0) {
       showError(t('common.noTransactionsToExport'));
@@ -70,16 +77,16 @@ export default function BalanceManagementPage() {
     }
 
     // CSV Header
-    const headers = ['Tanggal', 'Tipe', 'Keterangan', 'Metode', 'Jumlah', 'Status'];
+    const headers = [t('pppoe.balance.csvDate'), t('pppoe.balance.csvType'), t('pppoe.balance.csvDescription'), t('pppoe.balance.csvMethod'), t('pppoe.balance.csvAmount'), t('pppoe.balance.csvStatus')];
 
     // CSV Rows
-    const rows = transactions.map(t => [
-      t.createdAt,
-      t.type === 'DEPOSIT' ? 'Top-Up' : 'Auto-Renewal',
-      `"${(t.description || '-').replace(/"/g, '""')}"`,
-      t.paymentMethod || '-',
-      t.amount,
-      t.status
+    const rows = transactions.map(tx => [
+      tx.createdAt,
+      tx.type === 'DEPOSIT' ? t('pppoe.balance.topUp') : t('pppoe.balance.autoRenewalLabel'),
+      `"${(tx.description || '-').replace(/"/g, '""')}"`,
+      tx.paymentMethod || '-',
+      tx.amount,
+      tx.status
     ]);
 
     const csvContent = [
@@ -143,7 +150,7 @@ export default function BalanceManagementPage() {
         body: JSON.stringify({
           amount: amount,
           paymentMethod: topUpData.paymentMethod,
-          note: topUpData.note || `Top-up via ${topUpData.paymentMethod}`,
+          note: topUpData.note || t('pppoe.balance.topUpVia', { method: topUpData.paymentMethod }),
         }),
       });
 
@@ -245,7 +252,7 @@ export default function BalanceManagementPage() {
         <div className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg p-6">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold mb-1">{user.name || user.username}</h1>
+              <h1 className="text-lg sm:text-2xl font-bold mb-1">{user.name || user.username}</h1>
               <p className="text-cyan-100 text-sm">@{user.username}</p>
               <p className="text-cyan-100 text-sm">{user.phone || '-'}</p>
             </div>
@@ -262,7 +269,7 @@ export default function BalanceManagementPage() {
             <p className="text-xs text-muted-foreground uppercase">{t('pppoe.currentBalance')}</p>
             <DollarSign className="w-5 h-5 text-primary" />
           </div>
-          <p className="text-2xl font-bold text-primary">
+          <p className="text-lg sm:text-2xl font-bold text-primary">
             {new Intl.NumberFormat('id-ID', {
               style: 'currency',
               currency: 'IDR',
@@ -287,7 +294,7 @@ export default function BalanceManagementPage() {
             <p className="text-xs text-muted-foreground uppercase">{t('pppoe.totalTopUp')}</p>
             <TrendingUp className="w-5 h-5 text-success" />
           </div>
-          <p className="text-2xl font-bold text-success">
+          <p className="text-lg sm:text-2xl font-bold text-success">
             Rp {totalDeposit.toLocaleString('id-ID')}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
@@ -301,7 +308,7 @@ export default function BalanceManagementPage() {
             <p className="text-xs text-muted-foreground uppercase">{t('pppoe.totalUsed')}</p>
             <Calendar className="w-5 h-5 text-warning" />
           </div>
-          <p className="text-2xl font-bold text-warning">
+          <p className="text-lg sm:text-2xl font-bold text-warning">
             Rp {totalSpent.toLocaleString('id-ID')}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
@@ -314,7 +321,7 @@ export default function BalanceManagementPage() {
       <div className="bg-card border border-border rounded-lg p-4 mb-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <h3 className="font-semibold mb-1">Auto-Renewal</h3>
+            <h3 className="font-semibold mb-1">{t('pppoe.balance.autoRenewalLabel')}</h3>
             <p className="text-xs text-muted-foreground">
               {user.autoRenewal
                 ? t('pppoe.autoRenewalActiveDesc')
@@ -363,7 +370,57 @@ export default function BalanceManagementPage() {
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3 p-3">
+          {transactions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              {t('pppoe.noTransactions')}
+            </div>
+          ) : (
+            transactions.map((transaction) => (
+              <div key={transaction.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                    transaction.type === 'DEPOSIT'
+                      ? 'bg-success/10 text-success'
+                      : 'bg-warning/10 text-warning'
+                  }`}>
+                    {transaction.type === 'DEPOSIT' ? t('pppoe.balance.topUp') : t('pppoe.balance.autoRenewalLabel')}
+                  </span>
+                  {transaction.status === 'SUCCESS' ? (
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-destructive" />
+                  )}
+                </div>
+                <div className={`text-sm font-semibold mb-2 ${
+                  transaction.type === 'DEPOSIT' ? 'text-success' : 'text-warning'
+                }`}>
+                  {transaction.type === 'DEPOSIT' ? '+' : '-'}Rp {Math.abs(transaction.amount).toLocaleString('id-ID')}
+                </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">{t('pppoe.date')}</span>
+                    <p className="text-foreground">{formatWIB(transaction.createdAt, 'dd/MM/yyyy HH:mm')}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">{t('pppoe.method')}</span>
+                    <p className="text-foreground">{paymentMethodLabel(transaction.paymentMethod)}</p>
+                  </div>
+                  {transaction.description && (
+                    <div className="col-span-2 mt-1">
+                      <span className="text-muted-foreground">{t('pppoe.description')}</span>
+                      <p className="text-foreground">{transaction.description}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
@@ -393,14 +450,14 @@ export default function BalanceManagementPage() {
                         ? 'bg-success/10 text-success'
                         : 'bg-warning/10 text-warning'
                         }`}>
-                        {transaction.type === 'DEPOSIT' ? 'Top-Up' : 'Auto-Renewal'}
+                        {transaction.type === 'DEPOSIT' ? t('pppoe.balance.topUp') : t('pppoe.balance.autoRenewalLabel')}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
                       {transaction.description || '-'}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {transaction.paymentMethod}
+                      {paymentMethodLabel(transaction.paymentMethod)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className={`font-semibold ${transaction.type === 'DEPOSIT' ? 'text-success' : 'text-warning'
@@ -435,14 +492,14 @@ export default function BalanceManagementPage() {
             <div>
               <ModalLabel required>{t('pppoe.topUpAmountLabel')}</ModalLabel>
               <ModalInput type="number" value={topUpData.amount} onChange={(e) => setTopUpData({ ...topUpData, amount: e.target.value })} placeholder="50000" required min={1000} step={1000} />
-              <p className="text-[10px] text-[#e0d0ff]/50 mt-1">{t('pppoe.minAmount')}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{t('pppoe.minAmount')}</p>
             </div>
             <div>
               <ModalLabel required>{t('pppoe.paymentMethod')}</ModalLabel>
               <ModalSelect value={topUpData.paymentMethod} onChange={(e) => setTopUpData({ ...topUpData, paymentMethod: e.target.value as any })}>
                 <option value="CASH" className="bg-[#0a0520]">{t('pppoe.cash')}</option>
                 <option value="TRANSFER" className="bg-[#0a0520]">{t('pppoe.bankTransfer')}</option>
-                <option value="EWALLET" className="bg-[#0a0520]">E-Wallet</option>
+                <option value="EWALLET" className="bg-[#0a0520]">{t('pppoe.eWallet')}</option>
               </ModalSelect>
             </div>
             <div>
@@ -456,7 +513,7 @@ export default function BalanceManagementPage() {
           <ModalFooter>
             <ModalButton type="button" variant="secondary" onClick={() => { setIsTopUpModalOpen(false); setTopUpData({ amount: '', paymentMethod: 'CASH', note: '' }); }}>{t('common.cancel')}</ModalButton>
             <ModalButton type="submit" variant="primary" disabled={submitting}>
-              {submitting ? (<><Loader2 className="w-4 h-4 animate-spin mr-1" />{t('pppoe.processing')}</>) : (<><Plus className="w-4 h-4 mr-1" />Top-Up</>)}
+              {submitting ? (<><Loader2 className="w-4 h-4 animate-spin mr-1" />{t('pppoe.processing')}</>) : (<><Plus className="w-4 h-4 mr-1" />{t('pppoe.balance.topUpButton')}</>)}
             </ModalButton>
           </ModalFooter>
         </form>

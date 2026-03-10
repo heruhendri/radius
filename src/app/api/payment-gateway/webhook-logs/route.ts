@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +11,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');

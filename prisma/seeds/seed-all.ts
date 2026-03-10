@@ -41,83 +41,8 @@ const transactionCategories = [
 // =============================================
 // HOTSPOT PROFILES (Sample)
 // =============================================
-const hotspotProfiles = [
-  {
-    id: 'profile-12jam',
-    name: '12JAM',
-    speed: '5M/5M',
-    validityValue: 12,
-    validityUnit: 'HOURS',
-    costPrice: 2000,
-    sellingPrice: 3000,
-    resellerFee: 1000,
-    sharedUsers: 1,
-    groupProfile: 'VOUCHER_12JAM',
-    agentAccess: true,
-    eVoucherAccess: true,
-    isActive: true,
-  },
-  {
-    id: 'profile-1hari',
-    name: '1 HARI',
-    speed: '5M/5M',
-    validityValue: 1,
-    validityUnit: 'DAYS',
-    costPrice: 3000,
-    sellingPrice: 5000,
-    resellerFee: 1500,
-    sharedUsers: 1,
-    groupProfile: 'VOUCHER_1HARI',
-    agentAccess: true,
-    eVoucherAccess: true,
-    isActive: true,
-  },
-  {
-    id: 'profile-3hari',
-    name: '3 HARI',
-    speed: '10M/10M',
-    validityValue: 3,
-    validityUnit: 'DAYS',
-    costPrice: 7000,
-    sellingPrice: 10000,
-    resellerFee: 2000,
-    sharedUsers: 1,
-    groupProfile: 'VOUCHER_3HARI',
-    agentAccess: true,
-    eVoucherAccess: true,
-    isActive: true,
-  },
-  {
-    id: 'profile-7hari',
-    name: '7 HARI',
-    speed: '10M/10M',
-    validityValue: 7,
-    validityUnit: 'DAYS',
-    costPrice: 15000,
-    sellingPrice: 20000,
-    resellerFee: 3000,
-    sharedUsers: 1,
-    groupProfile: 'VOUCHER_7HARI',
-    agentAccess: true,
-    eVoucherAccess: true,
-    isActive: true,
-  },
-  {
-    id: 'profile-30hari',
-    name: '30 HARI',
-    speed: '15M/15M',
-    validityValue: 30,
-    validityUnit: 'DAYS',
-    costPrice: 50000,
-    sellingPrice: 75000,
-    resellerFee: 10000,
-    sharedUsers: 1,
-    groupProfile: 'VOUCHER_30HARI',
-    agentAccess: true,
-    eVoucherAccess: true,
-    isActive: true,
-  },
-];
+// Hotspot profiles are not seeded by default.
+// Admins can create their own profiles via the admin panel.
 
 // =============================================
 // ADMIN USER (Default Super Admin)
@@ -247,37 +172,8 @@ export async function seedAll() {
     console.log(`   ⊙ Admin user already exists: ${existingAdmin.username}\n`);
   }
 
-  // 4. Seed Hotspot Profiles
-  console.log('📶 Seeding Hotspot Profiles...');
-  for (const profile of hotspotProfiles) {
-    const existing = await prisma.hotspotProfile.findUnique({
-      where: { name: profile.name },
-    });
-    
-    if (!existing) {
-      await prisma.hotspotProfile.create({
-        data: {
-          id: profile.id,
-          name: profile.name,
-          speed: profile.speed,
-          validityValue: profile.validityValue,
-          validityUnit: profile.validityUnit as any,
-          costPrice: profile.costPrice,
-          sellingPrice: profile.sellingPrice,
-          resellerFee: profile.resellerFee,
-          sharedUsers: profile.sharedUsers,
-          groupProfile: profile.groupProfile,
-          agentAccess: profile.agentAccess,
-          eVoucherAccess: profile.eVoucherAccess,
-          isActive: profile.isActive,
-        },
-      });
-      console.log(`   ✅ Profile: ${profile.name}`);
-    } else {
-      console.log(`   ⊙ Profile exists: ${profile.name}`);
-    }
-  }
-  console.log('');
+  // 4. Hotspot Profiles — not seeded; created by admin via UI
+  console.log('📶 Hotspot Profiles: skipped (create via admin panel)\n');
 
   // 5. Seed WhatsApp Templates (Using imported function)
   console.log('💬 Seeding WhatsApp Templates...');

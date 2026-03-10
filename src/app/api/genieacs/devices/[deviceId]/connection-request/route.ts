@@ -5,6 +5,17 @@ interface RouteParams {
   params: Promise<{ deviceId: string }>;
 }
 
+// Helper: fetch with AbortController timeout (15s default)
+async function fetchWithTimeout(url: string, options: RequestInit = {}, ms = 15000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 // POST - Trigger connection request to device
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -33,7 +44,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Create empty task with connection_request to trigger device
     // This will force the device to connect and execute any pending tasks
-    const taskUrl = `${host}/devices/${encodeURIComponent(deviceId)}/tasks?connection_request`;
+    // timeout=10000 tells GenieACS to wait max 10s for device to come online
+    const taskUrl = `${host}/devices/${encodeURIComponent(deviceId)}/tasks?timeout=10000&connection_request`;
 
     console.log('Triggering connection request for device:', deviceId);
 
@@ -43,7 +55,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       parameterNames: ['InternetGatewayDevice.DeviceInfo.SoftwareVersion']
     };
 
-    const response = await fetch(taskUrl, {
+    const response = await fetchWithTimeout(taskUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -60,6 +72,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json(
           { success: false, error: 'Device tidak ditemukan di GenieACS' },
           { status: 404 }
+        );
+      }
+
+      // GenieACS 504 = device offline / did not respond within timeout
+      if (response.status === 504) {
+        return NextResponse.json(
+          { success: false, error: 'Device offline atau tidak merespons (timeout)' },
+          { status: 200 }
         );
       }
       
@@ -80,6 +100,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   } catch (error) {
     console.error('Error triggering connection request:', error);
+    // AbortError = Node.js fetch timed out (15s safety net)
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json(
+        { success: false, error: 'Koneksi ke GenieACS timeout. Periksa apakah server GenieACS berjalan.' },
+        { status: 200 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Terjadi kesalahan' },
       { status: 500 }

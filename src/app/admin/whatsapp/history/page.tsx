@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from '@/hooks/useTranslation';
-import { showError } from '@/lib/sweetalert';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import { formatDistanceToNow } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 
@@ -37,6 +37,7 @@ const getProviderColor = (type?: string) => {
 
 export default function WhatsAppHistoryPage() {
   const { t } = useTranslation();
+  const { addToast } = useToast();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, sent: 0, failed: 0, last24Hours: 0 });
   const [loading, setLoading] = useState(true);
@@ -44,6 +45,7 @@ export default function WhatsAppHistoryPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewingItem, setViewingItem] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
     fetchHistory();
@@ -67,11 +69,11 @@ export default function WhatsAppHistoryPage() {
         setStats(data.stats);
         setTotalPages(data.pagination.totalPages);
       } else {
-        showError(t('whatsapp.failedLoadHistory'));
+        addToast({ type: 'error', title: t('common.error'), description: t('whatsapp.failedLoadHistory') });
       }
     } catch (error) {
       console.error('Fetch history error:', error);
-      showError(t('whatsapp.failedLoadHistory'));
+      addToast({ type: 'error', title: t('common.error'), description: t('whatsapp.failedLoadHistory') });
     } finally {
       setLoading(false);
     }
@@ -83,55 +85,7 @@ export default function WhatsAppHistoryPage() {
   };
 
   const showDetail = (item: HistoryItem) => {
-    let responseData;
-    try {
-      responseData = JSON.parse(item.response);
-    } catch {
-      responseData = item.response;
-    }
-
-    Swal.fire({
-      title: t('whatsapp.messageDetail'),
-      html: `
-        <div class="text-left space-y-3 text-sm">
-          <div class="flex gap-2">
-            <span class="font-semibold text-gray-400 min-w-[80px]">${t('whatsapp.numberLabel')}:</span>
-            <span class="text-gray-200">${item.phone}</span>
-          </div>
-          <div class="flex gap-2">
-            <span class="font-semibold text-gray-400 min-w-[80px]">${t('whatsapp.statusLabel')}:</span>
-            <span>${item.status === 'sent' ? `<span class="text-green-400">✅ ${t('whatsapp.sentStatus')}</span>` : `<span class="text-red-400">❌ ${t('whatsapp.failedStatus')}</span>`}</span>
-          </div>
-          ${item.providerName ? `
-          <div class="flex gap-2">
-            <span class="font-semibold text-gray-400 min-w-[80px]">${t('whatsapp.providerLabel')}:</span>
-            <span class="text-gray-200">${item.providerName} <span class="text-purple-400">(${item.providerType?.toUpperCase()})</span></span>
-          </div>` : ''}
-          <div class="flex gap-2">
-            <span class="font-semibold text-gray-400 min-w-[80px]">${t('whatsapp.timeLabel')}:</span>
-            <span class="text-gray-200">${new Date(item.sentAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</span>
-          </div>
-          <div class="mt-4">
-            <div class="font-semibold text-gray-400 mb-2">${t('whatsapp.messageLabel')}:</div>
-            <div class="whitespace-pre-wrap bg-gray-800 border border-gray-700 p-3 rounded text-xs max-h-32 overflow-auto text-gray-200">${item.message}</div>
-          </div>
-          <div class="mt-4">
-            <div class="font-semibold text-gray-400 mb-2">${t('whatsapp.responseLabel')}:</div>
-            <pre class="text-xs bg-gray-800 border border-gray-700 p-3 rounded max-h-40 overflow-auto text-gray-300 font-mono">${JSON.stringify(responseData, null, 2)}</pre>
-          </div>
-        </div>
-      `,
-      width: 600,
-      background: '#1e1b2e',
-      color: '#e0d0ff',
-      confirmButtonText: t('common.close'),
-      confirmButtonColor: '#00f7ff',
-      customClass: {
-        popup: 'border border-[#bc13fe]/30',
-        title: 'text-xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent',
-        confirmButton: 'px-6 py-2.5 text-sm font-bold rounded-lg shadow-[0_0_20px_rgba(0,247,255,0.4)] hover:shadow-[0_0_30px_rgba(0,247,255,0.6)] transition-all'
-      }
-    });
+    setViewingItem(item);
   };
 
   if (loading && history.length === 0) {
@@ -145,8 +99,38 @@ export default function WhatsAppHistoryPage() {
     );
   }
 
+  function WaDetailModal() {
+    if (!viewingItem) return null;
+    let responseData;
+    try { responseData = JSON.parse(viewingItem.response); } catch { responseData = viewingItem.response; }
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setViewingItem(null)}>
+        <div className="bg-[#1e1b2e] border border-[#bc13fe]/30 rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between p-5 border-b border-[#bc13fe]/20">
+            <h2 className="text-lg font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent">{t('whatsapp.messageDetail')}</h2>
+            <button onClick={() => setViewingItem(null)} className="text-muted-foreground hover:text-foreground transition-colors text-xl leading-none">&times;</button>
+          </div>
+          <div className="p-5 overflow-y-auto flex-1 space-y-3 text-sm">
+            <div className="flex gap-2"><span className="font-semibold text-gray-400 min-w-[80px]">{t('whatsapp.numberLabel')}:</span><span className="text-gray-200">{viewingItem.phone}</span></div>
+            <div className="flex gap-2"><span className="font-semibold text-gray-400 min-w-[80px]">{t('whatsapp.statusLabel')}:</span><span className={viewingItem.status === 'sent' ? 'text-green-400' : 'text-red-400'}>{viewingItem.status === 'sent' ? `✅ ${t('whatsapp.sentStatus')}` : `❌ ${t('whatsapp.failedStatus')}`}</span></div>
+            {viewingItem.providerName && <div className="flex gap-2"><span className="font-semibold text-gray-400 min-w-[80px]">{t('whatsapp.providerLabel')}:</span><span className="text-gray-200">{viewingItem.providerName} <span className="text-purple-400">({viewingItem.providerType?.toUpperCase()})</span></span></div>}
+            <div className="flex gap-2"><span className="font-semibold text-gray-400 min-w-[80px]">{t('whatsapp.timeLabel')}:</span><span className="text-gray-200">{new Date(viewingItem.sentAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</span></div>
+            <div className="mt-4"><div className="font-semibold text-gray-400 mb-2">{t('whatsapp.messageLabel')}:</div><div className="whitespace-pre-wrap bg-gray-800 border border-gray-700 p-3 rounded text-xs max-h-32 overflow-auto text-gray-200">{viewingItem.message}</div></div>
+            <div className="mt-4"><div className="font-semibold text-gray-400 mb-2">{t('whatsapp.responseLabel')}:</div><pre className="text-xs bg-gray-800 border border-gray-700 p-3 rounded max-h-40 overflow-auto text-gray-300 font-mono">{JSON.stringify(responseData, null, 2)}</pre></div>
+          </div>
+          <div className="p-4 border-t border-[#bc13fe]/20 flex justify-end">
+            <button onClick={() => setViewingItem(null)} className="px-6 py-2 text-sm font-bold text-[#1a0f35] bg-[#00f7ff] rounded-lg shadow-[0_0_20px_rgba(0,247,255,0.4)] hover:shadow-[0_0_30px_rgba(0,247,255,0.6)] transition-all">{t('common.close')}</button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <>
+    <WaDetailModal />
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -157,13 +141,13 @@ export default function WhatsAppHistoryPage() {
         <div className="max-w-7xl mx-auto space-y-3">
           {/* Header */}
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <svg className="w-6 h-6 text-[#00f7ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {t('whatsapp.historyTitle')}
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('whatsapp.historySubtitle')}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('whatsapp.historySubtitle')}</p>
           </div>
 
           {/* Stats Cards */}
@@ -275,7 +259,65 @@ export default function WhatsAppHistoryPage() {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                {/* Mobile Card View */}
+                <div className="block md:hidden space-y-3 p-3">
+                  {history.map((item) => (
+                    <div key={item.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-mono text-foreground">{item.phone}</span>
+                        {item.status === 'sent' ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-success/20 text-success text-[10px] font-medium rounded">
+                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            {t('whatsapp.sent')}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-destructive/20 text-destructive text-[10px] font-medium rounded">
+                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            {t('whatsapp.failed')}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 text-[11px] mb-2">
+                        <div>
+                          <span className="text-muted-foreground">{t('common.time')}</span>
+                          <p className="text-foreground text-xs">
+                            {formatDistanceToNow(new Date(item.sentAt), { addSuffix: true, locale: localeId })}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">{t('whatsapp.provider')}</span>
+                          <p>
+                            {item.providerName ? (
+                              <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${getProviderColor(item.providerType)}`}>
+                                {item.providerName}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">-</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate mb-2">{item.message}</div>
+                      <button
+                        onClick={() => showDetail(item)}
+                        className="w-full p-2 text-xs text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center justify-center gap-1"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Detail
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="overflow-x-auto hidden md:block">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-border bg-background/50">
@@ -358,7 +400,7 @@ export default function WhatsAppHistoryPage() {
                 </div>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-between px-3 py-2 border-t border-border">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-3 py-2 border-t border-border">
                   <span className="text-[10px] text-muted-foreground dark:text-muted-foreground">
                     {t('whatsapp.page')} {page} {t('table.of')} {totalPages}
                   </span>
@@ -391,5 +433,6 @@ export default function WhatsAppHistoryPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

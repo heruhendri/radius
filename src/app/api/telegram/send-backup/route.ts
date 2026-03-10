@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { sendBackupToTelegram } from '@/lib/telegram';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
+import { sendBackupToTelegram } from '@/server/services/notifications/telegram.service';
 import * as fs from 'fs/promises';
 
 // POST - Send backup to Telegram manually

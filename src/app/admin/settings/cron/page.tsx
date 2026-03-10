@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Clock, Play, RefreshCw, CheckCircle, XCircle, Loader2, Activity } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import { formatWIB } from '@/lib/timezone';
 
 interface CronJob {
@@ -37,6 +37,7 @@ interface CronHistory {
 
 export default function CronSettingsPage() {
   const { t } = useTranslation();
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState<string | null>(null);
   const [jobs, setJobs] = useState<CronJob[]>([]);
@@ -90,108 +91,40 @@ export default function CronSettingsPage() {
       const res = await fetch('/api/cron', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: jobType })
+        body: JSON.stringify({ type: jobType, ...(jobType === 'invoice_generate' ? { force: true } : {}) })
       });
       const data = await res.json();
       
       if (data.success) {
+        let description = 'Job completed successfully!';
         if (jobType === 'voucher_sync') {
-          await Swal.fire({
-            icon: 'success',
-            title: t('common.success'),
-            text: `Synced ${data.synced} voucher(s)`,
-            timer: 2000,
-            showConfirmButton: false
-          });
+          description = `Synced ${data.synced} voucher(s)`;
         } else if (jobType === 'agent_sales') {
-          await Swal.fire({
-            icon: 'success',
-            title: t('common.success'),
-            text: `Recorded ${data.recorded} sales`,
-            timer: 2000,
-            showConfirmButton: false
-          });
+          description = `Recorded ${data.recorded} sales`;
         } else if (jobType === 'invoice_generate') {
-          await Swal.fire({
-            icon: 'success',
-            title: t('common.success'),
-            text: `Generated ${data.generated} invoices, skipped ${data.skipped}`,
-            timer: 2000,
-            showConfirmButton: false
-          });
+          description = `Generated ${data.generated} invoices, skipped ${data.skipped}`;
         } else if (jobType === 'invoice_reminder') {
-          await Swal.fire({
-            icon: 'success',
-            title: t('common.success'),
-            text: `Sent ${data.sent} reminders, skipped ${data.skipped}`,
-            timer: 2000,
-            showConfirmButton: false
-          });
+          description = `Sent ${data.sent} reminders, skipped ${data.skipped}`;
         } else if (jobType === 'auto_isolir') {
-          await Swal.fire({
-            icon: 'success',
-            title: t('common.success'),
-            text: `Isolated ${data.isolated} expired user(s)`,
-            timer: 2000,
-            showConfirmButton: false
-          });
+          description = `Isolated ${data.isolated} expired user(s)`;
         } else if (jobType === 'disconnect_sessions') {
-          await Swal.fire({
-            icon: 'success',
-            title: t('common.success'),
-            text: `Disconnected ${data.disconnected} expired session(s)`,
-            timer: 2000,
-            showConfirmButton: false
-          });
+          description = `Disconnected ${data.disconnected} expired session(s)`;
         } else if (jobType === 'activity_log_cleanup') {
-          await Swal.fire({
-            icon: 'success',
-            title: t('common.success'),
-            text: `Cleaned ${data.deleted} old activity log(s)`,
-            timer: 2000,
-            showConfirmButton: false
-          });
+          description = `Cleaned ${data.deleted} old activity log(s)`;
         } else if (jobType === 'auto_renewal') {
-          await Swal.fire({
-            icon: 'success',
-            title: t('common.success'),
-            text: `Processed ${data.processed || 0} auto-renewals, paid ${data.paid || 0}`,
-            timer: 2000,
-            showConfirmButton: false
-          });
+          description = `Processed ${data.processed || 0} auto-renewals, paid ${data.paid || 0}`;
         } else if (jobType === 'webhook_log_cleanup') {
-          await Swal.fire({
-            icon: 'success',
-            title: t('common.success'),
-            text: `Cleaned ${data.deleted} old webhook log(s)`,
-            timer: 2000,
-            showConfirmButton: false
-          });
-        } else {
-          await Swal.fire({
-            icon: 'success',
-            title: t('common.success'),
-            text: 'Job completed successfully!',
-            timer: 2000,
-            showConfirmButton: false
-          });
+          description = `Cleaned ${data.deleted} old webhook log(s)`;
         }
+        addToast({ type: 'success', title: t('common.success'), description, duration: 2000 });
       } else {
-        await Swal.fire({
-          icon: 'error',
-          title: t('common.error'),
-          text: t('common.failed') + ': ' + data.error
-        });
+        addToast({ type: 'error', title: t('common.error'), description: t('common.failed') + ': ' + data.error });
       }
       
       loadHistory();
     } catch (error) {
       console.error('Manual trigger error:', error);
-      await Swal.fire({
-        icon: 'error',
-        title: t('common.error'),
-        text: t('settings.failedTriggerJob')
-      });
+      addToast({ type: 'error', title: t('common.error'), description: t('settings.failedTriggerJob') });
     } finally {
       setTriggering(null);
     }
@@ -245,7 +178,7 @@ export default function CronSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
         <Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
       </div>
@@ -253,17 +186,17 @@ export default function CronSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
               <Clock className="w-7 h-7 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.8)]" />
               {t('settings.cronTitle')}
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               {t('settings.cronSubtitle')}
             </p>
           </div>
@@ -333,7 +266,7 @@ export default function CronSettingsPage() {
               <button
                 onClick={() => triggerManual(job.type)}
                 disabled={triggering !== null}
-                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 rounded-lg transition-colors"
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-foreground bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 rounded-lg transition-colors"
               >
                 {triggering === job.type ? (
                   <>
@@ -392,7 +325,65 @@ export default function CronSettingsPage() {
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3">
+          {(selectedType === 'all' ? history : history.filter(h => h.type === selectedType)).length === 0 ? (
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3 text-center text-sm text-muted-foreground">
+              {t('settings.noExecutionHistory')}
+            </div>
+          ) : (
+            (selectedType === 'all' ? history : history.filter(h => h.type === selectedType)).map((item) => {
+              const duration = item.completedAt
+                ? Math.round((new Date(item.completedAt).getTime() - new Date(item.startedAt).getTime()) / 1000)
+                : null;
+              return (
+                <div key={item.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded">
+                      {typeLabels[item.type] || item.type}
+                    </span>
+                    {getStatusBadge(item.status)}
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('settings.startedAt')}</span>
+                      <span className="text-foreground">{formatWIB(item.startedAt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('settings.completedAt')}</span>
+                      <span className="text-foreground">{item.completedAt ? formatWIB(item.completedAt) : '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('settings.duration')}</span>
+                      <span className="text-foreground">{duration ? `${duration}s` : '-'}</span>
+                    </div>
+                    {item.status === 'success' && item.result && (
+                      <div className="pt-1 border-t border-border">
+                        <span className="text-muted-foreground text-xs">{t('settings.result')}</span>
+                        <p className="text-foreground text-xs mt-0.5">{item.result}</p>
+                      </div>
+                    )}
+                    {item.status === 'error' && item.error && (
+                      <div className="pt-1 border-t border-border">
+                        <span className="text-muted-foreground text-xs">{t('settings.result')}</span>
+                        <p className="text-destructive text-xs mt-0.5">{item.error}</p>
+                      </div>
+                    )}
+                    {item.status === 'running' && (
+                      <div className="pt-1 border-t border-border">
+                        <span className="text-primary text-xs">{t('settings.inProgress')}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted">
               <tr>

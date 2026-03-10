@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/server/auth/config';
+import { startOfDayWIBtoUTC, endOfDayWIBtoUTC } from '@/lib/timezone';
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,6 +14,19 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const agentId = searchParams.get('agentId');
     const profileId = searchParams.get('profileId');
+    const monthParam = searchParams.get('month'); // YYYY-MM
+
+    // Build optional month filter for createdAt
+    let monthFilter: any = {};
+    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+      const [y, m] = monthParam.split('-').map(Number);
+      monthFilter = {
+        createdAt: {
+          gte: startOfDayWIBtoUTC(new Date(Date.UTC(y, m - 1, 1))),
+          lte: endOfDayWIBtoUTC(new Date(Date.UTC(y, m, 0))),
+        },
+      };
+    }
 
     // Get all batches with their vouchers grouped
     const batches = await prisma.hotspotVoucher.groupBy({
@@ -21,6 +35,7 @@ export async function GET(req: NextRequest) {
         batchCode: { not: null },
         ...(agentId && agentId !== 'all' ? { agentId } : {}),
         ...(profileId && profileId !== 'all' ? { profileId } : {}),
+        ...monthFilter,
       },
       _count: {
         id: true,

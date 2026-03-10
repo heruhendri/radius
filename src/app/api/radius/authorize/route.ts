@@ -1,22 +1,26 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+﻿import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/server/db/client";
+import { redisGet, redisSet, redisDel, RedisKeys } from "@/server/cache/redis";
 
 /**
  * RADIUS Authorize Hook
  * Called BEFORE authentication to check if voucher is allowed to login
- * 
- * This prevents expired vouchers from authenticating
+ *
+ * Menggunakan Redis cache (TTL 60 detik) untuk PPPoE user status.
+ * Mengurangi beban MySQL saat banyak user reconnect bersamaan.
+ *
  * Returns reject if:
  * 1. Voucher is expired
  * 2. Voucher status is EXPIRED
  * 3. Voucher has expiresAt in the past
- * 
- * FreeRADIUS will log the rejection in radpostauth table
  */
 export async function POST(request: NextRequest) {
+  let username: string | undefined;
   try {
-    const body = await request.json();
-    const { username } = body;
+    // Use text() + manual parse (more compatible than request.json())
+    const rawBody = await request.text();
+    const body = JSON.parse(rawBody);
+    username = body.username;
 
     if (!username) {
       return NextResponse.json({
@@ -34,32 +38,67 @@ export async function POST(request: NextRequest) {
 
     // If not a voucher, check if it's a PPPoE user
     if (!voucher) {
-      const pppoeUser = await prisma.pppoeUser.findUnique({
-        where: { username },
-        select: { 
-          id: true,
-          username: true, 
-          status: true, 
-          expiredAt: true,
-          name: true,
-        },
-      });
+      // ---- Redis cache untuk PPPoE user status ----
+      const cacheKey = RedisKeys.radiusAuth(username);
+      let pppoeUser: { id: string; username: string; status: string; expiredAt: Date | null; name: string | null } | null = null;
+      const cached = await redisGet(cacheKey);
 
-      // Check if PPPoE user is blocked or stop (reject login)
+      if (cached !== null) {
+        pppoeUser = JSON.parse(cached);
+      } else {
+        pppoeUser = await prisma.pppoeUser.findUnique({
+          where: { username },
+          select: {
+            id: true,
+            username: true,
+            status: true,
+            expiredAt: true,
+            name: true,
+          },
+        });
+        // Cache 60 detik (status tidak berubah terlalu sering)
+        if (pppoeUser !== null) {
+          await redisSet(cacheKey, JSON.stringify(pppoeUser), 60);
+        }
+      }
+
+      // Check if PPPoE user is blocked, stopped, or expired
       // NOTE: isolated users are NOT rejected - they login with restricted access
-      if (pppoeUser && (pppoeUser.status === 'blocked' || pppoeUser.status === 'stop')) {
-        console.log(`[AUTHORIZE] REJECT: PPPoE user ${username} is ${pppoeUser.status}`);
-        
-        const message = pppoeUser.status === 'blocked' 
-          ? 'Akun Diblokir - Hubungi Admin' 
-          : 'Langganan Dihentikan - Hubungi Admin';
-        
-        await logRejection(username, message);
-        
-        return NextResponse.json({
-          "control:Auth-Type": "Reject",
-          "reply:Reply-Message": message
-        }, { status: 200 });
+      if (pppoeUser) {
+        const now = new Date();
+
+        if (pppoeUser.status === 'blocked') {
+          const message = 'Akun Diblokir - Hubungi Admin';
+          console.log(`[AUTHORIZE] REJECT: PPPoE user ${username} is blocked`);
+          await logRejection(username, message);
+          return NextResponse.json({
+            "control:Auth-Type": "Reject",
+            "reply:Reply-Message": message
+          }, { status: 200 });
+        }
+
+        if (pppoeUser.status === 'stop') {
+          const message = 'Langganan Dihentikan - Hubungi Admin';
+          console.log(`[AUTHORIZE] REJECT: PPPoE user ${username} is stopped`);
+          await logRejection(username, message);
+          return NextResponse.json({
+            "control:Auth-Type": "Reject",
+            "reply:Reply-Message": message
+          }, { status: 200 });
+        }
+
+        // Cek apakah masa aktif sudah habis (expiredAt lewat)
+        if (pppoeUser.expiredAt && now > new Date(pppoeUser.expiredAt)) {
+          const message = 'Masa Aktif Habis - Segera Bayar Tagihan';
+          console.log(`[AUTHORIZE] REJECT: PPPoE user ${username} expired at ${pppoeUser.expiredAt}`);
+          // Invalidate cache agar status terbaru bisa diambil setelah dibayar
+          await redisDel(RedisKeys.radiusAuth(username));
+          await logRejection(username, message);
+          return NextResponse.json({
+            "control:Auth-Type": "Reject",
+            "reply:Reply-Message": message
+          }, { status: 200 });
+        }
       }
 
       // PPPoE user is active or not found, allow to continue to normal auth
@@ -130,23 +169,36 @@ export async function POST(request: NextRequest) {
     }
 
     // Voucher is valid, allow authentication to proceed
+    // Set Cleartext-Password = username so FreeRADIUS PAP/CHAP can verify
+    // (hotspot voucher code is used as BOTH username and password)
     console.log(`[AUTHORIZE] ALLOW: Voucher ${username} is valid (status: ${voucher.status})`);
     
     return NextResponse.json({
+      "control:Cleartext-Password": username,
       success: true,
       action: "allow",
       status: voucher.status,
-      expiresAt: voucher.expiresAt,
     });
 
   } catch (error: any) {
     console.error("[AUTHORIZE] Error:", error);
     
-    // Don't block authentication on errors, let it proceed
+    // Even on error, if we have the username (parsed before error),
+    // return Cleartext-Password so FreeRADIUS PAP can still verify.
+    // (Hotspot vouchers use voucher code as both username and password)
+    if (username) {
+      return NextResponse.json({
+        "control:Cleartext-Password": username,
+        success: true,
+        action: "allow",
+        message: "Error but allowing",
+        error: error.message
+      });
+    }
     return NextResponse.json({
       success: true,
       action: "allow",
-      message: "Error but allowing",
+      message: "Error but allowing (no username)",
       error: error.message
     });
   }

@@ -1,8 +1,8 @@
-'use client';
+﻿'use client';
 import { showError } from '@/lib/sweetalert';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Wifi, CheckCircle, Clock, AlertCircle, CreditCard, Building2, Loader2, User, Phone, Package, Calendar } from 'lucide-react';
+import { Wifi, CheckCircle, Clock, AlertCircle, CreditCard, Building2, Loader2, User, Phone, Package, Calendar, MapPin, Router, Network, Mail, Hash, Zap } from 'lucide-react';
 
 interface Invoice {
   id: string;
@@ -14,7 +14,19 @@ interface Invoice {
   dueDate: string;
   createdAt: string;
   paidAt: string | null;
-  user: { profile: { name: string; } | null; } | null;
+  user: {
+    name: string;
+    phone: string;
+    email: string | null;
+    username: string;
+    address: string | null;
+    customerId: string | null;
+    subscriptionType: string;
+    status: string;
+    profile: { name: string; price: number; downloadSpeed: number; uploadSpeed: number; } | null;
+    area: { name: string; } | null;
+    router: { shortname: string; } | null;
+  } | null;
 }
 
 interface PaymentGateway { id: string; name: string; provider: string; isActive: boolean; }
@@ -29,6 +41,8 @@ export default function PaymentPage() {
   const [company, setCompany] = useState<CompanySetting | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [duitkuMethods, setDuitkuMethods] = useState<{ code: string; name: string; group: string }[]>([]);
+  const [loadingDuitkuMethods, setLoadingDuitkuMethods] = useState(false);
 
   useEffect(() => { loadInvoice(); }, [token]);
 
@@ -41,7 +55,24 @@ export default function PaymentPage() {
       setInvoice(data.invoice);
       setPaymentGateways(data.paymentGateways || []);
       setCompany(data.company || null);
+      // If Duitku is in the list, fetch its payment methods
+      if ((data.paymentGateways || []).some((g: PaymentGateway) => g.provider === 'duitku')) {
+        fetchDuitkuMethods(data.invoice?.amount || 10000);
+      }
     } catch (err) { setError('Failed to load invoice'); } finally { setLoading(false); }
+  };
+
+  const fetchDuitkuMethods = async (amount: number) => {
+    setLoadingDuitkuMethods(true);
+    try {
+      const res = await fetch(`/api/payment/duitku-methods?amount=${amount}`);
+      const data = await res.json();
+      setDuitkuMethods(data.methods || []);
+    } catch {
+      // Use empty = will show nothing for Duitku methods
+    } finally {
+      setLoadingDuitkuMethods(false);
+    }
   };
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
@@ -57,11 +88,13 @@ export default function PaymentPage() {
     return <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold rounded-lg ${styles[status] || 'bg-gray-100'}`}>{icons[status]} {status}</span>;
   };
 
-  const handlePayment = async (gateway: string) => {
+  const handlePayment = async (gateway: string, paymentMethod?: string) => {
     if (!invoice) return;
     setProcessing(true);
     try {
-      const res = await fetch('/api/payment/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invoiceId: invoice.id, gateway }) });
+      const body: any = { invoiceId: invoice.id, gateway };
+      if (paymentMethod) body.paymentMethod = paymentMethod;
+      const res = await fetch('/api/payment/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) { await showError(data.error || 'Failed'); return; }
       if (data.paymentUrl) window.location.href = data.paymentUrl; else await showError('Payment URL not available');
@@ -156,21 +189,86 @@ export default function PaymentPage() {
                 <span className="w-6 h-[1px] bg-gradient-to-r from-[#00f7ff] to-transparent"></span>
                 Informasi Pelanggan
               </p>
-              <div className="bg-[#0a0520]/50 rounded-xl p-3 space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-[#e0d0ff]/60 flex items-center gap-1.5"><User className="w-3 h-3 text-[#bc13fe]" />Nama</span>
-                  <span className="font-medium text-white">{invoice.customerName}</span>
+              <div className="bg-[#0a0520]/50 rounded-xl p-3 space-y-2.5">
+                {/* Nama */}
+                <div className="flex justify-between items-start text-xs gap-2">
+                  <span className="text-[#e0d0ff]/60 flex items-center gap-1.5 shrink-0"><User className="w-3 h-3 text-[#bc13fe]" />Nama</span>
+                  <span className="font-semibold text-white text-right">{invoice.user?.name || invoice.customerName}</span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-[#e0d0ff]/60 flex items-center gap-1.5"><Phone className="w-3 h-3 text-[#00f7ff]" />Telepon</span>
-                  <span className="font-medium text-white">{invoice.customerPhone}</span>
-                </div>
-                {invoice.user?.profile?.name && (
-                  <div className="flex justify-between text-xs">
-                    <span className="text-[#e0d0ff]/60 flex items-center gap-1.5"><Package className="w-3 h-3 text-[#ff44cc]" />Paket</span>
-                    <span className="font-medium text-white">{invoice.user.profile.name}</span>
+                {/* Username */}
+                {invoice.user?.username && (
+                  <div className="flex justify-between items-start text-xs gap-2">
+                    <span className="text-[#e0d0ff]/60 flex items-center gap-1.5 shrink-0"><Hash className="w-3 h-3 text-[#bc13fe]" />Username</span>
+                    <span className="font-mono text-[#00f7ff] text-right">{invoice.user.username}</span>
                   </div>
                 )}
+                {/* Customer ID */}
+                {invoice.user?.customerId && (
+                  <div className="flex justify-between items-start text-xs gap-2">
+                    <span className="text-[#e0d0ff]/60 flex items-center gap-1.5 shrink-0"><Hash className="w-3 h-3 text-[#00f7ff]" />ID Pelanggan</span>
+                    <span className="font-mono text-white text-right">{invoice.user.customerId}</span>
+                  </div>
+                )}
+                {/* Telepon */}
+                <div className="flex justify-between items-start text-xs gap-2">
+                  <span className="text-[#e0d0ff]/60 flex items-center gap-1.5 shrink-0"><Phone className="w-3 h-3 text-[#00f7ff]" />Telepon</span>
+                  <span className="font-medium text-white text-right">{invoice.user?.phone || invoice.customerPhone}</span>
+                </div>
+                {/* Email */}
+                {invoice.user?.email && (
+                  <div className="flex justify-between items-start text-xs gap-2">
+                    <span className="text-[#e0d0ff]/60 flex items-center gap-1.5 shrink-0"><Mail className="w-3 h-3 text-[#ff44cc]" />Email</span>
+                    <span className="font-medium text-white text-right break-all">{invoice.user.email}</span>
+                  </div>
+                )}
+                {/* Alamat */}
+                {invoice.user?.address && (
+                  <div className="flex justify-between items-start text-xs gap-2">
+                    <span className="text-[#e0d0ff]/60 flex items-center gap-1.5 shrink-0"><MapPin className="w-3 h-3 text-[#ff44cc]" />Alamat</span>
+                    <span className="font-medium text-white text-right max-w-[60%]">{invoice.user.address}</span>
+                  </div>
+                )}
+                {/* Area */}
+                {invoice.user?.area?.name && (
+                  <div className="flex justify-between items-start text-xs gap-2">
+                    <span className="text-[#e0d0ff]/60 flex items-center gap-1.5 shrink-0"><Network className="w-3 h-3 text-[#bc13fe]" />Area</span>
+                    <span className="font-medium text-white text-right">{invoice.user.area.name}</span>
+                  </div>
+                )}
+
+                {/* Divider */}
+                <div className="border-t border-[#bc13fe]/15 pt-2 space-y-2.5">
+                  {/* Paket */}
+                  {invoice.user?.profile && (
+                    <div className="flex justify-between items-start text-xs gap-2">
+                      <span className="text-[#e0d0ff]/60 flex items-center gap-1.5 shrink-0"><Package className="w-3 h-3 text-[#ff44cc]" />Paket</span>
+                      <div className="text-right">
+                        <p className="font-semibold text-white">{invoice.user.profile.name}</p>
+                        {(invoice.user.profile.downloadSpeed > 0) && (
+                          <p className="text-[10px] text-[#00f7ff]/70 flex items-center justify-end gap-1"><Zap className="w-2.5 h-2.5" />{invoice.user.profile.downloadSpeed}M / {invoice.user.profile.uploadSpeed}M</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* Tipe & Status */}
+                  <div className="flex justify-between items-center text-xs gap-2">
+                    <span className="text-[#e0d0ff]/60 flex items-center gap-1.5 shrink-0"><CreditCard className="w-3 h-3 text-[#00f7ff]" />Tipe</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                        invoice.user?.subscriptionType === 'PREPAID'
+                          ? 'bg-[#ff44cc]/20 text-[#ff44cc] border border-[#ff44cc]/30'
+                          : 'bg-[#00f7ff]/15 text-[#00f7ff] border border-[#00f7ff]/30'
+                      }`}>{invoice.user?.subscriptionType || 'POSTPAID'}</span>
+                    </div>
+                  </div>
+                  {/* Router */}
+                  {invoice.user?.router?.shortname && (
+                    <div className="flex justify-between items-start text-xs gap-2">
+                      <span className="text-[#e0d0ff]/60 flex items-center gap-1.5 shrink-0"><Router className="w-3 h-3 text-[#bc13fe]" />Router</span>
+                      <span className="font-medium text-white text-right">{invoice.user.router.shortname}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -223,29 +321,74 @@ export default function PaymentPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {paymentGateways.map((gateway) => (
-                  <button
-                    key={gateway.id}
-                    onClick={() => handlePayment(gateway.provider)}
-                    disabled={processing}
-                    className="w-full flex items-center justify-between p-4 bg-[#0a0520]/50 border-2 border-[#bc13fe]/20 rounded-xl hover:border-[#00f7ff]/50 hover:bg-[#0a0520]/80 hover:shadow-[0_0_20px_rgba(0,247,255,0.1)] transition-all disabled:opacity-50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(188,19,254,0.3)]">
-                        <CreditCard className="w-5 h-5 text-white" />
+                {paymentGateways.map((gateway) => {
+                  // For Duitku: show individual payment method options
+                  if (gateway.provider === 'duitku') {
+                    if (loadingDuitkuMethods) {
+                      return (
+                        <div key={gateway.id} className="flex items-center justify-center py-4">
+                          <Loader2 className="w-5 h-5 animate-spin text-[#00f7ff] mr-2" />
+                          <span className="text-xs text-[#e0d0ff]/60">Memuat metode Duitku...</span>
+                        </div>
+                      );
+                    }
+                    if (duitkuMethods.length > 0) {
+                      return (
+                        <div key={gateway.id} className="space-y-2">
+                          <p className="text-[10px] font-bold text-[#00f7ff] uppercase tracking-widest px-1">{gateway.name}</p>
+                          {duitkuMethods.map((method) => (
+                            <button
+                              key={method.code}
+                              onClick={() => handlePayment('duitku', method.code)}
+                              disabled={processing}
+                              className="w-full flex items-center justify-between p-4 bg-[#0a0520]/50 border-2 border-[#bc13fe]/20 rounded-xl hover:border-[#00f7ff]/50 hover:bg-[#0a0520]/80 hover:shadow-[0_0_20px_rgba(0,247,255,0.1)] transition-all disabled:opacity-50"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(188,19,254,0.3)]">
+                                  <CreditCard className="w-5 h-5 text-white" />
+                                </div>
+                                <div className="text-left">
+                                  <p className="text-xs font-bold text-white">{method.name}</p>
+                                  <p className="text-[10px] text-[#e0d0ff]/60 uppercase">{method.code}</p>
+                                </div>
+                              </div>
+                              {processing ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-[#00f7ff]" />
+                              ) : (
+                                <span className="text-[10px] text-[#00f7ff] font-medium">Bayar →</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    }
+                    // Fallback: show single Duitku button with SP default
+                  }
+
+                  return (
+                    <button
+                      key={gateway.id}
+                      onClick={() => handlePayment(gateway.provider)}
+                      disabled={processing}
+                      className="w-full flex items-center justify-between p-4 bg-[#0a0520]/50 border-2 border-[#bc13fe]/20 rounded-xl hover:border-[#00f7ff]/50 hover:bg-[#0a0520]/80 hover:shadow-[0_0_20px_rgba(0,247,255,0.1)] transition-all disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(188,19,254,0.3)]">
+                          <CreditCard className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-xs font-bold text-white">{gateway.name}</p>
+                          <p className="text-[10px] text-[#e0d0ff]/60 capitalize">{gateway.provider}</p>
+                        </div>
                       </div>
-                      <div className="text-left">
-                        <p className="text-xs font-bold text-white">{gateway.name}</p>
-                        <p className="text-[10px] text-[#e0d0ff]/60 capitalize">{gateway.provider}</p>
-                      </div>
-                    </div>
-                    {processing ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-[#00f7ff]" />
-                    ) : (
-                      <span className="text-[10px] text-[#00f7ff] font-medium">Bayar Sekarang →</span>
-                    )}
-                  </button>
-                ))}
+                      {processing ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-[#00f7ff]" />
+                      ) : (
+                        <span className="text-[10px] text-[#00f7ff] font-medium">Bayar Sekarang →</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -266,7 +409,7 @@ export default function PaymentPage() {
         {/* Footer */}
         <div className="text-center space-y-1">
           <p className="text-[10px] text-[#e0d0ff]/50">Pembayaran aman didukung oleh</p>
-          <p className="text-xs font-bold bg-gradient-to-r from-[#00f7ff] to-[#bc13fe] bg-clip-text text-transparent">AIBILLRADIUS</p>
+          <p className="text-xs font-bold bg-gradient-to-r from-[#00f7ff] to-[#bc13fe] bg-clip-text text-transparent">SALFANETRADIUS</p>
         </div>
       </div>
     </div>

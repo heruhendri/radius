@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, User, Wifi, Receipt, Loader2, ExternalLink, Edit2, X, Check, Shield, Package, Wallet, Zap, AlertCircle, Upload, CreditCard } from 'lucide-react';
-import { showError, showSuccess, showWarning } from '@/lib/sweetalert';
+import { User, Wifi, Receipt, Loader2, ExternalLink, Edit2, X, Check, Package, Wallet, Zap, AlertCircle, Upload, CreditCard, FileText, MessageSquare, Gift, PauseCircle } from 'lucide-react';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -114,6 +114,9 @@ interface Invoice {
 
 export default function CustomerDashboard() {
   const router = useRouter();
+  const { addToast } = useToast();
+  const toast = (type: 'success'|'error'|'info'|'warning', title: string, desc?: string) =>
+    addToast({ type, title, description: desc, duration: type === 'error' ? 8000 : 5000 });
   const [user, setUser] = useState<CustomerUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -137,14 +140,28 @@ export default function CustomerDashboard() {
     // Auto-refresh invoices when user comes back from another page
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        loadInvoices(); // Refresh invoice data when page becomes visible
+        loadInvoices();
       }
     };
 
+    // Auto-refresh when admin makes changes (payment confirmed, etc.)
+    const handleAdminUpdate = () => {
+      loadInvoices();
+      loadUserData();
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('customer-data-refresh', handleAdminUpdate);
+
+    // Poll invoices every 30s so new transactions appear automatically
+    const interval = setInterval(() => {
+      loadInvoices();
+    }, 30_000);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('customer-data-refresh', handleAdminUpdate);
+      clearInterval(interval);
     };
   }, [router]);
 
@@ -162,7 +179,7 @@ export default function CustomerDashboard() {
 
   const handleRegeneratePayment = async (invoiceId: string, invoiceNumber: string) => {
     if (paymentGateways.length === 0) {
-      await showWarning(t('customer.noGatewayAvailable'));
+      toast('warning', 'Gateway Tidak Tersedia', t('customer.noGatewayAvailable'));
       return;
     }
 
@@ -191,11 +208,11 @@ export default function CustomerDashboard() {
         // Open payment URL
         window.open(data.paymentUrl, '_blank', 'noopener,noreferrer');
       } else {
-        await showError(data.error || t('customer.failedGeneratePaymentLink'));
+        toast('error', 'Gagal', data.error || t('customer.failedGeneratePaymentLink'));
       }
     } catch (error) {
       console.error('Regenerate payment error:', error);
-      await showError(t('customer.failedContactServer'));
+      toast('error', 'Gagal', t('customer.failedContactServer'));
     } finally {
       setGeneratingPayment(null);
     }
@@ -238,7 +255,7 @@ export default function CustomerDashboard() {
     try {
       const res = await fetch('/api/customer/invoices', { headers: { 'Authorization': `Bearer ${token}` } });
       const data = await res.json();
-      if (data.success) setInvoices(data.invoices || []);
+      if (data.success) setInvoices(data.data?.invoices || []);
     } catch (error) { console.error('Load invoices error:', error); }
   };
 
@@ -252,6 +269,8 @@ export default function CustomerDashboard() {
       if (wifiData.success && wifiData.device) {
         setOntDevice(wifiData.device);
         setConnectedDevices(wifiData.device.connectedHosts || []);
+      } else if (wifiData.reason === 'not_configured') {
+        // GenieACS not set up — silently skip, no device info available
       }
     } catch (error) { 
       console.error('[Customer Dashboard] Load device error:', error); 
@@ -263,18 +282,18 @@ export default function CustomerDashboard() {
 
   const handleUpdateWifi = async () => {
     if (!wifiForm.ssid) { 
-      await showWarning(t('customer.ssidRequired')); 
+      toast('warning', 'Wajib Diisi', t('customer.ssidRequired'));
       return; 
     }
     
     // Validate password if provided
     if (wifiForm.password && (wifiForm.password.length < 8 || wifiForm.password.length > 63)) {
-      await showWarning(t('customer.passwordLength'));
+      toast('warning', 'Password Tidak Valid', t('customer.passwordLength'));
       return;
     }
 
     if (!ontDevice?._id) {
-      await showError(t('customer.deviceNotFound'));
+      toast('error', 'Gagal', t('customer.deviceNotFound'));
       return;
     }
 
@@ -293,15 +312,15 @@ export default function CustomerDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        await showSuccess(t('customer.wifiUpdateSuccess'));
+        toast('success', 'WiFi Berhasil Diperbarui', t('customer.wifiUpdateSuccess'));
         setEditingWifi(false);
         setWifiForm({ ssid: '', password: '' });
         setTimeout(() => loadOntDevice(), 3000);
       } else {
-        await showError(data.error || t('customer.failedUpdateWifi'));
+        toast('error', 'Gagal', data.error || t('customer.failedUpdateWifi'));
       }
     } catch (error) { 
-      await showError(t('customer.failedUpdateWifi')); 
+      toast('error', 'Gagal', t('customer.failedUpdateWifi'));
     } finally { 
       setUpdatingWifi(false); 
     }
@@ -321,25 +340,9 @@ export default function CustomerDashboard() {
   const daysLeft = Math.ceil((expiredDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-primary/20 to-accent/20 backdrop-blur-xl border-b-2 border-primary/30 sticky top-0 z-10 shadow-[0_0_30px_rgba(188,19,254,0.2)]">
-        <div className="max-w-3xl mx-auto px-3 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary drop-shadow-[0_0_10px_rgba(188,19,254,0.8)]" />
-            <div>
-              <h1 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-pink-500">{companyName}</h1>
-              <p className="text-[10px] text-accent">Customer Portal</p>
-            </div>
-          </div>
-          <button onClick={handleLogout} className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-destructive/20 hover:bg-destructive/30 rounded-lg transition border border-destructive/40 text-destructive">
-            <LogOut className="w-3.5 h-3.5" /> {t('auth.logout')}
-          </button>
-        </div>
-      </header>
-
-      {/* Main */}
-      <div className="max-w-3xl mx-auto p-3 space-y-3">
+    <div className="p-3 lg:p-6">
+      {/* Top row: Profile + Balance */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* Profile Card */}
         <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-primary/30 shadow-[0_0_30px_rgba(188,19,254,0.15)]">
           <div className="flex items-center gap-2 mb-3">
@@ -482,7 +485,10 @@ export default function CustomerDashboard() {
             </div>
           </CyberCard>
         )}
+      </div>
 
+      {/* Bottom row: ONT/WiFi + Invoices */}
+      <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* ONT/WiFi Card */}
         <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-accent/30 shadow-[0_0_30px_rgba(0,247,255,0.15)]">
           <div className="flex items-center gap-2 mb-3">
@@ -638,7 +644,7 @@ export default function CustomerDashboard() {
                       </div>
                       {!isPaid && !isCancelled && (isPending || isOverdue) && (
                         <>
-                          {invoice.paymentLink && invoice.paymentLink.trim() !== '' ? (
+                          {invoice.paymentLink && invoice.paymentLink.trim() !== '' && !invoice.paymentLink.includes('localhost') ? (
                             <button
                               onClick={() => {
                                 console.log('[Dashboard] Bayar clicked for invoice:', invoice.invoiceNumber);
@@ -670,6 +676,42 @@ export default function CustomerDashboard() {
               })}
             </div>
           )}
+        </CyberCard>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mt-4">
+        <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-2 bg-cyan-500/20 rounded-lg border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+              <Zap className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_5px_rgba(6,182,212,0.8)]" />
+            </div>
+            <h2 className="text-sm font-bold text-cyan-400 uppercase tracking-wider drop-shadow-[0_0_5px_rgba(6,182,212,0.5)]">Menu Cepat</h2>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {([
+              { name: 'Semua Tagihan',  href: '/customer/invoices',      icon: FileText,      bg: 'bg-success/10',   border: 'border-success/30',   text: 'text-success' },
+              { name: 'Ganti Paket',   href: '/customer/upgrade',       icon: Package,       bg: 'bg-primary/10',   border: 'border-primary/30',   text: 'text-primary' },
+              { name: 'Top-Up Saldo',  href: '/customer/topup-direct',  icon: CreditCard,    bg: 'bg-cyan-500/10',  border: 'border-cyan-500/30',  text: 'text-cyan-400' },
+              { name: 'Riwayat Bayar', href: '/customer/history',       icon: Receipt,       bg: 'bg-accent/10',    border: 'border-accent/30',    text: 'text-accent' },
+              { name: 'WiFi',          href: '/customer/wifi',          icon: Wifi,          bg: 'bg-blue-500/10',  border: 'border-blue-500/30',  text: 'text-blue-400' },
+              { name: 'Tiket Support', href: '/customer/tickets',       icon: MessageSquare, bg: 'bg-yellow-500/10',border: 'border-yellow-500/30',text: 'text-yellow-400' },
+              { name: 'Referral',      href: '/customer/referral',      icon: Gift,          bg: 'bg-pink-500/10',  border: 'border-pink-500/30',  text: 'text-pink-400' },
+              { name: 'Profil Akun',   href: '/customer/profile',       icon: User,          bg: 'bg-muted/50',     border: 'border-muted',        text: 'text-muted-foreground' },
+            ] as const).map((action) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={action.href}
+                  onClick={() => router.push(action.href)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 hover:scale-105 active:scale-95 ${action.bg} ${action.border}`}
+                >
+                  <Icon className={`w-5 h-5 ${action.text}`} />
+                  <span className={`text-[9px] font-bold text-center leading-tight ${action.text}`}>{action.name}</span>
+                </button>
+              );
+            })}
+          </div>
         </CyberCard>
       </div>
     </div>

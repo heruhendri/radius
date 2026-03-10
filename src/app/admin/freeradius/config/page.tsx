@@ -8,7 +8,7 @@ import {
     FileCode, Terminal
 } from 'lucide-react';
 import { showConfirm } from '@/lib/sweetalert';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface FileItem {
     name: string;
@@ -24,6 +24,7 @@ interface ConfigGroup {
 
 export default function RadiusConfigPage() {
     const { t } = useTranslation();
+    const { addToast, confirm } = useToast();
     const [groups, setGroups] = useState<ConfigGroup[]>([]);
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [content, setContent] = useState('');
@@ -77,11 +78,7 @@ export default function RadiusConfigPage() {
                 throw new Error(data.error || 'Failed to load file');
             }
         } catch (error: any) {
-            Swal.fire({
-                icon: 'error',
-                title: t('common.error'),
-                text: error.message
-            });
+            addToast({ type: 'error', title: t('common.error'), description: error.message });
             setContent('');
         } finally {
             setLoadingFile(false);
@@ -104,87 +101,66 @@ export default function RadiusConfigPage() {
     const handleSave = async () => {
         if (!selectedFile) return;
 
-        const result = await Swal.fire({
+        if (!await confirm({
             title: t('radius.saveChanges'),
-            text: t('radius.saveConfirm', { file: selectedFile }),
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: t('radius.saveChanges'),
-            confirmButtonColor: '#0d9488',
-            cancelButtonText: t('common.cancel')
-        });
+            message: t('radius.saveConfirm', { file: selectedFile }),
+            confirmText: t('radius.saveChanges'),
+            cancelText: t('common.cancel'),
+            variant: 'warning',
+        })) return;
+        setSaving(true);
+        try {
+            const response = await fetch('/api/freeradius/config/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filename: selectedFile,
+                    content
+                })
+            });
+            const data = await response.json();
 
-        if (result.isConfirmed) {
-            setSaving(true);
-            try {
-                const response = await fetch('/api/freeradius/config/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        filename: selectedFile,
-                        content
-                    })
-                });
-                const data = await response.json();
+            if (response.ok && data.success) {
+                setOriginalContent(content);
+                addToast({ type: 'success', title: t('common.success'), description: t('radius.saveSuccess'), duration: 2000 });
 
-                if (response.ok && data.success) {
-                    setOriginalContent(content);
-                    Swal.fire({
-                        icon: 'success',
-                        title: t('common.success'),
-                        text: t('radius.saveSuccess'),
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-
-                    // Ask to restart service
-                    const restart = await Swal.fire({
-                        title: t('radius.restartPrompt'),
-                        text: t('radius.restartDesc'),
-                        icon: 'info',
-                        showCancelButton: true,
-                        confirmButtonText: t('radius.restartService'),
-                        cancelButtonText: t('common.cancel')
-                    });
-
-                    if (restart.isConfirmed) {
-                        const restartRes = await fetch('/api/freeradius/restart', { method: 'POST' });
-                        const restartData = await restartRes.json();
-                        if (restartRes.ok && restartData.success) {
-                            Swal.fire('Success', t('radius.success'), 'success');
-                        } else {
-                            Swal.fire('Error', restartData.error || 'Failed to restart', 'error');
-                        }
+                // Ask to restart service
+                if (await confirm({
+                    title: t('radius.restartPrompt'),
+                    message: t('radius.restartDesc'),
+                    confirmText: t('radius.restartService'),
+                    cancelText: t('common.cancel'),
+                    variant: 'info',
+                })) {
+                    const restartRes = await fetch('/api/freeradius/restart', { method: 'POST' });
+                    const restartData = await restartRes.json();
+                    if (restartRes.ok && restartData.success) {
+                        addToast({ type: 'success', title: 'Success', description: t('radius.success') });
+                    } else {
+                        addToast({ type: 'error', title: 'Error', description: restartData.error || 'Failed to restart' });
                     }
-                } else {
-                    throw new Error(data.error || 'Failed to save');
                 }
-            } catch (error: any) {
-                Swal.fire({
-                    icon: 'error',
-                    title: t('common.error'),
-                    text: error.message
-                });
-            } finally {
-                setSaving(false);
+            } else {
+                throw new Error(data.error || 'Failed to save');
             }
+        } catch (error: any) {
+            addToast({ type: 'error', title: t('common.error'), description: error.message });
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleReset = () => {
+    const handleReset = async () => {
         if (content !== originalContent) {
-            Swal.fire({
+            if (await confirm({
                 title: t('radius.confirmAction'),
-                text: t('radius.unsavedChanges'),
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: t('radius.clearView'),
-                cancelButtonText: t('common.cancel')
-            }).then((res) => {
-                if (res.isConfirmed) {
-                    setContent(originalContent);
-                }
-            });
+                message: t('radius.unsavedChanges'),
+                confirmText: t('radius.clearView'),
+                cancelText: t('common.cancel'),
+                variant: 'warning',
+            })) {
+                setContent(originalContent);
+            }
         }
     };
 
@@ -194,7 +170,7 @@ export default function RadiusConfigPage() {
         <div className="space-y-6 h-[calc(100vh-8rem)] flex flex-col">
             {/* Header */}
             <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                     <Settings className="w-6 h-6 text-primary" />
                     {t('radius.configTitle')}
                 </h1>
@@ -311,7 +287,7 @@ export default function RadiusConfigPage() {
                     </div>
 
                     {/* Editor */}
-                    <div className="flex-1 relative bg-[#1e1e1e] font-mono text-sm group">
+                    <div className="flex-1 relative bg-muted/50 dark:bg-[#1e1e1e] font-mono text-sm group">
                         {!selectedFile ? (
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
                                 <Settings className="w-12 h-12 mb-4 opacity-20" />
@@ -325,7 +301,7 @@ export default function RadiusConfigPage() {
                             <textarea
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
-                                className="w-full h-full p-4 bg-transparent text-[#d4d4d4] resize-none focus:outline-none leading-relaxed custom-scrollbar"
+                                className="w-full h-full p-4 bg-transparent text-foreground resize-none focus:outline-none leading-relaxed custom-scrollbar font-mono"
                                 spellCheck={false}
                                 autoCorrect="off"
                             />

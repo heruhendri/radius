@@ -104,7 +104,7 @@ export default function EVoucherManagementPage() {
   };
 
   const handleCancelOrder = async (orderId: string, orderNumber: string) => {
-    const confirmed = await showConfirm(`Cancel order ${orderNumber}?`);
+    const confirmed = await showConfirm(t('hotspot.cancelOrderConfirm', { number: orderNumber }));
     if (!confirmed) return;
     try {
       const res = await fetch(`/api/admin/evoucher/orders/${orderId}/cancel`, { method: 'POST' });
@@ -121,7 +121,7 @@ export default function EVoucherManagementPage() {
   };
 
   const handleResendVoucher = async (orderId: string, orderNumber: string) => {
-    const confirmed = await showConfirm(`Resend vouchers for ${orderNumber}?`);
+    const confirmed = await showConfirm(t('hotspot.resendVouchersConfirm', { number: orderNumber }));
     if (!confirmed) return;
     try {
       const res = await fetch(`/api/admin/evoucher/orders/${orderId}/resend`, { method: 'POST' });
@@ -203,7 +203,7 @@ export default function EVoucherManagementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -214,11 +214,11 @@ export default function EVoucherManagementPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
             <ShoppingCart className="w-5 h-5 text-[#00f7ff]" />
             {t('evoucher.title')}
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('evoucher.subtitle')}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('evoucher.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           {selectedOrders.length > 0 && (
@@ -242,7 +242,7 @@ export default function EVoucherManagementPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
         <div className="bg-card p-2.5 rounded-lg border border-border">
           <div className="flex items-center justify-between">
             <div>
@@ -330,8 +330,72 @@ export default function EVoucherManagementPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
+      {/* Mobile Card View */}
+      <div className="block md:hidden space-y-3">
+        {loading ? (
+          <div className="text-center py-8">
+            <RefreshCw className="w-5 h-5 animate-spin mx-auto text-primary" />
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-xs">{t('evoucher.noOrdersFound')}</div>
+        ) : (
+          filteredOrders.map((order) => (
+            <div key={order.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedOrders.includes(order.id)}
+                    onChange={() => handleSelectOrder(order.id)}
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <div>
+                    <div className="font-mono text-xs text-foreground">{order.orderNumber}</div>
+                    <div className="text-[10px] text-muted-foreground">{formatToWIB(order.createdAt)}</div>
+                  </div>
+                </div>
+                {getStatusBadge(order.status)}
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                <div>
+                  <div className="text-[10px] text-muted-foreground">{t('evoucher.customer')}</div>
+                  <div className="font-medium">{order.customerName}</div>
+                  <div className="text-[10px] text-muted-foreground">{order.customerPhone}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">{t('evoucher.profile')}</div>
+                  <div>{order.profile.name}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">{t('evoucher.quantity')}</div>
+                  <div>{order.quantity}x</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">{t('evoucher.amount')}</div>
+                  <div className="font-medium">{formatCurrency(order.totalAmount)}</div>
+                </div>
+              </div>
+              {(order.status === 'PENDING' || order.status === 'PAID') && (
+                <div className="flex justify-end gap-1 border-t border-border pt-2">
+                  {order.status === 'PENDING' && (
+                    <button onClick={() => handleCancelOrder(order.id, order.orderNumber)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Cancel">
+                      <Ban className="w-4 h-4" />
+                    </button>
+                  )}
+                  {order.status === 'PAID' && (
+                    <button onClick={() => handleResendVoucher(order.id, order.orderNumber)} className="p-2 text-primary hover:bg-primary/10 rounded" title="Resend">
+                      <Send className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Table - Desktop */}
+      <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
         {loading ? (
           <div className="text-center py-8">
             <RefreshCw className="w-5 h-5 animate-spin mx-auto text-primary" />

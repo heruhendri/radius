@@ -12,10 +12,16 @@ import {
   User,
   Wifi,
   Globe,
+  Sun,
+  Moon,
+  LifeBuoy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AgentNotificationDropdown from '@/components/agent/NotificationDropdown';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useTheme } from '@/hooks/useTheme';
+import { CyberToastProvider, useToast } from '@/components/cyberpunk/CyberToast';
+import { registerGlobalToast, registerGlobalConfirm } from '@/lib/sweetalert';
 
 interface MenuItem {
   titleKey: string;
@@ -38,6 +44,11 @@ const menuItems: MenuItem[] = [
     titleKey: 'agent.portal.sessions',
     icon: <Wifi className="w-4 h-4" />,
     href: '/agent/sessions',
+  },
+  {
+    titleKey: 'agent.portal.support',
+    icon: <LifeBuoy className="w-4 h-4" />,
+    href: '/agent/tickets',
   },
 ];
 
@@ -75,23 +86,24 @@ function AgentSidebar({
       {/* Sidebar */}
       <aside className={cn(
         'fixed top-0 left-0 h-full z-50 transition-all duration-300 ease-in-out',
-        'w-64 bg-[#0a0520]/95 backdrop-blur-xl border-r border-[#bc13fe]/20',
-        'shadow-[5px_0_30px_rgba(188,19,254,0.15)]',
+        'w-64 bg-white dark:bg-[#0a0520]/95 backdrop-blur-xl border-r border-purple-200 dark:border-[#bc13fe]/20',
+        'shadow-[5px_0_15px_rgba(0,0,0,0.08)] dark:shadow-[5px_0_30px_rgba(188,19,254,0.15)]',
+        'overflow-y-auto',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:translate-x-0' // Always visible on desktop
       )}>
         {/* Logo */}
-        <div className="p-4 border-b border-[#bc13fe]/20">
+        <div className="p-4 border-b border-purple-200 dark:border-[#bc13fe]/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-xl shadow-[0_0_20px_rgba(188,19,254,0.5)]">
                 <Ticket className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-base font-bold bg-gradient-to-r from-[#00f7ff] to-[#bc13fe] bg-clip-text text-transparent">
+                <h1 className="text-base font-bold text-purple-700 dark:text-transparent dark:bg-gradient-to-r dark:from-[#00f7ff] dark:to-[#bc13fe] dark:bg-clip-text">
                   {t('agent.portal.title')}
                 </h1>
-                <p className="text-[10px] text-[#e0d0ff]/60">{t('agent.portal.subtitle')}</p>
+                <p className="text-[10px] text-slate-500 dark:text-[#e0d0ff]/60">{t('agent.portal.subtitle')}</p>
               </div>
             </div>
             <button
@@ -106,8 +118,8 @@ function AgentSidebar({
         {/* Balance Card */}
         {agent && (
           <div className="p-4">
-            <div className="bg-gradient-to-br from-[#bc13fe]/30 to-[#00f7ff]/30 rounded-xl p-3 border border-[#00f7ff]/30">
-              <p className="text-[10px] text-[#e0d0ff]/70 uppercase tracking-wider">{t('agent.portal.yourBalance')}</p>
+            <div className="bg-gradient-to-br from-[#bc13fe]/20 to-[#00f7ff]/20 dark:from-[#bc13fe]/30 dark:to-[#00f7ff]/30 rounded-xl p-3 border border-cyan-200 dark:border-[#00f7ff]/30">
+              <p className="text-[10px] text-slate-500 dark:text-[#e0d0ff]/70 uppercase tracking-wider">{t('agent.portal.yourBalance')}</p>
               <p className="text-lg font-bold text-[#00f7ff] drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]">
                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(agent.balance || 0)}
               </p>
@@ -125,15 +137,15 @@ function AgentSidebar({
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 group',
                 pathname === item.href
-                  ? 'text-[#00f7ff] bg-[#00f7ff]/10 border border-[#00f7ff]/30 shadow-[0_0_15px_rgba(0,247,255,0.15)]'
-                  : 'text-[#e0d0ff]/70 hover:text-white hover:bg-[#bc13fe]/10 border border-transparent hover:border-[#bc13fe]/20',
+                  ? 'text-[#00f7ff] bg-cyan-50 dark:bg-[#00f7ff]/10 border border-cyan-300 dark:border-[#00f7ff]/30 shadow-sm dark:shadow-[0_0_15px_rgba(0,247,255,0.15)]'
+                  : 'text-slate-600 dark:text-[#e0d0ff]/70 hover:text-slate-900 dark:hover:text-white hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10 border border-transparent hover:border-purple-200 dark:hover:border-[#bc13fe]/20',
               )}
             >
               <span className={cn(
                 'p-1.5 rounded-lg transition-all duration-300',
                 pathname === item.href 
-                  ? 'text-[#00f7ff] bg-[#00f7ff]/10 drop-shadow-[0_0_8px_rgba(0,247,255,0.8)]' 
-                  : 'text-[#e0d0ff]/60 group-hover:text-[#00f7ff]'
+                  ? 'text-[#00f7ff] bg-cyan-50 dark:bg-[#00f7ff]/10' 
+                  : 'text-slate-400 dark:text-[#e0d0ff]/60 group-hover:text-[#00f7ff]'
               )}>
                 {item.icon}
               </span>
@@ -143,16 +155,16 @@ function AgentSidebar({
         </nav>
 
         {/* User Info & Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#bc13fe]/20 bg-[#0a0520]/50">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-purple-200 dark:border-[#bc13fe]/20 bg-slate-50/80 dark:bg-[#0a0520]/50">
           {agent && (
             <div className="mb-3">
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#bc13fe]/10 border border-[#bc13fe]/20">
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-purple-50 dark:bg-[#bc13fe]/10 border border-purple-200 dark:border-[#bc13fe]/20">
                 <div className="p-2 bg-gradient-to-br from-[#bc13fe] to-[#ff44cc] rounded-lg">
                   <User className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-white truncate">{agent.name}</p>
-                  <p className="text-[10px] text-[#e0d0ff]/60 truncate">{agent.phone}</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{agent.name}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-[#e0d0ff]/60 truncate">{agent.phone}</p>
                 </div>
               </div>
             </div>
@@ -170,13 +182,14 @@ function AgentSidebar({
   );
 }
 
-export default function AgentLayoutClient({ children }: { children: React.ReactNode }) {
+function AgentLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [agent, setAgent] = useState<AgentData | null>(null);
   const [mounted, setMounted] = useState(false);
   const { t, locale, setLocale } = useTranslation();
+  const { isDark, toggleTheme } = useTheme();
 
   // Check if on login page
   const isLoginPage = pathname === '/agent';
@@ -202,7 +215,19 @@ export default function AgentLayoutClient({ children }: { children: React.ReactN
     if (!isLoginPage) {
       const agentDataStr = localStorage.getItem('agentData');
       if (agentDataStr) {
-        setAgent(JSON.parse(agentDataStr));
+        const localAgent = JSON.parse(agentDataStr);
+        setAgent(localAgent);
+        // Fetch fresh balance from API
+        fetch(`/api/agent/dashboard?agentId=${localAgent.id}&limit=1`)
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data?.agent) {
+              const updated = { ...localAgent, balance: data.agent.balance };
+              setAgent(updated);
+              localStorage.setItem('agentData', JSON.stringify(updated));
+            }
+          })
+          .catch(() => {});
       }
     }
   }, [isLoginPage, pathname]);
@@ -219,13 +244,13 @@ export default function AgentLayoutClient({ children }: { children: React.ReactN
 
   // Desktop layout with sidebar
   return (
-    <div className="min-h-screen bg-[#0a0520]">
-      {/* Background Effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0520]">
+      {/* Background Effects - dark only */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none hidden dark:block">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/10 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/10 rounded-full blur-3xl"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.02)_1px,transparent_1px),linear_gradient(90deg,rgba(188,19,254,0.02)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.02)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       </div>
 
       {/* Desktop Sidebar - Hidden on mobile */}
@@ -251,17 +276,25 @@ export default function AgentLayoutClient({ children }: { children: React.ReactN
       {/* Main Content Area */}
       <div className="lg:ml-64 min-h-screen flex flex-col">
         {/* Desktop Header */}
-        <header className="hidden lg:block sticky top-0 z-20 bg-[#0a0520]/80 backdrop-blur-xl border-b border-[#bc13fe]/20">
+        <header className="hidden lg:block sticky top-0 z-20 bg-white/80 dark:bg-[#0a0520]/80 backdrop-blur-xl border-b border-slate-200 dark:border-[#bc13fe]/20 shadow-sm dark:shadow-none">
           <div className="px-6 py-3 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-bold text-white">{t('agent.portal.welcome')}</h2>
-              <p className="text-xs text-[#e0d0ff]/60">{agent?.name || 'Agent'}</p>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('agent.portal.welcome')}</h2>
+              <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{agent?.name || 'Agent'}</p>
             </div>
             <div className="flex items-center gap-3">
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#bc13fe]/10 hover:bg-slate-200 dark:hover:bg-[#bc13fe]/20 border border-slate-200 dark:border-[#bc13fe]/30 transition-all"
+                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDark ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-slate-600" />}
+              </button>
               {/* Language Switcher */}
               <button
                 onClick={() => setLocale(locale === 'id' ? 'en' : 'id')}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-[#bc13fe]/10 hover:bg-[#bc13fe]/20 text-[#e0d0ff] border border-[#bc13fe]/30 rounded-lg transition-all"
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-[#bc13fe]/10 hover:bg-slate-200 dark:hover:bg-[#bc13fe]/20 text-slate-700 dark:text-[#e0d0ff] border border-slate-200 dark:border-[#bc13fe]/30 rounded-lg transition-all"
               >
                 <Globe className="w-3.5 h-3.5" />
                 <span className="uppercase">{locale}</span>
@@ -287,6 +320,13 @@ export default function AgentLayoutClient({ children }: { children: React.ReactN
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition border border-white/20"
+              >
+                {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-white" />}
+              </button>
               {/* Language Switcher */}
               <button
                 onClick={() => setLocale(locale === 'id' ? 'en' : 'id')}
@@ -311,5 +351,23 @@ export default function AgentLayoutClient({ children }: { children: React.ReactN
         </main>
       </div>
     </div>
+  );
+}
+
+function AgentToastBridge() {
+  const { addToast, confirm } = useToast();
+  useEffect(() => {
+    registerGlobalToast(addToast);
+    registerGlobalConfirm(confirm);
+  }, [addToast, confirm]);
+  return null;
+}
+
+export default function AgentLayoutClient({ children }: { children: React.ReactNode }) {
+  return (
+    <CyberToastProvider>
+      <AgentToastBridge />
+      <AgentLayoutInner>{children}</AgentLayoutInner>
+    </CyberToastProvider>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BarChart3, Download, RefreshCw, Filter } from 'lucide-react';
+import { BarChart3, Download, RefreshCw, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface RekapVoucher {
@@ -30,10 +30,24 @@ export default function RekapVoucherPage() {
   const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [voucherMonth, setVoucherMonth] = useState<string>(''); // '' = all-time
+
+  const MONTH_NAMES_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const getMonthLabel = (ym: string) => {
+    if (!ym) return 'Semua';
+    const [y, m] = ym.split('-').map(Number);
+    return `${MONTH_NAMES_ID[m - 1]} ${y}`;
+  };
+  const shiftVoucherMonth = (delta: number) => {
+    const base = voucherMonth || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })();
+    const [y, m] = base.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    setVoucherMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  };
 
   useEffect(() => {
     fetchData();
-  }, [filterAgent, filterProfile]);
+  }, [filterAgent, filterProfile, voucherMonth]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -41,6 +55,7 @@ export default function RekapVoucherPage() {
       const params = new URLSearchParams();
       if (filterAgent && filterAgent !== 'all') params.set('agentId', filterAgent);
       if (filterProfile && filterProfile !== 'all') params.set('profileId', filterProfile);
+      if (voucherMonth) params.set('month', voucherMonth);
 
       const res = await fetch(`/api/hotspot/rekap-voucher?${params}`);
       const data = await res.json();
@@ -58,6 +73,7 @@ export default function RekapVoucherPage() {
       const params = new URLSearchParams();
       if (filterAgent && filterAgent !== 'all') params.set('agentId', filterAgent);
       if (filterProfile && filterProfile !== 'all') params.set('profileId', filterProfile);
+      if (voucherMonth) params.set('month', voucherMonth);
       
       const res = await fetch(`/api/hotspot/rekap-voucher/export?${params}`);
       const blob = await res.blob();
@@ -75,13 +91,13 @@ export default function RekapVoucherPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+    try {
+      const { formatWIB } = require('@/lib/timezone');
+      return formatWIB(new Date(dateString), 'dd/MM/yyyy HH:mm');
+    } catch {
+      const date = new Date(dateString);
+      return `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+    }
   };
 
   const filteredRekap = rekap.filter(item => {
@@ -99,7 +115,7 @@ export default function RekapVoucherPage() {
   const totalSold = filteredRekap.reduce((sum, item) => sum + item.sold, 0);
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -110,11 +126,11 @@ export default function RekapVoucherPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-[#00f7ff]" />
             {t('hotspot.rekapVoucherTitle')}
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {t('hotspot.rekapVoucherSubtitle')}
           </p>
         </div>
@@ -187,26 +203,121 @@ export default function RekapVoucherPage() {
             />
           </div>
         </div>
+        {/* Month Filter */}
+        <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Periode:</span>
+          <div className="flex items-center gap-1 border border-border rounded-lg bg-muted/30 px-1 py-1">
+            <button
+              onClick={() => shiftVoucherMonth(-1)}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setVoucherMonth('')}
+              className="text-xs font-medium text-foreground min-w-[90px] text-center hover:text-primary transition-colors"
+              title="Klik untuk reset ke semua"
+            >
+              {getMonthLabel(voucherMonth)}
+            </button>
+            <button
+              onClick={() => shiftVoucherMonth(1)}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-card p-4 rounded-lg border-2 border-primary/30 shadow-[0_0_15px_rgba(188,19,254,0.1)]">
           <div className="text-xs text-primary font-bold uppercase mb-1">{t('hotspot.totalQty')}</div>
-          <div className="text-2xl font-bold text-primary drop-shadow-[0_0_5px_rgba(188,19,254,0.5)]">{totalQty.toLocaleString()}</div>
+          <div className="text-lg sm:text-2xl font-bold text-primary drop-shadow-[0_0_5px_rgba(188,19,254,0.5)]">{totalQty.toLocaleString()}</div>
         </div>
         <div className="bg-card p-4 rounded-lg border-2 border-success/30 shadow-[0_0_15px_rgba(0,255,136,0.1)]">
           <div className="text-xs text-success font-bold uppercase mb-1">{t('hotspot.stock')}</div>
-          <div className="text-2xl font-bold text-success drop-shadow-[0_0_5px_rgba(0,255,136,0.5)]">{totalStock.toLocaleString()}</div>
+          <div className="text-lg sm:text-2xl font-bold text-success drop-shadow-[0_0_5px_rgba(0,255,136,0.5)]">{totalStock.toLocaleString()}</div>
         </div>
         <div className="bg-card p-4 rounded-lg border-2 border-warning/30 shadow-[0_0_15px_rgba(255,170,0,0.1)]">
           <div className="text-xs text-warning font-bold uppercase mb-1">{t('hotspot.sold')}</div>
-          <div className="text-2xl font-bold text-warning drop-shadow-[0_0_5px_rgba(255,170,0,0.5)]">{totalSold.toLocaleString()}</div>
+          <div className="text-lg sm:text-2xl font-bold text-warning drop-shadow-[0_0_5px_rgba(255,170,0,0.5)]">{totalSold.toLocaleString()}</div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
+      {/* Mobile Card View */}
+      <div className="block md:hidden space-y-3">
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground text-xs">{t('common.loading')}</div>
+        ) : filteredRekap.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-xs">{t('hotspot.noRekapData')}</div>
+        ) : (
+          filteredRekap.map((item, index) => (
+            <div key={item.batchCode} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <div className="font-mono text-xs text-foreground">{item.batchCode}</div>
+                  <div className="text-[10px] text-muted-foreground">{formatDate(item.createdAt)}</div>
+                </div>
+                <span className="text-[10px] text-muted-foreground">#{index + 1}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                <div>
+                  <div className="text-[10px] text-muted-foreground">{t('hotspot.partnerAgent')}</div>
+                  {item.agent ? (
+                    <div>
+                      <div className="font-medium text-foreground">{item.agent.name}</div>
+                      <div className="text-[10px] text-muted-foreground">{item.agent.phone}</div>
+                    </div>
+                  ) : (
+                    <div className="italic text-muted-foreground">{t('hotspot.admin')}</div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">{t('hotspot.profile')}</div>
+                  <div>{item.profile.name}</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-xs border-t border-border pt-2">
+                <div className="text-center">
+                  <div className="text-[10px] text-muted-foreground">{t('hotspot.qty')}</div>
+                  <div className="font-medium text-primary">{item.totalQty}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[10px] text-muted-foreground">{t('hotspot.stock')}</div>
+                  <div className="font-medium text-success">{item.stock}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[10px] text-muted-foreground">{t('hotspot.sold')}</div>
+                  <div className="font-medium text-orange-600">{item.sold}</div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+        {filteredRekap.length > 0 && (
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/40 p-3">
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="text-center">
+                <div className="text-[10px] text-muted-foreground font-bold">{t('common.total')} {t('hotspot.qty')}</div>
+                <div className="font-bold text-primary">{totalQty.toLocaleString()}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] text-muted-foreground font-bold">{t('common.total')} {t('hotspot.stock')}</div>
+                <div className="font-bold text-success">{totalStock.toLocaleString()}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] text-muted-foreground font-bold">{t('common.total')} {t('hotspot.sold')}</div>
+                <div className="font-bold text-orange-600">{totalSold.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Table - Desktop */}
+      <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted border-b border-border">

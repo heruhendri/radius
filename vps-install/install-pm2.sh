@@ -1,6 +1,6 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ============================================================================
-# AIBILL RADIUS VPS Installer - PM2 & Build Module
+# SALFANET RADIUS VPS Installer - PM2 & Build Module
 # ============================================================================
 # Step 7: Install PM2, build application, start with PM2
 # ============================================================================
@@ -82,8 +82,8 @@ check_and_create_swap() {
     
     print_info "System memory: ${TOTAL_MEM}MB total, ${AVAILABLE_MEM}MB available"
     
-    if [ "$TOTAL_MEM" -lt "2000" ]; then
-        print_warning "Low memory system detected (< 2GB RAM)"
+    if [ "$TOTAL_MEM" -lt "3000" ]; then
+        print_warning "Low memory system detected (< 3GB RAM) — creating swap for build safety"
         
         if [ ! -f /swapfile ]; then
             print_info "Creating 2GB swap file (one-time setup, 2-3 minutes)..."
@@ -123,20 +123,56 @@ build_application() {
         return 1
     fi
     
+    # Fix tsconfig.json: remove expo extend that breaks Next.js build
+    if grep -q '"extends": "expo/tsconfig.base"' tsconfig.json 2>/dev/null; then
+        print_info "Removing invalid expo tsconfig extend from root tsconfig.json..."
+        # Remove the "extends" line and fix trailing comma on "exclude" block
+        python3 -c "
+import json, re, sys
+with open('tsconfig.json', 'r') as f:
+    content = f.read()
+# Remove the extends line
+content = re.sub(r',?\s*\"extends\"\s*:\s*\"expo/tsconfig.base\"\s*', '', content)
+# Also ensure mobile-app is excluded
+try:
+    data = json.loads(content)
+    excl = data.get('exclude', [])
+    if 'mobile-app' not in excl:
+        excl.append('mobile-app')
+    data['exclude'] = excl
+    # Remove extends key if still present
+    data.pop('extends', None)
+    with open('tsconfig.json', 'w') as f:
+        json.dump(data, f, indent=2)
+    print('tsconfig.json fixed successfully')
+except Exception as e:
+    print(f'JSON fix failed: {e}, trying raw replace')
+    with open('tsconfig.json', 'w') as f:
+        f.write(content)
+" 2>&1 || sed -i '/"extends": "expo\/tsconfig.base"/d' tsconfig.json
+        print_success "tsconfig.json fixed"
+    fi
+
     # Clean previous build
     print_info "Cleaning previous build artifacts..."
     rm -rf .next .turbo node_modules/.cache 2>/dev/null || true
     print_success "Build cache cleared"
+    
+    # Free memory before build (critical for 2GB RAM VPS)
+    print_info "Freeing memory before build..."
+    pm2 stop all 2>/dev/null || true
+    sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+    local FREE_MEM=$(free -m | awk 'NR==2{printf "%s", $7}')
+    print_info "Available memory: ${FREE_MEM}MB"
     
     # Build with optimizations
     print_info "Starting Next.js build process..."
     print_info "Building with Node.js memory limit: 1.5GB"
     echo ""
     
-    if NODE_OPTIONS="--max-old-space-size=1536 --max-semi-space-size=64" \
-       NEXT_TELEMETRY_DISABLED=1 \
+    if NEXT_TELEMETRY_DISABLED=1 \
        PRISMA_HIDE_UPDATE_MESSAGE=true \
-       npm run build 2>&1 | tee /tmp/build.log; then
+       npm run build:vps 2>&1 | tee /tmp/build.log; then
         print_success "Build completed successfully!"
     else
         print_error "Build failed!"
@@ -168,21 +204,34 @@ build_application() {
 
 create_pm2_config() {
     print_info "Creating PM2 ecosystem file..."
-    
-    cat > ${APP_DIR}/ecosystem.config.js <<'EOF'
+
+    # Prefer the production-tuned config shipped with the app
+    if [ -f "${APP_DIR}/production/ecosystem.config.js" ]; then
+        cp "${APP_DIR}/production/ecosystem.config.js" "${APP_DIR}/ecosystem.config.js"
+        print_success "PM2 ecosystem file copied from production/ecosystem.config.js"
+    else
+        # Fallback: generate a complete config with all required settings
+        print_info "production/ecosystem.config.js not found, generating fallback..."
+        cat > ${APP_DIR}/ecosystem.config.js <<'EOF'
 module.exports = {
   apps: [
     {
       name: 'salfanet-radius',
-      script: 'npm',
+      script: 'node_modules/next/dist/bin/next',
       args: 'start',
       cwd: process.env.APP_DIR || '/var/www/salfanet-radius',
       instances: 1,
       exec_mode: 'cluster',
       watch: false,
       max_memory_restart: '400M',
+      node_args: [
+        '--max-old-space-size=350',
+        '--max-semi-space-size=8',
+        '--optimize-for-size'
+      ],
       env: {
         NODE_ENV: 'production',
+        NODE_OPTIONS: '--max-old-space-size=350',
         PORT: 3000,
         TZ: 'Asia/Jakarta'
       },
@@ -192,7 +241,8 @@ module.exports = {
       merge_logs: true,
       autorestart: true,
       max_restarts: 10,
-      min_uptime: '10s'
+      min_uptime: '10s',
+      cron_restart: '0 */6 * * *'
     },
     {
       name: 'salfanet-cron',
@@ -202,8 +252,15 @@ module.exports = {
       exec_mode: 'fork',
       watch: false,
       max_memory_restart: '150M',
+      node_args: [
+        '--max-old-space-size=120',
+        '--max-semi-space-size=4',
+        '--optimize-for-size'
+      ],
       env: {
         NODE_ENV: 'production',
+        NODE_OPTIONS: '--max-old-space-size=120',
+        API_URL: 'http://localhost:3000',
         TZ: 'Asia/Jakarta'
       },
       error_file: './logs/cron-error.log',
@@ -218,9 +275,11 @@ module.exports = {
   ]
 };
 EOF
+        print_success "PM2 ecosystem file generated (fallback)"
+    fi
 
     mkdir -p ${APP_DIR}/logs
-    print_success "PM2 ecosystem file created (salfanet-radius + salfanet-cron)"
+    print_success "PM2 ecosystem configured (salfanet-radius + salfanet-cron)"
 }
 
 check_port_conflict() {
@@ -342,8 +401,15 @@ start_pm2_app() {
     # Setup PM2 startup for app user
     print_info "Configuring PM2 startup for ${APP_USER}..."
     
-    # Execute the startup command as root
-    sudo /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u ${APP_USER} --hp /home/${APP_USER}
+    # Handle root user or empty user: pm2 startup without -u/--hp flags
+    if [ -z "${APP_USER}" ] || [ "${APP_USER}" = "root" ]; then
+        # Running as root - use standard startup without user flags
+        env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u root --hp /root || \
+        pm2 startup systemd || true
+    else
+        # Dedicated user - pass user and home path
+        sudo /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u ${APP_USER} --hp /home/${APP_USER} || true
+    fi
     
     # Wait for app to stabilize
     print_info "Waiting for applications to stabilize..."
@@ -357,7 +423,7 @@ start_pm2_app() {
         sudo su - ${APP_USER} -c 'pm2 list'
         echo ""
         print_info "Application URLs:"
-        echo "  Main App: http://${VPS_IP}:3000"
+        echo "  Main App: http://${VPS_IP} (via Nginx port 80)"
         echo "  Cron Service: Running in background"
         echo ""
         print_info "Monitor logs:"
@@ -441,7 +507,7 @@ create_deployment_script() {
 #!/bin/bash
 set -e
 
-echo "[*] Deploying AIBILL RADIUS..."
+echo "[*] Deploying SALFANET RADIUS..."
 
 APP_DIR="/var/www/salfanet-radius"
 APP_USER="salfanet"
@@ -481,9 +547,15 @@ NODE_OPTIONS="--max-old-space-size=1536" npm run build
 echo "[>] Fixing permissions..."
 chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
 
+# Refresh ecosystem.config.js from production/ (rsync --delete erases root copy)
+if [ -f "${APP_DIR}/production/ecosystem.config.js" ]; then
+    cp "${APP_DIR}/production/ecosystem.config.js" "${APP_DIR}/ecosystem.config.js"
+    echo "[>] ecosystem.config.js refreshed from production/"
+fi
+
 # Restart PM2 as salfanet user
 echo "[>] Restarting application..."
-sudo su - ${APP_USER} -c 'pm2 restart all || pm2 start /var/www/salfanet-radius/ecosystem.config.js'
+sudo su - ${APP_USER} -c "cd ${APP_DIR} && pm2 reload ecosystem.config.js --update-env || pm2 start ${APP_DIR}/ecosystem.config.js"
 sudo su - ${APP_USER} -c 'pm2 save'
 
 echo "[OK] Deployment completed!"

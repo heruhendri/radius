@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { Power, RefreshCw, Wifi, Search, Download, Trash2, RotateCcw } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface Session {
@@ -54,6 +54,7 @@ interface Router {
 
 export default function PPPoESessionsPage() {
   const { t } = useTranslation();
+  const { addToast, confirm } = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [routers, setRouters] = useState<Router[]>([]);
@@ -72,6 +73,7 @@ export default function PPPoESessionsPage() {
       params.set('page', page.toString());
       params.set('limit', pageSize.toString());
       params.set('type', 'pppoe'); // Force PPPoE only
+      params.set('live', 'true'); // Merge live bytes dari MikroTik API
       if (routerFilter) params.set('routerId', routerFilter);
       if (searchFilter) params.set('search', searchFilter);
 
@@ -124,7 +126,7 @@ export default function PPPoESessionsPage() {
     fetchSessions(1);
     const interval = setInterval(() => {
       fetchSessions(pagination.page);
-    }, 30000);
+    }, 10000); // 10 detik — live bytes dari MikroTik API
     return () => clearInterval(interval);
   }, [fetchSessions, pagination.page]);
 
@@ -149,18 +151,13 @@ export default function PPPoESessionsPage() {
   const handleDisconnect = async (sessionIds: string[]) => {
     if (sessionIds.length === 0) return;
     
-    const result = await Swal.fire({
+    if (!await confirm({
       title: t('sessions.kickUser'),
-      text: t('sessions.disconnectPppoeConfirm').replace('{count}', String(sessionIds.length)),
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#dc2626',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: t('sessions.yesKick'),
-      cancelButtonText: t('common.cancel')
-    });
-
-    if (!result.isConfirmed) return;
+      message: t('sessions.disconnectPppoeConfirm').replace('{count}', String(sessionIds.length)),
+      confirmText: t('sessions.yesKick'),
+      cancelText: t('common.cancel'),
+      variant: 'danger',
+    })) return;
 
     setDisconnecting(true);
     try {
@@ -171,14 +168,14 @@ export default function PPPoESessionsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        Swal.fire(t('common.success'), t('sessions.sessionsDisconnected').replace('{count}', data.disconnected), 'success');
+        addToast({ type: 'success', title: t('common.success'), description: t('sessions.sessionsDisconnected').replace('{count}', data.disconnected) });
         setSelectedSessions(new Set());
         fetchSessions(pagination.page);
       } else {
-        Swal.fire(t('common.error'), data.error || t('sessions.failedDisconnect'), 'error');
+        addToast({ type: 'error', title: t('common.error'), description: data.error || t('sessions.failedDisconnect') });
       }
     } catch {
-      Swal.fire(t('common.error'), t('sessions.failedDisconnectSession'), 'error');
+      addToast({ type: 'error', title: t('common.error'), description: t('sessions.failedDisconnectSession') });
     } finally {
       setDisconnecting(false);
     }
@@ -203,12 +200,12 @@ export default function PPPoESessionsPage() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch {
-      Swal.fire('Error', t('sessions.exportFailed'), 'error');
+      addToast({ type: 'error', title: 'Error', description: t('sessions.exportFailed') });
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -218,12 +215,12 @@ export default function PPPoESessionsPage() {
       <div className="relative z-10 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
-            <Wifi className="w-5 h-5 text-[#00f7ff]" />
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <Wifi className="w-4 h-4 sm:w-5 sm:h-5 text-[#00f7ff] flex-shrink-0" />
             {t('sessions.pppoeSessions')}
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('sessions.monitorPppoe')}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('sessions.monitorPppoe')}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -252,25 +249,25 @@ export default function PPPoESessionsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
-          <p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('sessions.activeSessions')}</p>
-          <p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats?.pppoe || 0}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide">{t('sessions.activeSessions')}</p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats?.pppoe || 0}</p>
         </div>
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
-          <p className="text-xs text-[#00f7ff] uppercase tracking-wide">↑ {t('sessions.totalUpload')}</p>
-          <p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats?.totalUploadFormatted || '0 B'}</p>
+        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide">↑ {t('sessions.totalUpload')}</p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats?.totalUploadFormatted || '0 B'}</p>
         </div>
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
-          <p className="text-xs text-[#00f7ff] uppercase tracking-wide">↓ {t('sessions.totalDownload')}</p>
-          <p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats?.totalDownloadFormatted || '0 B'}</p>
+        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide">↓ {t('sessions.totalDownload')}</p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats?.totalDownloadFormatted || '0 B'}</p>
         </div>
       </div>
 
       {/* Table */}
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         {/* Filters */}
-        <div className="px-3 py-2 border-b border-border flex flex-wrap items-center justify-between gap-2 bg-muted">
+        <div className="px-3 py-2 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-muted">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{t('sessions.show')}</span>
             <select 
@@ -292,7 +289,7 @@ export default function PPPoESessionsPage() {
               placeholder={t('sessions.searchPlaceholder')}
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              className="px-2 py-1 text-xs border border-border rounded bg-card w-40"
+              className="px-2 py-1 text-xs border border-border rounded bg-card w-full sm:w-40"
             />
           </div>
         </div>
@@ -442,11 +439,11 @@ export default function PPPoESessionsPage() {
         </div>
 
         {/* Pagination Footer */}
-        <div className="px-3 py-2 border-t border-border flex flex-wrap items-center justify-between gap-2 bg-muted">
+        <div className="px-3 py-2 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-2 bg-muted">
           <div className="text-xs text-muted-foreground">
             {t('sessions.showing')} {((pagination.page - 1) * pageSize) + 1} {t('sessions.to')} {Math.min(pagination.page * pageSize, pagination.total)} {t('sessions.of')} {pagination.total} {t('sessions.entries')}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap justify-center">
             <button
               onClick={() => fetchSessions(pagination.page - 1)}
               disabled={pagination.page === 1}

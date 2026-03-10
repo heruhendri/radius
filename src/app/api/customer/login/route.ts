@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { nanoid } from 'nanoid';
+import { rateLimit, RateLimitPresets } from '@/server/middleware/rate-limit';
 
 /**
  * Customer Login for Mobile App
@@ -9,6 +10,15 @@ import { nanoid } from 'nanoid';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 10 attempts per 15 minutes per IP (brute force protection)
+    const limited = await rateLimit(request, { max: 10, windowMs: 15 * 60 * 1000 });
+    if (limited) {
+      return NextResponse.json(
+        { success: false, message: 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.' },
+        { status: 429 }
+      );
+    }
+
     const { identifier } = await request.json();
 
     if (!identifier) {

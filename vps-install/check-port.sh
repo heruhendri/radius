@@ -1,6 +1,6 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ============================================================================
-# AIBILL RADIUS - Port Conflict Checker & Resolver
+# SALFANET RADIUS - Port Conflict Checker & Resolver
 # ============================================================================
 # Check and kill processes using port 3000
 # ============================================================================

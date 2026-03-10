@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { showSuccess, showError, showConfirm } from '@/lib/sweetalert';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Server, Plus, Trash2, Edit, CheckCircle, XCircle, Copy, Loader2, Shield, Radio, Wifi, Activity, RefreshCw, Settings } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { Server, Plus, Trash2, Edit, CheckCircle, XCircle, Copy, Loader2, Shield, Radio, Wifi, Activity, RefreshCw, Settings, X } from 'lucide-react';
 
 interface Router {
   id: string
@@ -47,6 +48,7 @@ interface VpnClient {
 
 export default function RouterPage() {
   const { t } = useTranslation()
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(true)
   const [routers, setRouters] = useState<Router[]>([])
   const [statusMap, setStatusMap] = useState<Record<string, RouterStatus>>({})
@@ -80,6 +82,8 @@ export default function RouterPage() {
   const [creating, setCreating] = useState(false)
   const [settingUpIsolir, setSettingUpIsolir] = useState<string | null>(null)
   const [settingUpRadius, setSettingUpRadius] = useState<string | null>(null)
+  const [showScriptModal, setShowScriptModal] = useState(false)
+  const [scriptModalData, setScriptModalData] = useState<{ script: string; config: any } | null>(null)
 
   useEffect(() => {
     loadRouters()
@@ -221,16 +225,16 @@ export default function RouterPage() {
       const data = await response.json()
 
       if (response.ok) {
-        showSuccess(editingRouter ? 'Router Updated!' : 'Router Created!')
+        showSuccess(editingRouter ? t('network.routerUpdated') : t('network.routerCreated'))
         setShowModal(false)
         setEditingRouter(null)
         resetForm()
         loadRouters()
       } else {
-        showError(data.error || 'Failed to save router')
+        showError(data.error || t('network.failedSaveRouter'))
       }
     } catch (error: any) {
-      showError(error.message || 'Failed to save router')
+      showError(error.message || t('network.failedSaveRouter'))
     } finally {
       setCreating(false)
     }
@@ -260,7 +264,7 @@ export default function RouterPage() {
   }
 
   const handleDelete = async (id: string, name: string) => {
-    const confirmed = await showConfirm(`Are you sure you want to delete "${name}"?`, 'Delete Router?')
+    const confirmed = await showConfirm(t('network.deleteRouterConfirm', { name }), t('network.deleteRouter'))
 
     if (!confirmed) return
 
@@ -306,40 +310,8 @@ export default function RouterPage() {
       const result = await response.json()
 
       if (response.ok) {
-        Swal.fire({
-          icon: 'success',
-          title: t('network.radiusScriptGenerated'),
-          html: `
-            <div style="text-align: left;">
-              <p style="margin-bottom: 12px; color: #a0aec0;">${t('network.copyScriptBelow')}</p>
-              <div style="background: #1e293b; padding: 16px; border-radius: 8px; margin: 16px 0; max-height: 300px; overflow-y: auto; border: 1px solid #334155;">
-                <pre id="radius-script" style="color: #10b981; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; margin: 0; font-family: monospace;">${result.script}</pre>
-              </div>
-              <div style="background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
-                <div style="font-weight: 600; margin-bottom: 8px; color: #00f7ff;">${t('network.configuration')}:</div>
-                <div style="font-size: 13px; color: #a0aec0;">
-                  <div>${t('network.server')}: <b style="color: #fff;">${result.config.radiusServer}</b> (${result.config.connectionType})</div>
-                  <div>${t('network.authAcct')}: <b style="color: #fff;">${result.config.authPort}/${result.config.acctPort}</b></div>
-                  <div>${t('network.coa')}: <b style="color: #fff;">${result.config.coaPort}</b></div>
-                  <div>${t('network.secret')}: <b style="color: #fff;">${result.config.radiusSecret}</b></div>
-                </div>
-              </div>
-            </div>
-          `,
-          showCancelButton: true,
-          confirmButtonColor: '#00f7ff',
-          cancelButtonColor: '#6b7280',
-          confirmButtonText: t('network.copyScript'),
-          cancelButtonText: t('network.close'),
-          background: '#0f0624',
-          color: '#fff',
-          width: '600px',
-        }).then((swalResult) => {
-          if (swalResult.isConfirmed) {
-            navigator.clipboard.writeText(result.script)
-            Swal.fire({ icon: 'success', title: t('network.scriptCopied'), text: t('network.pasteToTerminal'), timer: 2000, showConfirmButton: false, background: '#0f0624', color: '#fff' })
-          }
-        })
+        setScriptModalData({ script: result.script, config: result.config })
+        setShowScriptModal(true)
       } else {
         showError(result.error + (result.details ? '\n' + result.details : ''))
       }
@@ -364,7 +336,7 @@ export default function RouterPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-[#1a0f35] to-slate-900 relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -379,9 +351,37 @@ export default function RouterPage() {
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-[#1a0f35] to-slate-900 relative overflow-hidden">
+      {showScriptModal && scriptModalData && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowScriptModal(false)}>
+          <div className="bg-[#1e1b2e] border border-[#bc13fe]/40 rounded-xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-[#bc13fe]/20">
+              <h2 className="font-bold text-[#00f7ff]">{t('network.radiusScriptGenerated')}</h2>
+              <button onClick={() => setShowScriptModal(false)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1">
+              <p className="text-sm text-muted-foreground mb-3">{t('network.copyScriptBelow')}</p>
+              <pre className="bg-[#0f0a1e] border border-[#334155] rounded-lg p-4 text-green-400 text-xs font-mono overflow-auto max-h-64 whitespace-pre-wrap break-words">{scriptModalData.script}</pre>
+              <div className="mt-4 bg-[#0f0a1e] border border-[#334155] rounded-lg p-3 text-sm">
+                <div className="font-semibold text-[#00f7ff] mb-2">{t('network.configuration')}:</div>
+                <div className="text-gray-400 space-y-1">
+                  <div>{t('network.server')}: <b className="text-foreground">{scriptModalData.config.radiusServer}</b> ({scriptModalData.config.connectionType})</div>
+                  <div>{t('network.authAcct')}: <b className="text-foreground">{scriptModalData.config.authPort}/{scriptModalData.config.acctPort}</b></div>
+                  <div>{t('network.coa')}: <b className="text-foreground">{scriptModalData.config.coaPort}</b></div>
+                  <div>{t('network.secret')}: <b className="text-foreground">{scriptModalData.config.radiusSecret}</b></div>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 p-4 border-t border-[#bc13fe]/20">
+              <button onClick={() => setShowScriptModal(false)} className="flex-1 px-4 py-2 text-sm border border-gray-600 rounded-lg text-muted-foreground hover:text-foreground">{t('network.close')}</button>
+              <button onClick={() => { navigator.clipboard.writeText(scriptModalData.script); addToast({ type: 'success', title: t('network.scriptCopied') }); }} className="flex-1 px-4 py-2 text-sm font-bold bg-[#00f7ff] text-[#1a0f35] rounded-lg">{t('network.copyScript')}</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      <main className="bg-background relative overflow-hidden">
         {/* Animated Background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none dark:block hidden">
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#bc13fe]/15 rounded-full blur-[120px] animate-pulse"></div>
           <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-[#00f7ff]/15 rounded-full blur-[100px] animate-pulse delay-700"></div>
           <div className="absolute bottom-0 left-1/2 w-[600px] h-[400px] bg-[#ff44cc]/10 rounded-full blur-[150px] animate-pulse delay-1000"></div>
@@ -401,7 +401,7 @@ export default function RouterPage() {
                     {t('network.routerManagement')}
                   </h1>
                 </div>
-                <p className="text-[#e0d0ff]/70 ml-14">
+                <p className="text-muted-foreground ml-14">
                   {t('network.routerManagementDesc')}
                 </p>
               </div>
@@ -420,8 +420,8 @@ export default function RouterPage() {
             <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-[#bc13fe]/30 p-5 hover:border-[#bc13fe]/50 transition-all group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[#e0d0ff]/60 text-sm mb-1">{t('common.totalRouters')}</p>
-                  <p className="text-3xl font-bold text-white">{totalRouters}</p>
+                  <p className="text-muted-foreground text-sm mb-1">{t('common.totalRouters')}</p>
+                  <p className="text-3xl font-bold text-foreground">{totalRouters}</p>
                 </div>
                 <div className="p-3 bg-[#bc13fe]/20 rounded-xl group-hover:bg-[#bc13fe]/30 transition-colors">
                   <Server className="w-6 h-6 text-[#bc13fe]" />
@@ -432,7 +432,7 @@ export default function RouterPage() {
             <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-green-500/30 p-5 hover:border-green-500/50 transition-all group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[#e0d0ff]/60 text-sm mb-1">{t('network.online')}</p>
+                  <p className="text-muted-foreground text-sm mb-1">{t('network.online')}</p>
                   <p className="text-3xl font-bold text-green-400">{onlineRouters}</p>
                 </div>
                 <div className="p-3 bg-green-500/20 rounded-xl group-hover:bg-green-500/30 transition-colors">
@@ -444,7 +444,7 @@ export default function RouterPage() {
             <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-[#00f7ff]/30 p-5 hover:border-[#00f7ff]/50 transition-all group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[#e0d0ff]/60 text-sm mb-1">MikroTik</p>
+                  <p className="text-muted-foreground text-sm mb-1">MikroTik</p>
                   <p className="text-3xl font-bold text-[#00f7ff]">{mikrotikRouters}</p>
                 </div>
                 <div className="p-3 bg-[#00f7ff]/20 rounded-xl group-hover:bg-[#00f7ff]/30 transition-colors">
@@ -456,7 +456,7 @@ export default function RouterPage() {
             <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-5 hover:border-purple-500/50 transition-all group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[#e0d0ff]/60 text-sm mb-1">{t('common.viaVpn')}</p>
+                  <p className="text-muted-foreground text-sm mb-1">{t('common.viaVpn')}</p>
                   <p className="text-3xl font-bold text-purple-400">{vpnRouters}</p>
                 </div>
                 <div className="p-3 bg-purple-500/20 rounded-xl group-hover:bg-purple-500/30 transition-colors">
@@ -472,8 +472,8 @@ export default function RouterPage() {
               <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-[#bc13fe]/20 to-[#00f7ff]/20 rounded-2xl flex items-center justify-center">
                 <Server className="w-10 h-10 text-[#bc13fe]" />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-3">{t('network.noRoutersYet')}</h3>
-              <p className="text-[#e0d0ff]/60 mb-8 max-w-md mx-auto">
+              <h3 className="text-lg sm:text-2xl font-bold text-foreground mb-3">{t('network.noRoutersYet')}</h3>
+              <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                 {t('network.noRoutersDesc')}
               </p>
               <button
@@ -502,7 +502,7 @@ export default function RouterPage() {
                           </div>
                           <div>
                             <div className="flex items-center gap-3">
-                              <h3 className="text-xl font-bold text-white group-hover:text-[#00f7ff] transition-colors">{routerData.name}</h3>
+                              <h3 className="text-xl font-bold text-foreground group-hover:text-[#00f7ff] transition-colors">{routerData.name}</h3>
                               {status?.online ? (
                                 <span className="px-3 py-1 text-xs font-bold rounded-lg bg-green-500/20 border border-green-500/40 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
                                   {t('network.online')}
@@ -518,7 +518,7 @@ export default function RouterPage() {
                                 </span>
                               )}
                             </div>
-                            <p className="text-[#e0d0ff]/60 text-sm mt-0.5">{routerData.type} • {routerData.nasname}</p>
+                            <p className="text-muted-foreground text-sm mt-0.5">{routerData.type} • {routerData.nasname}</p>
                           </div>
                         </div>
 
@@ -542,7 +542,7 @@ export default function RouterPage() {
                           </button>
                           <button
                             onClick={() => handleEdit(routerData)}
-                            className="p-2.5 bg-slate-700/50 border border-slate-600/50 text-white rounded-xl hover:bg-slate-700 transition-all"
+                            className="p-2.5 bg-muted border border-border text-foreground rounded-xl hover:bg-accent transition-all"
                             title="Edit"
                           >
                             <Edit className="w-5 h-5" />
@@ -564,7 +564,7 @@ export default function RouterPage() {
                         <div>
                           <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('network.nasName')}</p>
                           <div className="flex items-center gap-2">
-                            <code className="font-mono text-sm text-white">{routerData.nasname}</code>
+                            <code className="font-mono text-sm text-foreground">{routerData.nasname}</code>
                             <button
                               onClick={() => copyToClipboard(routerData.nasname, 'NAS Name')}
                               className="text-[#e0d0ff]/40 hover:text-[#00f7ff] transition-colors"
@@ -575,24 +575,24 @@ export default function RouterPage() {
                         </div>
                         <div>
                           <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('network.shortName')}</p>
-                          <p className="font-mono text-sm text-white">{routerData.shortname}</p>
+                          <p className="font-mono text-sm text-foreground">{routerData.shortname}</p>
                         </div>
                         <div>
                           <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('common.type')}</p>
-                          <p className="font-mono text-sm text-white">{routerData.type}</p>
+                          <p className="font-mono text-sm text-foreground">{routerData.type}</p>
                         </div>
                         <div>
                           <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('network.apiPort')}</p>
-                          <p className="font-mono text-sm text-white">{routerData.port}</p>
+                          <p className="font-mono text-sm text-foreground">{routerData.port}</p>
                         </div>
                         <div>
                           <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('network.radiusPort')}</p>
-                          <p className="font-mono text-sm text-white">{routerData.ports}</p>
+                          <p className="font-mono text-sm text-foreground">{routerData.ports}</p>
                         </div>
                         <div>
                           <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('network.radiusSecret')}</p>
                           <div className="flex items-center gap-2">
-                            <code className="font-mono text-sm text-white">{'•'.repeat(8)}</code>
+                            <code className="font-mono text-sm text-foreground">{'*'.repeat(8)}</code>
                             <button
                               onClick={() => copyToClipboard(routerData.secret, 'RADIUS Secret')}
                               className="text-[#e0d0ff]/40 hover:text-[#00f7ff] transition-colors"
@@ -609,20 +609,20 @@ export default function RouterPage() {
                           {status.identity && (
                             <div>
                               <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('network.routerIdentityLabel')}</p>
-                              <p className="font-mono text-sm text-white">{status.identity}</p>
+                              <p className="font-mono text-sm text-foreground">{status.identity}</p>
                             </div>
                           )}
                           {status.uptime && (
                             <div>
                               <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('network.uptimeLabel')}</p>
-                              <p className="font-mono text-sm text-white">{status.uptime}</p>
+                              <p className="font-mono text-sm text-foreground">{status.uptime}</p>
                             </div>
                           )}
                         </div>
                       )}
 
                       {routerData.description && (
-                        <p className="text-sm text-[#e0d0ff]/60 mt-4">{routerData.description}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-4">{routerData.description}</p>
                       )}
                     </div>
                   </div>
@@ -634,13 +634,13 @@ export default function RouterPage() {
 
         {/* Add/Edit Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-4">
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-[#bc13fe]/50 rounded-2xl max-w-lg w-full p-6 shadow-[0_0_50px_rgba(188,19,254,0.3)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-lg">
                   <Server className="w-5 h-5 text-white" />
                 </div>
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-xl font-bold text-foreground">
                   {editingRouter ? t('network.editRouter') : t('network.addNewRouter')}
                 </h2>
               </div>
@@ -653,7 +653,7 @@ export default function RouterPage() {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-900/80 border border-[#bc13fe]/40 rounded-xl text-white placeholder-gray-500 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
+                    className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
                     placeholder={t('network.mainRouterPlaceholder')}
                     required
                   />
@@ -665,7 +665,7 @@ export default function RouterPage() {
                   <select
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-900/80 border border-[#bc13fe]/40 rounded-xl text-white focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
+                    className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
                     required
                   >
                     <option value="mikrotik" className="bg-slate-800">{t('network.mikrotikRouter')}</option>
@@ -687,8 +687,8 @@ export default function RouterPage() {
                       className="w-5 h-5 rounded border-[#bc13fe]/50 bg-slate-900 text-[#00f7ff]"
                     />
                     <div>
-                      <span className="text-sm font-medium text-white">{t('network.connectViaVpn')}</span>
-                      <p className="text-xs text-[#e0d0ff]/60 mt-0.5">{t('network.useVpnClientIp')}</p>
+                      <span className="text-sm font-medium text-foreground">{t('network.connectViaVpn')}</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">{t('network.useVpnClientIp')}</p>
                     </div>
                   </label>
                 </div>
@@ -700,7 +700,7 @@ export default function RouterPage() {
                     <select
                       value={formData.vpnClientId}
                       onChange={(e) => handleVpnClientChange(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-900/80 border border-[#bc13fe]/40 rounded-xl text-white focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
+                      className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
                       required={useVpnClient}
                     >
                       <option value="" className="bg-slate-800">{t('network.selectVpnClient')}</option>
@@ -720,7 +720,7 @@ export default function RouterPage() {
                     type="text"
                     value={formData.ipAddress}
                     onChange={(e) => setFormData({ ...formData, ipAddress: e.target.value, nasname: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-900/80 border border-[#bc13fe]/40 rounded-xl text-white placeholder-gray-500 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all disabled:opacity-50"
+                    className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all disabled:opacity-50"
                     placeholder="192.168.88.1"
                     required
                     disabled={useVpnClient && !!formData.vpnClientId}
@@ -735,7 +735,7 @@ export default function RouterPage() {
                       type="number"
                       value={formData.port}
                       onChange={(e) => setFormData({ ...formData, port: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-900/80 border border-[#bc13fe]/40 rounded-xl text-white focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
+                      className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
                       placeholder="8728"
                     />
                   </div>
@@ -745,7 +745,7 @@ export default function RouterPage() {
                       type="number"
                       value={formData.apiPort}
                       onChange={(e) => setFormData({ ...formData, apiPort: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-900/80 border border-[#bc13fe]/40 rounded-xl text-white focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
+                      className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
                       placeholder="8729"
                     />
                   </div>
@@ -760,7 +760,7 @@ export default function RouterPage() {
                         type="text"
                         value={formData.username}
                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        className="w-full px-4 py-3 bg-slate-900/80 border border-[#bc13fe]/40 rounded-xl text-white placeholder-gray-500 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
+                        className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
                         placeholder="admin"
                         required={formData.type !== 'gateway'}
                       />
@@ -771,8 +771,8 @@ export default function RouterPage() {
                         type="password"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full px-4 py-3 bg-slate-900/80 border border-[#bc13fe]/40 rounded-xl text-white placeholder-gray-500 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
-                        placeholder="••••••••"
+                        className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
+                        placeholder="********"
                         required={formData.type !== 'gateway' && !editingRouter}
                       />
                     </div>
@@ -786,7 +786,7 @@ export default function RouterPage() {
                     type="text"
                     value={formData.secret}
                     onChange={(e) => setFormData({ ...formData, secret: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-900/80 border border-[#bc13fe]/40 rounded-xl text-white placeholder-gray-500 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
+                    className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
                     placeholder="secret123"
                     required
                   />
@@ -796,7 +796,7 @@ export default function RouterPage() {
                 {!editingRouter && (
                   <div className="p-4 bg-[#bc13fe]/10 border border-[#bc13fe]/30 rounded-xl">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-medium text-white">{t('network.testConnection')}</span>
+                      <span className="text-sm font-medium text-foreground">{t('network.testConnection')}</span>
                       <button
                         type="button"
                         onClick={handleTestConnection}
@@ -828,7 +828,7 @@ export default function RouterPage() {
                   <button
                     type="button"
                     onClick={() => { setShowModal(false); setEditingRouter(null); resetForm() }}
-                    className="flex-1 px-4 py-3 bg-slate-700/50 border border-slate-600/50 text-white rounded-xl hover:bg-slate-700 transition-all font-medium"
+                    className="flex-1 px-4 py-3 bg-muted border border-border text-foreground rounded-xl hover:bg-accent transition-all font-medium"
                   >
                     {t('common.cancel')}
                   </button>

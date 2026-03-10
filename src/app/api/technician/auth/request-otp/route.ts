@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { WhatsAppService } from '@/lib/whatsapp';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
 
 export async function POST(req: NextRequest) {
   try {

@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { showSuccess, showError } from '@/lib/sweetalert';
-import { UserPlus, Loader2, Wifi, CheckCircle, MapPin, Phone, Mail, Home, Package, FileText } from 'lucide-react';
+import { useToast, CyberToastProvider } from '@/components/cyberpunk/CyberToast';
+import { UserPlus, Loader2, Wifi, CheckCircle, MapPin, Phone, Mail, Home, Package, FileText, Gift, CreditCard, Camera, X } from 'lucide-react';
 import MapPicker from '@/components/MapPicker';
+
+export const dynamic = 'force-dynamic';
 
 interface Profile {
   id: string;
@@ -14,7 +16,7 @@ interface Profile {
   description: string | null;
 }
 
-export default function DaftarPage() {
+function DaftarPageInner() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -29,14 +31,26 @@ export default function DaftarPage() {
     address: '',
     profileId: '',
     notes: '',
+    referralCode: '',
+    idCardNumber: '',
     latitude: null as number | null,
     longitude: null as number | null,
   });
+  const [idCardPhoto, setIdCardPhoto] = useState<string>('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
+
+  const { addToast } = useToast();
 
   useEffect(() => {
     loadCompanyName();
     loadProfiles();
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) setFormData(prev => ({ ...prev, referralCode: ref.toUpperCase() }));
   }, []);
 
   const loadCompanyName = async () => {
@@ -50,7 +64,7 @@ export default function DaftarPage() {
 
   const loadProfiles = async () => {
     try {
-      const res = await fetch('/api/pppoe/profiles');
+      const res = await fetch('/api/public/profiles');
       const data = await res.json();
       setProfiles(data.profiles.filter((p: any) => p.isActive) || []);
     } catch (error) { console.error('Failed to load profiles:', error); }
@@ -60,11 +74,11 @@ export default function DaftarPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.phone || !formData.address || !formData.profileId) {
-      await showError('Mohon lengkapi semua field yang wajib diisi');
+      addToast({ type: 'error', title: 'Form Tidak Lengkap', description: 'Mohon lengkapi semua field yang wajib diisi' });
       return;
     }
     if (!formData.latitude || !formData.longitude) {
-      await showError('Mohon pilih lokasi GPS Anda di peta');
+      addToast({ type: 'error', title: 'Lokasi Diperlukan', description: 'Mohon pilih lokasi GPS Anda di peta' });
       return;
     }
 
@@ -73,18 +87,17 @@ export default function DaftarPage() {
       const res = await fetch('/api/registrations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, idCardPhoto }),
       });
 
       const data = await res.json();
       if (res.ok) {
         setSuccess(true);
-        await showSuccess('Pendaftaran berhasil dikirim!\n\nTim kami akan menghubungi Anda segera.');
       } else {
-        await showError(data.error || 'Gagal mengirim pendaftaran');
+        addToast({ type: 'error', title: 'Gagal', description: data.error || 'Gagal mengirim pendaftaran' });
       }
     } catch (error) {
-      await showError('Gagal mengirim pendaftaran');
+      addToast({ type: 'error', title: 'Error', description: 'Gagal mengirim pendaftaran' });
     } finally {
       setSubmitting(false);
     }
@@ -137,7 +150,8 @@ export default function DaftarPage() {
           <button
             onClick={() => {
               setSuccess(false);
-              setFormData({ name: '', phone: '', email: '', address: '', profileId: '', notes: '', latitude: null, longitude: null });
+              setFormData({ name: '', phone: '', email: '', address: '', profileId: '', notes: '', referralCode: '', idCardNumber: '', latitude: null, longitude: null });
+              setIdCardPhoto('');
             }}
             className="w-full px-4 py-3 bg-gradient-to-r from-[#bc13fe] to-[#00f7ff] hover:from-[#a010e0] hover:to-[#00d4dd] text-white text-sm font-bold rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(188,19,254,0.4)] hover:shadow-[0_0_30px_rgba(188,19,254,0.6)]"
           >
@@ -264,7 +278,7 @@ export default function DaftarPage() {
                       type="button"
                       onClick={async () => {
                         if (!navigator.geolocation) {
-                          await showError('Browser Anda tidak mendukung GPS');
+                        addToast({ type: 'error', title: 'GPS Tidak Didukung', description: 'Browser Anda tidak mendukung GPS' });
                           return;
                         }
 
@@ -276,7 +290,7 @@ export default function DaftarPage() {
                               latitude: position.coords.latitude,
                               longitude: position.coords.longitude,
                             });
-                            showSuccess('Lokasi GPS berhasil didapatkan!');
+                            addToast({ type: 'success', title: 'Berhasil!', description: 'Lokasi GPS berhasil didapatkan' });
                             setSubmitting(false);
                           },
                           (error) => {
@@ -284,7 +298,7 @@ export default function DaftarPage() {
                             if (error.code === 1) errorMsg = 'Akses lokasi ditolak. Mohon aktifkan izin lokasi di browser Anda.';
                             else if (error.code === 2) errorMsg = 'Lokasi tidak tersedia';
                             else if (error.code === 3) errorMsg = 'Timeout mendapatkan lokasi';
-                            showError(errorMsg);
+                            addToast({ type: 'error', title: 'GPS Error', description: errorMsg });
                             setSubmitting(false);
                           },
                           {
@@ -384,6 +398,88 @@ export default function DaftarPage() {
               )}
             </div>
 
+            {/* ID Card Section */}
+            <div className="space-y-4">
+              <p className="text-[10px] font-bold text-[#00f7ff] uppercase tracking-widest flex items-center gap-2">
+                <span className="w-8 h-[1px] bg-gradient-to-r from-[#00f7ff] to-transparent"></span>
+                Dokumen Identitas (Opsional)
+              </p>
+
+              {/* KTP Number */}
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-medium text-[#e0d0ff] mb-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-[#00f7ff]" />
+                  Nomor KTP
+                </label>
+                <input
+                  type="text"
+                  placeholder="16 digit nomor KTP"
+                  value={formData.idCardNumber}
+                  onChange={(e) => setFormData({ ...formData, idCardNumber: e.target.value.replace(/\D/g, '').slice(0, 16) })}
+                  maxLength={16}
+                  className="w-full px-3 py-2.5 text-sm bg-[#0a0520] border-2 border-[#bc13fe]/30 rounded-xl text-white placeholder-[#e0d0ff]/40 focus:border-[#00f7ff] focus:ring-1 focus:ring-[#00f7ff]/50 focus:shadow-[0_0_15px_rgba(0,247,255,0.3)] transition-all outline-none font-mono tracking-widest"
+                />
+              </div>
+
+              {/* KTP Photo */}
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-medium text-[#e0d0ff] mb-1.5">
+                  <Camera className="w-3.5 h-3.5 text-[#00f7ff]" />
+                  Foto KTP
+                </label>
+                {idCardPhoto ? (
+                  <div className="relative">
+                    <img src={idCardPhoto} alt="Foto KTP" className="w-full h-32 object-cover rounded-xl border-2 border-[#00ff88]/50" />
+                    <button
+                      type="button"
+                      onClick={() => setIdCardPhoto('')}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-[#bc13fe]/40 rounded-xl cursor-pointer hover:border-[#00f7ff]/60 bg-[#0a0520] transition-all">
+                    {uploadingPhoto
+                      ? <Loader2 className="w-6 h-6 animate-spin text-[#00f7ff]" />
+                      : <>
+                          <Camera className="w-6 h-6 text-[#bc13fe]/60 mb-1" />
+                          <span className="text-[10px] text-[#e0d0ff]/60">Tap untuk upload foto KTP</span>
+                          <span className="text-[9px] text-[#e0d0ff]/40 mt-0.5">JPG/PNG, maks. 3MB</span>
+                        </>
+                    }
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      className="hidden"
+                      disabled={uploadingPhoto}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploadingPhoto(true);
+                        try {
+                          const fd = new FormData();
+                          fd.append('file', file);
+                          const res = await fetch('/api/public/upload-registration', { method: 'POST', body: fd });
+                          const data = await res.json();
+                          if (data.success) {
+                            setIdCardPhoto(data.url);
+                          } else {
+                            addToast({ type: 'error', title: 'Upload Gagal', description: data.error || 'Gagal upload foto KTP' });
+                          }
+                        } catch {
+                          addToast({ type: 'error', title: 'Upload Gagal', description: 'Gagal upload foto KTP' });
+                        } finally {
+                          setUploadingPhoto(false);
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
             {/* Notes */}
             <div>
               <label className="flex items-center gap-1.5 text-xs font-medium text-[#e0d0ff] mb-1.5">
@@ -397,6 +493,27 @@ export default function DaftarPage() {
                 className="w-full px-3 py-2.5 text-sm bg-[#0a0520] border-2 border-[#bc13fe]/30 rounded-xl text-white placeholder-[#e0d0ff]/40 focus:border-[#00f7ff] focus:ring-1 focus:ring-[#00f7ff]/50 focus:shadow-[0_0_15px_rgba(0,247,255,0.3)] transition-all outline-none resize-none"
                 rows={2}
               />
+            </div>
+
+            {/* Referral Code */}
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-medium text-[#e0d0ff] mb-1.5">
+                <Gift className="w-3.5 h-3.5 text-[#00f7ff]" />
+                Kode Referral (Opsional)
+              </label>
+              <input
+                type="text"
+                placeholder="Masukkan kode referral (jika ada)"
+                value={formData.referralCode}
+                onChange={(e) => setFormData({ ...formData, referralCode: e.target.value.toUpperCase() })}
+                maxLength={10}
+                className="w-full px-3 py-2.5 text-sm bg-[#0a0520] border-2 border-[#bc13fe]/30 rounded-xl text-white placeholder-[#e0d0ff]/40 focus:border-[#00f7ff] focus:ring-1 focus:ring-[#00f7ff]/50 focus:shadow-[0_0_15px_rgba(0,247,255,0.3)] transition-all outline-none font-mono tracking-widest uppercase"
+              />
+              {formData.referralCode && (
+                <p className="text-[10px] text-[#00ff88] mt-1 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" /> Bonus saldo akan diberikan setelah aktivasi!
+                </p>
+              )}
             </div>
 
             {/* Submit Button */}
@@ -435,5 +552,13 @@ export default function DaftarPage() {
         initialLng={formData.longitude || undefined}
       />
     </div>
+  );
+}
+
+export default function DaftarPage() {
+  return (
+    <CyberToastProvider>
+      <DaftarPageInner />
+    </CyberToastProvider>
   );
 }

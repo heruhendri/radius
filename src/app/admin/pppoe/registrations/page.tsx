@@ -206,7 +206,7 @@ export default function RegistrationsPage() {
   };
 
   const handleDelete = async (registrationId: string, name: string) => {
-    const confirmed = await showConfirm(`Hapus pendaftaran ${name}?`);
+    const confirmed = await showConfirm(t('pppoe.deleteRegistrationConfirm', { name }));
     if (!confirmed) return;
 
     setDeleting(registrationId);
@@ -245,22 +245,22 @@ export default function RegistrationsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden"><div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div></div><RefreshCw className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" /></div>
+      <div className="flex items-center justify-center min-h-[60vh]"><div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div></div><RefreshCw className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" /></div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <UserPlus className="w-6 h-6 text-[#00f7ff]" />
               {t('pppoe.registrationsTitle')}
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('pppoe.registrationsSubtitle')}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('pppoe.registrationsSubtitle')}</p>
           </div>
           <button
             onClick={fetchRegistrations}
@@ -273,7 +273,7 @@ export default function RegistrationsPage() {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
             <div className="bg-card p-2.5 rounded-lg border border-border">
               <div className="text-[10px] font-medium text-muted-foreground uppercase">{t('common.total')}</div>
               <div className="text-lg font-bold text-foreground">{stats.total}</div>
@@ -335,8 +335,79 @@ export default function RegistrationsPage() {
           </div>
         </div>
 
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3">
+          {registrations.length === 0 ? (
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-6 text-center text-muted-foreground text-xs">{t('pppoe.noRegistrations')}</div>
+          ) : (
+            registrations.filter(reg => reg.status !== 'INSTALLED').map((reg) => (
+              <div key={reg.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-medium text-sm text-foreground">{reg.name}</p>
+                    <p className="text-xs text-muted-foreground">{reg.address}</p>
+                  </div>
+                  {getStatusBadge(reg.status)}
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                  <div>
+                    <span className="text-muted-foreground">{t('pppoe.contact')}:</span>
+                    <p className="font-medium">{reg.phone}</p>
+                    {reg.email && <p className="text-[10px] text-muted-foreground">{reg.email}</p>}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">{t('pppoe.profile')}:</span>
+                    <p className="font-medium">{reg.profile.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{reg.profile.downloadSpeed}/{reg.profile.uploadSpeed}M</p>
+                    <p className="text-[10px] text-success font-medium">Rp {reg.profile.price.toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                  {reg.latitude && reg.longitude && (
+                    <div>
+                      <span className="text-muted-foreground">{t('pppoe.gpsLocation')}:</span>
+                      <button onClick={() => window.open(`https://www.google.com/maps?q=${reg.latitude},${reg.longitude}`, '_blank')} className="flex items-center gap-1 text-[10px] text-primary hover:underline mt-0.5"><MapPin className="w-3 h-3" />{t('pppoe.openMap')}</button>
+                    </div>
+                  )}
+                  {reg.pppoeUser && (
+                    <div>
+                      <span className="text-muted-foreground">{t('pppoe.pppoeUser')}:</span>
+                      <p className="font-mono text-[10px]">{reg.pppoeUser.username}</p>
+                      <span className={`text-[9px] ${reg.pppoeUser.status === 'isolated' ? 'text-warning' : 'text-success'}`}>{reg.pppoeUser.status}</span>
+                    </div>
+                  )}
+                  {reg.invoice && (
+                    <div>
+                      <span className="text-muted-foreground">{t('pppoe.invoice')}:</span>
+                      <p className="font-mono text-[10px]">{reg.invoice.invoiceNumber}</p>
+                      <p className="text-[10px] text-muted-foreground">Rp {reg.invoice.amount.toLocaleString()}</p>
+                      <span className={`text-[9px] ${reg.invoice.status === 'PAID' ? 'text-success' : 'text-warning'}`}>{reg.invoice.status}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">{t('common.date')}:</span>
+                    <p className="text-[10px]">{formatToWIB(reg.createdAt)}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-1 border-t border-border pt-2">
+                  {reg.status === 'PENDING' && (
+                    <>
+                      <button onClick={() => handleApproveClick(reg)} className="p-2 text-success hover:bg-success/10 rounded" title="Approve"><CheckCircle className="w-4 h-4" /></button>
+                      <button onClick={() => handleRejectClick(reg)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Reject"><XCircle className="w-4 h-4" /></button>
+                    </>
+                  )}
+                  {reg.status === 'APPROVED' && (
+                    <button onClick={() => handleMarkInstalled(reg)} disabled={marking} className="p-2 text-accent hover:bg-accent/100/10 rounded disabled:opacity-50" title="Mark Installed"><Wrench className="w-4 h-4" /></button>
+                  )}
+                  <button onClick={() => handleDelete(reg.id, reg.name)} disabled={deleting === reg.id} className="p-2 text-destructive hover:bg-destructive/10 rounded disabled:opacity-50" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
         {/* Table */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted border-b border-border">
@@ -480,21 +551,21 @@ export default function RegistrationsPage() {
             <>
               <ModalBody className="space-y-4">
                 <div className="bg-[#00f7ff]/10 p-3 rounded-lg space-y-1.5 text-xs border border-[#00f7ff]/30">
-                  <div className="flex justify-between"><span className="text-[#e0d0ff]/60">{t('common.name')}:</span><span className="font-medium text-[#e0d0ff]">{selectedRegistration.name}</span></div>
-                  <div className="flex justify-between"><span className="text-[#e0d0ff]/60">{t('common.phone')}:</span><span className="font-medium text-[#e0d0ff]">{selectedRegistration.phone}</span></div>
-                  <div className="flex justify-between"><span className="text-[#e0d0ff]/60">{t('pppoe.profile')}:</span><span className="font-medium text-[#e0d0ff]">{selectedRegistration.profile.name}</span></div>
-                  <div className="flex justify-between"><span className="text-[#e0d0ff]/60">{t('pppoe.username')}:</span><span className="font-mono text-[#00f7ff]">{selectedRegistration.name.split(' ')[0].toLowerCase()}-{selectedRegistration.phone}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('common.name')}:</span><span className="font-medium text-foreground">{selectedRegistration.name}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('common.phone')}:</span><span className="font-medium text-foreground">{selectedRegistration.phone}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('pppoe.profile')}:</span><span className="font-medium text-foreground">{selectedRegistration.profile.name}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('pppoe.username')}:</span><span className="font-mono text-[#00f7ff]">{selectedRegistration.name.split(' ')[0].toLowerCase()}-{selectedRegistration.phone}</span></div>
                 </div>
                 <div>
                   <ModalLabel required>{t('pppoe.subscriptionType')}</ModalLabel>
                   <div className="space-y-2">
                     <label className={`flex items-center p-2.5 border rounded-lg cursor-pointer transition-all ${subscriptionType === 'POSTPAID' ? 'border-[#00f7ff] bg-[#00f7ff]/10 shadow-[0_0_10px_rgba(0,247,255,0.2)]' : 'border-[#bc13fe]/30 hover:border-[#bc13fe]/50'}`}>
                       <input type="radio" name="subscriptionType" value="POSTPAID" checked={subscriptionType === 'POSTPAID'} onChange={(e) => setSubscriptionType(e.target.value as 'POSTPAID')} className="w-4 h-4 text-[#00f7ff] border-[#bc13fe]/50 bg-[#0a0520] focus:ring-[#00f7ff]" />
-                      <div className="ml-3 flex-1"><div className="text-xs font-medium text-[#e0d0ff]">📅 {t('pppoe.postpaid')}</div><div className="text-[10px] text-[#e0d0ff]/50">Tagihan bulanan, tanggal tetap</div></div>
+                      <div className="ml-3 flex-1"><div className="text-xs font-medium text-foreground">📅 {t('pppoe.postpaid')}</div><div className="text-[10px] text-muted-foreground">{t('pppoe.monthlyBillingDesc')}</div></div>
                     </label>
                     <label className={`flex items-center p-2.5 border rounded-lg cursor-pointer transition-all ${subscriptionType === 'PREPAID' ? 'border-[#00f7ff] bg-[#00f7ff]/10 shadow-[0_0_10px_rgba(0,247,255,0.2)]' : 'border-[#bc13fe]/30 hover:border-[#bc13fe]/50'}`}>
                       <input type="radio" name="subscriptionType" value="PREPAID" checked={subscriptionType === 'PREPAID'} onChange={(e) => setSubscriptionType(e.target.value as 'PREPAID')} className="w-4 h-4 text-[#00f7ff] border-[#bc13fe]/50 bg-[#0a0520] focus:ring-[#00f7ff]" />
-                      <div className="ml-3 flex-1"><div className="text-xs font-medium text-[#e0d0ff]">⏰ {t('pppoe.prepaid')}</div><div className="text-[10px] text-[#e0d0ff]/50">Bayar dimuka, dapat validitas</div></div>
+                      <div className="ml-3 flex-1"><div className="text-xs font-medium text-foreground">⏰ {t('pppoe.prepaid')}</div><div className="text-[10px] text-muted-foreground">{t('pppoe.prepaidValidityDesc')}</div></div>
                     </label>
                   </div>
                 </div>
@@ -504,7 +575,7 @@ export default function RegistrationsPage() {
                     <ModalSelect value={billingDay} onChange={(e) => setBillingDay(e.target.value)}>
                       {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (<option key={day} value={day} className="bg-[#0a0520]">{t('pppoe.dayOf')} {day}</option>))}
                     </ModalSelect>
-                    <p className="text-[10px] text-[#e0d0ff]/50 mt-1">Tanggal jatuh tempo tagihan setiap bulan (1-31)</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{t('pppoe.monthlyDueDateLabel')}</p>
                   </div>
                 )}
                 <div>
@@ -514,9 +585,9 @@ export default function RegistrationsPage() {
                 {subscriptionType === 'PREPAID' && (
                   <div className="bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg p-3 space-y-1">
                     <div className="text-xs font-medium text-[#00ff88]">💡 Rincian Tagihan Prepaid:</div>
-                    <div className="flex justify-between text-xs text-[#00ff88]"><span>Biaya Instalasi:</span><span>Rp {(installationFee ? parseFloat(installationFee) : 0).toLocaleString('id-ID')}</span></div>
-                    <div className="flex justify-between text-xs text-[#00ff88]"><span>Biaya Paket:</span><span>Rp {selectedRegistration.profile.price.toLocaleString('id-ID')}</span></div>
-                    <div className="flex justify-between text-sm font-bold text-[#00ff88] pt-1 border-t border-[#00ff88]/30"><span>Total Tagihan:</span><span>Rp {((installationFee ? parseFloat(installationFee) : 0) + selectedRegistration.profile.price).toLocaleString('id-ID')}</span></div>
+                    <div className="flex justify-between text-xs text-[#00ff88]"><span>{t('pppoe.installationFee')}:</span><span>Rp {(installationFee ? parseFloat(installationFee) : 0).toLocaleString('id-ID')}</span></div>
+                    <div className="flex justify-between text-xs text-[#00ff88]"><span>{t('pppoe.packageFee')}:</span><span>Rp {selectedRegistration.profile.price.toLocaleString('id-ID')}</span></div>
+                    <div className="flex justify-between text-sm font-bold text-[#00ff88] pt-1 border-t border-[#00ff88]/30"><span>{t('pppoe.totalBilling')}:</span><span>Rp {((installationFee ? parseFloat(installationFee) : 0) + selectedRegistration.profile.price).toLocaleString('id-ID')}</span></div>
                   </div>
                 )}
                 {subscriptionType === 'POSTPAID' && (

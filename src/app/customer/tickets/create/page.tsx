@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslation } from '@/hooks/useTranslation';
-import { showError } from '@/lib/sweetalert';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import { ArrowLeft, Send, CheckCircle } from 'lucide-react';
 import { CyberCard } from '@/components/cyberpunk/CyberCard';
 import { CyberButton } from '@/components/cyberpunk/CyberButton';
@@ -18,6 +18,8 @@ interface Category {
 export default function CreateTicketPage() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { addToast } = useToast();
+  const toastError = (msg: string) => addToast({ type: 'error', title: 'Gagal', description: msg, duration: 8000 });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [ticketNumber, setTicketNumber] = useState('');
@@ -61,7 +63,10 @@ export default function CreateTicketPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('/api/tickets/categories?isActive=true');
+      const token = localStorage.getItem('customer_token');
+      const res = await fetch('/api/tickets/categories?isActive=true', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res.ok) {
         const data = await res.json();
         setCategories(data);
@@ -133,11 +138,11 @@ export default function CreateTicketPage() {
         }, 3000);
       } else {
         const error = await res.json();
-        await showError(error.error || t('ticket.createFailed'));
+        toastError(error.error || t('ticket.createFailed'));
       }
     } catch (error) {
       console.error('Failed to create ticket:', error);
-      await showError(t('ticket.createFailed'));
+      toastError(t('ticket.createFailed'));
     } finally {
       setLoading(false);
     }
@@ -145,7 +150,7 @@ export default function CreateTicketPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="flex items-center justify-center p-4 py-12">
         <CyberCard className="p-8 max-w-md w-full text-center bg-card/90 backdrop-blur-xl border-2 border-success/30 shadow-[0_0_40px_rgba(34,197,94,0.2)]">
           <CheckCircle size={64} className="text-success mx-auto mb-4 drop-shadow-[0_0_20px_rgba(34,197,94,0.8)]" />
           <h2 className="text-2xl font-bold text-success mb-2 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]">
@@ -171,7 +176,7 @@ export default function CreateTicketPage() {
   }
 
   return (
-    <div className="p-3 space-y-3 min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="p-3 space-y-3">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link

@@ -15,7 +15,7 @@ import {
   RefreshCw,
   Loader2
 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface IsolationSettings {
   isolationIpPool: string;
@@ -25,6 +25,7 @@ interface IsolationSettings {
 
 export default function MikroTikSetupPage() {
   const { t } = useTranslation();
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<IsolationSettings>({
     isolationIpPool: '192.168.200.0/24',
@@ -57,16 +58,36 @@ export default function MikroTikSetupPage() {
   };
 
   const copyToClipboard = async (text: string, label: string) => {
+    const fallbackCopy = (str: string): boolean => {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = str;
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        return ok;
+      } catch {
+        return false;
+      }
+    };
+
     try {
-      await navigator.clipboard.writeText(text);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ok = fallbackCopy(text);
+        if (!ok) throw new Error('copy failed');
+      }
       setCopied(label);
       setTimeout(() => setCopied(null), 2000);
-    } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Gagal!',
-        text: 'Gagal menyalin ke clipboard',
-      });
+      addToast({ type: 'success', title: 'Berhasil disalin!', description: 'Script berhasil disalin ke clipboard' });
+    } catch {
+      addToast({ type: 'error', title: 'Gagal menyalin!', description: 'Gagal menyalin ke clipboard. Coba pilih teks dan Ctrl+C.' });
     }
   };
 
@@ -124,21 +145,37 @@ add name=isolir \\
   };
 
   const firewallFilterScript = `/ip firewall filter
-# Allow DNS untuk user isolir
+# PENTING: Tambahkan rule-rule berikut SEBELUM rule DROP yang sudah ada!
+# Gunakan: /ip firewall filter move [rule-baru] destination=[posisi-sebelum-drop]
+
+# [1] Allow ESTABLISHED & RELATED — return traffic dari payment gateway
+add chain=forward \\
+    src-address=${getNetworkAddress(settings.isolationIpPool)} \\
+    connection-state=established,related \\
+    action=accept \\
+    comment="Allow established/related for isolated users"
+
+add chain=forward \\
+    dst-address=${getNetworkAddress(settings.isolationIpPool)} \\
+    connection-state=established,related \\
+    action=accept \\
+    comment="Allow return traffic to isolated users"
+
+# [2] Allow DNS untuk user isolir
 add chain=forward \\
     src-address=${getNetworkAddress(settings.isolationIpPool)} \\
     protocol=udp dst-port=53 \\
     action=accept \\
     comment="Allow DNS for isolated users"
 
-# Allow ICMP (ping)
+# [3] Allow ICMP (ping)
 add chain=forward \\
     src-address=${getNetworkAddress(settings.isolationIpPool)} \\
     protocol=icmp \\
     action=accept \\
     comment="Allow ping for isolated users"
 
-# Allow akses ke server (payment page)
+# [4] Allow akses ke billing server (halaman isolir + payment)
 # IMPORTANT: Ganti ${getServerIp()} dengan IP ADDRESS server Anda!
 # MikroTik firewall tidak support hostname, hanya IP!
 add chain=forward \\
@@ -147,31 +184,94 @@ add chain=forward \\
     action=accept \\
     comment="Allow access to billing server - GANTI DENGAN IP!"
 
-# Allow akses ke payment gateway (auto-resolve domain ke IP)
+# [5] Allow akses ke payment gateway
 add chain=forward \\
     src-address=${getNetworkAddress(settings.isolationIpPool)} \\
     dst-address-list=payment-gateways \\
     action=accept \\
     comment="Allow access to payment gateways"
 
-# Block semua akses internet lainnya
+# [6] Block semua akses internet lainnya
 add chain=forward \\
     src-address=${getNetworkAddress(settings.isolationIpPool)} \\
     action=drop \\
     comment="Block internet for isolated users"`;
 
-  // Script 4: Payment Gateway Address List (NEW!)
   const paymentGatewayScript = `/ip firewall address-list
-# Payment Gateway IPs (auto-resolve from domain)
+# ============================================
+# PAYMENT GATEWAY ADDRESS LIST
+# RouterOS akan auto-resolve domain -> IP saat add
+# Jalankan ulang jika IP berubah (CDN/load-balance)
+# ============================================
+
+# Midtrans / Snap
 add list=payment-gateways address=api.midtrans.com comment="Midtrans API"
 add list=payment-gateways address=app.midtrans.com comment="Midtrans Snap"
 add list=payment-gateways address=app.sandbox.midtrans.com comment="Midtrans Sandbox"
+add list=payment-gateways address=payment.midtrans.com comment="Midtrans Payment"
+add list=payment-gateways address=assets.midtrans.com comment="Midtrans Assets (JS/CSS)"
+
+# Xendit
 add list=payment-gateways address=api.xendit.co comment="Xendit API"
 add list=payment-gateways address=checkout.xendit.co comment="Xendit Checkout"
+add list=payment-gateways address=dashboard.xendit.co comment="Xendit Dashboard"
+add list=payment-gateways address=pay.xendit.co comment="Xendit Pay"
+
+# Duitku
 add list=payment-gateways address=passport.duitku.com comment="Duitku API"
 add list=payment-gateways address=merchant.duitku.com comment="Duitku Merchant"
+add list=payment-gateways address=sandbox.duitku.com comment="Duitku Sandbox"
 
-# NOTE: MikroTik akan otomatis resolve domain ke IP dan update address-list`;
+# Nicepay
+add list=payment-gateways address=www.nicepay.co.id comment="Nicepay"
+add list=payment-gateways address=dev.nicepay.co.id comment="Nicepay Dev"
+
+# OY! Indonesia
+add list=payment-gateways address=api.oyindonesia.com comment="OY! API"
+add list=payment-gateways address=pay.oyindonesia.com comment="OY! Pay"
+
+# Flip
+add list=payment-gateways address=api.flip.id comment="Flip API"
+add list=payment-gateways address=flip.id comment="Flip"
+
+# Tripay
+add list=payment-gateways address=tripay.co.id comment="Tripay"
+add list=payment-gateways address=payment.tripay.co.id comment="Tripay Payment"
+
+# iPaymu
+add list=payment-gateways address=my.ipaymu.com comment="iPaymu"
+add list=payment-gateways address=payment.ipaymu.com comment="iPaymu Payment"
+
+# GoPay / Gojek (QRIS & VA)
+add list=payment-gateways address=api.gojek.com comment="Gojek API"
+add list=payment-gateways address=gopay.co.id comment="GoPay"
+add list=payment-gateways address=payment.gojek.com comment="Gojek Payment"
+
+# DANA
+add list=payment-gateways address=api.dana.id comment="DANA API"
+add list=payment-gateways address=m.dana.id comment="DANA Mobile"
+add list=payment-gateways address=checkout.dana.id comment="DANA Checkout"
+
+# OVO
+add list=payment-gateways address=api.ovo.id comment="OVO API"
+add list=payment-gateways address=checkout.ovo.id comment="OVO Checkout"
+
+# ShopeePay / SeaMoney
+add list=payment-gateways address=open-api.airpay.co.id comment="ShopeePay API"
+add list=payment-gateways address=open-api.pay.shopee.co.id comment="ShopeePay"
+
+# Bank BCA Virtual Account
+add list=payment-gateways address=p2p.klikbca.com comment="BCA KlikBCA"
+
+# Bank BRI
+add list=payment-gateways address=partner.bri.co.id comment="BRI Partner API"
+
+# QRIS Central (GPN)
+add list=payment-gateways address=qris.id comment="QRIS"
+add list=payment-gateways address=api.qris.id comment="QRIS API"
+
+# NOTE: Jalankan script ini ulang setiap 7 hari agar IP tetap update
+# atau gunakan RouterOS Scheduler untuk auto-refresh`;
 
   // Script 5: Firewall NAT (Redirect to Landing Page)
   const firewallNatScript = `/ip firewall nat
@@ -254,7 +354,7 @@ ${firewallNatScript}
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
         <Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
       </div>
@@ -262,16 +362,16 @@ ${firewallNatScript}
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-4">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] mb-1.5">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] mb-1.5">
             <Server className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] inline mr-2" />
             {t('isolation.mikrotikTitle')}
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             {t('isolation.mikrotikSubtitle')}
           </p>
         </div>
@@ -294,7 +394,7 @@ ${firewallNatScript}
           <div className="flex items-start gap-3">
             <AlertCircle className="w-6 h-6 text-[#ff6b8a] flex-shrink-0 mt-0.5 drop-shadow-[0_0_10px_rgba(255,68,102,0.6)]" />
             <div className="flex-1">
-              <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+              <h3 className="font-bold text-foreground mb-2 flex items-center gap-2">
                 ⚠️ PENTING: Ganti Hostname dengan IP Address!
               </h3>
               <div className="space-y-2 text-sm text-[#e0d0ff]/90">

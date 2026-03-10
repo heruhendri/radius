@@ -25,8 +25,14 @@ const NOTIFICATION_CATEGORIES = [
   { type: 'invoice_generated', key: 'notifications.categories.invoice_generated', icon: Receipt },
   { type: 'payment_received', key: 'notifications.categories.payment_received', icon: CheckCheck },
   { type: 'manual_payment_submitted', key: 'notifications.categories.manual_payment_submitted', icon: CreditCard },
+  { type: 'manual_payment_approved', key: 'notifications.categories.manual_payment_approved', icon: CheckCheck },
+  { type: 'manual_payment_rejected', key: 'notifications.categories.manual_payment_rejected', icon: AlertCircle },
   { type: 'new_registration', key: 'notifications.categories.new_registration', icon: UserPlus },
   { type: 'user_expired', key: 'notifications.categories.user_expired', icon: Clock },
+  { type: 'package_change_request', key: 'notifications.categories.package_change_request', icon: Briefcase },
+  { type: 'agent_deposit', key: 'notifications.categories.agent_deposit', icon: Wallet },
+  { type: 'agent_voucher_generated', key: 'notifications.categories.agent_voucher_generated', icon: Receipt },
+  { type: 'agent_balance_adjustment', key: 'notifications.categories.agent_balance_adjustment', icon: DollarSign },
   { type: 'system_alert', key: 'notifications.categories.system_alert', icon: AlertTriangle },
 ];
 
@@ -215,12 +221,28 @@ export default function NotificationsPage() {
     switch (type) {
       case 'invoice_overdue':
         return 'border-l-destructive bg-destructive/10';
+      case 'manual_payment_rejected':
+        return 'border-l-destructive bg-destructive/10';
       case 'new_registration':
+        return 'border-l-info bg-info/10';
+      case 'package_change_request':
         return 'border-l-info bg-info/10';
       case 'payment_received':
         return 'border-l-success bg-success/10';
+      case 'manual_payment_approved':
+        return 'border-l-success bg-success/10';
+      case 'invoice_generated':
+        return 'border-l-success bg-success/10';
       case 'user_expired':
         return 'border-l-warning bg-warning/10';
+      case 'manual_payment_submitted':
+        return 'border-l-warning bg-warning/10';
+      case 'agent_deposit':
+        return 'border-l-warning bg-warning/10';
+      case 'agent_balance_adjustment':
+        return 'border-l-warning bg-warning/10';
+      case 'agent_voucher_generated':
+        return 'border-l-primary bg-primary/10';
       case 'system_alert':
         return 'border-l-primary bg-primary/10';
       default:
@@ -231,8 +253,16 @@ export default function NotificationsPage() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'invoice_overdue': return '💸';
+      case 'invoice_generated': return '🧾';
       case 'new_registration': return '👤';
       case 'payment_received': return '✅';
+      case 'manual_payment_submitted': return '📄';
+      case 'manual_payment_approved': return '✅';
+      case 'manual_payment_rejected': return '❌';
+      case 'package_change_request': return '📦';
+      case 'agent_deposit': return '💰';
+      case 'agent_voucher_generated': return '🎟️';
+      case 'agent_balance_adjustment': return '💳';
       case 'user_expired': return '⏰';
       case 'system_alert': return '⚠️';
       default: return '📢';
@@ -240,7 +270,7 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -254,7 +284,7 @@ export default function NotificationsPage() {
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5" />
             <div>
-              <h1 className="text-2xl font-bold">{t('notifications.title')}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold">{t('notifications.title')}</h1>
               <p className="text-sm text-white/80 mt-1">{t('notifications.manageAll')}</p>
             </div>
           </div>

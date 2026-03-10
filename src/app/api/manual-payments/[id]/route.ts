@@ -1,9 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { WhatsAppService } from '@/lib/whatsapp';
-import { EmailService } from '@/lib/email';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
+import { EmailService } from '@/server/services/notifications/email.service';
 import { addMonths } from 'date-fns';
-import { generateTransactionId } from '@/lib/invoice-generator';
+import { generateTransactionId } from '@/server/services/billing/invoice.service';
+import { disconnectPPPoEUser } from '@/server/services/radius/coa-handler.service';
+import { sendPushToUser } from '@/server/services/notifications/push-templates.service';
+import { nowWIB } from '@/lib/timezone';
 
 // GET - Get single manual payment
 export async function GET(
@@ -140,13 +143,46 @@ export async function PATCH(
           break;
       }
       
-      // Update user expiry and reactivate if needed
+      // ============================================
+      // CHECK FOR PACKAGE CHANGE IN INVOICE METADATA
+      // ============================================
+      let newProfileId = manualPayment.user.profileId;
+      let newProfileData = manualPayment.user.profile;
+      let isPackageChange = false;
+      if (manualPayment.invoice && manualPayment.invoice.additionalFees) {
+        try {
+          const fees = manualPayment.invoice.additionalFees as any;
+          if (fees.items && Array.isArray(fees.items)) {
+            const pkgItem = fees.items.find((item: any) =>
+              (item.metadata?.type === 'package_change' || item.metadata?.type === 'package_upgrade') &&
+              item.metadata?.newPackageId
+            );
+            if (pkgItem) {
+              isPackageChange = true;
+              newProfileId = pkgItem.metadata.newPackageId;
+              const foundProfile = await prisma.pppoeProfile.findUnique({ where: { id: newProfileId } });
+              if (foundProfile) {
+                newProfileData = foundProfile as any;
+                console.log(`[Manual Payment APPROVE] Package change: ${pkgItem.metadata.oldPackageName} → ${pkgItem.metadata.newPackageName} (expiry PRESERVED)`);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[Manual Payment APPROVE] Failed to parse additionalFees:', e);
+        }
+      }
+
+      // For package change: preserve existing expiredAt, do NOT extend
+      const finalExpiry = isPackageChange ? currentExpiry : newExpiry;
+
+      // Update user expiry, status, and profile (if package change)
       await prisma.pppoeUser.update({
         where: { id: manualPayment.userId },
         data: {
-          expiredAt: newExpiry,
+          expiredAt: finalExpiry,
           status: 'active',
           lastPaymentDate: new Date(),
+          ...(newProfileId !== manualPayment.user.profileId && { profileId: newProfileId }),
         },
       });
       
@@ -161,6 +197,59 @@ export async function PATCH(
           paidAt: new Date(),
         },
       });
+
+      // ============================================
+      // SYNC RADIUS - Update group + CoA disconnect
+      // ============================================
+      try {
+        const activeProfile = newProfileData;
+        if (activeProfile && 'groupName' in activeProfile) {
+          // Update password in radcheck
+          await prisma.$executeRaw`
+            INSERT INTO radcheck (username, attribute, op, value)
+            VALUES (${manualPayment.user.username}, 'Cleartext-Password', ':=', ${manualPayment.user.password})
+            ON DUPLICATE KEY UPDATE value = ${manualPayment.user.password}
+          `;
+          // Update radusergroup to new profile
+          await prisma.$executeRaw`
+            DELETE FROM radusergroup WHERE username = ${manualPayment.user.username}
+          `;
+          await prisma.$executeRaw`
+            INSERT INTO radusergroup (username, groupname, priority)
+            VALUES (${manualPayment.user.username}, ${(activeProfile as any).groupName}, 1)
+          `;
+          // Remove isolation entries
+          await prisma.radcheck.deleteMany({
+            where: { username: manualPayment.user.username, attribute: 'Auth-Type' }
+          });
+          await prisma.radreply.deleteMany({
+            where: { username: manualPayment.user.username, attribute: 'Reply-Message' }
+          });
+          // CoA disconnect to force re-auth
+          const coaResult = await disconnectPPPoEUser(manualPayment.user.username);
+          console.log(`[Manual Payment APPROVE] CoA: ${coaResult.success ? 'disconnected for re-auth' : coaResult.error}`);
+        }
+      } catch (radiusErr) {
+        console.error('[Manual Payment APPROVE] RADIUS sync error:', radiusErr);
+      }
+
+      // ============================================
+      // FCM PUSH NOTIFICATION TO CUSTOMER
+      // ============================================
+      try {
+        await sendPushToUser(manualPayment.userId, 'payment-success', {
+          customerName: manualPayment.user.name,
+          username: manualPayment.user.username,
+          invoiceNumber: manualPayment.invoice.invoiceNumber,
+          amount: manualPayment.invoice.amount,
+          profileName: (newProfileData as any)?.name || '',
+          expiredDate: finalExpiry,
+          companyName: company?.name || '',
+          companyPhone: company?.phone || '',
+        });
+      } catch (pushErr) {
+        console.error('[Manual Payment APPROVE] FCM push error:', pushErr);
+      }
       
       // Send notifications
       const customerName = manualPayment.user.name;
@@ -234,18 +323,24 @@ export async function PATCH(
       }
       
       // Create notification
+      const pkgChangeMsg = newProfileId !== manualPayment.user.profileId
+        ? ` | Paket diubah ke ${(newProfileData as any)?.name || newProfileId}`
+        : '';
       await prisma.notification.create({
         data: {
           type: 'manual_payment_approved',
           title: 'Pembayaran Disetujui',
-          message: `Pembayaran manual untuk ${customerName} (${invoiceNumber}) telah disetujui`,
+          message: `Pembayaran manual untuk ${customerName} (${invoiceNumber}) telah disetujui${pkgChangeMsg}`,
           link: `/admin/manual-payments`,
+          createdAt: nowWIB(),
         },
       });
       
       return NextResponse.json({
         success: true,
         message: 'Manual payment approved successfully',
+        packageChanged: newProfileId !== manualPayment.user.profileId,
+        newProfileId: newProfileId !== manualPayment.user.profileId ? newProfileId : undefined,
       });
     } else {
       // Reject payment
@@ -334,9 +429,26 @@ export async function PATCH(
           title: 'Pembayaran Ditolak',
           message: `Pembayaran manual untuk ${customerName} (${invoiceNumber}) ditolak: ${rejectionReason}`,
           link: `/admin/manual-payments`,
+          createdAt: nowWIB(),
         },
       });
-      
+
+      // ============================================
+      // FCM PUSH NOTIFICATION TO CUSTOMER (REJECT)
+      // ============================================
+      try {
+        await sendPushToUser(manualPayment.userId, 'payment-rejected', {
+          customerName: manualPayment.user.name,
+          invoiceNumber: manualPayment.invoice.invoiceNumber,
+          amount: manualPayment.invoice.amount,
+          customBody: rejectionReason,
+          companyName: company?.name || '',
+          companyPhone: company?.phone || '',
+        });
+      } catch (pushErr) {
+        console.error('[Manual Payment REJECT] FCM push error:', pushErr);
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Manual payment rejected',

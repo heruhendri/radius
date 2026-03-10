@@ -141,8 +141,15 @@ build_app() {
     log_info "Building application..."
     cd "$APP_DIR"
     
-    # Use optimized build command
-    NODE_OPTIONS="--max-old-space-size=1536" npm run build:vps
+    # Stop PM2 to free memory for build
+    pm2 stop all 2>/dev/null || true
+    sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+    
+    # Clean build cache
+    rm -rf .next .turbo node_modules/.cache 2>/dev/null || true
+    
+    # Use optimized VPS build command (1.5GB heap limit)
+    NEXT_TELEMETRY_DISABLED=1 npm run build:vps
     
     log_success "Build completed"
 }

@@ -1,10 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
 import { seedParameterDisplayConfig } from '../../../../../../../prisma/seeds/parameter-display-config';
 
 // POST - Reset to default configurations
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.log('🔄 Resetting parameter display configurations to defaults...');
     
     // Run the seed function

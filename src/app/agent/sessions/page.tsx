@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatWIB } from '@/lib/timezone';
@@ -30,6 +30,7 @@ interface Session {
   acctInputOctets: number;
   acctOutputOctets: number;
   acctSessionTime: number;
+  expiresAt?: string | null;
   profileName?: string;
   routerName?: string;
 }
@@ -42,11 +43,18 @@ export default function AgentSessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
+  const [now, setNow] = useState(Date.now());
   const [stats, setStats] = useState({
     total: 0,
     totalUpload: 0,
     totalDownload: 0,
   });
+
+  // 1-second ticker for live duration counter
+  useEffect(() => {
+    const ticker = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(ticker);
+  }, []);
 
   useEffect(() => {
     const agentDataStr = localStorage.getItem('agentData');
@@ -103,10 +111,25 @@ export default function AgentSessionsPage() {
   };
 
   const formatDuration = (seconds: number) => {
+    if (!seconds || seconds < 0) return '0s';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    return `${hours}h ${minutes}m ${secs}s`;
+    if (hours > 0) return `${hours}h ${minutes}m ${secs}s`;
+    if (minutes > 0) return `${minutes}m ${secs}s`;
+    return `${secs}s`;
+  };
+
+  const liveDuration = (startTimeStr: string | null) => {
+    if (!startTimeStr) return 0;
+    const startMs = new Date(startTimeStr).getTime();
+    return Math.max(0, Math.floor((now - startMs) / 1000));
+  };
+
+  // Countdown from expiresAt (remaining time)
+  const liveCountdown = (expiresAtStr: string | null | undefined) => {
+    if (!expiresAtStr) return 0;
+    return Math.max(0, Math.floor((new Date(expiresAtStr).getTime() - now) / 1000));
   };
 
   if (loading) {
@@ -115,7 +138,7 @@ export default function AgentSessionsPage() {
         <div className="min-h-[50vh] flex items-center justify-center">
           <div className="text-center">
             <div className="w-10 h-10 border-4 border-[#00f7ff] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-            <p className="text-[#e0d0ff]/70">{t('agent.portal.loadingSessions')}...</p>
+            <p className="text-slate-500 dark:text-[#e0d0ff]/70">{t('agent.portal.loadingSessions')}...</p>
           </div>
         </div>
       </div>
@@ -127,12 +150,12 @@ export default function AgentSessionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl lg:text-2xl font-bold text-white">{t('agent.portal.onlineSessions')}</h1>
-          <p className="text-xs lg:text-sm text-[#e0d0ff]/60 mt-1">{t('agent.portal.activeVouchers')}</p>
+          <h1 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-white">{t('agent.portal.onlineSessions')}</h1>
+          <p className="text-xs lg:text-sm text-slate-500 dark:text-[#e0d0ff]/60 mt-1">{t('agent.portal.activeVouchers')}</p>
         </div>
         <button
           onClick={() => agent && loadSessions(agent.id)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#bc13fe]/20 hover:bg-[#bc13fe]/30 border border-[#bc13fe]/30 rounded-xl text-white transition"
+          className="flex items-center gap-2 px-4 py-2 bg-[#bc13fe]/20 hover:bg-[#bc13fe]/30 border border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white transition"
         >
           <RefreshCcw className="h-4 w-4" />
           <span className="hidden lg:inline">{t('agent.portal.refresh')}</span>
@@ -141,61 +164,61 @@ export default function AgentSessionsPage() {
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#0a0520]/80 backdrop-blur-xl rounded-xl border-2 border-[#00f7ff]/30 p-4 shadow-[0_0_20px_rgba(0,247,255,0.1)]">
+        <div className="bg-white/80 dark:bg-[#0a0520]/80 backdrop-blur-xl rounded-xl border-2 border-cyan-200 dark:border-[#00f7ff]/30 p-4 shadow-[0_0_20px_rgba(0,247,255,0.1)]">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-[#00f7ff]/20 rounded-lg">
               <Users className="h-6 w-6 text-[#00f7ff]" />
             </div>
             <div>
-              <p className="text-xs text-[#e0d0ff]/70">{t('agent.portal.totalSessions')}</p>
-              <p className="text-2xl font-bold text-white">{stats.total}</p>
+              <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/70">{t('agent.portal.totalSessions')}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.total}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-[#0a0520]/80 backdrop-blur-xl rounded-xl border-2 border-[#00ff88]/30 p-4 shadow-[0_0_20px_rgba(0,255,136,0.1)]">
+        <div className="bg-white/80 dark:bg-[#0a0520]/80 backdrop-blur-xl rounded-xl border-2 border-emerald-200 dark:border-[#00ff88]/30 p-4 shadow-[0_0_20px_rgba(0,255,136,0.1)]">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-[#00ff88]/20 rounded-lg">
               <Activity className="h-6 w-6 text-[#00ff88]" />
             </div>
             <div>
-              <p className="text-xs text-[#e0d0ff]/70">{t('agent.portal.totalUpload')}</p>
-              <p className="text-2xl font-bold text-white">{formatBytes(stats.totalUpload)}</p>
+              <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/70">{t('agent.portal.totalUpload')}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatBytes(stats.totalUpload)}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-[#0a0520]/80 backdrop-blur-xl rounded-xl border-2 border-[#ff44cc]/30 p-4 shadow-[0_0_20px_rgba(255,68,204,0.1)]">
+        <div className="bg-white/80 dark:bg-[#0a0520]/80 backdrop-blur-xl rounded-xl border-2 border-pink-200 dark:border-[#ff44cc]/30 p-4 shadow-[0_0_20px_rgba(255,68,204,0.1)]">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-[#ff44cc]/20 rounded-lg">
               <Activity className="h-6 w-6 text-[#ff44cc]" />
             </div>
             <div>
-              <p className="text-xs text-[#e0d0ff]/70">{t('agent.portal.totalDownload')}</p>
-              <p className="text-2xl font-bold text-white">{formatBytes(stats.totalDownload)}</p>
+              <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/70">{t('agent.portal.totalDownload')}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatBytes(stats.totalDownload)}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Search */}
-      <div className="bg-[#0a0520]/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4">
+      <div className="bg-white/80 dark:bg-[#0a0520]/80 backdrop-blur-xl rounded-xl border-2 border-purple-300 dark:border-[#bc13fe]/30 p-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#e0d0ff]/50" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-[#e0d0ff]/50" />
           <input
             type="text"
             placeholder={t('agent.portal.searchSession') + '...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 text-sm bg-[#0a0520] border-2 border-[#bc13fe]/30 rounded-lg text-white focus:border-[#00f7ff] outline-none"
+            className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-white focus:border-[#00f7ff] outline-none"
           />
         </div>
       </div>
 
       {/* Sessions List */}
-      <div className="bg-[#0a0520]/80 backdrop-blur-xl rounded-2xl border-2 border-[#bc13fe]/30 overflow-hidden shadow-[0_0_30px_rgba(188,19,254,0.15)]">
-        <div className="px-5 py-4 border-b border-[#bc13fe]/20">
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
+      <div className="bg-white/80 dark:bg-[#0a0520]/80 backdrop-blur-xl rounded-2xl border-2 border-purple-300 dark:border-[#bc13fe]/30 overflow-hidden shadow-[0_0_30px_rgba(188,19,254,0.15)]">
+        <div className="px-5 py-4 border-b border-purple-200 dark:border-[#bc13fe]/20">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Wifi className="h-5 w-5 text-[#00ff88]" />
             {t('agent.portal.activeSessions')} ({filteredSessions.length})
           </h2>
@@ -203,26 +226,26 @@ export default function AgentSessionsPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[#0a0520]/50">
+            <thead className="bg-slate-50 dark:bg-[#0a0520]/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.username')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.profile')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.router')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.ipAddress')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.macAddress')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.upload')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.download')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.duration')}</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.startTime')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.username')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.profile')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.router')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.ipAddress')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.macAddress')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.upload')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.download')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.duration')}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.startTime')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#bc13fe]/10">
+            <tbody className="divide-y divide-slate-200 dark:divide-[#bc13fe]/10">
               {filteredSessions.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-10 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <WifiOff className="h-12 w-12 text-[#e0d0ff]/30 mb-3" />
-                      <p className="text-sm text-[#e0d0ff]/60">
+                      <p className="text-sm text-slate-500 dark:text-[#e0d0ff]/60">
                         {searchQuery ? t('agent.portal.noSearchResults') : t('agent.portal.noActiveSessions')}
                       </p>
                     </div>
@@ -230,22 +253,26 @@ export default function AgentSessionsPage() {
                 </tr>
               ) : (
                 filteredSessions.map((session) => (
-                  <tr key={session.id} className="hover:bg-[#bc13fe]/5 transition">
+                  <tr key={session.id} className="hover:bg-purple-50/50 dark:hover:bg-[#bc13fe]/5 transition">
                     <td className="px-4 py-3">
-                      <p className="font-mono font-bold text-sm text-white">{session.username}</p>
+                      <p className="font-mono font-bold text-sm text-slate-900 dark:text-white">{session.username}</p>
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#e0d0ff]/80">
+                    <td className="px-4 py-3 text-xs text-slate-600 dark:text-[#e0d0ff]/80">
                       {session.profileName || '-'}
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#e0d0ff]/80">
+                    <td className="px-4 py-3 text-xs text-slate-600 dark:text-[#e0d0ff]/80">
                       {session.routerName || '-'}
                     </td>
-                    <td className="px-4 py-3 text-xs text-white font-mono">{session.framedIpAddress || '-'}</td>
-                    <td className="px-4 py-3 text-xs text-[#e0d0ff]/80 font-mono">{session.callingStationId || '-'}</td>
+                    <td className="px-4 py-3 text-xs text-slate-900 dark:text-white font-mono">{session.framedIpAddress || '-'}</td>
+                    <td className="px-4 py-3 text-xs text-slate-600 dark:text-[#e0d0ff]/80 font-mono">{session.callingStationId || '-'}</td>
                     <td className="px-4 py-3 text-xs text-[#00ff88]">{formatBytes(session.acctInputOctets || 0)}</td>
                     <td className="px-4 py-3 text-xs text-[#ff44cc]">{formatBytes(session.acctOutputOctets || 0)}</td>
-                    <td className="px-4 py-3 text-xs text-white">{formatDuration(session.acctSessionTime || 0)}</td>
-                    <td className="px-4 py-3 text-xs text-[#e0d0ff]/60">
+                    <td className="px-4 py-3 text-xs text-slate-900 dark:text-white">
+                      {session.expiresAt
+                        ? formatDuration(liveCountdown(session.expiresAt)) + ' left'
+                        : formatDuration(liveDuration(session.acctStartTime))}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-500 dark:text-[#e0d0ff]/60">
                       {session.acctStartTime ? formatWIB(new Date(session.acctStartTime), 'dd MMM HH:mm') : '-'}
                     </td>
                   </tr>
@@ -258,3 +285,4 @@ export default function AgentSessionsPage() {
     </div>
   );
 }
+

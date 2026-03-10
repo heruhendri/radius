@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
 import { RouterOSAPI } from 'node-routeros';
-
-const prisma = new PrismaClient();
+import { generateUniqueReferralCode } from '@/server/services/referral.service';
 
 interface MikrotikPPPoESecret {
   '.id': string;
@@ -42,6 +43,10 @@ interface SyncResult {
 // GET - Preview PPPoE secrets from MikroTik (without importing)
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
     const routerId = searchParams.get('routerId');
 
@@ -125,6 +130,10 @@ export async function GET(request: NextRequest) {
 // POST - Import/Sync PPPoE secrets from MikroTik to database
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await request.json();
     const { 
       routerId, 
@@ -270,6 +279,7 @@ export async function POST(request: NextRequest) {
             status: 'active',
             expiredAt: expiredAt,
             syncedToRadius: false,
+            referralCode: await generateUniqueReferralCode(),
           },
         });
 
@@ -291,7 +301,7 @@ export async function POST(request: NextRequest) {
               data: {
                 username: secret.name,
                 groupname: profile.groupName,
-                priority: 1,
+                priority: 0,
               },
             });
 

@@ -22,7 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, DollarSign, FileText, CheckCircle, CheckCircle2, Clock, RefreshCw, Eye, AlertCircle, Copy, Check, ExternalLink, MessageCircle, Trash2, Search, Download, Printer } from 'lucide-react';
+import { Loader2, DollarSign, FileText, CheckCircle, CheckCircle2, Clock, RefreshCw, Eye, AlertCircle, Copy, Check, ExternalLink, MessageCircle, Trash2, Search, Download, Printer, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
 interface Invoice {
   id: string;
@@ -90,16 +91,34 @@ export default function InvoicesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [broadcasting, setBroadcasting] = useState(false);
+  const [exportDateFrom, setExportDateFrom] = useState('');
+  const [exportDateTo, setExportDateTo] = useState('');
+  const [invoiceMonth, setInvoiceMonth] = useState<string>(''); // '' = all-time, 'YYYY-MM' = filtered
+
+  const MONTH_NAMES_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const getMonthLabel = (ym: string) => {
+    if (!ym) return 'Semua';
+    const [y, m] = ym.split('-').map(Number);
+    return `${MONTH_NAMES_ID[m - 1]} ${y}`;
+  };
+  const shiftInvoiceMonth = (delta: number) => {
+    const base = invoiceMonth || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })();
+    const [y, m] = base.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    setInvoiceMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  };
 
   useEffect(() => {
     loadInvoices();
-  }, [activeTab]);
+  }, [activeTab, invoiceMonth]);
 
   const loadInvoices = async () => {
     try {
       setLoading(true);
       const status = activeTab === 'unpaid' ? 'PENDING' : activeTab === 'paid' ? 'PAID' : 'all';
-      const res = await fetch(`/api/invoices?status=${status}`);
+      const params = new URLSearchParams({ status });
+      if (invoiceMonth) params.set('month', invoiceMonth);
+      const res = await fetch(`/api/invoices?${params}`);
       const data = await res.json();
       setInvoices(data.invoices || []);
       setStats(data.stats || stats);
@@ -139,9 +158,9 @@ export default function InvoicesPage() {
       });
 
       if (res.ok) {
-        await showSuccess(t('invoices.markedAsPaid'));
         setIsPaymentDialogOpen(false);
         loadInvoices();
+        showToast(t('invoices.markedAsPaid'), 'success');
       } else {
         const data = await res.json();
         await showError(data.error || t('invoices.failedToMarkPaid'));
@@ -248,7 +267,7 @@ export default function InvoicesPage() {
 
     const confirmed = await showConfirm(
       t('invoices.broadcastConfirm', { count: selectedInvoices.size }),
-      'Broadcast Tagihan'
+      t('invoices.broadcastBilling')
     );
     if (!confirmed) return;
 
@@ -280,8 +299,8 @@ export default function InvoicesPage() {
 
   const handleDeleteInvoice = async (invoice: Invoice) => {
     const confirmed = await showConfirm(
-      `Delete invoice ${invoice.invoiceNumber}?\n\n${invoice.customerName || invoice.customerUsername || 'Unknown'}\n${formatCurrency(Number(invoice.amount))}`,
-      'Delete Invoice'
+      `${t('invoices.deleteConfirm', { number: invoice.invoiceNumber })}\n\n${invoice.customerName || invoice.customerUsername || 'Unknown'}\n${formatCurrency(Number(invoice.amount))}`,
+      t('invoices.deleteInvoice')
     );
     if (!confirmed) return;
 
@@ -290,8 +309,8 @@ export default function InvoicesPage() {
       const res = await fetch(`/api/invoices?id=${invoice.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
-        await showSuccess(t('invoices.invoiceDeleted'));
         loadInvoices();
+        showToast(t('invoices.invoiceDeleted'), 'success');
       } else {
         await showError(data.error || t('common.failedDelete'));
       }
@@ -306,18 +325,25 @@ export default function InvoicesPage() {
   const handleExportExcel = async () => {
     try {
       const status = activeTab === 'unpaid' ? 'PENDING' : activeTab === 'paid' ? 'PAID' : 'all';
-      const res = await fetch(`/api/invoices/export?format=excel&status=${status}`);
+      let url = `/api/invoices/export?format=excel&status=${status}`;
+      if (exportDateFrom) url += `&startDate=${exportDateFrom}`;
+      if (exportDateTo) url += `&endDate=${exportDateTo}`;
+      const res = await fetch(url);
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `Invoices-${new Date().toISOString().split('T')[0]}.xlsx`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
+      const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob);
+      const dateSuffix = exportDateFrom && exportDateTo ? `${exportDateFrom}_to_${exportDateTo}` : new Date().toISOString().split('T')[0];
+      a.download = `Invoices-${dateSuffix}.xlsx`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(a.href);
     } catch (error) { console.error('Export error:', error); await showError(t('invoices.exportFailed')); }
   };
 
   const handleExportPDF = async () => {
     try {
       const status = activeTab === 'unpaid' ? 'PENDING' : activeTab === 'paid' ? 'PAID' : 'all';
-      const res = await fetch(`/api/invoices/export?format=pdf&status=${status}`);
+      let url = `/api/invoices/export?format=pdf&status=${status}`;
+      if (exportDateFrom) url += `&startDate=${exportDateFrom}`;
+      if (exportDateTo) url += `&endDate=${exportDateTo}`;
+      const res = await fetch(url);
       const data = await res.json();
       if (data.pdfData) {
         const jsPDF = (await import('jspdf')).default;
@@ -331,7 +357,8 @@ export default function InvoicesPage() {
           doc.setFontSize(9); doc.setFont('helvetica', 'bold');
           data.pdfData.summary.forEach((s: any, i: number) => { doc.text(`${s.label}: ${s.value}`, 14, finalY + (i * 5)); });
         }
-        doc.save(`Invoices-${new Date().toISOString().split('T')[0]}.pdf`);
+        const dateSuffix = exportDateFrom && exportDateTo ? `${exportDateFrom}_to_${exportDateTo}` : new Date().toISOString().split('T')[0];
+        doc.save(`Invoices-${dateSuffix}.pdf`);
       }
     } catch (error) { console.error('PDF error:', error); await showError(t('invoices.pdfExportFailed')); }
   };
@@ -355,17 +382,17 @@ export default function InvoicesPage() {
 
       // Invoice title
       doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-      doc.text('INVOICE', 105, 45, { align: 'center' });
+      doc.text(t('invoices.pdfInvoice'), 105, 45, { align: 'center' });
 
       // Invoice details
       doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-      doc.text(`No: ${inv.invoice.number}`, 14, 55);
-      doc.text(`Date: ${inv.invoice.date}`, 14, 61);
-      doc.text(`Due: ${inv.invoice.dueDate}`, 14, 67);
-      doc.text(`Status: ${inv.invoice.status}`, 14, 73);
+      doc.text(`${t('invoices.pdfNo')} ${inv.invoice.number}`, 14, 55);
+      doc.text(`${t('invoices.pdfDate')} ${inv.invoice.date}`, 14, 61);
+      doc.text(`${t('invoices.pdfDue')} ${inv.invoice.dueDate}`, 14, 67);
+      doc.text(`${t('invoices.pdfStatus')} ${inv.invoice.status}`, 14, 73);
 
       // Customer
-      doc.setFont('helvetica', 'bold'); doc.text('Bill To:', 130, 55);
+      doc.setFont('helvetica', 'bold'); doc.text(`${t('invoices.pdfBillTo')}`, 130, 55);
       doc.setFont('helvetica', 'normal');
       doc.text(inv.customer.name, 130, 61);
       if (inv.customer.phone) doc.text(inv.customer.phone, 130, 67);
@@ -374,7 +401,7 @@ export default function InvoicesPage() {
       // Items table
       const autoTable = (await import('jspdf-autotable')).default;
       autoTable(doc, {
-        head: [['Description', 'Qty', 'Price', 'Total']],
+        head: [[t('invoices.pdfHeaderDesc'), t('invoices.pdfHeaderQty'), t('invoices.pdfHeaderPrice'), t('invoices.pdfHeaderTotal')]],
         body: inv.items.map((item: any) => [item.description, item.quantity, formatCurrency(item.price), formatCurrency(item.total)]),
         startY: 85,
         headStyles: { fillColor: [13, 148, 136] },
@@ -387,8 +414,8 @@ export default function InvoicesPage() {
 
       if (inv.invoice.paidAt) {
         doc.setFontSize(14); doc.setTextColor(0, 128, 0);
-        doc.text('PAID', 105, finalY + 15, { align: 'center' });
-        doc.setFontSize(9); doc.text(`Paid on: ${inv.invoice.paidAt}`, 105, finalY + 21, { align: 'center' });
+        doc.text(t('invoices.pdfPaid'), 105, finalY + 15, { align: 'center' });
+        doc.setFontSize(9); doc.text(`${t('invoices.pdfPaidOn')} ${inv.invoice.paidAt}`, 105, finalY + 21, { align: 'center' });
       }
 
       doc.save(`Invoice-${inv.invoice.number}.pdf`);
@@ -430,7 +457,7 @@ export default function InvoicesPage() {
 
   if (loading && invoices.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -441,7 +468,7 @@ export default function InvoicesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       {/* Neon Cyberpunk Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
@@ -452,10 +479,10 @@ export default function InvoicesPage() {
 
       <div className="relative z-10 space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('invoices.title')}</h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('invoices.monthlyBilling')}</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('invoices.title')}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('invoices.monthlyBilling')}</p>
           </div>
           <div className="flex gap-1.5 flex-wrap">
             {selectedInvoices.size > 0 && (
@@ -468,8 +495,21 @@ export default function InvoicesPage() {
                 {t('invoices.broadcast')} ({selectedInvoices.size})
               </button>
             )}
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">Periode:</span>
+              <input type="date" value={exportDateFrom} onChange={e => setExportDateFrom(e.target.value)}
+                className="text-[10px] px-1.5 py-1 bg-[#1a1135]/80 border border-[#bc13fe]/30 rounded text-foreground focus:outline-none focus:border-[#bc13fe]/60" />
+              <span className="text-[10px] text-[#e0d0ff]/40">–</span>
+              <input type="date" value={exportDateTo} onChange={e => setExportDateTo(e.target.value)}
+                className="text-[10px] px-1.5 py-1 bg-[#1a1135]/80 border border-[#bc13fe]/30 rounded text-foreground focus:outline-none focus:border-[#bc13fe]/60" />
+            </div>
             <button onClick={handleExportExcel} className="inline-flex items-center px-2 py-1.5 text-xs border border-success text-success rounded hover:bg-success/10"><Download className="h-3 w-3 mr-1" />Excel</button>
             <button onClick={handleExportPDF} className="inline-flex items-center px-2 py-1.5 text-xs border border-destructive text-destructive rounded hover:bg-destructive/10"><Download className="h-3 w-3 mr-1" />PDF</button>
+            <Link href="/admin/invoices/import">
+              <button className="inline-flex items-center px-2 py-1.5 text-xs border border-[#bc13fe]/60 text-foreground rounded hover:bg-[#bc13fe]/10">
+                <Upload className="h-3 w-3 mr-1" />Import CSV
+              </button>
+            </Link>
             <Button onClick={handleGenerateInvoices} disabled={generating} size="sm" className="h-8 text-xs">
               {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
               {t('invoices.generateInvoice')}
@@ -478,50 +518,50 @@ export default function InvoicesPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('common.total')}</p>
-                <p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.total}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide truncate">{t('common.total')}</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.total}</p>
               </div>
-              <div className="p-2 rounded-lg shadow-lg bg-[#bc13fe]/20">
-                <FileText className="w-4 h-4" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('invoices.pending')}</p>
-                <p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.unpaid}</p>
-                <p className="text-xs text-[#e0d0ff]/70 mt-1">{formatCurrency(Number(stats.totalUnpaidAmount))}</p>
-              </div>
-              <div className="p-2 rounded-lg shadow-lg bg-red-400/20">
-                <Clock className="w-4 h-4 text-red-400" />
+              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-[#bc13fe]/20 flex-shrink-0">
+                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             </div>
           </div>
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('invoices.paid')}</p>
-                <p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.paid}</p>
-                <p className="text-xs text-[#e0d0ff]/70 mt-1">{formatCurrency(Number(stats.totalPaidAmount))}</p>
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide truncate">{t('invoices.pending')}</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.unpaid}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{formatCurrency(Number(stats.totalUnpaidAmount))}</p>
               </div>
-              <div className="p-2 rounded-lg shadow-lg bg-green-400/20">
-                <CheckCircle2 className="w-4 h-4 text-green-400" />
+              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-red-400/20 flex-shrink-0">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400" />
               </div>
             </div>
           </div>
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('invoices.overdue')}</p>
-                <p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.overdue}</p>
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide truncate">{t('invoices.paid')}</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.paid}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{formatCurrency(Number(stats.totalPaidAmount))}</p>
               </div>
-              <div className="p-2 rounded-lg shadow-lg bg-amber-400/20">
-                <DollarSign className="w-4 h-4 text-amber-400" />
+              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-green-400/20 flex-shrink-0">
+                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide truncate">{t('invoices.overdue')}</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.overdue}</p>
+              </div>
+              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-amber-400/20 flex-shrink-0">
+                <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
               </div>
             </div>
           </div>
@@ -549,6 +589,28 @@ export default function InvoicesPage() {
                 </button>
               ))}
             </div>
+            {/* Month Filter */}
+            <div className="flex items-center gap-1 border border-border rounded-lg bg-muted/30 px-1 py-1">
+              <button
+                onClick={() => shiftInvoiceMonth(-1)}
+                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setInvoiceMonth('')}
+                className="text-xs font-medium text-foreground min-w-[90px] text-center hover:text-primary transition-colors"
+                title="Klik untuk reset ke semua"
+              >
+                {getMonthLabel(invoiceMonth)}
+              </button>
+              <button
+                onClick={() => shiftInvoiceMonth(1)}
+                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
@@ -562,7 +624,7 @@ export default function InvoicesPage() {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow className="text-[10px]">
@@ -578,8 +640,8 @@ export default function InvoicesPage() {
                   <TableHead className="text-[10px] py-2 hidden xl:table-cell">{t('invoices.customerId')}</TableHead>
                   <TableHead className="text-[10px] py-2">{t('invoices.customer')}</TableHead>
                   <TableHead className="text-[10px] py-2 hidden lg:table-cell">{t('common.email')}</TableHead>
-                  <TableHead className="text-[10px] py-2 hidden md:table-cell">{t('nav.profile')}</TableHead>
-                  <TableHead className="text-[10px] py-2 hidden lg:table-cell">{t('common.area')}</TableHead>
+                  <TableHead className="text-[10px] py-2 hidden lg:table-cell">{t('nav.profile')}</TableHead>
+                  <TableHead className="text-[10px] py-2 hidden xl:table-cell">{t('common.area')}</TableHead>
                   <TableHead className="text-[10px] py-2 text-right">{t('invoices.amount')}</TableHead>
                   <TableHead className="text-[10px] py-2">{t('invoices.status')}</TableHead>
                   <TableHead className="text-[10px] py-2 hidden sm:table-cell">{t('invoices.dueDate')}</TableHead>
@@ -611,13 +673,13 @@ export default function InvoicesPage() {
                       </TableCell>
                       <TableCell className="py-2 text-[10px]">
                         <div>
-                          <div className="font-medium truncate max-w-[120px]">{invoice.user?.name || invoice.customerName || 'Deleted'}</div>
+                          <div className="font-medium truncate max-w-[120px]">{invoice.user?.name || invoice.customerName || t('invoices.deleted')}</div>
                           <div className="text-muted-foreground text-[9px] truncate max-w-[120px]">{invoice.user?.phone || invoice.customerPhone || '-'}</div>
                         </div>
                       </TableCell>
                       <TableCell className="py-2 hidden lg:table-cell text-[10px] text-muted-foreground truncate max-w-[150px]">{invoice.user?.email || invoice.customerEmail || '-'}</TableCell>
-                      <TableCell className="py-2 hidden md:table-cell text-[10px] text-muted-foreground">{invoice.user?.profile?.name || '-'}</TableCell>
-                      <TableCell className="py-2 hidden lg:table-cell text-[10px] text-muted-foreground">
+                      <TableCell className="py-2 hidden lg:table-cell text-[10px] text-muted-foreground">{invoice.user?.profile?.name || '-'}</TableCell>
+                      <TableCell className="py-2 hidden xl:table-cell text-[10px] text-muted-foreground">
                         {invoice.user?.area?.name || '-'}
                       </TableCell>
                       <TableCell className="py-2 text-right font-medium text-xs">{formatCurrency(Number(invoice.amount))}</TableCell>
@@ -657,6 +719,97 @@ export default function InvoicesPage() {
               </TableBody>
             </Table>
           </div>
+
+          {/* Mobile Card View */}
+          <div className="block md:hidden divide-y divide-border">
+            {filteredInvoices.length === 0 ? (
+              <div className="px-3 py-8 text-center text-muted-foreground">
+                <AlertCircle className="h-5 w-5 mx-auto mb-1 opacity-50" />
+                <p className="text-xs">{t('common.noData')}</p>
+              </div>
+            ) : (
+              filteredInvoices.map((invoice) => (
+                <div key={invoice.id} className="p-3 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={selectedInvoices.has(invoice.id)}
+                        onChange={() => toggleInvoiceSelection(invoice.id)}
+                        className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <span className="font-mono text-[11px] font-medium text-foreground">{invoice.invoiceNumber}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {getStatusBadge(invoice.status)}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold text-foreground whitespace-nowrap">{formatCurrency(Number(invoice.amount))}</span>
+                  </div>
+                  <div className="space-y-1 text-[11px] ml-6">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('invoices.customer')}:</span>
+                      <span className="font-medium text-foreground truncate ml-2">{invoice.user?.name || invoice.customerName || t('invoices.deleted')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Phone:</span>
+                      <span className="text-muted-foreground">{invoice.user?.phone || invoice.customerPhone || '-'}</span>
+                    </div>
+                    {invoice.user?.profile?.name && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">{t('nav.profile')}:</span>
+                        <span className="text-muted-foreground">{invoice.user.profile.name}</span>
+                      </div>
+                    )}
+                    {invoice.user?.area?.name && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">{t('common.area')}:</span>
+                        <span className="text-muted-foreground">{invoice.user.area.name}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('invoices.dueDate')}:</span>
+                      <span className="text-muted-foreground">{formatDate(invoice.dueDate)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-1 mt-2 ml-6">
+                    {invoice.paymentLink && (
+                      <button onClick={() => handleCopyPaymentLink(invoice)} className="p-1.5 hover:bg-muted rounded" title="Copy Link">
+                        {copiedId === invoice.id ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+                      </button>
+                    )}
+                    <button onClick={() => handlePrintInvoice(invoice)} className="p-1.5 hover:bg-muted rounded" title="Print PDF">
+                      <Printer className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                    <button onClick={() => handleViewDetail(invoice)} className="p-1.5 hover:bg-muted rounded" title="View">
+                      <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                    {(invoice.status === 'PENDING' || invoice.status === 'OVERDUE') && invoice.customerPhone && (
+                      <button onClick={() => handleSendWhatsApp(invoice)} disabled={sendingWA === invoice.id} className="p-1.5 hover:bg-muted rounded" title="WhatsApp">
+                        {sendingWA === invoice.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+                      </button>
+                    )}
+                    {(invoice.status === 'PENDING' || invoice.status === 'OVERDUE') && (
+                      <button onClick={() => handleMarkAsPaid(invoice)} className="px-2 py-1 text-[10px] font-medium bg-success text-success-foreground rounded hover:bg-success/90">
+                        {t('invoices.markAsPaid')}
+                      </button>
+                    )}
+                    <button onClick={() => handleDeleteInvoice(invoice)} disabled={deleting === invoice.id} className="p-1.5 hover:bg-destructive/10 rounded text-destructive" title="Delete">
+                      {deleting === invoice.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Result count */}
+          <div className="px-3 py-2 border-t border-border bg-muted">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              {t('table.showing')} {filteredInvoices.length} {t('table.of')} {invoices.length}
+            </p>
+          </div>
         </div>
 
         {/* Detail Dialog */}
@@ -680,7 +833,7 @@ export default function InvoicesPage() {
                 </div>
                 <div className="border-t pt-3 border-border">
                   <p className="text-[10px] text-muted-foreground">{t('invoices.customer')}</p>
-                  <p className="font-medium">{selectedInvoice.user?.name || selectedInvoice.customerName || 'Deleted'}</p>
+                  <p className="font-medium">{selectedInvoice.user?.name || selectedInvoice.customerName || t('invoices.deleted')}</p>
                   <p className="text-muted-foreground">{selectedInvoice.user?.phone || selectedInvoice.customerPhone || '-'}</p>
                   {(selectedInvoice.user?.email || selectedInvoice.customerEmail) && (
                     <p className="text-muted-foreground text-[10px]">📧 {selectedInvoice.user?.email || selectedInvoice.customerEmail}</p>
@@ -735,35 +888,52 @@ export default function InvoicesPage() {
 
         {/* Payment Dialog */}
         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle className="text-sm">{t('invoices.markAsPaid')}</DialogTitle>
-              <DialogDescription className="text-xs">{selectedInvoice?.invoiceNumber}</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={confirmPayment} className="space-y-3">
-              <div className="text-xs">
-                <p className="text-[10px] text-muted-foreground">{t('invoices.customer')}</p>
-                <p className="font-medium">{selectedInvoice?.user?.name || selectedInvoice?.customerName || 'Deleted'}</p>
-              </div>
-              <div className="text-xs">
-                <p className="text-[10px] text-muted-foreground">{t('invoices.amount')}</p>
-                <p className="text-base font-bold">{formatCurrency(Number(selectedInvoice?.amount || 0))}</p>
-              </div>
-              <div className="bg-info/10 border border-info/20 rounded-md p-2.5">
-                <p className="text-[10px] text-info">
-                  ℹ️ {t('invoices.expiryExtendedNote')}
-                </p>
-              </div>
-              <DialogFooter className="gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsPaymentDialogOpen(false)} disabled={processing} size="sm" className="h-8 text-xs">
-                  {t('common.cancel')}
-                </Button>
-                <Button type="submit" disabled={processing} size="sm" className="h-8 text-xs">
-                  {processing && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}
-                  {t('common.confirm')}
-                </Button>
-              </DialogFooter>
-            </form>
+          <DialogContent className="max-w-xs p-0 overflow-hidden gap-0">
+            {/* Coloured header strip */}
+            <div className="h-1 w-full bg-gradient-to-r from-success to-emerald-400" />
+            <div className="p-5">
+              <DialogHeader className="mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-full bg-success/15 border border-success/30">
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-sm font-bold">{t('invoices.markAsPaid')}</DialogTitle>
+                    <DialogDescription className="text-[11px] font-mono mt-0.5">
+                      {selectedInvoice?.invoiceNumber}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <form onSubmit={confirmPayment} className="space-y-3">
+                <div className="rounded-xl border border-border/60 bg-muted/30 divide-y divide-border/40">
+                  <div className="flex items-center justify-between px-3.5 py-2.5">
+                    <span className="text-[11px] text-muted-foreground">{t('invoices.customer')}</span>
+                    <span className="text-xs font-semibold">{selectedInvoice?.user?.name || selectedInvoice?.customerName || t('invoices.deleted')}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-3.5 py-2.5">
+                    <span className="text-[11px] text-muted-foreground">{t('invoices.amount')}</span>
+                    <span className="text-sm font-bold text-success">{formatCurrency(Number(selectedInvoice?.amount || 0))}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2 bg-info/10 border border-info/20 rounded-xl px-3 py-2.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-info flex-shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-info leading-snug">{t('invoices.expiryExtendedNote')}</p>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <Button type="button" variant="outline" onClick={() => setIsPaymentDialogOpen(false)} disabled={processing} size="sm" className="flex-1 h-9 text-xs">
+                    {t('common.cancel')}
+                  </Button>
+                  <Button type="submit" disabled={processing} size="sm" className="flex-1 h-9 text-xs bg-success hover:bg-success/90 text-white">
+                    {processing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
+                    {t('common.confirm')}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

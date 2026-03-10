@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { getCompanyInfo } from '@/lib/company';
+﻿import { NextResponse } from 'next/server';
+import { getCompanyInfo } from '@/server/services/company.service';
 
 export async function GET() {
   try {
@@ -11,6 +11,7 @@ export async function GET() {
         name: company.name,
         logo: (company as any).logo || null,
         poweredBy: (company as any).poweredBy || 'SALFANET RADIUS',
+        footerCustomer: (company as any).footerCustomer || null,
       }
     });
   } catch (error: any) {

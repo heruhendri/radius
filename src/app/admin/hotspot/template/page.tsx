@@ -99,7 +99,6 @@ export default function VoucherTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<VoucherTemplate | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -110,13 +109,6 @@ export default function VoucherTemplatesPage() {
 
   useEffect(() => {
     fetchTemplates();
-  }, []);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 640);
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const fetchTemplates = async () => {
@@ -231,7 +223,7 @@ export default function VoucherTemplatesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -242,11 +234,11 @@ export default function VoucherTemplatesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <FileCode className="w-5 h-5 text-[#00f7ff]" />
               {t('hotspot.templateTitle')}
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('hotspot.templateSubtitle')}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('hotspot.templateSubtitle')}</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -265,11 +257,46 @@ export default function VoucherTemplatesPage() {
           </div>
         </div>
 
-        {/* Table */}
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3">
+          {loading ? (
+            <div className="text-center py-8 text-xs text-muted-foreground">{t('common.loading')}</div>
+          ) : templates.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-xs">{t('hotspot.noTemplates')}</div>
+          ) : (
+            templates.map((template) => (
+              <div key={template.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="font-medium text-sm text-foreground">{template.name}</div>
+                  <div className="flex items-center gap-1">
+                    {template.isDefault && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/20 text-primary">
+                        {t('common.default')}
+                      </span>
+                    )}
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${template.isActive ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                      {template.isActive ? t('common.active') : t('common.inactive')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-1 border-t border-border pt-2">
+                  <button onClick={() => handleEdit(template)} className="p-2 text-primary hover:bg-primary/10 rounded" title="Edit">
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(template.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Delete">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Table - Desktop */}
         {loading ? (
-          <div className="text-center py-8 text-xs text-muted-foreground">{t('common.loading')}</div>
+          <div className="hidden md:block text-center py-8 text-xs text-muted-foreground">{t('common.loading')}</div>
         ) : (
-          <div className="bg-card rounded-lg border border-border overflow-hidden">
+          <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
             <table className="w-full">
               <thead className="bg-muted border-b border-border">
                 <tr>
@@ -347,18 +374,18 @@ export default function VoucherTemplatesPage() {
               <div>
                 <ModalLabel>{t('hotspot.htmlTemplate')}</ModalLabel>
                 <ModalTextarea value={formData.htmlTemplate} onChange={(e) => setFormData({ ...formData, htmlTemplate: e.target.value })} required rows={12} className="font-mono text-[10px]" placeholder="Enter HTML template..." />
-                <p className="text-[9px] text-[#e0d0ff]/50 mt-1">
+                <p className="text-[9px] text-muted-foreground mt-1">
                   Use Smarty: {`{$vs['code']}, {$vs['secret']}, {$vs['total']}, {$_c['currency_code']}`}
                 </p>
               </div>
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={formData.isDefault} onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff] w-3.5 h-3.5" />
-                  <span className="text-xs text-[#e0d0ff]">{t('hotspot.setDefault')}</span>
+                  <span className="text-xs text-foreground">{t('hotspot.setDefault')}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff] w-3.5 h-3.5" />
-                  <span className="text-xs text-[#e0d0ff]">{t('common.active')}</span>
+                  <span className="text-xs text-foreground">{t('common.active')}</span>
                 </label>
               </div>
             </ModalBody>
@@ -375,26 +402,28 @@ export default function VoucherTemplatesPage() {
         </SimpleModal>
 
         {/* Preview Dialog */}
-        <SimpleModal isOpen={showPreview} onClose={() => setShowPreview(false)} size="full">
+        <SimpleModal isOpen={showPreview} onClose={() => setShowPreview(false)} size="md">
           <ModalHeader>
             <ModalTitle>{t('hotspot.previewTemplate')}</ModalTitle>
           </ModalHeader>
-          <ModalBody className="bg-white/90 rounded-lg p-4">
-            <div
-              className="voucher-preview-container"
-              style={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                flexWrap: isMobile ? 'nowrap' : 'wrap',
-                gap: isMobile ? '12px' : '6px',
-                justifyContent: 'flex-start',
-                alignItems: 'flex-start',
-                width: '100%',
-                maxWidth: '100%',
-                boxSizing: 'border-box'
-              }}
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
-            />
+          <ModalBody className="p-4 overflow-y-auto">
+            <div style={{ display: 'flex', justifyContent: 'center', maxHeight: '65vh', overflowY: 'auto' }}>
+              <div
+                style={{
+                  background: '#fff',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  width: '100%',
+                  maxWidth: '380px',
+                  boxSizing: 'border-box',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  overflowX: 'hidden',
+                }}
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
+            </div>
           </ModalBody>
           <ModalFooter className="justify-center">
             <ModalButton variant="secondary" onClick={() => setShowPreview(false)}>{t('common.close')}</ModalButton>

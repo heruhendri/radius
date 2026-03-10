@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { getGenieACSCredentials } from '@/app/api/settings/genieacs/route';
 
 // Helper to safely convert any value to string (same as admin API)
@@ -351,6 +351,13 @@ export async function GET(request: NextRequest) {
       device: deviceInfo,
     });
   } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.warn('[Customer ONT] GenieACS tidak merespons setelah 5 detik');
+      return NextResponse.json(
+        { success: true, device: null, timeout: true, message: 'GenieACS tidak merespons. Perangkat mungkin offline.' },
+        { status: 200 }
+      );
+    }
     console.error('Get ONT error:', error);
     return NextResponse.json(
       { success: false, error: error.message, device: null },

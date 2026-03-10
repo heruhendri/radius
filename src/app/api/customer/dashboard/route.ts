@@ -1,5 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { cacheGetOrSet, RedisKeys } from '@/server/cache/redis';
+
+// Dashboard data cached 30 detik per user (has live RADIUS session)
+const DASHBOARD_CACHE_TTL = 30;
 
 /**
  * Get Customer Dashboard Data
@@ -64,6 +68,12 @@ export async function GET(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    // Wrap semua DB queries dalam Redis cache 30 detik per userId
+    const dashboardData = await cacheGetOrSet(
+      RedisKeys.customerDashboard(user.id),
+      DASHBOARD_CACHE_TTL,
+      async () => {
 
     // Get active session from RADIUS
     const activeSession = await prisma.radacct.findFirst({
@@ -141,38 +151,44 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    return {
+      user: {
+        id: user.id.toString(),
+        customerId: user.customerId || '',
+        username: user.username,
+        name: user.name || user.username,
+        email: user.email || '',
+        phone: user.phone || '',
+        status: user.status,
+        profileName: user.profile?.name || 'Unknown',
+        expiredAt: user.expiredAt?.toISOString() || null,
+        balance: user.balance || 0,
+        autoRenewal: user.autoRenewal || false,
+        packagePrice: user.profile?.price || 0,
+      },
+      session: {
+        isOnline: !!activeSession,
+        ipAddress: activeSession?.framedipaddress || null,
+        startTime: activeSession?.acctstarttime?.toISOString() || null,
+      },
+      usage: {
+        upload: uploadBytes,
+        download: downloadBytes,
+        total: totalBytes,
+      },
+      invoice: {
+        unpaidCount: unpaidInvoices,
+        totalUnpaid: Number(unpaidTotal._sum?.amount || 0),
+        nextDueDate: nextInvoice?.dueDate?.toISOString() || null,
+      },
+    };
+
+      } // end cacheGetOrSet fetcher
+    ); // end cacheGetOrSet
+
     return NextResponse.json({
       success: true,
-      data: {
-        user: {
-          id: user.id.toString(),
-          username: user.username,
-          name: user.name || user.username,
-          email: user.email || '',
-          phone: user.phone || '',
-          status: user.status,
-          profileName: user.profile?.name || 'Unknown',
-          expiredAt: user.expiredAt?.toISOString() || null,
-          balance: user.balance || 0,
-          autoRenewal: user.autoRenewal || false,
-          packagePrice: user.profile?.price || 0,
-        },
-        session: {
-          isOnline: !!activeSession,
-          ipAddress: activeSession?.framedipaddress || null,
-          startTime: activeSession?.acctstarttime?.toISOString() || null,
-        },
-        usage: {
-          upload: uploadBytes,
-          download: downloadBytes,
-          total: totalBytes,
-        },
-        invoice: {
-          unpaidCount: unpaidInvoices,
-          totalUnpaid: Number(unpaidTotal._sum?.amount || 0),
-          nextDueDate: nextInvoice?.dueDate?.toISOString() || null,
-        },
-      },
+      data: dashboardData,
     });
   } catch (error: any) {
     console.error('Get customer dashboard error:', error);

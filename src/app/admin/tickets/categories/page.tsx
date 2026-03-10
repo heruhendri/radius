@@ -214,7 +214,7 @@ export default function TicketCategoriesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -225,10 +225,10 @@ export default function TicketCategoriesPage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">
               {t('ticket.ticketCategories')}
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               {t('ticket.manageCategoriesDescription')}
             </p>
           </div>
@@ -243,7 +243,7 @@ export default function TicketCategoriesPage() {
 
         {/* Categories Grid */}
         {loading ? (
-          <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+          <div className="flex items-center justify-center min-h-[60vh]">
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
               <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -255,7 +255,7 @@ export default function TicketCategoriesPage() {
             {categories.map((category) => (
               <div
                 key={category.id}
-                className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-4 hover:border-[#00f7ff]/50 transition-all hover:shadow-[0_0_20px_rgba(0,247,255,0.3)]"
+                className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-[#00f7ff]/50 transition-all hover:shadow-[0_0_20px_rgba(0,247,255,0.3)]"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -263,20 +263,20 @@ export default function TicketCategoriesPage() {
                       className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]"
                       style={{ backgroundColor: category.color }}
                     />
-                    <h3 className="font-semibold text-white">
+                    <h3 className="font-semibold text-foreground">
                       {category.name}
                     </h3>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleOpenModal(category)}
-                      className="text-[#e0d0ff]/60 hover:text-[#00f7ff] transition-colors"
+                      className="text-muted-foreground hover:text-[#00f7ff] transition-colors"
                     >
                       <Edit2 size={16} />
                     </button>
                     <button
                       onClick={() => handleDelete(category)}
-                      className="text-[#e0d0ff]/60 hover:text-[#ff44cc] transition-colors"
+                      className="text-muted-foreground hover:text-[#ff44cc] transition-colors"
                       disabled={category._count.tickets > 0}
                     >
                       <Trash2 size={16} />
@@ -285,13 +285,13 @@ export default function TicketCategoriesPage() {
                 </div>
 
                 {category.description && (
-                  <p className="text-[#e0d0ff]/70 text-sm mb-3">
+                  <p className="text-muted-foreground text-sm mb-3">
                     {category.description}
                   </p>
                 )}
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#e0d0ff]/60">
+                  <span className="text-muted-foreground">
                     {category._count.tickets} {t('ticket.tickets').toLowerCase()}
                   </span>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${category.isActive
@@ -308,21 +308,21 @@ export default function TicketCategoriesPage() {
 
         {/* Stats Footer */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-4 hover:border-[#00f7ff]/50 transition-all">
-            <p className="text-xs text-[#e0d0ff]/60 mb-1">{t('ticket.categoriesPage.totalCategories')}</p>
-            <p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">{stats.total}</p>
+          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-[#00f7ff]/50 transition-all">
+            <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.totalCategories')}</p>
+            <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.total}</p>
           </div>
-          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-4 hover:border-red-500/50 transition-all">
-            <p className="text-xs text-[#e0d0ff]/60 mb-1">{t('ticket.categoriesPage.networkConnection')}</p>
-            <p className="text-2xl font-bold text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">{stats.network}</p>
+          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-red-500/50 transition-all">
+            <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.networkConnection')}</p>
+            <p className="text-lg sm:text-2xl font-bold text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">{stats.network}</p>
           </div>
-          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-4 hover:border-green-500/50 transition-all">
-            <p className="text-xs text-[#e0d0ff]/60 mb-1">{t('ticket.categoriesPage.installationTechnical')}</p>
-            <p className="text-2xl font-bold text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]">{stats.technical}</p>
+          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-green-500/50 transition-all">
+            <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.installationTechnical')}</p>
+            <p className="text-lg sm:text-2xl font-bold text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]">{stats.technical}</p>
           </div>
-          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-4 hover:border-cyan-500/50 transition-all">
-            <p className="text-xs text-[#e0d0ff]/60 mb-1">{t('ticket.categoriesPage.billingSupport')}</p>
-            <p className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]">{stats.billing}</p>
+          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-cyan-500/50 transition-all">
+            <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.billingSupport')}</p>
+            <p className="text-lg sm:text-2xl font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]">{stats.billing}</p>
           </div>
         </div>
 
@@ -352,7 +352,7 @@ export default function TicketCategoriesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-sm text-[#e0d0ff] cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                   <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff] w-4 h-4" />
                   <span>{t('ticket.active')}</span>
                 </label>

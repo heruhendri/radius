@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserPermissions, setUserPermissions, resetUserPermissionsToRole } from '@/lib/permissions';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getUserPermissions, setUserPermissions, resetUserPermissionsToRole } from '@/server/auth/permissions';
 
 /**
  * GET /api/admin/users/[id]/permissions - Get user's permissions

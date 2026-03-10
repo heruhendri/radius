@@ -1,13 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { WhatsAppService } from '@/lib/whatsapp';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
 import { toWIB, nowWIB } from '@/lib/timezone';
-
-const prisma = new PrismaClient();
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
 
 // GET - List all agents with statistics
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const agents = await prisma.agent.findMany({
       include: {
         vouchers: {
@@ -40,21 +45,21 @@ export async function GET() {
     const agentsWithStats = agents.map((agent) => {
       // Use WIB timezone for month calculation (UTC stored in DB)
       const now = nowWIB();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
+      const currentMonth = now.getUTCMonth();
+      const currentYear = now.getUTCFullYear();
 
       // Filter sold vouchers (SOLD, ACTIVE, EXPIRED = terjual)
       const soldVouchers = agent.vouchers.filter((v) => 
         v.status === 'SOLD' || v.status === 'ACTIVE' || v.status === 'EXPIRED'
       );
 
-      // Current month sold vouchers - Convert UTC to WIB before comparison
+      // Current month sold vouchers - Compare using UTC methods (WIB-as-UTC)
       const currentMonthSold = soldVouchers.filter((v) => {
         const usedDate = v.firstLoginAt ? toWIB(v.firstLoginAt) : null;
         if (!usedDate) return false;
         return (
-          usedDate.getMonth() === currentMonth &&
-          usedDate.getFullYear() === currentYear
+          usedDate.getUTCMonth() === currentMonth &&
+          usedDate.getUTCFullYear() === currentYear
         );
       });
 
@@ -153,7 +158,7 @@ export async function POST(request: NextRequest) {
       const company = await prisma.company.findFirst();
       const baseUrl = company?.baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const agentPortalUrl = `${baseUrl}/agent`;
-      const companyName = company?.name || 'AIBILL';
+      const companyName = company?.name || 'SALFANET';
       const companyPhone = company?.phone || '';
 
       const message = `🎉 *Selamat Bergabung sebagai Agent!*\n\n` +

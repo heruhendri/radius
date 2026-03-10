@@ -1,15 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { syncBatchToRadius } from '@/lib/hotspot-radius-sync';
-import { logActivity } from '@/lib/activity-log';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { syncVoucherToRadius } from '@/server/services/radius/hotspot-sync.service';
+import { logActivity } from '@/server/services/activity-log.service';
+import { nowWIB } from '@/lib/timezone';
 
-const prisma = new PrismaClient();
+// Code type definitions (same as admin)
+const CODE_TYPES: Record<string, { chars: string }> = {
+  'alpha-upper': { chars: 'ABCDEFGHJKLMNPQRSTUVWXYZ' },
+  'alpha-lower': { chars: 'abcdefghjklmnpqrstuvwxyz' },
+  'numeric': { chars: '123456789' },
+  'alphanumeric-upper': { chars: 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789' },
+};
 
 // POST - Generate voucher by agent
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { agentId, profileId, quantity = 1 } = body;
+    const { agentId, profileId, quantity = 1, codeLength = 6, codeType = 'alpha-upper', prefix = '' } = body;
 
     if (!agentId || !profileId) {
       return NextResponse.json(
@@ -99,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < quantity; i++) {
       // Generate unique code
-      const code = generateVoucherCode();
+      const code = generateVoucherCode(codeLength, prefix, codeType);
 
       // Create voucher with batch code, agentId, and routerId
       const voucher = await prisma.hotspotVoucher.create({
@@ -138,7 +145,7 @@ export async function POST(request: NextRequest) {
             voucherCode: voucher.code,
             profileName: profile.name,
             amount: profile.resellerFee, // Agent profit per voucher
-            createdAt: new Date(),
+            createdAt: nowWIB(),
           },
         });
       } catch (saleError) {
@@ -146,13 +153,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Auto-sync to RADIUS (same as admin)
-    try {
-      const syncResult = await syncBatchToRadius(batchCode);
-      console.log(`Agent vouchers synced: ${syncResult.successCount}/${syncResult.total} to RADIUS`);
-    } catch (syncError) {
-      console.error('RADIUS sync error:', syncError);
-      // Don't fail the request if sync fails
+    // Auto-sync to RADIUS — inline logic matching admin route exactly
+    // Uses vouchers already in memory + profile data to avoid re-fetch issues
+    let syncSuccessCount = 0;
+    let syncFailCount = 0;
+    for (const voucher of vouchers) {
+      try {
+        const password = voucher.code; // hotspot: username = password = code
+        const groupProfile = profile.groupProfile || profile.name;
+        await syncVoucherToRadius(voucher.code, password, groupProfile);
+        syncSuccessCount++;
+      } catch (syncError: any) {
+        syncFailCount++;
+        console.error(`[RADIUS SYNC] Failed for voucher ${voucher.code}: ${syncError?.message}`);
+      }
+    }
+    console.log(`[RADIUS SYNC] Agent batch ${batchCode}: ${syncSuccessCount} OK, ${syncFailCount} failed`);
+    if (syncFailCount > 0) {
+      console.error(`[RADIUS SYNC] ${syncFailCount} voucher(s) failed to sync for agent ${agent.name}`);
     }
 
     // Get updated agent balance
@@ -181,6 +199,7 @@ export async function POST(request: NextRequest) {
         title: 'Agent Generate Voucher',
         message: `${agent.name} generate ${quantity} voucher ${profile.name} (Total: Rp ${totalCost.toLocaleString('id-ID')})`,
         link: '/admin/hotspot/agent',
+        createdAt: nowWIB(),
       },
     });
 
@@ -235,10 +254,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function generateVoucherCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 8; i++) {
+function generateVoucherCode(length: number = 6, prefix: string = '', codeType: string = 'alpha-upper'): string {
+  const chars = CODE_TYPES[codeType]?.chars || CODE_TYPES['alpha-upper'].chars;
+  let code = prefix;
+  for (let i = 0; i < length; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return code;

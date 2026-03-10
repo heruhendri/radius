@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { nowWIB } from '@/lib/timezone';
+import { prisma } from '@/server/db/client';
 
 /**
  * POST /api/hotspot/agents/balance
@@ -9,6 +10,10 @@ const prisma = new PrismaClient();
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await request.json();
     const { agentId, amount, type, note } = body;
 
@@ -96,6 +101,7 @@ export async function POST(request: NextRequest) {
         title: 'Penyesuaian Saldo Agent',
         message: `Saldo ${agent.name} ${type === 'add' ? 'ditambah' : 'dikurangi'} Rp ${amount.toLocaleString('id-ID')}. Saldo baru: Rp ${newBalance.toLocaleString('id-ID')}`,
         link: '/admin/hotspot/agent',
+        createdAt: nowWIB(),
       },
     });
 

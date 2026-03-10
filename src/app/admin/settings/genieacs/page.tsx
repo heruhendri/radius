@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Server, Loader2, Zap, Save, CheckCircle, Info, ExternalLink } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface GenieACSSettings {
   id?: string;
@@ -16,6 +16,7 @@ interface GenieACSSettings {
 
 export default function GenieACSSettingsPage() {
   const { t } = useTranslation();
+  const { addToast } = useToast();
   const [settings, setSettings] = useState<GenieACSSettings>({
     host: '',
     username: '',
@@ -66,7 +67,7 @@ export default function GenieACSSettingsPage() {
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settings.host || !settings.username || (!settings.password && !settings.hasPassword)) {
-      Swal.fire({ icon: 'warning', title: t('genieacs.attention'), text: t('genieacs.requiredFields') });
+      addToast({ type: 'warning', title: t('genieacs.attention'), description: t('genieacs.requiredFields') });
       return;
     }
     setSaving(true);
@@ -84,13 +85,13 @@ export default function GenieACSSettingsPage() {
       const data = await response.json();
       if (response.ok) {
         setSettings(prev => ({ ...prev, hasPassword: true, password: '', isActive: true }));
-        Swal.fire({ icon: 'success', title: t('common.success'), text: t('genieacs.settingsSaved'), timer: 2000, showConfirmButton: false });
+        addToast({ type: 'success', title: t('common.success'), description: t('genieacs.settingsSaved'), duration: 2000 });
       } else {
         throw new Error(data.error || t('common.failed'));
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : t('genieacs.saveFailed');
-      Swal.fire({ icon: 'error', title: t('common.error'), text: msg });
+      addToast({ type: 'error', title: t('common.error'), description: msg });
     } finally {
       setSaving(false);
     }
@@ -98,7 +99,7 @@ export default function GenieACSSettingsPage() {
 
   const handleTestConnection = async () => {
     if (!settings.host) {
-      Swal.fire({ icon: 'warning', title: t('genieacs.attention'), text: t('genieacs.enterUrlFirst') });
+      addToast({ type: 'warning', title: t('genieacs.attention'), description: t('genieacs.enterUrlFirst') });
       return;
     }
     setTesting(true);
@@ -110,13 +111,13 @@ export default function GenieACSSettingsPage() {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        Swal.fire({ icon: 'success', title: t('genieacs.connectionSuccess'), text: t('genieacs.serverReachable').replace('{count}', data.deviceCount || 0), timer: 3000, showConfirmButton: false });
+        addToast({ type: 'success', title: t('genieacs.connectionSuccess'), description: t('genieacs.serverReachable').replace('{count}', String(data.deviceCount || 0)), duration: 3000 });
       } else {
         throw new Error(data.error || t('genieacs.connectionFailed'));
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : t('genieacs.failedToConnect');
-      Swal.fire({ icon: 'error', title: t('genieacs.connectionFailed'), text: msg });
+      addToast({ type: 'error', title: t('genieacs.connectionFailed'), description: msg });
     } finally {
       setTesting(false);
     }
@@ -124,7 +125,7 @@ export default function GenieACSSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
         <Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
       </div>
@@ -132,17 +133,17 @@ export default function GenieACSSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 space-y-6 max-w-2xl">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
             <Server className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.8)]" />
             {t('genieacs.title')}
           </h1>
           <div className="flex items-center justify-between mt-2">
-            <p className="text-sm text-[#e0d0ff]/80">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               {t('genieacs.subtitle')}
             </p>
             <span className={`px-2 py-1 text-xs font-medium rounded ${settings.isActive ? 'bg-success/100' : 'bg-destructive/100'}`}>
@@ -239,7 +240,7 @@ export default function GenieACSSettingsPage() {
                 value={settings.password || ''}
                 onChange={(e) => setSettings({ ...settings, password: e.target.value })}
                 className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-card focus:ring-2 focus:ring-primary focus:border-primary"
-                placeholder={settings.hasPassword ? t('genieacs.passwordUnchanged') : '••••••••'}
+                placeholder={settings.hasPassword ? t('genieacs.passwordUnchanged') : '********'}
                 required={!settings.hasPassword}
               />
             </div>

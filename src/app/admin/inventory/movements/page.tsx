@@ -142,7 +142,7 @@ export default function StockMovementsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -153,7 +153,7 @@ export default function StockMovementsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -163,11 +163,11 @@ export default function StockMovementsPage() {
       <div className="relative z-10 space-y-6">
         <div className="p-6">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <RefreshCcw className="h-6 w-6 text-[#00f7ff]" />
               Stock Movements
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               Track all stock in and out movements
             </p>
           </div>
@@ -178,7 +178,7 @@ export default function StockMovementsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Movements</p>
-                  <p className="text-2xl font-bold text-foreground">
+                  <p className="text-lg sm:text-2xl font-bold text-foreground">
                     {stats.totalMovements}
                   </p>
                 </div>
@@ -190,7 +190,7 @@ export default function StockMovementsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Stock In</p>
-                  <p className="text-2xl font-bold text-success">{stats.totalIn}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-success">{stats.totalIn}</p>
                 </div>
                 <TrendingUp className="h-10 w-10 text-success" />
               </div>
@@ -200,7 +200,7 @@ export default function StockMovementsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Stock Out</p>
-                  <p className="text-2xl font-bold text-destructive">{stats.totalOut}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-destructive">{stats.totalOut}</p>
                 </div>
                 <TrendingDown className="h-10 w-10 text-destructive" />
               </div>
@@ -257,8 +257,46 @@ export default function StockMovementsPage() {
             </div>
           </div>
 
+          {/* Mobile Card View */}
+          <div className="block md:hidden space-y-3">
+            {filteredMovements.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No movements found</div>
+            ) : (
+              filteredMovements.map((movement) => (
+                <div key={movement.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{movement.item.name}</p>
+                      <p className="text-xs font-mono text-muted-foreground">{movement.item.sku}</p>
+                    </div>
+                    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded-full ml-2 shrink-0 ${
+                      movement.movementType === 'IN' ? 'bg-success/20 text-success' :
+                      movement.movementType === 'OUT' ? 'bg-destructive/20 text-destructive' :
+                      'bg-primary/20 text-primary'
+                    }`}>
+                      {movement.movementType}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-1">
+                    <div>
+                      <span className="text-muted-foreground">Qty:</span>{' '}
+                      <span className={`font-medium ${movement.movementType === 'IN' ? 'text-success' : movement.movementType === 'OUT' ? 'text-destructive' : 'text-primary'}`}>
+                        {movement.movementType === 'IN' && '+'}{movement.movementType === 'OUT' && '-'}{movement.quantity} {movement.item.unit}
+                      </span>
+                    </div>
+                    <div><span className="text-muted-foreground">Stock:</span> <span className="text-foreground">{movement.previousStock} → {movement.newStock}</span></div>
+                    <div><span className="text-muted-foreground">Ref:</span> <span className="text-foreground">{movement.referenceNo || '-'}</span></div>
+                    <div><span className="text-muted-foreground">User:</span> <span className="text-foreground">{movement.userName || '-'}</span></div>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">{new Date(movement.createdAt).toLocaleString('id-ID')}</div>
+                  {movement.notes && <div className="text-[10px] text-muted-foreground mt-1">{movement.notes}</div>}
+                </div>
+              ))
+            )}
+          </div>
+
           {/* Movements Table */}
-          <div className="bg-card rounded-lg shadow overflow-hidden">
+          <div className="hidden md:block bg-card rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-muted">
@@ -368,19 +406,19 @@ export default function StockMovementsPage() {
           {/* Add Movement Modal */}
           <SimpleModal isOpen={isDialogOpen} onClose={() => { setIsDialogOpen(false); resetForm(); }} size="md">
             <ModalHeader>
-              <ModalTitle>Record Stock Movement</ModalTitle>
+              <ModalTitle>{t('inventory.recordStockMovement')}</ModalTitle>
             </ModalHeader>
             <form onSubmit={handleSubmit}>
               <ModalBody className="space-y-4">
                 <div>
-                  <ModalLabel required>Item</ModalLabel>
+                  <ModalLabel required>{t('inventory.itemLabel')}</ModalLabel>
                   <ModalSelect value={formData.itemId} onChange={(e) => setFormData({ ...formData, itemId: e.target.value })} required>
                     <option value="" className="bg-[#0a0520]">Select Item</option>
                     {items.map((item) => (<option key={item.id} value={item.id} className="bg-[#0a0520]">{item.name} ({item.sku})</option>))}
                   </ModalSelect>
                 </div>
                 <div>
-                  <ModalLabel required>Movement Type</ModalLabel>
+                  <ModalLabel required>{t('inventory.movementType')}</ModalLabel>
                   <ModalSelect value={formData.movementType} onChange={(e) => setFormData({ ...formData, movementType: e.target.value })} required>
                     <option value="IN" className="bg-[#0a0520]">Stock In (Purchase/Return)</option>
                     <option value="OUT" className="bg-[#0a0520]">Stock Out (Sale/Usage)</option>
@@ -388,22 +426,22 @@ export default function StockMovementsPage() {
                   </ModalSelect>
                 </div>
                 <div>
-                  <ModalLabel required>Quantity</ModalLabel>
+                  <ModalLabel required>{t('inventory.quantityLabel')}</ModalLabel>
                   <ModalInput type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })} required min={1} />
-                  {formData.movementType === 'ADJUSTMENT' && <p className="text-[10px] text-[#e0d0ff]/60 mt-1">Enter the new total stock quantity</p>}
+                  {formData.movementType === 'ADJUSTMENT' && <p className="text-[10px] text-muted-foreground mt-1">Enter the new total stock quantity</p>}
                 </div>
                 <div>
-                  <ModalLabel>Reference No</ModalLabel>
+                  <ModalLabel>{t('inventory.referenceNo')}</ModalLabel>
                   <ModalInput type="text" value={formData.referenceNo} onChange={(e) => setFormData({ ...formData, referenceNo: e.target.value })} placeholder="PO-001, INV-123, etc" />
                 </div>
                 <div>
-                  <ModalLabel>Notes</ModalLabel>
+                  <ModalLabel>{t('inventory.notesLabel')}</ModalLabel>
                   <ModalTextarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3} />
                 </div>
               </ModalBody>
               <ModalFooter>
                 <ModalButton type="button" variant="secondary" onClick={() => { setIsDialogOpen(false); resetForm(); }}>Cancel</ModalButton>
-                <ModalButton type="submit" variant="primary">Record Movement</ModalButton>
+                <ModalButton type="submit" variant="primary">{t('inventory.recordMovement')}</ModalButton>
               </ModalFooter>
             </form>
           </SimpleModal>

@@ -1,9 +1,15 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { WhatsAppService } from '@/lib/whatsapp'
+﻿import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/server/auth/config'
+import { prisma } from '@/server/db/client'
+import { WhatsAppService } from '@/server/services/notifications/whatsapp.service'
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const { phone, vouchers } = await request.json()
 
     if (!vouchers || !Array.isArray(vouchers) || vouchers.length === 0) {
@@ -16,7 +22,7 @@ export async function POST(request: Request) {
 
     // Get company info
     const company = await prisma.company.findFirst()
-    const companyName = company?.name || 'AIBILL'
+    const companyName = company?.name || 'SALFANET'
     const companyPhone = company?.phone || ''
 
     // Build voucher message

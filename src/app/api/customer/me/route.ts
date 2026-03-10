@@ -1,5 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { cacheGetOrSet, RedisKeys } from '@/server/cache/redis';
+
+// Profile data cached 60 detik per user (jarang berubah)
+const ME_CACHE_TTL = 60;
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,29 +32,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get fresh user data
-    const user = await prisma.pppoeUser.findUnique({
-      where: { id: session.userId },
-      select: {
-        id: true,
-        username: true,
-        name: true,
-        phone: true,
-        email: true,
-        status: true,
-        expiredAt: true,
-        balance: true,
-        autoRenewal: true,
-        profile: {
-          select: {
-            name: true,
-            downloadSpeed: true,
-            uploadSpeed: true,
-            price: true,
+    // Get user data — cached per userId 60 detik (profile jarang berubah)
+    const user = await cacheGetOrSet(
+      RedisKeys.customerMe(session.userId),
+      ME_CACHE_TTL,
+      () => prisma.pppoeUser.findUnique({
+        where: { id: session.userId },
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          phone: true,
+          email: true,
+          status: true,
+          expiredAt: true,
+          balance: true,
+          autoRenewal: true,
+          profile: {
+            select: {
+              name: true,
+              downloadSpeed: true,
+              uploadSpeed: true,
+              price: true,
+            },
           },
         },
-      },
-    });
+      })
+    );
 
     if (!user) {
       return NextResponse.json(

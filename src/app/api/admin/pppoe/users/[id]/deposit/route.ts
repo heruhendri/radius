@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+﻿import { prisma } from '@/server/db/client'
 import { NextRequest, NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 

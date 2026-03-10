@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { randomBytes, randomUUID } from 'crypto';
 
 function generatePaymentToken(): string {
@@ -170,7 +170,7 @@ export async function POST(
     // Send Email notification
     if (user.email) {
       try {
-        const { EmailService } = await import('@/lib/email');
+        const { EmailService } = await import('@/server/services/notifications/email.service');
         const emailSettings = await EmailService.getSettings();
 
         if (emailSettings?.enabled && emailSettings.notifyInvoice) {

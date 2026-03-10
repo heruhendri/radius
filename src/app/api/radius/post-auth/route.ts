@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+﻿import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/server/db/client";
 import { Prisma } from "@prisma/client";
 import { nanoid } from "nanoid";
+import { nowWIB } from "@/lib/timezone";
 
 /**
  * RADIUS Post-Auth Hook
@@ -10,9 +11,9 @@ import { nanoid } from "nanoid";
  * 2. Check if voucher is expired
  * 3. Update voucher status
  * 
- * STRATEGY: Store in server local time (no timezone conversion)
- * Server is in Asia/Jakarta (WIB), so all times are WIB
- * new Date() returns server local time directly
+ * STRATEGY: Use nowWIB() to store times in WIB-as-UTC pattern
+ * All datetime fields store WIB value in a UTC column (Prisma reads raw bytes)
+ * nowWIB() = new Date(Date.now() + 7h offset) gives WIB wall-clock time as a Date object
  */
 
 export async function POST(request: NextRequest) {
@@ -43,8 +44,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get current server time (WIB) - no conversion needed
-    const now = new Date();
+    // Get current WIB time stored as WIB-as-UTC (matches the rest of the app's timezone pattern)
+    const now = nowWIB();
     
     // Check if voucher is already expired (compare in same timezone)
     if (voucher.expiresAt && now > voucher.expiresAt) {
@@ -103,8 +104,9 @@ export async function POST(request: NextRequest) {
       // Auto-sync to Keuangan (realtime for manual/agent vouchers)
       if (!voucher.orderId) {
         try {
-          const hotspotCategory = await prisma.transactionCategory.findFirst({
-            where: { name: "Pembayaran Hotspot", type: "INCOME" },
+          // Use ID lookup (stable) - category name is "Penjualan Voucher Hotspot"
+          const hotspotCategory = await prisma.transactionCategory.findUnique({
+            where: { id: "cat-income-hotspot" },
           });
 
           if (hotspotCategory) {
@@ -140,8 +142,8 @@ export async function POST(request: NextRequest) {
               // If agent voucher, record commission as expense
               // Net profit = sellingPrice - resellerFee
               if (isAgentVoucher && hasResellerFee) {
-                const agentCategory = await prisma.transactionCategory.findFirst({
-                  where: { name: "Komisi Agent", type: "EXPENSE" },
+                const agentCategory = await prisma.transactionCategory.findUnique({
+                  where: { id: "cat-expense-komisi" },
                 });
 
                 if (agentCategory) {

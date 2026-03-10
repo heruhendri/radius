@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { MikroTikConnection } from '@/lib/mikrotik/routeros'
+import { authOptions } from '@/server/auth/config'
+import { MikroTikConnection } from '@/server/services/mikrotik/client'
 
 // POST - Test MikroTik connection
 export async function POST(request: Request) {
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
       username,
       password,
       port: parseInt(apiPort) || 8728,
+      timeout: 15000,
     })
 
     const result = await mtik.testConnection()

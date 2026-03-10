@@ -175,7 +175,7 @@ export default function TechniciansManagementPage() {
 
   if (loading && technicians.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -186,7 +186,7 @@ export default function TechniciansManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -195,24 +195,24 @@ export default function TechniciansManagementPage() {
       </div>
       <div className="relative z-10 space-y-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
             <Users className="h-6 w-6 text-[#00f7ff]" />
             {t('technician.management')}
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {t('technician.managementDesc')}
           </p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#00f7ff] uppercase tracking-wide">
                   {t('technician.totalTechnicians')}
                 </p>
-                <p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">
+                <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">
                   {stats.total}
                 </p>
               </div>
@@ -226,7 +226,7 @@ export default function TechniciansManagementPage() {
                 <p className="text-sm text-muted-foreground">
                   {t('technician.activeTechnicians')}
                 </p>
-                <p className="text-2xl font-bold text-success">{stats.active}</p>
+                <p className="text-lg sm:text-2xl font-bold text-success">{stats.active}</p>
               </div>
               <CheckCircle className="h-10 w-10 text-success" />
             </div>
@@ -238,7 +238,7 @@ export default function TechniciansManagementPage() {
                 <p className="text-sm text-muted-foreground">
                   {t('technician.inactiveTechnicians')}
                 </p>
-                <p className="text-2xl font-bold text-muted-foreground">{stats.inactive}</p>
+                <p className="text-lg sm:text-2xl font-bold text-muted-foreground">{stats.inactive}</p>
               </div>
               <XCircle className="h-10 w-10 text-muted-foreground" />
             </div>
@@ -256,7 +256,7 @@ export default function TechniciansManagementPage() {
                 placeholder={t('technician.searchTechnicians')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-inputdark:text-white"
+                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary dark:bg-input dark:text-foreground"
               />
             </div>
 
@@ -265,7 +265,7 @@ export default function TechniciansManagementPage() {
               <select
                 value={filterActive}
                 onChange={(e) => setFilterActive(e.target.value)}
-                className="px-3 py-2 border border-border rounded-lg text-sm dark:bg-inputdark:text-white"
+                className="px-3 py-2 border border-border rounded-lg text-sm dark:bg-input dark:text-foreground"
               >
                 <option value="">{t('technician.allStatus')}</option>
                 <option value="true">{t('common.active')}</option>
@@ -294,8 +294,94 @@ export default function TechniciansManagementPage() {
           </div>
         </div>
 
-        {/* Technicians Table */}
-        <div className="bg-card rounded-lg shadow overflow-hidden">
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3">
+          {technicians.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              {t('technician.noTechnicians')}
+            </div>
+          ) : (
+            technicians.map((technician) => (
+              <div
+                key={technician.id}
+                className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3"
+              >
+                {/* Header: Name + Status */}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-foreground truncate mr-2">
+                    {technician.name}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${
+                      technician.isActive
+                        ? 'bg-success/10 text-success'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {technician.isActive ? t('common.active') : t('common.inactive')}
+                  </span>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs mb-3">
+                  <div>
+                    <span className="text-muted-foreground">{t('technician.contact')}</span>
+                    <div className="flex items-center gap-1 text-foreground mt-0.5">
+                      <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      <span className="truncate">{technician.phoneNumber}</span>
+                    </div>
+                    {technician.email && (
+                      <div className="flex items-center gap-1 text-muted-foreground mt-0.5">
+                        <Mail className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{technician.email}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">{t('technician.workOrders')}</span>
+                    <p className="text-foreground mt-0.5">
+                      {technician._count?.workOrders || 0} {t('technician.tasks').toLowerCase()}
+                    </p>
+                  </div>
+                  <div className="col-span-2 mt-1">
+                    <span className="text-muted-foreground">{t('technician.lastLogin')}</span>
+                    <p className="text-foreground mt-0.5">
+                      {technician.lastLoginAt ? (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          {new Date(technician.lastLoginAt).toLocaleDateString('id-ID')}
+                        </span>
+                      ) : (
+                        '-'
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 border-t border-[#bc13fe]/10 pt-2">
+                  <button
+                    onClick={() => handleEdit(technician)}
+                    className="flex-1 flex items-center justify-center gap-1.5 p-2 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    {t('common.edit')}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(technician)}
+                    className="flex-1 flex items-center justify-center gap-1.5 p-2 text-xs font-medium text-destructive bg-destructive/10 rounded-lg hover:bg-destructive/20 transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {t('common.delete')}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Technicians Table (Desktop) */}
+        <div className="hidden md:block bg-card rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted">
@@ -411,25 +497,25 @@ export default function TechniciansManagementPage() {
               <div>
                 <ModalLabel required>{t('technician.phoneNumber')}</ModalLabel>
                 <ModalInput type="tel" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="08123456789" required />
-                <p className="text-[10px] text-[#e0d0ff]/60 mt-1">{t('technician.phoneHelp')}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{t('technician.phoneHelp')}</p>
               </div>
               <div>
                 <ModalLabel>{t('common.email')}</ModalLabel>
                 <ModalInput type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
               </div>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-sm text-[#e0d0ff] cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                   <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff] w-4 h-4" />
                   <span>{t('common.active')}</span>
                 </label>
               </div>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-sm text-[#e0d0ff] cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                   <input type="checkbox" checked={formData.requireOtp} onChange={(e) => setFormData({ ...formData, requireOtp: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff] w-4 h-4" />
                   <span>{t('technician.requireOtp')}</span>
                 </label>
               </div>
-              <p className="text-[10px] text-[#e0d0ff]/50">{t('technician.requireOtpHelp')}</p>
+              <p className="text-[10px] text-muted-foreground">{t('technician.requireOtpHelp')}</p>
             </ModalBody>
             <ModalFooter>
               <ModalButton type="button" variant="secondary" onClick={() => { setIsDialogOpen(false); setEditingTechnician(null); resetForm(); }}>{t('common.cancel')}</ModalButton>

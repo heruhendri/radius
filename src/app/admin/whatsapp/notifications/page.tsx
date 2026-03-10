@@ -134,7 +134,7 @@ export default function NotificationSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -145,7 +145,7 @@ export default function NotificationSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -156,8 +156,8 @@ export default function NotificationSettingsPage() {
       <div className="max-w-3xl mx-auto space-y-3">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('whatsapp.notificationsTitle')}</h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('whatsapp.notificationsSubtitle')}</p>
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('whatsapp.notificationsTitle')}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('whatsapp.notificationsSubtitle')}</p>
         </div>
 
         {/* Invoice Reminder Card */}
@@ -184,7 +184,7 @@ export default function NotificationSettingsPage() {
                 onClick={() => setEnabled(!enabled)}
                 className={`relative w-10 h-5 rounded-full transition-colors ${enabled ? 'bg-teal-600' : 'bg-muted/80'}`}
               >
-                <span className={`absolute top-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${enabled ? 'left-5' : 'left-0.5'}`} />
+                <span className={`absolute top-[2px] left-[2px] w-[16px] h-[16px] bg-card rounded-full shadow transition-transform ${enabled ? 'translate-x-[20px]' : 'translate-x-0'}`} />
               </button>
             </div>
 
@@ -287,7 +287,7 @@ export default function NotificationSettingsPage() {
                 onClick={() => setOtpEnabled(!otpEnabled)}
                 className={`relative w-10 h-5 rounded-full transition-colors ${otpEnabled ? 'bg-teal-600' : 'bg-muted/80'}`}
               >
-                <span className={`absolute top-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${otpEnabled ? 'left-5' : 'left-0.5'}`} />
+                <span className={`absolute top-[2px] left-[2px] w-[16px] h-[16px] bg-card rounded-full shadow transition-transform ${otpEnabled ? 'translate-x-[20px]' : 'translate-x-0'}`} />
               </button>
             </div>
 
@@ -342,8 +342,8 @@ export default function NotificationSettingsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Pengaturan Pengiriman Batch</h3>
-                <p className="text-[10px] text-muted-foreground dark:text-muted-foreground">Atur pengiriman pesan untuk menghindari banned WhatsApp</p>
+                <h3 className="text-sm font-semibold text-foreground">{t('whatsapp.batchSendingSettings')}</h3>
+                <p className="text-[10px] text-muted-foreground dark:text-muted-foreground">{t('whatsapp.batchSendingDesc')}</p>
               </div>
             </div>
           </div>
@@ -393,14 +393,14 @@ export default function NotificationSettingsPage() {
             {/* Randomize Toggle */}
             <div className="flex items-center justify-between p-2.5 bg-muted/50 rounded-lg">
               <div>
-                <p className="text-xs font-medium text-foreground">Acak Urutan Pengiriman</p>
-                <p className="text-[10px] text-muted-foreground dark:text-muted-foreground">Kirim pesan dalam urutan acak untuk menghindari deteksi pattern</p>
+                <p className="text-xs font-medium text-foreground">{t('whatsapp.randomOrder')}</p>
+                <p className="text-[10px] text-muted-foreground dark:text-muted-foreground">{t('whatsapp.randomOrderDesc')}</p>
               </div>
               <button
                 onClick={() => setRandomize(!randomize)}
                 className={`relative w-10 h-5 rounded-full transition-colors ${randomize ? 'bg-teal-600' : 'bg-muted/80'}`}
               >
-                <span className={`absolute top-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${randomize ? 'left-5' : 'left-0.5'}`} />
+                <span className={`absolute top-[2px] left-[2px] w-[16px] h-[16px] bg-card rounded-full shadow transition-transform ${randomize ? 'translate-x-[20px]' : 'translate-x-0'}`} />
               </button>
             </div>
 

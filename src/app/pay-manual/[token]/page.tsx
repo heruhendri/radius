@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, CreditCard, Upload, Calendar, Building2, User, ArrowLeft, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { showSuccess, showError, showWarning } from '@/lib/sweetalert';
 import { formatWIB } from '@/lib/timezone';
 
 interface BankAccount {
@@ -51,20 +51,11 @@ export default function PayManualPage({ params }: { params: Promise<{ token: str
         setInvoice(data.invoice);
         setUserId(data.invoice.userId || '');
       } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Invoice Tidak Ditemukan',
-          text: data.error || 'Token tidak valid',
-        }).then(() => {
-          router.push('/');
-        });
+        showError(data.error || 'Token tidak valid', 'Invoice Tidak Ditemukan');
+        router.push('/');
       }
     } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Gagal memuat invoice',
-      });
+      showError('Gagal memuat invoice', 'Error');
     } finally {
       setLoading(false);
     }
@@ -110,21 +101,13 @@ export default function PayManualPage({ params }: { params: Promise<{ token: str
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Format File Tidak Valid',
-        text: 'Hanya file JPG, PNG, dan WebP yang diperbolehkan',
-      });
+      showError('Hanya file JPG, PNG, dan WebP yang diperbolehkan', 'Format File Tidak Valid');
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      Swal.fire({
-        icon: 'error',
-        title: 'File Terlalu Besar',
-        text: 'Ukuran file maksimal 5MB',
-      });
+      showError('Ukuran file maksimal 5MB', 'File Terlalu Besar');
       return;
     }
 
@@ -143,22 +126,12 @@ export default function PayManualPage({ params }: { params: Promise<{ token: str
 
       if (data.success) {
         setProofImageUrl(data.url);
-        Swal.fire({
-          icon: 'success',
-          title: 'Upload Berhasil',
-          text: 'Bukti transfer berhasil diupload',
-          timer: 1500,
-          showConfirmButton: false,
-        });
+        showSuccess('Bukti transfer berhasil diupload', 'Upload Berhasil');
       } else {
         throw new Error(data.error || 'Upload failed');
       }
     } catch (error: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Upload Gagal',
-        text: error.message || 'Gagal upload bukti transfer',
-      });
+      showError(error.message || 'Gagal upload bukti transfer', 'Upload Gagal');
     } finally {
       setUploadingImage(false);
     }
@@ -168,20 +141,12 @@ export default function PayManualPage({ params }: { params: Promise<{ token: str
     e.preventDefault();
     
     if (!formData.bankName || !formData.accountName || !formData.transferDate) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Form Tidak Lengkap',
-        text: 'Mohon lengkapi semua field yang wajib diisi',
-      });
+      showWarning('Mohon lengkapi semua field yang wajib diisi', 'Form Tidak Lengkap');
       return;
     }
 
     if (!proofImageUrl) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Bukti Transfer Diperlukan',
-        text: 'Mohon upload bukti transfer terlebih dahulu',
-      });
+      showWarning('Mohon upload bukti transfer terlebih dahulu', 'Bukti Transfer Diperlukan');
       return;
     }
     
@@ -205,27 +170,14 @@ export default function PayManualPage({ params }: { params: Promise<{ token: str
       const data = await response.json();
       
       if (data.success) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Pembayaran Disubmit!',
-          html: `
-            <p class="mb-2">Konfirmasi pembayaran Anda telah diterima</p>
-            <p class="text-sm text-gray-600">Tim kami akan memverifikasi pembayaran dalam 1x24 jam</p>
-          `,
-          confirmButtonText: 'OK',
-        }).then(() => {
-          router.push('/');
-        });
+        showSuccess('Konfirmasi pembayaran Anda telah diterima. Tim kami akan memverifikasi pembayaran dalam 1x24 jam.', 'Pembayaran Disubmit!');
+        router.push('/');
       } else {
         throw new Error(data.error || 'Failed to submit payment');
       }
     } catch (error: any) {
       console.error('Submit payment error:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Gagal Submit',
-        text: error.message || 'Terjadi kesalahan saat submit pembayaran',
-      });
+      showError(error.message || 'Terjadi kesalahan saat submit pembayaran', 'Gagal Submit');
     } finally {
       setSubmitting(false);
     }

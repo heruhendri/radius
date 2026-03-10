@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+﻿import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/server/db/client";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/server/auth/config";
 import { nowWIB } from "@/lib/timezone";
 
 export const dynamic = 'force-dynamic';
@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || 'all';
 
     const now = nowWIB();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    const currentYear = now.getUTCFullYear();
+    const currentMonth = now.getUTCMonth();
 
     const result: any = {};
 
@@ -31,9 +31,9 @@ export async function GET(request: NextRequest) {
       // Monthly revenue for last 12 months
       const monthlyRevenue = [];
       for (let i = 11; i >= 0; i--) {
-        const date = new Date(currentYear, currentMonth - i, 1);
-        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
+        const date = new Date(Date.UTC(currentYear, currentMonth - i, 1));
+        const startOfMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+        const endOfMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59));
 
         const income = await prisma.transaction.aggregate({
           where: {
@@ -44,13 +44,13 @@ export async function GET(request: NextRequest) {
         });
 
         monthlyRevenue.push({
-          month: `${monthNames[date.getMonth()]} ${date.getFullYear().toString().slice(-2)}`,
+          month: `${monthNames[date.getUTCMonth()]} ${date.getUTCFullYear().toString().slice(-2)}`,
           revenue: Number(income._sum.amount) || 0,
         });
       }
 
       // Revenue by category (this month)
-      const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+      const startOfCurrentMonth = new Date(Date.UTC(currentYear, currentMonth, 1));
       const categoryRevenue = await prisma.transaction.groupBy({
         by: ['categoryId'],
         where: {
@@ -105,16 +105,16 @@ export async function GET(request: NextRequest) {
       let cumulativeTotal = 0;
 
       // Get total users before 12 months ago
-      const twelveMonthsAgo = new Date(currentYear, currentMonth - 11, 1);
+      const twelveMonthsAgo = new Date(Date.UTC(currentYear, currentMonth - 11, 1));
       const usersBefore = await prisma.pppoeUser.count({
         where: { createdAt: { lt: twelveMonthsAgo } },
       });
       cumulativeTotal = usersBefore;
 
       for (let i = 11; i >= 0; i--) {
-        const date = new Date(currentYear, currentMonth - i, 1);
-        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
+        const date = new Date(Date.UTC(currentYear, currentMonth - i, 1));
+        const startOfMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+        const endOfMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59));
 
         const newUsers = await prisma.pppoeUser.count({
           where: { createdAt: { gte: startOfMonth, lte: endOfMonth } },
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
         cumulativeTotal += newUsers;
 
         userGrowth.push({
-          month: `${monthNames[date.getMonth()]} ${date.getFullYear().toString().slice(-2)}`,
+          month: `${monthNames[date.getUTCMonth()]} ${date.getUTCFullYear().toString().slice(-2)}`,
           newUsers,
           totalUsers: cumulativeTotal,
         });
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
     // ==================== HOTSPOT ANALYTICS ====================
     if (type === 'all' || type === 'hotspot') {
       // Voucher sales by profile (this month)
-      const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+      const startOfCurrentMonth = new Date(Date.UTC(currentYear, currentMonth, 1));
       
       const vouchersByProfile = await prisma.hotspotVoucher.groupBy({
         by: ['profileId'],
@@ -186,8 +186,9 @@ export async function GET(request: NextRequest) {
       const hoursAgo = 24;
 
       for (let i = hoursAgo - 1; i >= 0; i--) {
-        const hourStart = new Date(Date.now() - (i + 1) * 60 * 60 * 1000);
-        const hourEnd = new Date(Date.now() - i * 60 * 60 * 1000);
+        const nowMs = now.getTime(); // WIB-as-UTC base time
+        const hourStart = new Date(nowMs - (i + 1) * 60 * 60 * 1000);
+        const hourEnd = new Date(nowMs - i * 60 * 60 * 1000);
 
         // Count sessions active during this hour
         const pppoeCount = await prisma.radacct.count({
@@ -213,7 +214,7 @@ export async function GET(request: NextRequest) {
         });
 
         sessionsData.push({
-          time: `${hourEnd.getHours().toString().padStart(2, '0')}:00`,
+          time: `${hourEnd.getUTCHours().toString().padStart(2, '0')}:00`,
           pppoe: pppoeCount,
           hotspot: hotspotCount,
         });
@@ -222,8 +223,8 @@ export async function GET(request: NextRequest) {
       // Bandwidth usage for last 7 days (daily)
       const bandwidthData = [];
       for (let i = 6; i >= 0; i--) {
-        const dayStart = new Date(currentYear, currentMonth, now.getDate() - i, 0, 0, 0);
-        const dayEnd = new Date(currentYear, currentMonth, now.getDate() - i, 23, 59, 59);
+        const dayStart = new Date(Date.UTC(currentYear, currentMonth, now.getUTCDate() - i, 0, 0, 0));
+        const dayEnd = new Date(Date.UTC(currentYear, currentMonth, now.getUTCDate() - i, 23, 59, 59));
 
         const bandwidth = await prisma.radacct.aggregate({
           where: {
@@ -239,7 +240,7 @@ export async function GET(request: NextRequest) {
         const downloadMB = Number(bandwidth._sum.acctoutputoctets || 0) / (1024 * 1024);
 
         bandwidthData.push({
-          time: `${dayStart.getDate()}/${dayStart.getMonth() + 1}`,
+          time: `${dayStart.getUTCDate()}/${dayStart.getUTCMonth() + 1}`,
           upload: Math.round(uploadMB),
           download: Math.round(downloadMB),
         });
@@ -256,9 +257,9 @@ export async function GET(request: NextRequest) {
       // Income vs Expense for last 6 months
       const incomeExpenseData = [];
       for (let i = 5; i >= 0; i--) {
-        const date = new Date(currentYear, currentMonth - i, 1);
-        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
+        const date = new Date(Date.UTC(currentYear, currentMonth - i, 1));
+        const startOfMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+        const endOfMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59));
 
         const income = await prisma.transaction.aggregate({
           where: {
@@ -277,14 +278,14 @@ export async function GET(request: NextRequest) {
         });
 
         incomeExpenseData.push({
-          month: monthNames[date.getMonth()],
+          month: monthNames[date.getUTCMonth()],
           income: Number(income._sum.amount) || 0,
           expense: Number(expense._sum.amount) || 0,
         });
       }
 
       // Top revenue sources (this month)
-      const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+      const startOfCurrentMonth = new Date(Date.UTC(currentYear, currentMonth, 1));
       const topSources = await prisma.transaction.groupBy({
         by: ['description'],
         where: {

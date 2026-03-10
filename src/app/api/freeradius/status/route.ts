@@ -1,10 +1,16 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 
 const execAsync = promisify(exec);
 
 export async function GET() {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     try {
         // Check if FreeRADIUS is running
         let running = false;

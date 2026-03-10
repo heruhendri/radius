@@ -1,8 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 const RouterOSAPI = require('node-routeros').RouterOSAPI;
-
-const prisma = new PrismaClient();
 
 interface MikrotikInterface {
   name: string;

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Wallet, Loader2, CreditCard, CheckCircle, AlertCircle, Upload, Zap } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { showSuccess, showError, showWarning } from '@/lib/sweetalert';
 import { CyberCard, CyberButton } from '@/components/cyberpunk';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -12,6 +12,13 @@ interface PaymentGateway {
   name: string;
   provider: string;
   isActive: boolean;
+}
+
+interface PaymentChannel {
+  code: string;
+  name: string;
+  totalFee?: number;
+  iconUrl?: string | null;
 }
 
 interface User {
@@ -32,6 +39,9 @@ export default function TopUpDirectPage() {
   const [amount, setAmount] = useState<string>('');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [paymentChannels, setPaymentChannels] = useState<PaymentChannel[]>([]);
+  const [selectedChannel, setSelectedChannel] = useState<string>('');
+  const [loadingChannels, setLoadingChannels] = useState(false);
 
   // Preset amounts
   const presetAmounts = [50000, 100000, 200000, 500000, 1000000];
@@ -94,6 +104,37 @@ export default function TopUpDirectPage() {
     }
   };
 
+  const loadChannels = async (gateway: string, amt: number) => {
+    if (!gateway || amt < 10000) return;
+    setLoadingChannels(true);
+    setPaymentChannels([]);
+    setSelectedChannel('');
+    try {
+      const res = await fetch(`/api/customer/payment-methods?gateway=${gateway}&amount=${amt}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.methods) && data.methods.length > 0) {
+        setPaymentChannels(data.methods);
+        // Auto-select first channel
+        setSelectedChannel(data.methods[0].code);
+      }
+    } catch {
+      // silent fail — user must manually pick
+    } finally {
+      setLoadingChannels(false);
+    }
+  };
+
+  // Reload channels whenever gateway or valid amount changes
+  useEffect(() => {
+    const amt = parseInt(amount);
+    if (selectedGateway && !isNaN(amt) && amt >= 10000) {
+      loadChannels(selectedGateway, amt);
+    } else {
+      setPaymentChannels([]);
+      setSelectedChannel('');
+    }
+  }, [selectedGateway, amount]);
+
   const handleTopUp = async () => {
     const topupAmount = parseInt(amount);
 
@@ -104,6 +145,11 @@ export default function TopUpDirectPage() {
 
     if (!selectedGateway) {
       setError(t('customer.selectPaymentFirst'));
+      return;
+    }
+
+    if (paymentChannels.length > 0 && !selectedChannel) {
+      setError('Pilih metode pembayaran terlebih dahulu');
       return;
     }
 
@@ -120,7 +166,8 @@ export default function TopUpDirectPage() {
         },
         body: JSON.stringify({
           amount: topupAmount,
-          gateway: selectedGateway
+          gateway: selectedGateway,
+          paymentChannel: selectedChannel || undefined,
         })
       });
 
@@ -134,20 +181,10 @@ export default function TopUpDirectPage() {
         const errorMsg = data.error || data.details || data.message || t('customer.invoiceCreationError');
         console.error('[Top-Up Direct Frontend] Error:', errorMsg);
 
-        await Swal.fire({
-          icon: 'error',
-          title: t('customer.paymentCreationFailed'),
-          html: `
-            <div class="text-left">
-              <p class="text-sm text-red-400 mb-2">${errorMsg}</p>
-              ${data.gateway ? `<p class="text-xs text-gray-400">Gateway: ${data.gateway}</p>` : ''}
-            </div>
-          `,
-          confirmButtonText: 'OK',
-          confirmButtonColor: '#00f7ff',
-          background: '#0f0624',
-          color: '#fff'
-        });
+        showError(
+          `${errorMsg}${data.gateway ? ` (Gateway: ${data.gateway})` : ''}`,
+          t('customer.paymentCreationFailed')
+        );
         setError(errorMsg);
         return;
       }
@@ -156,58 +193,30 @@ export default function TopUpDirectPage() {
         // Success - redirect to payment
         console.log('[Top-Up Direct Frontend] Redirecting to:', data.paymentUrl);
 
-        await Swal.fire({
-          icon: 'success',
-          title: t('common.success'),
-          html: `
-            <p class="mb-2 text-white">${t('customer.topupInvoiceCreated')}</p>
-            <p class="text-sm text-gray-300">${t('customer.invoiceNo')}: <strong class="text-[#00f7ff]">${data.invoiceNumber}</strong></p>
-            <p class="text-sm text-gray-300 mb-3">${t('customer.total')}: <strong class="text-[#00f7ff]">${formatCurrency(data.amount)}</strong></p>
-            <p class="text-sm font-semibold text-green-400">${t('customer.redirectingToPayment')}</p>
-          `,
-          timer: 1500,
-          timerProgressBar: true,
-          showConfirmButton: false,
-          background: '#0f0624',
-          color: '#fff'
-        });
+        showSuccess(
+          `${t('customer.invoiceNo')}: ${data.invoiceNumber} — ${t('customer.total')}: ${formatCurrency(data.amount)}. ${t('customer.redirectingToPayment')}`,
+          t('common.success')
+        );
 
         // Redirect to payment gateway
         setTimeout(() => {
           window.location.href = data.paymentUrl;
         }, 1500);
       } else {
-        // Success but no payment URL (shouldn't happen with new code)
+        // Success but no payment URL
         console.warn('[Top-Up Direct Frontend] No payment URL in response');
 
-        await Swal.fire({
-          icon: 'warning',
-          title: t('common.attention'),
-          html: `
-            <p class="mb-2 text-white">${t('customer.invoiceCreatedNoLink')}</p>
-            <p class="text-sm text-gray-300">${t('customer.invoiceNo')}: <strong class="text-[#00f7ff]">${data.invoiceNumber}</strong></p>
-            <p class="text-sm text-yellow-400 mt-2">${t('customer.contactAdmin')}</p>
-          `,
-          confirmButtonText: t('nav.backToDashboard'),
-          confirmButtonColor: '#00f7ff',
-          background: '#0f0624',
-          color: '#fff'
-        });
+        showWarning(
+          `${t('customer.invoiceCreatedNoLink')} ${t('customer.invoiceNo')}: ${data.invoiceNumber}. ${t('customer.contactAdmin')}`,
+          t('common.attention')
+        );
 
         router.push('/customer');
       }
     } catch (error: any) {
       console.error('[Top-Up Direct Frontend] Fetch error:', error);
 
-      await Swal.fire({
-        icon: 'error',
-        title: t('customer.connectionError'),
-        text: t('customer.failedContactServer'),
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#00f7ff',
-        background: '#0f0624',
-        color: '#fff'
-      });
+      showError(t('customer.failedContactServer'), t('customer.connectionError'));
 
       setError(t('customer.serverConnectionFailed'));
     } finally {
@@ -224,43 +233,27 @@ export default function TopUpDirectPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-[#1a0f35] to-slate-900 flex items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        </div>
-        <Loader2 className="w-8 h-8 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-[#00f7ff]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-[#1a0f35] to-slate-900 relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#bc13fe]/15 rounded-full blur-[120px] animate-pulse"></div>
-        <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-[#00f7ff]/15 rounded-full blur-[100px] animate-pulse delay-700"></div>
-        <div className="absolute bottom-0 left-1/2 w-[600px] h-[400px] bg-[#ff44cc]/10 rounded-full blur-[150px] animate-pulse delay-1000"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
-      </div>
-
-      {/* Header */}
-      <header className="relative z-10 bg-gradient-to-r from-[#00f7ff]/20 to-[#bc13fe]/20 backdrop-blur-xl border-b-2 border-[#00f7ff]/30 shadow-[0_0_30px_rgba(0,247,255,0.2)]">
-        <div className="max-w-3xl mx-auto px-3 py-4 flex items-center gap-4">
-          <button
-            onClick={() => router.push('/customer')}
-            className="p-2 bg-slate-800/50 border border-[#bc13fe]/40 text-[#00f7ff] rounded-xl hover:bg-[#bc13fe]/20 transition-all"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-lg font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">{t('customer.directTopup')}</h1>
-            <p className="text-xs text-[#e0d0ff]/70">{t('customer.directTopupDesc')}</p>
-          </div>
+    <div className="p-3 lg:p-6 space-y-5">
+      {/* Back + Page Header */}
+      <div className="flex items-center gap-3 mb-2">
+        <button
+          onClick={() => router.push('/customer')}
+          className="p-2 bg-card/60 border border-[#bc13fe]/40 text-[#00f7ff] rounded-xl hover:bg-[#bc13fe]/20 transition-all"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h1 className="text-lg font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">{t('customer.directTopup')}</h1>
+          <p className="text-xs text-[#e0d0ff]/70">{t('customer.directTopupDesc')}</p>
         </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-3 py-6 space-y-5 pb-32 relative z-10">
+      </div>
         {/* Current Balance */}
         {user && (
           <CyberCard className="p-5 bg-card/80 backdrop-blur-xl border-2 border-[#00f7ff]/30 shadow-[0_0_30px_rgba(0,247,255,0.15)]">
@@ -332,8 +325,7 @@ export default function TopUpDirectPage() {
         </CyberCard>
 
         {/* Payment Gateway Selection */}
-        {amount && parseInt(amount) >= 10000 && (
-          <CyberCard className="p-5 bg-card/80 backdrop-blur-xl border-2 border-[#ff44cc]/30">
+        <CyberCard className="p-5 bg-card/80 backdrop-blur-xl border-2 border-[#ff44cc]/30">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-[#ff44cc]/20 rounded-lg border border-[#ff44cc]/30">
                 <CreditCard className="w-5 h-5 text-[#ff44cc]" />
@@ -388,36 +380,89 @@ export default function TopUpDirectPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="space-y-3">
-                  {paymentGateways.map((gateway) => (
-                    <button
-                      key={gateway.id}
-                      onClick={() => setSelectedGateway(gateway.provider)}
-                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${selectedGateway === gateway.provider
-                          ? 'border-[#00f7ff] bg-[#00f7ff]/10 shadow-[0_0_20px_rgba(0,247,255,0.3)]'
-                          : 'border-[#bc13fe]/30 bg-slate-900/50 hover:border-[#00f7ff]/50'
-                        }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="p-2 bg-slate-800/80 border border-[#bc13fe]/30 rounded-lg">
-                            <CreditCard className="w-5 h-5 text-[#00f7ff]" />
+                {/* Step 1: Gateway selection (only if multiple gateways) */}
+                {paymentGateways.length > 1 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-[#e0d0ff]/60 uppercase tracking-wider font-bold">Provider</p>
+                    {paymentGateways.map((gw) => (
+                      <button
+                        key={gw.id}
+                        onClick={() => setSelectedGateway(gw.provider)}
+                        className={`w-full text-left p-3 rounded-xl border-2 transition-all ${selectedGateway === gw.provider
+                            ? 'border-[#00f7ff] bg-[#00f7ff]/10 shadow-[0_0_20px_rgba(0,247,255,0.3)]'
+                            : 'border-[#bc13fe]/30 bg-slate-900/50 hover:border-[#00f7ff]/50'
+                          }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <CreditCard className="w-4 h-4 text-[#00f7ff]" />
+                            <p className="font-bold text-white text-sm">{gw.name}</p>
                           </div>
-                          <div>
-                            <p className="font-bold text-white">{gateway.name}</p>
-                            <p className="text-xs text-[#e0d0ff]/60 capitalize">{gateway.provider}</p>
-                          </div>
+                          {selectedGateway === gw.provider && (
+                            <CheckCircle className="w-5 h-5 text-[#00f7ff]" />
+                          )}
                         </div>
-                        {selectedGateway === gateway.provider && (
-                          <CheckCircle className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_8px_rgba(0,247,255,0.8)]" />
-                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Step 2: Payment channel selection */}
+                {loadingChannels ? (
+                  <div className="flex items-center justify-center gap-2 py-6">
+                    <Loader2 className="w-5 h-5 animate-spin text-[#00f7ff]" />
+                    <span className="text-sm text-[#e0d0ff]/60">Memuat metode pembayaran...</span>
+                  </div>
+                ) : paymentChannels.length > 0 ? (
+                  <div className="space-y-2">
+                    {parseInt(amount) < 10000 && (
+                      <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-center">
+                        <p className="text-xs text-amber-400">⬆️ {t('customer.enterAmountAbove')}</p>
                       </div>
-                    </button>
-                  ))}
-                </div>
+                    )}
+                    <p className="text-xs text-[#e0d0ff]/60 uppercase tracking-wider font-bold">Pilih Metode Pembayaran</p>
+                    {paymentChannels.map((ch) => (
+                      <button
+                        key={ch.code}
+                        onClick={() => setSelectedChannel(ch.code)}
+                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${selectedChannel === ch.code
+                            ? 'border-[#00f7ff] bg-[#00f7ff]/10 shadow-[0_0_20px_rgba(0,247,255,0.3)]'
+                            : 'border-[#bc13fe]/30 bg-slate-900/50 hover:border-[#00f7ff]/50'
+                          }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            {ch.iconUrl ? (
+                              <img src={ch.iconUrl} alt={ch.name} className="w-10 h-10 object-contain rounded-lg bg-white p-1" />
+                            ) : (
+                              <div className="p-2 bg-slate-800/80 border border-[#bc13fe]/30 rounded-lg">
+                                <CreditCard className="w-5 h-5 text-[#00f7ff]" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-bold text-white text-sm">{ch.name}</p>
+                              {ch.totalFee !== undefined && (
+                                <p className="text-xs text-[#e0d0ff]/60">
+                                  {ch.totalFee === 0 ? 'Gratis biaya' : `Biaya: Rp ${ch.totalFee.toLocaleString('id-ID')}`}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {selectedChannel === ch.code && (
+                            <CheckCircle className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_8px_rgba(0,247,255,0.8)]" />
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : selectedGateway && parseInt(amount) >= 10000 ? (
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                    <p className="text-sm text-amber-400">Gagal memuat metode pembayaran. Coba lagi atau hubungi admin.</p>
+                  </div>
+                ) : null}
 
                 {/* Payment Button */}
-                {selectedGateway && (
+                {selectedGateway && amount && parseInt(amount) >= 10000 ? (
                   <CyberButton
                     onClick={handleTopUp}
                     disabled={processing}
@@ -437,7 +482,11 @@ export default function TopUpDirectPage() {
                       </>
                     )}
                   </CyberButton>
-                )}
+                ) : selectedGateway ? (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-center">
+                    <p className="text-xs text-amber-400">⬆️ {t('customer.enterAmountAbove')}</p>
+                  </div>
+                ) : null}
 
                 <p className="text-xs text-[#e0d0ff]/50 text-center">
                   {t('customer.paymentRedirectInfo')}
@@ -445,8 +494,6 @@ export default function TopUpDirectPage() {
               </div>
             )}
           </CyberCard>
-        )}
-      </main>
     </div>
   );
 }

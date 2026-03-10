@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 
+// PUBLIC endpoint — called from /isolated page by isolated customers (no admin session)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -47,6 +48,8 @@ export async function GET(request: NextRequest) {
             name: true,
             phone: true,
             email: true,
+            address: true,
+            customerId: true,
             status: true,
             expiredAt: true,
             profile: {
@@ -54,7 +57,10 @@ export async function GET(request: NextRequest) {
                 name: true,
                 price: true,
               }
-            }
+            },
+            area: {
+              select: { name: true }
+            },
           }
         });
       }
@@ -68,6 +74,8 @@ export async function GET(request: NextRequest) {
           name: true,
           phone: true,
           email: true,
+          address: true,
+          customerId: true,
           status: true,
           expiredAt: true,
           profile: {
@@ -75,7 +83,10 @@ export async function GET(request: NextRequest) {
               name: true,
               price: true,
             }
-          }
+          },
+          area: {
+            select: { name: true }
+          },
         }
       });
     }
@@ -116,16 +127,28 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Get active payment gateways for the isolated page PG selector
+    const activeGateways = await prisma.paymentGateway.findMany({
+      where:  { isActive: true },
+      select: { provider: true, name: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
     return NextResponse.json({
       success: true,
       isolated: true,
+      availableGateways: activeGateways,
       data: {
         username: user.username,
         name: user.name,
         phone: user.phone,
         email: user.email,
+        address: (user as any).address ?? null,
+        customerId: (user as any).customerId ?? null,
+        area: (user as any).area?.name ?? null,
         expiredAt: user.expiredAt,
         profileName: user.profile?.name,
+        profilePrice: user.profile?.price ?? null,
         unpaidInvoices: unpaidInvoices
       }
     });

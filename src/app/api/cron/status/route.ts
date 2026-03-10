@@ -1,11 +1,15 @@
-import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { CRON_JOBS, getNextRunTime } from '@/lib/cron/config';
-
-const prisma = new PrismaClient();
+﻿import { NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { CRON_JOBS, getNextRunTime } from '@/server/jobs/jobs.config';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { unauthorized } from '@/lib/api-response';
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) return unauthorized();
+
     // Get latest run for each job type
     const jobsStatus = await Promise.all(
       CRON_JOBS.map(async (job) => {

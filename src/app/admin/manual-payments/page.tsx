@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CheckCircle, XCircle, Eye, Trash2, Search, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, Trash2, Search, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 
@@ -44,6 +44,7 @@ interface ManualPayment {
   amount: number;
   paymentDate: string;
   bankName: string;
+  accountNumber: string | null;
   accountName: string;
   receiptImage: string | null;
   notes: string | null;
@@ -82,10 +83,24 @@ export default function ManualPaymentsPage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [paymentMonth, setPaymentMonth] = useState<string>(''); // '' = all-time, 'YYYY-MM' = filtered
+
+  const MONTH_NAMES_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const getMonthLabel = (ym: string) => {
+    if (!ym) return 'Semua';
+    const [y, m] = ym.split('-').map(Number);
+    return `${MONTH_NAMES_ID[m - 1]} ${y}`;
+  };
+  const shiftPaymentMonth = (delta: number) => {
+    const base = paymentMonth || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })();
+    const [y, m] = base.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    setPaymentMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  };
 
   useEffect(() => {
     fetchPayments();
-  }, []);
+  }, [paymentMonth]);
 
   useEffect(() => {
     filterPayments();
@@ -94,7 +109,9 @@ export default function ManualPaymentsPage() {
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/manual-payments');
+      const params = new URLSearchParams();
+      if (paymentMonth) params.set('month', paymentMonth);
+      const response = await fetch(`/api/manual-payments?${params}`);
       if (!response.ok) throw new Error('Failed to fetch payments');
       const data = await response.json();
       setPayments(data.data || []);
@@ -192,7 +209,7 @@ export default function ManualPaymentsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = await showConfirm('Yakin ingin menghapus data pembayaran ini?');
+    const confirmed = await showConfirm(t('manualPayments.deleteConfirm'));
     if (!confirmed) return;
 
     try {
@@ -239,7 +256,7 @@ export default function ManualPaymentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -249,7 +266,7 @@ export default function ManualPaymentsPage() {
       <div className="relative z-10 space-y-6">
       <div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('manualPayment.title')}</h1>
-        <p className="text-sm text-[#e0d0ff]/80 mt-1">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           {t('manualPayment.description')}
         </p>
       </div>
@@ -276,7 +293,7 @@ export default function ManualPaymentsPage() {
         </Card>
         <Card className="border-2 border-primary/30 bg-card/80 backdrop-blur-sm shadow-[0_0_15px_rgba(188,19,254,0.1)]">
           <CardHeader className="p-4 pb-3">
-            <CardDescription className="text-xs font-bold text-primary uppercase tracking-wide">Total</CardDescription>
+            <CardDescription className="text-xs font-bold text-primary uppercase tracking-wide">{t('manualPayments.totalLabel')}</CardDescription>
             <CardTitle className="text-4xl font-black text-primary drop-shadow-[0_0_5px_rgba(188,19,254,0.5)]">{stats.total}</CardTitle>
           </CardHeader>
         </Card>
@@ -308,6 +325,28 @@ export default function ManualPaymentsPage() {
                 <SelectItem value="REJECTED">{t('manualPayment.rejected')}</SelectItem>
               </SelectContent>
             </Select>
+            {/* Month Filter */}
+            <div className="flex items-center gap-1 border border-border rounded-lg bg-muted/30 px-1 py-1">
+              <button
+                onClick={() => shiftPaymentMonth(-1)}
+                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setPaymentMonth('')}
+                className="text-xs font-medium text-foreground min-w-[90px] text-center hover:text-primary transition-colors"
+                title="Klik untuk reset ke semua"
+              >
+                {getMonthLabel(paymentMonth)}
+              </button>
+              <button
+                onClick={() => shiftPaymentMonth(1)}
+                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
             <Button onClick={fetchPayments} variant="outline" size="icon">
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -331,7 +370,106 @@ export default function ManualPaymentsPage() {
               {t('manualPayment.noData')}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Mobile Card View */}
+            <div className="block md:hidden space-y-3">
+              {filteredPayments.map((payment) => (
+                <div
+                  key={payment.id}
+                  className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3 space-y-2"
+                >
+                  {/* Header: Customer + Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-sm text-foreground truncate">{payment.user.name}</div>
+                      <div className="text-xs text-muted-foreground">{payment.user.username}</div>
+                    </div>
+                    {getStatusBadge(payment.status)}
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">{t('common.date')}</span>
+                      <div className="font-medium text-foreground">
+                        {format(new Date(payment.paymentDate), 'dd MMM yyyy', { locale: localeId })}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">{t('common.invoice')}</span>
+                      <div className="font-mono font-medium text-foreground truncate">{payment.invoice.invoiceNumber}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">{t('manualPayment.bank')}</span>
+                      <div className="font-medium text-foreground">{payment.bankName}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">{t('manualPayment.sender')}</span>
+                      <div className="font-medium text-foreground truncate">{payment.accountName}</div>
+                    </div>
+                  </div>
+
+                  {/* Amount */}
+                  <div className="text-right">
+                    <span className="text-sm font-bold text-[#00f7ff]">
+                      {formatCurrency(Number(payment.amount))}
+                    </span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#bc13fe]/10">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="p-2 h-auto"
+                      onClick={() => {
+                        setSelectedPayment(payment);
+                        setShowDetailDialog(true);
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {payment.status === 'PENDING' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="p-2 h-auto text-success hover:bg-success/10"
+                          onClick={() => {
+                            setSelectedPayment(payment);
+                            setShowApproveDialog(true);
+                          }}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="p-2 h-auto text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setSelectedPayment(payment);
+                            setShowRejectDialog(true);
+                          }}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="p-2 h-auto text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(payment.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -423,6 +561,7 @@ export default function ManualPaymentsPage() {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -440,12 +579,12 @@ export default function ManualPaymentsPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label className="text-xs text-accent font-bold uppercase tracking-wide">Status</Label>
+                  <Label className="text-xs text-accent font-bold uppercase tracking-wide">{t('manualPayments.statusLabel')}</Label>
                   <div className="mt-2">{getStatusBadge(selectedPayment.status)}</div>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-accent font-bold uppercase tracking-wide">{t('manualPayment.paymentDate')}</Label>
-                  <div className="mt-2 text-sm font-medium text-white">
+                  <div className="mt-2 text-sm font-medium text-foreground">
                     {format(new Date(selectedPayment.paymentDate), 'dd MMMM yyyy HH:mm', {
                       locale: localeId,
                     })}
@@ -458,19 +597,19 @@ export default function ManualPaymentsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label className="text-xs text-accent font-bold uppercase tracking-wide">{t('common.name')}</Label>
-                    <div className="mt-2 text-sm font-medium text-white">{selectedPayment.user.name}</div>
+                    <div className="mt-2 text-sm font-medium text-foreground">{selectedPayment.user.name}</div>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-accent font-bold uppercase tracking-wide">{t('auth.username')}</Label>
-                    <div className="mt-2 text-sm font-medium text-white">{selectedPayment.user.username}</div>
+                    <div className="mt-2 text-sm font-medium text-foreground">{selectedPayment.user.username}</div>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-accent font-bold uppercase tracking-wide">{t('common.phone')}</Label>
-                    <div className="mt-2 text-sm font-medium text-white">{selectedPayment.user.phone}</div>
+                    <div className="mt-2 text-sm font-medium text-foreground">{selectedPayment.user.phone}</div>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-accent font-bold uppercase tracking-wide">{t('common.email')}</Label>
-                    <div className="mt-2 text-sm font-medium text-white">{selectedPayment.user.email || '-'}</div>
+                    <div className="mt-2 text-sm font-medium text-foreground">{selectedPayment.user.email || '-'}</div>
                   </div>
                 </div>
               </div>
@@ -508,11 +647,17 @@ export default function ManualPaymentsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground">{t('manualPayment.bank')}</Label>
-                    <div className="mt-1">{selectedPayment.bankName}</div>
+                    <div className="mt-1 font-medium">{selectedPayment.bankName}</div>
                   </div>
+                  {selectedPayment.accountNumber && (
+                    <div>
+                      <Label className="text-muted-foreground">{t('manualPayments.accountNumber')}</Label>
+                      <div className="mt-1 font-mono">{selectedPayment.accountNumber}</div>
+                    </div>
+                  )}
                   <div>
                     <Label className="text-muted-foreground">{t('manualPayment.senderName')}</Label>
-                    <div className="mt-1">{selectedPayment.accountName}</div>
+                    <div className="mt-1 font-medium">{selectedPayment.accountName}</div>
                   </div>
                   <div className="col-span-2">
                     <Label className="text-muted-foreground">{t('manualPayment.transferAmount')}</Label>
@@ -526,7 +671,7 @@ export default function ManualPaymentsPage() {
               {selectedPayment.notes && (
                 <div className="border-t-2 border-primary/20 pt-4">
                   <Label className="text-xs text-accent font-bold uppercase tracking-wide">{t('common.notes')}</Label>
-                  <div className="mt-2 p-3 bg-card/80 rounded-lg border border-primary/20 text-sm text-white">{selectedPayment.notes}</div>
+                  <div className="mt-2 p-3 bg-card/80 rounded-lg border border-primary/20 text-sm text-foreground">{selectedPayment.notes}</div>
                 </div>
               )}
 
@@ -549,11 +694,11 @@ export default function ManualPaymentsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <span className="text-xs text-success/80 font-bold uppercase tracking-wide">{t('manualPayment.approvedBy')}:</span>
-                      <div className="text-sm font-medium text-white">{selectedPayment.approvedBy}</div>
+                      <div className="text-sm font-medium text-foreground">{selectedPayment.approvedBy}</div>
                     </div>
                     <div className="space-y-1">
                       <span className="text-xs text-success/80 font-bold uppercase tracking-wide">{t('common.date')}:</span>
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-medium text-foreground">
                         {format(new Date(selectedPayment.approvedAt), 'dd MMM yyyy HH:mm', {
                           locale: localeId,
                         })}

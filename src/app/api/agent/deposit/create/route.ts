@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { createMidtransPayment } from '@/lib/payment/midtrans';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { createMidtransPayment } from '@/server/services/payment/midtrans.service';
 
 /**
  * POST /api/agent/deposit/create
@@ -9,7 +9,7 @@ import { createMidtransPayment } from '@/lib/payment/midtrans';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { agentId, amount, gateway } = body;
+    const { agentId, amount, gateway, paymentMethod: selectedPaymentMethod } = body;
 
     // Validate input
     if (!agentId || !amount || !gateway) {
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         case 'xendit':
           {
             // For xendit, use createXenditInvoice
-            const { createXenditInvoice } = await import('@/lib/payment/xendit');
+            const { createXenditInvoice } = await import('@/server/services/payment/xendit.service');
             const xenditResult = await createXenditInvoice({
               externalId: deposit.id,
               amount,
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
             const company = await prisma.company.findFirst();
             const baseUrl = company?.baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-            const { DuitkuPayment } = await import('@/lib/payment/duitku');
+            const { DuitkuPayment } = await import('@/server/services/payment/duitku.service');
             const duitku = new DuitkuPayment({
               merchantCode: gatewayConfig.duitkuMerchantCode,
               apiKey: gatewayConfig.duitkuApiKey,
@@ -144,8 +144,21 @@ export async function POST(request: NextRequest) {
               returnUrl: `${baseUrl}/agent/dashboard`,
               sandbox: gatewayConfig.duitkuEnvironment === 'sandbox',
             });
+
+            // Use selected payment method from frontend, or fetch first available, or fallback to 'VA'
+            let duitkuPaymentMethod = selectedPaymentMethod || 'VA';
+            if (!selectedPaymentMethod) {
+              try {
+                const methodsData = await duitku.getPaymentMethods(amount);
+                if (methodsData?.paymentFee?.length > 0) {
+                  duitkuPaymentMethod = methodsData.paymentFee[0].paymentMethod;
+                }
+              } catch {
+                // fallback to VA
+              }
+            }
             
-            const duitkuResult = await duitku.createInvoice({
+            const invoiceParams = {
               invoiceId: deposit.id,
               amount,
               customerName: agent.name,
@@ -153,9 +166,21 @@ export async function POST(request: NextRequest) {
               customerPhone: agent.phone,
               description: 'Deposit Saldo Agent',
               expiryMinutes: 1440, // 24 hours
-              paymentMethod: 'SP', // QRIS via ShopeePay
-            });
-            
+              paymentMethod: duitkuPaymentMethod,
+            };
+
+            let duitkuResult;
+            try {
+              duitkuResult = await duitku.createInvoice(invoiceParams);
+            } catch (channelError: any) {
+              // If selected channel not available, retry without specifying method
+              if (selectedPaymentMethod && channelError.message?.includes('404')) {
+                duitkuResult = await duitku.createInvoice({ ...invoiceParams, paymentMethod: undefined });
+              } else {
+                throw channelError;
+              }
+            }
+
             paymentResult = {
               paymentUrl: duitkuResult.paymentUrl,
               transactionId: duitkuResult.reference,
@@ -176,7 +201,7 @@ export async function POST(request: NextRequest) {
             const company = await prisma.company.findFirst();
             const baseUrl = company?.baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-            const { TripayPayment } = await import('@/lib/payment/tripay');
+            const { TripayPayment } = await import('@/server/services/payment/tripay.service');
             const tripay = new TripayPayment({
               merchantCode: gatewayConfig.tripayMerchantCode,
               apiKey: gatewayConfig.tripayApiKey,
@@ -184,13 +209,14 @@ export async function POST(request: NextRequest) {
               sandbox: gatewayConfig.tripayEnvironment === 'sandbox',
             });
             
-            // Get QRIS payment channel (or default first available channel)
-            const channels = await tripay.getPaymentChannels();
-            let paymentMethod = 'QRIS';
-            
-            if (channels && channels.data && channels.data.length > 0) {
-              const qris = channels.data.find((ch: any) => ch.code === 'QRIS' || ch.code === 'QRISC');
-              paymentMethod = qris ? qris.code : channels.data[0].code;
+            // Use selected payment method from frontend, or pick QRIS/first available
+            let paymentMethod = selectedPaymentMethod || 'QRIS';
+            if (!selectedPaymentMethod) {
+              const channels = await tripay.getPaymentChannels();
+              if (channels?.data?.length > 0) {
+                const qris = channels.data.find((ch: any) => ch.code === 'QRIS' || ch.code === 'QRISC');
+                paymentMethod = qris ? qris.code : channels.data[0].code;
+              }
             }
             
             const tripayResult = await tripay.createTransaction({

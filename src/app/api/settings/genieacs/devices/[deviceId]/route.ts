@@ -29,13 +29,21 @@ export async function DELETE(
     const authHeader = 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
 
     // Delete device from GenieACS
-    const response = await fetch(`${host}/devices/${encodeURIComponent(deviceId)}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': authHeader,
-        'Accept': 'application/json',
-      },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    let response: Response;
+    try {
+      response = await fetch(`${host}/devices/${encodeURIComponent(deviceId)}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': authHeader,
+          'Accept': 'application/json',
+        },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -60,6 +68,12 @@ export async function DELETE(
 
   } catch (error: unknown) {
     console.error('Error deleting device:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json(
+        { success: false, error: 'Koneksi ke GenieACS timeout.' },
+        { status: 200 }
+      );
+    }
     const errorMessage = error instanceof Error ? error.message : 'Failed to delete device';
     return NextResponse.json(
       { success: false, error: errorMessage },

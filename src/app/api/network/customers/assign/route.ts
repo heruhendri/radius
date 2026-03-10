@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
 import { nanoid } from 'nanoid';
 
 // Haversine formula to calculate distance between two GPS coordinates
@@ -25,6 +27,10 @@ function calculateDistance(
 // GET - Get all customer assignments or get nearest ODPs for a customer
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get('customerId');
 
@@ -141,6 +147,10 @@ export async function GET(request: NextRequest) {
 // POST - Create new customer assignment
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await request.json();
     const { customerId, odpId, portNumber, notes } = body;
 
@@ -259,6 +269,10 @@ export async function POST(request: NextRequest) {
 // PUT - Update customer assignment
 export async function PUT(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await request.json();
     const { id, odpId, portNumber, notes } = body;
 
@@ -381,6 +395,10 @@ export async function PUT(request: NextRequest) {
 // DELETE - Remove customer assignment
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

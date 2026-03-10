@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGenieACSCredentials } from '../../../route';
 
+// Helper: fetch with AbortController timeout
+async function fetchWithTimeout(url: string, options: RequestInit = {}, ms = 15000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 // POST - Reboot a specific device
 export async function POST(
   request: NextRequest,
@@ -33,7 +44,8 @@ export async function POST(
       name: 'reboot'
     };
 
-    const response = await fetch(`${host}/devices/${encodeURIComponent(deviceId)}/tasks?connection_request`, {
+    // timeout=10000 tells GenieACS to wait max 10s for device connection
+    const response = await fetchWithTimeout(`${host}/devices/${encodeURIComponent(deviceId)}/tasks?timeout=10000&connection_request`, {
       method: 'POST',
       headers: {
         'Authorization': authHeader,
@@ -44,6 +56,12 @@ export async function POST(
     });
 
     if (!response.ok) {
+      if (response.status === 504) {
+        return NextResponse.json(
+          { success: false, error: 'Device offline atau tidak merespons (timeout 10s)' },
+          { status: 200 }
+        );
+      }
       const errorText = await response.text();
       console.error('GenieACS reboot error:', errorText);
       return NextResponse.json(
@@ -60,6 +78,12 @@ export async function POST(
 
   } catch (error: unknown) {
     console.error('Error rebooting device:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json(
+        { success: false, error: 'Koneksi ke GenieACS timeout. Periksa apakah server GenieACS berjalan.' },
+        { status: 200 }
+      );
+    }
     const errorMessage = error instanceof Error ? error.message : 'Failed to reboot device';
     return NextResponse.json(
       { success: false, error: errorMessage },

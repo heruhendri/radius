@@ -1,10 +1,10 @@
-# AIBILL RADIUS - Comprehensive Feature Guide
+﻿# SALFANET RADIUS - Comprehensive Feature Guide
 
-**Version**: 2.7.5  
-**Last Updated**: December 23, 2025  
+**Version**: 2.10.21  
+**Last Updated**: March 5, 2026  
 **Project**: ISP/RTRW.NET Billing & RADIUS Management System
 
-> **Ringkasan Lengkap**: Dokumentasi ini merangkum semua fitur dan kemampuan dari AIBILL RADIUS berdasarkan 20+ dokumentasi teknis yang tersedia.
+> **Ringkasan Lengkap**: Dokumentasi ini merangkum semua fitur dan kemampuan dari SALFANET RADIUS. Konten dasar guide ini mencakup fitur hingga v2.7.5; untuk fitur baru v2.10.x (Dark Mode, Admin Dashboard v2, Swal Migration, PPPoE Session Sync, dll) lihat [`CHANGELOG.md`](getting-started/CHANGELOG.md) dan [`ROADMAP.md`](ROADMAP.md).
 
 ---
 
@@ -199,7 +199,7 @@ Public IP: 103.67.244.131
 5. Update existing users
 6. Generate import report
 
-**Use Case**: Migrasi dari MikroTik manual ke AIBILL RADIUS
+**Use Case**: Migrasi dari MikroTik manual ke SALFANET RADIUS
 
 ---
 
@@ -1240,7 +1240,7 @@ formatWIB(date)     // Format for display
 ## 📝 License
 
 Proprietary - All Rights Reserved  
-Copyright © 2025 AIBILL RADIUS
+Copyright © 2025 SALFANET RADIUS
 
 ---
 

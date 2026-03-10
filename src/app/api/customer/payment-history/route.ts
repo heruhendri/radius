@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 
 // Helper to verify customer token
 async function verifyCustomerToken(request: NextRequest) {
@@ -52,22 +52,72 @@ export async function GET(request: NextRequest) {
         paymentToken: true,
         paymentLink: true,
         createdAt: true,
+        invoiceType: true,
+        additionalFees: true,
+        payments: {
+          orderBy: { paidAt: 'desc' },
+          take: 1,
+          select: { id: true, method: true, status: true },
+        },
+        manualPayments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            bankName: true,
+            accountName: true,
+            status: true,
+            rejectionReason: true,
+          },
+        },
       }
     });
 
     return NextResponse.json({
       success: true,
-      payments: invoices.map(inv => ({
-        id: inv.id,
-        invoiceNumber: inv.invoiceNumber,
-        amount: inv.amount,
-        status: inv.status,
-        dueDate: inv.dueDate.toISOString(),
-        paidAt: inv.paidAt?.toISOString() || null,
-        paymentToken: inv.paymentToken,
-        paymentLink: inv.paymentLink,
-        createdAt: inv.createdAt.toISOString(),
-      }))
+      payments: invoices.map(inv => {
+        const manual = inv.manualPayments[0] ?? null;
+        const gateway = inv.payments[0] ?? null;
+        const isPaid = inv.status === 'PAID';
+
+        let paymentSource: string | null = null;
+        if (gateway && isPaid) paymentSource = 'gateway';
+        else if (manual && (manual.status === 'APPROVED' || isPaid)) paymentSource = 'manual';
+        else if (isPaid) paymentSource = 'admin';
+
+        // Detect package change from additionalFees metadata
+        let isPackageChange = false;
+        let packageChangeDescription: string | null = null;
+        try {
+          const fees = inv.additionalFees as any;
+          const item = fees?.items?.[0];
+          if (item?.metadata?.type === 'package_change') {
+            isPackageChange = true;
+            packageChangeDescription = item.description || `Ganti Paket ke ${item.metadata?.newPackageName || ''}`;
+          }
+        } catch { /* ignore */ }
+
+        return {
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          amount: inv.amount,
+          status: inv.status,
+          dueDate: inv.dueDate.toISOString(),
+          paidAt: inv.paidAt?.toISOString() || null,
+          paymentToken: inv.paymentToken,
+          paymentLink: inv.paymentLink,
+          createdAt: inv.createdAt.toISOString(),
+          invoiceType: inv.invoiceType,
+          isPackageChange,
+          packageChangeDescription,
+          manualPaymentId: manual?.id || null,
+          manualPaymentStatus: manual?.status?.toLowerCase() || null,
+          manualPaymentBank: manual?.bankName || null,
+          manualPaymentAccountName: manual?.accountName || null,
+          manualPaymentRejectionReason: manual?.rejectionReason || null,
+          paymentSource,
+        };
+      })
     });
 
   } catch (error: any) {

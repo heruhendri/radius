@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { writeFile } from 'fs/promises';
 import path from 'path';
 
@@ -35,7 +35,7 @@ async function verifyCustomerToken(request: NextRequest) {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await verifyCustomerToken(request);
@@ -46,7 +46,7 @@ export async function POST(
       );
     }
 
-    const paymentId = params.id;
+    const { id: paymentId } = await params;
 
     // Verify payment belongs to user
     const payment = await prisma.manualPayment.findFirst({

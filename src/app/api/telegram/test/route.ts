@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { sendTelegramMessage } from '@/lib/telegram';
+import { authOptions } from '@/server/auth/config';
+import { sendTelegramMessage } from '@/server/services/notifications/telegram.service';
 
 // POST - Test Telegram connection
 export async function POST(request: NextRequest) {

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { testTelegramConnection } from '@/lib/telegram';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
+import { testTelegramConnection } from '@/server/services/notifications/telegram.service';
 
 // GET - Get current Telegram settings
 export async function GET(request: NextRequest) {

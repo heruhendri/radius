@@ -21,7 +21,7 @@ import {
   CheckCircle,
   Loader2
 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface IsolationTemplate {
   id: string;
@@ -37,6 +37,7 @@ type ViewMode = 'desktop' | 'tablet' | 'mobile';
 
 export default function TemplatesPage() {
   const { t } = useTranslation();
+  const { addToast } = useToast();
   const [templates, setTemplates] = useState<IsolationTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState<IsolationTemplate | null>(null);
@@ -61,19 +62,11 @@ export default function TemplatesPage() {
         setTemplates(data.data);
       } else {
         console.error('API returned error:', data.message);
-        Swal.fire({
-          icon: 'error',
-          title: t('common.failed'),
-          text: data.message || t('isolation.failedLoadTemplates'),
-        });
+        addToast({ type: 'error', title: t('common.failed'), description: data.message || t('isolation.failedLoadTemplates') });
       }
     } catch (error) {
       console.error('Failed to fetch templates:', error);
-      Swal.fire({
-        icon: 'error',
-        title: t('common.failed'),
-        text: t('isolation.failedLoadTemplates'),
-      });
+      addToast({ type: 'error', title: t('common.failed'), description: t('isolation.failedLoadTemplates') });
     } finally {
       setLoading(false);
     }
@@ -104,13 +97,7 @@ export default function TemplatesPage() {
       const data = await response.json();
 
       if (data.success) {
-        await Swal.fire({
-          icon: 'success',
-          title: t('common.success'),
-          text: t('isolation.templateUpdated'),
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        addToast({ type: 'success', title: t('common.success'), description: t('isolation.templateUpdated'), duration: 2000 });
         
         fetchTemplates();
         setShowEditor(false);
@@ -119,11 +106,7 @@ export default function TemplatesPage() {
         throw new Error(data.message);
       }
     } catch (error: any) {
-      Swal.fire({
-        icon: 'error',
-        title: t('common.failed'),
-        text: error.message || t('isolation.failedSaveTemplate'),
-      });
+      addToast({ type: 'error', title: t('common.failed'), description: error.message || t('isolation.failedSaveTemplate') });
     } finally {
       setSaving(false);
     }
@@ -264,7 +247,7 @@ export default function TemplatesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
         <Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
       </div>
@@ -273,19 +256,19 @@ export default function TemplatesPage() {
 
   if (showEditor && editingTemplate) {
     return (
-      <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+      <div className="bg-background relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
         <div className="relative z-10 max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">
                 {editingTemplate.type === 'whatsapp' && <MessageCircle className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] inline mr-2" />}
                 {editingTemplate.type === 'email' && <Mail className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] inline mr-2" />}
                 {editingTemplate.type === 'html_page' && <Globe className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] inline mr-2" />}
                 {t('isolation.editTemplate')} {editingTemplate.name}
               </h1>
-              <p className="text-sm text-[#e0d0ff]/80 mt-1">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 {editingTemplate.type === 'whatsapp' && t('isolation.whatsappTemplateDesc')}
                 {editingTemplate.type === 'email' && t('isolation.emailTemplateDesc')}
                 {editingTemplate.type === 'html_page' && t('isolation.htmlPageTemplateDesc')}
@@ -296,7 +279,7 @@ export default function TemplatesPage() {
               onClick={() => setPreviewMode(!previewMode)}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 previewMode
-                  ? 'bg-accent hover:bg-accent/90 text-accent-foreground text-white'
+                  ? 'bg-accent hover:bg-accent/90 text-accent-foreground'
                   : 'bg-muted hover:bg-muted/80 text-foreground'
               }`}
             >
@@ -306,7 +289,7 @@ export default function TemplatesPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-white px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50"
             >
               {saving ? (
                 <>
@@ -414,13 +397,7 @@ export default function TemplatesPage() {
                     className="p-2 bg-muted rounded border border-border cursor-pointer hover:bg-muted transition-colors"
                     onClick={() => {
                       navigator.clipboard.writeText(`{{${variable.key}}}`);
-                      Swal.fire({
-                        icon: 'success',
-                        title: t('common.copied'),
-                        text: `{{${variable.key}}} ${t('common.copied')}`,
-                        timer: 1500,
-                        showConfirmButton: false,
-                      });
+                      addToast({ type: 'success', title: t('common.copied'), description: `{{${variable.key}}} ${t('common.copied')}`, duration: 1500 });
                     }}
                     title={t('common.copy')}
                   >
@@ -463,16 +440,16 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] mb-2">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] mb-2">
             <FileText className="w-8 h-8 text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] inline mr-2" />
             {t('isolation.templatesTitle')}
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             {t('isolation.templatesSubtitle')}
           </p>
         </div>
@@ -490,8 +467,54 @@ export default function TemplatesPage() {
         </div>
       </div>
 
-      {/* Templates Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Mobile Card View */}
+      <div className="block md:hidden space-y-3">
+        {templates.map((template) => (
+          <div key={template.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {getTemplateIcon(template.type)}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">{template.name}</h3>
+                  <p className="text-[10px] text-muted-foreground capitalize">{template.type.replace('_', ' ')}</p>
+                </div>
+              </div>
+              {template.isActive ? (
+                <span className="flex items-center gap-1 text-[10px] bg-success/20 dark:bg-green-900/30 text-success px-1.5 py-0.5 rounded-full">
+                  <CheckCircle className="w-3 h-3" />
+                  {t('isolation.active')}
+                </span>
+              ) : (
+                <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                  {t('isolation.inactive')}
+                </span>
+              )}
+            </div>
+            {template.subject && (
+              <div className="mb-2">
+                <p className="text-[10px] text-muted-foreground">{t('isolation.subject')}:</p>
+                <p className="text-xs text-foreground font-medium truncate">{template.subject}</p>
+              </div>
+            )}
+            <div className="mb-3">
+              <p className="text-[10px] text-muted-foreground mb-1">{t('isolation.previewLabel')}</p>
+              <div className="bg-card rounded p-2 text-[10px] text-muted-foreground font-mono h-16 overflow-hidden">
+                {template.message.substring(0, 100)}...
+              </div>
+            </div>
+            <button
+              onClick={() => handleEdit(template)}
+              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground text-white font-medium p-2 rounded-lg transition-colors text-sm"
+            >
+              <Edit className="w-4 h-4" />
+              {t('common.edit')}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Templates Grid */}
+      <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {templates.map((template) => (
           <div
             key={template.id}

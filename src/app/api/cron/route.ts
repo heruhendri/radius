@@ -1,11 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getCronHistory, recordAgentSales, generateInvoices, sendInvoiceReminders, disconnectExpiredVoucherSessions } from '@/lib/cron/voucher-sync'
+﻿import { NextRequest, NextResponse } from 'next/server'
+import { getCronHistory, recordAgentSales, generateInvoices, sendInvoiceReminders, disconnectExpiredVoucherSessions, reconcileVoucherTransactions } from '@/server/jobs/voucher-sync'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/server/auth/config'
+import { unauthorized } from '@/lib/api-response'
 
 /**
  * GET /api/cron - Get cron history
  */
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) return unauthorized();
+
     const history = await getCronHistory()
     
     return NextResponse.json({
@@ -35,7 +41,7 @@ export async function POST(request: NextRequest) {
     switch (jobType) {
       case 'hotspot_sync':
       case 'voucher_sync': // Backward compatibility
-        const { syncHotspotWithRadius } = await import('@/lib/cron/hotspot-sync')
+        const { syncHotspotWithRadius } = await import('@/server/jobs/hotspot-sync')
         result = await syncHotspotWithRadius()
         return NextResponse.json({
           success: result.success,
@@ -47,7 +53,7 @@ export async function POST(request: NextRequest) {
         
       case 'pppoe_auto_isolir':
       case 'auto_isolir': // Backward compatibility
-        const { autoIsolatePPPoEUsers } = await import('@/lib/cron/pppoe-sync')
+        const { autoIsolatePPPoEUsers } = await import('@/server/jobs/pppoe-sync')
         result = await autoIsolatePPPoEUsers()
         return NextResponse.json({
           success: result.success,
@@ -64,7 +70,8 @@ export async function POST(request: NextRequest) {
         })
         
       case 'invoice_generate':
-        result = await generateInvoices()
+        // force=true allows manual triggers to bypass billingDay date check for POSTPAID
+        result = await generateInvoices(body.force === true)
         return NextResponse.json({
           success: result.success,
           generated: result.generated,
@@ -83,7 +90,7 @@ export async function POST(request: NextRequest) {
         })
         
       case 'invoice_status_update':
-        const { updateInvoiceStatus } = await import('@/lib/cron/invoice-status-updater')
+        const { updateInvoiceStatus } = await import('@/server/jobs/invoice-status-updater')
         result = await updateInvoiceStatus()
         return NextResponse.json({
           success: result.success,
@@ -92,12 +99,12 @@ export async function POST(request: NextRequest) {
         })
         
       case 'notification_check':
-        const { NotificationService } = await import('@/lib/notifications')
+        const { NotificationService } = await import('@/server/services/notifications/dispatcher.service')
         result = await NotificationService.runNotificationCheck()
         return NextResponse.json(result)
         
       case 'auto_isolir_users':
-        const { autoIsolateExpiredUsers } = await import('@/lib/cron/voucher-sync')
+        const { autoIsolateExpiredUsers } = await import('@/server/jobs/voucher-sync')
         result = await autoIsolateExpiredUsers()
         return NextResponse.json({
           success: result.success,
@@ -106,7 +113,7 @@ export async function POST(request: NextRequest) {
         })
         
       case 'telegram_backup':
-        const { autoBackupToTelegram } = await import('@/lib/cron/telegram-cron')
+        const { autoBackupToTelegram } = await import('@/server/jobs/telegram-cron')
         result = await autoBackupToTelegram()
         return NextResponse.json({
           success: result.success,
@@ -114,7 +121,7 @@ export async function POST(request: NextRequest) {
         })
         
       case 'telegram_health':
-        const { sendHealthCheckToTelegram } = await import('@/lib/cron/telegram-cron')
+        const { sendHealthCheckToTelegram } = await import('@/server/jobs/telegram-cron')
         result = await sendHealthCheckToTelegram()
         return NextResponse.json({
           success: result.success,
@@ -128,9 +135,17 @@ export async function POST(request: NextRequest) {
           disconnected: result.disconnected,
           error: result.error
         })
+
+      case 'keuangan_reconcile':
+        const reconciledCount = await reconcileVoucherTransactions()
+        return NextResponse.json({
+          success: true,
+          reconciled: reconciledCount,
+          message: `Reconciled ${reconciledCount} missing keuangan transaction(s) for hotspot vouchers`,
+        })
         
       case 'activity_log_cleanup':
-        const { cleanOldActivities } = await import('@/lib/activity-log')
+        const { cleanOldActivities } = await import('@/server/services/activity-log.service')
         result = await cleanOldActivities(30)
         return NextResponse.json({
           success: result.success,
@@ -139,7 +154,7 @@ export async function POST(request: NextRequest) {
         })
         
       case 'auto_renewal':
-        const { processAutoRenewal } = await import('@/lib/cron/auto-renewal')
+        const { processAutoRenewal } = await import('@/server/jobs/auto-renewal')
         result = await processAutoRenewal()
         return NextResponse.json({
           success: true,
@@ -150,7 +165,7 @@ export async function POST(request: NextRequest) {
         })
         
       case 'webhook_log_cleanup':
-        const { prisma } = await import('@/lib/prisma')
+        const { prisma } = await import('@/server/db/client')
         const { nanoid } = await import('nanoid')
         
         const startedAt = new Date()
@@ -214,7 +229,7 @@ export async function POST(request: NextRequest) {
         }
         
       case 'session_monitor':
-        const { SessionMonitor } = await import('@/lib/session-monitor')
+        const { SessionMonitor } = await import('@/server/services/session-monitor.service')
         result = await SessionMonitor.runAllChecks()
         return NextResponse.json({
           success: result.success,
@@ -222,7 +237,7 @@ export async function POST(request: NextRequest) {
         })
         
       case 'freeradius_health':
-        const { freeradiusHealthCheck } = await import('@/lib/cron/freeradius-health')
+        const { freeradiusHealthCheck } = await import('@/server/jobs/freeradius-health')
         result = await freeradiusHealthCheck(true) // auto-restart enabled
         return NextResponse.json({
           success: result.success,
@@ -233,9 +248,97 @@ export async function POST(request: NextRequest) {
             ? 'FreeRADIUS was down and has been restarted'
             : result.action === 'restart_failed'
             ? 'FreeRADIUS restart failed - manual intervention required'
+            : result.action === 'nas_synced'
+            ? 'FreeRADIUS is healthy — NAS config was out of sync and has been reloaded'
             : 'FreeRADIUS is healthy'
         })
-        
+
+      case 'pppoe_session_sync':
+        try {
+          const { syncPPPoESessions } = await import('@/server/jobs/pppoe-session-sync')
+          const syncPppoeResult = await syncPPPoESessions()
+          return NextResponse.json({
+            success: syncPppoeResult.success,
+            inserted: syncPppoeResult.inserted,
+            closed: syncPppoeResult.closed,
+            routers: syncPppoeResult.routers,
+            routerErrors: syncPppoeResult.routerErrors,
+            message: `Inserted: ${syncPppoeResult.inserted}, Closed: ${syncPppoeResult.closed}, Routers: ${syncPppoeResult.routers}`,
+            error: syncPppoeResult.error,
+          })
+        } catch (pppoeErr: any) {
+          return NextResponse.json({ success: false, error: pppoeErr.message })
+        }
+
+      case 'sync_online_users':
+        try {
+          const { syncOnlineUsersFromDB } = await import('@/server/cache/online-users.cache')
+          const { isRedisAvailable } = await import('@/server/cache/redis')
+          if (!isRedisAvailable()) {
+            return NextResponse.json({ success: true, message: 'Redis not available, skipped', synced: 0, removed: 0 })
+          }
+          const syncResult = await syncOnlineUsersFromDB()
+          return NextResponse.json({
+            success: true,
+            message: `Synced ${syncResult.synced} users, removed ${syncResult.removed} stale`,
+            ...syncResult,
+          })
+        } catch (syncErr: any) {
+          return NextResponse.json({ success: false, error: syncErr.message })
+        }
+
+      case 'suspend_check':
+        try {
+          const { prisma: suspendPrisma } = await import('@/server/db/client')
+          const now = new Date()
+
+          // 1. Activate pending suspends (startDate <= now, status = APPROVED, user still active)
+          const toSuspend = await suspendPrisma.suspendRequest.findMany({
+            where: { status: 'APPROVED', startDate: { lte: now } },
+            include: { user: { select: { id: true, status: true } } },
+          })
+          let suspended = 0
+          for (const sr of toSuspend) {
+            if (sr.user.status === 'active') {
+              await suspendPrisma.pppoeUser.update({
+                where: { id: sr.userId },
+                data: { status: 'stopped' },
+              })
+              suspended++
+            }
+          }
+
+          // 2. Restore users whose suspend endDate has passed
+          const toRestore = await suspendPrisma.suspendRequest.findMany({
+            where: { status: 'APPROVED', endDate: { lte: now } },
+            include: { user: { select: { id: true, status: true } } },
+          })
+          let restored = 0
+          for (const sr of toRestore) {
+            if (sr.user.status === 'stopped') {
+              await suspendPrisma.pppoeUser.update({
+                where: { id: sr.userId },
+                data: { status: 'active' },
+              })
+              restored++
+            }
+            // Mark request as COMPLETED
+            await suspendPrisma.suspendRequest.update({
+              where: { id: sr.id },
+              data: { status: 'COMPLETED' },
+            })
+          }
+
+          return NextResponse.json({
+            success: true,
+            suspended,
+            restored,
+            message: `Suspend check: ${suspended} suspended, ${restored} restored`,
+          })
+        } catch (suspendErr: any) {
+          return NextResponse.json({ success: false, error: suspendErr.message })
+        }
+
       default:
         return NextResponse.json({
           success: false,

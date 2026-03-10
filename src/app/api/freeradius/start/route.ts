@@ -1,4 +1,6 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -6,6 +8,10 @@ const execAsync = promisify(exec);
 
 export async function POST() {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
         // Start FreeRADIUS service
         await execAsync('systemctl start freeradius 2>/dev/null || service freeradius start 2>/dev/null');
 

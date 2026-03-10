@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { getGenieACSCredentials } from '@/app/api/settings/genieacs/route';
 
 // Helper to verify customer token using CustomerSession
@@ -52,9 +52,9 @@ export async function GET(request: NextRequest) {
     const credentials = await getGenieACSCredentials();
 
     if (!credentials) {
+      // Return 200 (not 400) so the browser doesn't log a red error — GenieACS simply not set up
       return NextResponse.json(
-        { success: false, error: 'GenieACS not configured' },
-        { status: 400 }
+        { success: false, reason: 'not_configured', error: 'GenieACS not configured' }
       );
     }
 
@@ -63,13 +63,21 @@ export async function GET(request: NextRequest) {
     const authHeader = Buffer.from(`${username}:${password}`).toString('base64');
 
     // Fetch ALL devices and find by PPPoE username (same approach as admin API)
-    const response = await fetch(`${host}/devices`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Basic ${authHeader}`,
-        'Accept': 'application/json',
-      },
-    });
+    const ctrl1 = new AbortController();
+    const t1 = setTimeout(() => ctrl1.abort(), 5000);
+    let response: Response;
+    try {
+      response = await fetch(`${host}/devices`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${authHeader}`,
+          'Accept': 'application/json',
+        },
+        signal: ctrl1.signal,
+      });
+    } finally {
+      clearTimeout(t1);
+    }
 
     if (!response.ok) {
       return NextResponse.json(
@@ -119,9 +127,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (!device) {
+      // Return 200 so browser doesn't log a red error; caller handles !data.success
       return NextResponse.json(
-        { success: false, error: 'Device not found', device: null },
-        { status: 404 }
+        { success: false, reason: 'device_not_found', error: 'Device not found', device: null }
       );
     }
 
@@ -134,9 +142,18 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.warn('[Customer WiFi GET] GenieACS tidak merespons setelah 5 detik');
+      return NextResponse.json({
+        success: false,
+        reason: 'timeout',
+        error: 'GenieACS tidak merespons dalam 5 detik. Perangkat mungkin offline.',
+        device: null
+      });
+    }
     console.error('Get WiFi info error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error.message, device: null },
       { status: 500 }
     );
   }
@@ -496,8 +513,7 @@ export async function POST(request: NextRequest) {
 
     if (!credentials) {
       return NextResponse.json(
-        { success: false, error: 'GenieACS not configured' },
-        { status: 400 }
+        { success: false, reason: 'not_configured', error: 'GenieACS not configured' }
       );
     }
 
@@ -513,10 +529,18 @@ export async function POST(request: NextRequest) {
     
     console.log('[Customer WiFi] Fetching device from:', deviceUrl);
     
-    const deviceResponse = await fetch(deviceUrl, {
-      method: 'GET',
-      headers: { 'Authorization': `Basic ${authHeader}` }
-    });
+    const ctrl2 = new AbortController();
+    const t2 = setTimeout(() => ctrl2.abort(), 5000);
+    let deviceResponse: Response;
+    try {
+      deviceResponse = await fetch(deviceUrl, {
+        method: 'GET',
+        headers: { 'Authorization': `Basic ${authHeader}` },
+        signal: ctrl2.signal,
+      });
+    } finally {
+      clearTimeout(t2);
+    }
     
     if (!deviceResponse.ok) {
       console.error('[Customer WiFi] Failed to fetch device:', deviceResponse.status, await deviceResponse.text());
@@ -606,14 +630,22 @@ export async function POST(request: NextRequest) {
     const ssidUrl = `${host}/devices/${encodeURIComponent(deviceId)}/tasks?timeout=3000&connection_request`;
     
     console.log('[Customer WiFi] Sending SSID task...');
-    const ssidResponse = await fetch(ssidUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${authHeader}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(ssidTask)
-    });
+    const ctrl3 = new AbortController();
+    const t3 = setTimeout(() => ctrl3.abort(), 8000);
+    let ssidResponse: Response;
+    try {
+      ssidResponse = await fetch(ssidUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${authHeader}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(ssidTask),
+        signal: ctrl3.signal,
+      });
+    } finally {
+      clearTimeout(t3);
+    }
 
     if (!ssidResponse.ok) {
       const errorText = await ssidResponse.text();
@@ -636,14 +668,22 @@ export async function POST(request: NextRequest) {
       const passwordUrl = `${host}/devices/${encodeURIComponent(deviceId)}/tasks?timeout=3000&connection_request`;
       
       console.log('[Customer WiFi] Sending password task...');
-      const passwordResponse = await fetch(passwordUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${authHeader}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(passwordTask)
-      });
+      const ctrl4 = new AbortController();
+      const t4 = setTimeout(() => ctrl4.abort(), 8000);
+      let passwordResponse: Response;
+      try {
+        passwordResponse = await fetch(passwordUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${authHeader}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(passwordTask),
+          signal: ctrl4.signal,
+        });
+      } finally {
+        clearTimeout(t4);
+      }
 
       if (!passwordResponse.ok) {
         const errorText = await passwordResponse.text();
@@ -664,14 +704,21 @@ export async function POST(request: NextRequest) {
 
       const refreshUrl = `${host}/devices/${encodeURIComponent(deviceId)}/tasks?connection_request`;
       
-      await fetch(refreshUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${authHeader}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(refreshTask)
-      });
+      const ctrl5 = new AbortController();
+      const t5 = setTimeout(() => ctrl5.abort(), 5000);
+      try {
+        await fetch(refreshUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${authHeader}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(refreshTask),
+          signal: ctrl5.signal,
+        });
+      } finally {
+        clearTimeout(t5);
+      }
 
       console.log('[Customer WiFi] Refresh task sent ✅');
     } catch (refreshError) {
@@ -697,6 +744,13 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.warn('[Customer WiFi POST] GenieACS tidak merespons setelah timeout');
+      return NextResponse.json(
+        { success: false, error: 'GenieACS tidak merespons. Perangkat mungkin sedang offline, coba lagi nanti.' },
+        { status: 503 }
+      );
+    }
     console.error('[Customer WiFi] Update WiFi error:', error);
     console.error('[Customer WiFi] Error stack:', error.stack);
     console.error('[Customer WiFi] Error message:', error.message);

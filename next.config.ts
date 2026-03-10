@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
     workerThreads: false,
     cpus: 1, // Use single CPU for build to reduce memory
   },
+  // Node.js-only packages used in API routes — skip Turbopack bundling entirely
+  // This prevents static analysis of conditional require('source-map-support') in node-routeros
+  serverExternalPackages: ['node-routeros', 'source-map-support'],
   // Fix workspace root detection issue
   turbopack: {
     root: path.resolve(__dirname),
@@ -26,6 +29,35 @@ const nextConfig: NextConfig = {
   
   // Headers for security
   async headers() {
+    // CSP directives — practical policy untuk Next.js + TailwindCSS + SweetAlert2
+    const cspDirectives = [
+      "default-src 'self'",
+      // Scripts: allow self + inline (Next.js hydration) + Cloudflare analytics
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
+      // Styles: allow self + inline (Tailwind utility classes)
+      "style-src 'self' 'unsafe-inline'",
+      // Images: allow self, data URIs (inline), blob (PDF export), CDN maps
+      "img-src 'self' data: blob: https: http:",
+      // Fonts: self + data URIs
+      "font-src 'self' data:",
+      // Connections: self + Cloudflare analytics beacon + payment gateways
+      "connect-src 'self' https://cloudflareinsights.com https://api.midtrans.com https://api.xendit.co https://sandbox.duitku.com https://passport.duitku.com https://sandbox.tripay.co.id https://tripay.co.id",
+      // Frames: hanya self (bukan 'none' agar SweetAlert2 modal bisa inline)
+      "frame-src 'self' https://app.midtrans.com https://app.sandbox.midtrans.com",
+      // Batas upload media — 10MB
+      "media-src 'self' blob:",
+      // Worker: untuk PDF generation
+      "worker-src 'self' blob:",
+      // Objek HTML (Flash, dll): tidak diizinkan
+      "object-src 'none'",
+      // Cegah clickjacking via CSP (lebih kuat dari X-Frame-Options)
+      "frame-ancestors 'self'",
+      // Base URI: hanya self
+      "base-uri 'self'",
+      // Form action: hanya self
+      "form-action 'self'",
+    ].join('; ');
+
     return [
       {
         source: '/:path*',
@@ -49,6 +81,32 @@ const nextConfig: NextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin'
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block'
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: cspDirectives,
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(self), payment=(self), usb=()',
+          },
+        ],
+      },
+      // API routes: disable caching untuk semua endpoint sensitif
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
           },
         ],
       },

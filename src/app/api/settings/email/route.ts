@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { EmailService } from '@/lib/email';
-import { requirePermission } from '@/lib/apiAuth';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { EmailService } from '@/server/services/notifications/email.service';
+import { requirePermission } from '@/server/middleware/api-auth';
 
 export async function GET() {
   try {

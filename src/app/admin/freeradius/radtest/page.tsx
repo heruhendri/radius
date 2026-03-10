@@ -6,7 +6,7 @@ import {
     Play, Loader2, CheckCircle, XCircle, Key, User, Server,
     Shield, RefreshCw, Terminal, Copy, Clock
 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface RadTestResult {
     success: boolean;
@@ -19,6 +19,7 @@ interface RadTestResult {
 
 export default function RadTestPage() {
     const { t } = useTranslation();
+  const { addToast } = useToast();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [nasIP, setNasIP] = useState('127.0.0.1');
@@ -30,11 +31,7 @@ export default function RadTestPage() {
 
     const handleTest = async () => {
         if (!username || !password) {
-            Swal.fire({
-                icon: 'warning',
-                title: t('radius.requiredFields'),
-                text: 'Please enter username and password'
-            });
+            addToast({ type: 'warning', title: t('radius.requiredFields'), description: 'Please enter username and password' });
             return;
         }
 
@@ -62,11 +59,7 @@ export default function RadTestPage() {
                 throw new Error(data.error || 'Test failed');
             }
         } catch (error: any) {
-            Swal.fire({
-                icon: 'error',
-                title: t('common.error'),
-                text: error.message || 'Failed to run radtest'
-            });
+            addToast({ type: 'error', title: t('common.error'), description: error.message || 'Failed to run radtest' });
         } finally {
             setTesting(false);
         }
@@ -75,12 +68,7 @@ export default function RadTestPage() {
     const copyRawOutput = () => {
         if (result?.rawOutput) {
             navigator.clipboard.writeText(result.rawOutput);
-            Swal.fire({
-                icon: 'success',
-                title: 'Copied!',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            addToast({ type: 'success', title: 'Copied!', duration: 1500 });
         }
     };
 
@@ -88,7 +76,7 @@ export default function RadTestPage() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                     <Shield className="w-6 h-6 text-primary" />
                     {t('radius.radTestTitle')}
                 </h1>

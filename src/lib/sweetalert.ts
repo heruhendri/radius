@@ -1,221 +1,75 @@
-import Swal from 'sweetalert2';
+﻿/**
+ * sweetalert.ts — CyberToast bridge (replaces SweetAlert2)
+ *
+ * This module exposes the same API surface as the old Swal helpers but uses the
+ * CyberToast/CyberConfirm system.  A GlobalToastBridge React component
+ * (rendered inside the admin layout) registers the real functions at mount time
+ * via `registerGlobalToast` and `registerGlobalConfirm`.
+ */
 
-// Cyberpunk theme configuration
-const cyberpunkTheme = {
-  background: 'linear-gradient(135deg, #0a0520 0%, #1a0a3a 100%)',
-  borderColor: '#bc13fe',
-  glowColor: 'rgba(188, 19, 254, 0.3)',
-  textColor: '#e0d0ff',
-  titleColor: '#ffffff',
+// ─── Global registry ───────────────────────────────────────────────────────────
+
+type ToastType = 'success' | 'error' | 'warning' | 'info';
+type AddToastFn = (opts: {
+  type: ToastType;
+  title: string;
+  description?: string;
+  duration?: number;
+}) => void;
+type ConfirmFn = (opts: {
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: 'danger' | 'warning' | 'info';
+}) => Promise<boolean>;
+
+let _addToast: AddToastFn | null = null;
+let _confirm: ConfirmFn | null = null;
+
+/** Called by GlobalToastBridge in admin/customer layout. */
+export function registerGlobalToast(fn: AddToastFn) { _addToast = fn; }
+export function registerGlobalConfirm(fn: ConfirmFn) { _confirm = fn; }
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+const _toast = (type: ToastType, message: string, title: string, duration?: number) => {
+  _addToast?.({ type, title, description: message, duration });
 };
 
-// Success alert with cyberpunk theme
-export const showSuccess = (message: string, title: string = 'Success!') => {
-  return Swal.fire({
-    icon: 'success',
-    title,
-    text: message,
-    confirmButtonColor: '#00ff88',
-    confirmButtonText: 'OK',
-    background: cyberpunkTheme.background,
-    color: cyberpunkTheme.textColor,
-    customClass: {
-      container: 'swal-cyberpunk',
-      popup: 'swal-cyberpunk-popup',
-      title: 'swal-cyberpunk-title',
-      confirmButton: 'swal-cyberpunk-confirm'
-    },
-    didOpen: () => {
-      const popup = Swal.getPopup();
-      if (popup) {
-        popup.style.border = `2px solid ${cyberpunkTheme.borderColor}`;
-        popup.style.boxShadow = `0 0 30px ${cyberpunkTheme.glowColor}, inset 0 0 20px rgba(0, 247, 255, 0.1)`;
-      }
-    },
-    heightAuto: false,
-  });
-};
+// ─── Public API ────────────────────────────────────────────────────────────────
 
-// Error alert with cyberpunk theme
-export const showError = (message: string, title: string = 'Error!') => {
-  return Swal.fire({
-    icon: 'error',
-    title,
-    text: message,
-    confirmButtonColor: '#ff4466',
-    confirmButtonText: 'OK',
-    background: cyberpunkTheme.background,
-    color: cyberpunkTheme.textColor,
-    customClass: {
-      container: 'swal-cyberpunk',
-      popup: 'swal-cyberpunk-popup',
-      title: 'swal-cyberpunk-title',
-      confirmButton: 'swal-cyberpunk-error'
-    },
-    didOpen: () => {
-      const popup = Swal.getPopup();
-      if (popup) {
-        popup.style.border = '2px solid #ff4466';
-        popup.style.boxShadow = '0 0 30px rgba(255, 68, 102, 0.3), inset 0 0 20px rgba(255, 68, 102, 0.1)';
-      }
-    },
-  });
-};
+export const showSuccess = (message: string, title = 'Berhasil!') =>
+  _toast('success', message, title, 4000);
 
-// Warning alert with cyberpunk theme
-export const showWarning = (message: string, title: string = 'Warning!') => {
-  return Swal.fire({
-    icon: 'warning',
-    title,
-    text: message,
-    confirmButtonColor: '#fbbf24',
-    confirmButtonText: 'OK',
-    background: cyberpunkTheme.background,
-    color: cyberpunkTheme.textColor,
-    customClass: {
-      container: 'swal-cyberpunk',
-      popup: 'swal-cyberpunk-popup',
-      title: 'swal-cyberpunk-title',
-      confirmButton: 'swal-cyberpunk-warning'
-    },
-    didOpen: () => {
-      const popup = Swal.getPopup();
-      if (popup) {
-        popup.style.border = '2px solid #fbbf24';
-        popup.style.boxShadow = '0 0 30px rgba(251, 191, 36, 0.3), inset 0 0 20px rgba(251, 191, 36, 0.1)';
-      }
-    },
-  });
-};
+export const showError = (message: string, title = 'Error!') =>
+  _toast('error', message, title);
 
-// Info alert with cyberpunk theme
-export const showInfo = (message: string, title: string = 'Info') => {
-  return Swal.fire({
-    icon: 'info',
-    title,
-    text: message,
-    confirmButtonColor: '#00f7ff',
-    confirmButtonText: 'OK',
-    background: cyberpunkTheme.background,
-    color: cyberpunkTheme.textColor,
-    customClass: {
-      container: 'swal-cyberpunk',
-      popup: 'swal-cyberpunk-popup',
-      title: 'swal-cyberpunk-title',
-      confirmButton: 'swal-cyberpunk-info'
-    },
-    didOpen: () => {
-      const popup = Swal.getPopup();
-      if (popup) {
-        popup.style.border = '2px solid #00f7ff';
-        popup.style.boxShadow = '0 0 30px rgba(0, 247, 255, 0.3), inset 0 0 20px rgba(0, 247, 255, 0.1)';
-      }
-    },
-  });
-};
+export const showWarning = (message: string, title = 'Perhatian!') =>
+  _toast('warning', message, title);
 
-// Confirm dialog with cyberpunk theme
-export const showConfirm = async (
-  message: string,
-  title: string = 'Are you sure?',
-  confirmText: string = 'Yes',
-  cancelText: string = 'Cancel'
-) => {
-  const result = await Swal.fire({
-    icon: 'question',
-    title,
-    text: message,
-    showCancelButton: true,
-    confirmButtonColor: '#00f7ff',
-    cancelButtonColor: '#6b7280',
-    confirmButtonText: confirmText,
-    cancelButtonText: cancelText,
-    reverseButtons: true,
-    background: cyberpunkTheme.background,
-    color: cyberpunkTheme.textColor,
-    customClass: {
-      container: 'swal-cyberpunk',
-      popup: 'swal-cyberpunk-popup',
-      title: 'swal-cyberpunk-title',
-      confirmButton: 'swal-cyberpunk-confirm',
-      cancelButton: 'swal-cyberpunk-cancel'
-    },
-    didOpen: () => {
-      const popup = Swal.getPopup();
-      if (popup) {
-        popup.style.border = `2px solid ${cyberpunkTheme.borderColor}`;
-        popup.style.boxShadow = `0 0 30px ${cyberpunkTheme.glowColor}, inset 0 0 20px rgba(0, 247, 255, 0.1)`;
-      }
-    },
-  });
-  
-  return result.isConfirmed;
-};
+export const showInfo = (message: string, title = 'Info') =>
+  _toast('info', message, title);
 
-// Loading alert with cyberpunk theme
-export const showLoading = (message: string = 'Please wait...') => {
-  return Swal.fire({
-    title: message,
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    background: cyberpunkTheme.background,
-    color: cyberpunkTheme.textColor,
-    customClass: {
-      container: 'swal-cyberpunk',
-      popup: 'swal-cyberpunk-popup',
-      title: 'swal-cyberpunk-title'
-    },
-    didOpen: () => {
-      Swal.showLoading();
-      const popup = Swal.getPopup();
-      if (popup) {
-        popup.style.border = `2px solid ${cyberpunkTheme.borderColor}`;
-        popup.style.boxShadow = `0 0 30px ${cyberpunkTheme.glowColor}, inset 0 0 20px rgba(0, 247, 255, 0.1)`;
-      }
-    },
-  });
-};
-
-// Close loading
-export const closeLoading = () => {
-  Swal.close();
-};
-
-// Toast notification with cyberpunk theme
 export const showToast = (
   message: string,
   icon: 'success' | 'error' | 'warning' | 'info' = 'success'
-) => {
-  const colors = {
-    success: '#00ff88',
-    error: '#ff4466',
-    warning: '#fbbf24',
-    info: '#00f7ff'
-  };
+) => _toast(icon, message, icon === 'success' ? 'Berhasil!' : icon === 'error' ? 'Error!' : 'Info');
 
-  const Toast = Swal.mixin({
-    toast: true,
-    position: 'top-end',
-    showConfirmButton: false,
-    timer: 3000,
-    timerProgressBar: true,
-    background: 'linear-gradient(135deg, rgba(10, 5, 32, 0.95) 0%, rgba(26, 10, 58, 0.95) 100%)',
-    color: cyberpunkTheme.textColor,
-    customClass: {
-      container: 'swal-cyberpunk-toast',
-      popup: 'swal-cyberpunk-toast-popup',
-    },
-    didOpen: (toast) => {
-      toast.addEventListener('mouseenter', Swal.stopTimer);
-      toast.addEventListener('mouseleave', Swal.resumeTimer);
-      toast.style.border = `2px solid ${colors[icon]}`;
-      toast.style.boxShadow = `0 0 20px ${colors[icon]}40, inset 0 0 15px ${colors[icon]}20`;
-      toast.style.backdropFilter = 'blur(10px)';
-    },
-  });
-
-  return Toast.fire({
-    icon,
-    title: message,
-  });
+export const showConfirm = async (
+  message: string,
+  title = 'Konfirmasi',
+  confirmText = 'Ya',
+  cancelText = 'Batal'
+): Promise<boolean> => {
+  if (_confirm) {
+    return _confirm({ title, message, confirmText, cancelText, variant: 'warning' });
+  }
+  return window.confirm(`${title}\n${message}`);
 };
+
+/** @deprecated Loading modal replaced with component-level loading state. No-op. */
+export const showLoading = (_message?: string): void => { /* no-op */ };
+
+/** @deprecated No-op. */
+export const closeLoading = (): void => { /* no-op */ };

@@ -124,32 +124,32 @@ export default function PPPoEProfilesPage() {
 
   const resetForm = () => { setFormData({ name: '', description: '', price: '', downloadSpeed: '', uploadSpeed: '', rateLimit: '', groupName: 'salfanetradius', validityValue: '1', validityUnit: 'MONTHS', sharedUser: true }); setFieldErrors({}); };
 
-  if (loading) { return <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden"><div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div></div><RefreshCw className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" /></div>; }
+  if (loading) { return <div className="flex items-center justify-center min-h-[60vh]"><div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div></div><RefreshCw className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" /></div>; }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('pppoe.profilesTitle')}</h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('pppoe.profilesSubtitle')}</p>
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('pppoe.profilesTitle')}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('pppoe.profilesSubtitle')}</p>
           </div>
           <button onClick={() => { resetForm(); setEditingProfile(null); setIsDialogOpen(true); }} className="inline-flex items-center px-3 py-1.5 text-xs bg-primary hover:bg-primary/90 text-white rounded"><Plus className="h-3 w-3 mr-1" />{t('pppoe.addProfile')}</button>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="flex items-center justify-between">
-              <div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('common.total')}</p><p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{profiles.length}</p></div>
+              <div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('common.total')}</p><p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{profiles.length}</p></div>
               <FileText className="h-7 w-7 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.6)]" />
             </div>
           </div>
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="flex items-center justify-between">
-              <div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('pppoe.active')}</p><p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{profiles.filter(p => p.isActive).length}</p></div>
+              <div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('pppoe.active')}</p><p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{profiles.filter(p => p.isActive).length}</p></div>
               <CheckCircle2 className="h-7 w-7 text-green-400 drop-shadow-[0_0_15px_rgba(34,197,94,0.6)]" />
             </div>
           </div>
@@ -161,8 +161,41 @@ export default function PPPoEProfilesPage() {
           </div>
         </div>
 
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3">
+          {profiles.length === 0 ? (
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-6 text-center text-muted-foreground text-xs">{t('pppoe.noProfiles')}</div>
+          ) : (
+            profiles.map((profile) => (
+              <div key={profile.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-medium text-sm text-foreground">{profile.name}</p>
+                    {profile.description && <p className="text-xs text-muted-foreground mt-0.5">{profile.description}</p>}
+                  </div>
+                  {profile.syncedToRadius ? (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-success/10 text-success"><CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />{t('pppoe.synced')}</span>
+                  ) : (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-warning/10 text-warning"><XCircle className="h-2.5 w-2.5 mr-0.5" />{t('pppoe.pending')}</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                  <div><span className="text-muted-foreground">{t('hotspot.price')}:</span><p className="font-medium">Rp {profile.price.toLocaleString('id-ID')}</p></div>
+                  <div><span className="text-muted-foreground">{t('hotspot.speed')}:</span><p className="font-mono font-medium">{profile.downloadSpeed}M/{profile.uploadSpeed}M</p></div>
+                  <div><span className="text-muted-foreground">{t('pppoe.validity')}:</span><p className="font-medium">{profile.validityValue} {profile.validityUnit === 'MONTHS' ? 'Mo' : 'D'}</p></div>
+                  <div><span className="text-muted-foreground">{t('pppoe.groupLabel')}:</span><p className="font-mono font-medium">{profile.groupName}</p></div>
+                </div>
+                <div className="flex justify-end gap-1 border-t border-border pt-2">
+                  <button onClick={() => handleEdit(profile)} className="p-2 text-muted-foreground hover:bg-muted rounded"><Pencil className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => setDeleteProfileId(profile.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
         {/* Table */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
           <div className="px-3 py-2 border-b border-border">
             <span className="text-xs font-medium">{t('pppoe.profilesList')}</span>
           </div>
@@ -171,7 +204,7 @@ export default function PPPoEProfilesPage() {
               <thead className="bg-muted/50">
                 <tr>
                   <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase">{t('common.name')}</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden md:table-cell">Group</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden md:table-cell">{t('pppoe.groupLabel')}</th>
                   <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase">{t('hotspot.price')}</th>
                   <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden sm:table-cell">{t('hotspot.speed')}</th>
                   <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden lg:table-cell">{t('pppoe.validity')}</th>
@@ -227,7 +260,7 @@ export default function PPPoEProfilesPage() {
                 <div>
                   <ModalLabel required>{t('pppoe.radiusGroup')}</ModalLabel>
                   <ModalInput type="text" value={formData.groupName} onChange={(e) => setFormData({ ...formData, groupName: e.target.value })} required className={fieldErrors['groupName'] ? 'border-[#ff4466]' : ''} />
-                  <p className="text-[9px] text-[#e0d0ff]/60 mt-1">{t('pppoe.matchMikrotik')}</p>
+                  <p className="text-[9px] text-muted-foreground mt-1">{t('pppoe.matchMikrotik')}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -281,18 +314,18 @@ export default function PPPoEProfilesPage() {
                     className="font-mono text-center text-lg border-[#00f7ff]/50 focus:border-[#00f7ff]"
                     required
                   />
-                  <p className="text-[9px] text-[#e0d0ff]/50 mt-1">
+                  <p className="text-[9px] text-muted-foreground mt-1">
                     Format: download/upload [burst-rates] [thresholds] [burst-time] [priority] [min-rates]
                   </p>
                 </div>
 
               </div>
               <div>
-                <label className="flex items-center gap-2 text-xs text-[#e0d0ff] cursor-pointer">
+                <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
                   <input type="checkbox" checked={formData.sharedUser} onChange={(e) => setFormData({ ...formData, sharedUser: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]" />
                   <span>Shared User (Only One Device)</span>
                 </label>
-                <p className="text-[9px] text-[#e0d0ff]/50 mt-1">Jika diaktifkan, username hanya bisa login di 1 device. Login ke-2 akan disconnect session pertama.</p>
+                <p className="text-[9px] text-muted-foreground mt-1">Jika diaktifkan, username hanya bisa login di 1 device. Login ke-2 akan disconnect session pertama.</p>
               </div>
               <div>
                 <ModalLabel>{t('common.description')}</ModalLabel>
@@ -312,8 +345,8 @@ export default function PPPoEProfilesPage() {
             <div className="w-14 h-14 bg-[#ff4466]/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-[#ff4466]/50">
               <Trash2 className="w-7 h-7 text-[#ff6b8a]" />
             </div>
-            <h2 className="text-base font-bold text-white mb-2">{t('pppoe.deleteProfile')}</h2>
-            <p className="text-xs text-[#e0d0ff]/70">{t('pppoe.deleteProfileConfirm')}</p>
+            <h2 className="text-base font-bold text-foreground mb-2">{t('pppoe.deleteProfile')}</h2>
+            <p className="text-xs text-muted-foreground">{t('pppoe.deleteProfileConfirm')}</p>
           </ModalBody>
           <ModalFooter className="justify-center">
             <ModalButton variant="secondary" onClick={() => setDeleteProfileId(null)}>{t('common.cancel')}</ModalButton>

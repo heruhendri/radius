@@ -1,12 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth';
-import { getIsolationSettings, getCidrRange } from '@/lib/isolation-settings';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { getIsolationSettings, getCidrRange } from '@/server/services/isolation.service';
 
 // GET - Generate MikroTik script based on current isolation settings
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication
-    await requireAdmin(request);
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     // Get current isolation settings
     const settings = await getIsolationSettings();

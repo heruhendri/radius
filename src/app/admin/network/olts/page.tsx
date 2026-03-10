@@ -186,7 +186,7 @@ export default function OLTsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -197,7 +197,7 @@ export default function OLTsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       {/* Neon Cyberpunk Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
@@ -209,11 +209,11 @@ export default function OLTsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
               <Server className="h-6 w-6 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.6)]" />
               OLT Management
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-2">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Manage Optical Line Terminals (OLT) for FTTH network
             </p>
           </div>
@@ -227,7 +227,7 @@ export default function OLTsPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
           <div className="bg-card rounded-lg border border-border p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -261,8 +261,95 @@ export default function OLTsPage() {
           </div>
         </div>
 
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3">
+          {olts.length === 0 ? (
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-4 text-center text-muted-foreground text-xs">
+              No OLTs found. Click &quot;Add OLT&quot; to create one.
+            </div>
+          ) : (
+            olts.map((olt) => (
+              <div key={olt.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Server className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">{olt.name}</span>
+                  </div>
+                  <span
+                    className={`px-1.5 py-0.5 text-[10px] rounded font-medium ${olt.status === 'active'
+                      ? 'bg-success/10 text-success'
+                      : 'bg-destructive/10 text-destructive'
+                    }`}
+                  >
+                    {olt.status}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">IP Address</span>
+                    <p className="font-mono text-muted-foreground">{olt.ipAddress}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">ODPs</span>
+                    <p>
+                      <span className="px-1.5 py-0.5 text-[10px] bg-accent/20 text-accent dark:bg-purple-900/30 rounded">
+                        {olt._count?.odps || 0} ODPs
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">Location</span>
+                    <a
+                      href={`https://www.google.com/maps?q=${olt.latitude},${olt.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline text-[10px]"
+                    >
+                      <MapPin className="h-3 w-3" />
+                      {olt.latitude.toFixed(6)}, {olt.longitude.toFixed(6)}
+                    </a>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">Routers</span>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {olt.routers.map((r, idx) => (
+                        <span
+                          key={r.id}
+                          className={`px-1.5 py-0.5 text-[9px] rounded ${idx === 0
+                            ? 'bg-primary/20 text-primary'
+                            : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          {r.router.name}
+                        </span>
+                      ))}
+                      {olt.routers.length === 0 && (
+                        <span className="text-[10px] text-muted-foreground">No router</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-1 border-t border-border pt-2">
+                  <button
+                    onClick={() => handleEdit(olt)}
+                    className="p-2 text-muted-foreground hover:bg-muted rounded"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(olt)}
+                    className="p-2 text-destructive hover:bg-destructive/10 rounded"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
         {/* Table */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
           <div className="px-3 py-2 border-b border-border">
             <span className="text-xs font-medium">OLT List</span>
           </div>
@@ -370,23 +457,23 @@ export default function OLTsPage() {
         <SimpleModal isOpen={isDialogOpen} onClose={() => { setIsDialogOpen(false); setEditingOlt(null); resetForm(); }} size="lg">
           <ModalHeader>
             <ModalTitle>{editingOlt ? 'Edit OLT' : 'Add OLT'}</ModalTitle>
-            <ModalDescription>Configure Optical Line Terminal</ModalDescription>
+            <ModalDescription>{t('network.configureOlt')}</ModalDescription>
           </ModalHeader>
           <form onSubmit={handleSubmit}>
             <ModalBody className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <ModalLabel required>Name</ModalLabel>
+                  <ModalLabel required>{t('network.oltName')}</ModalLabel>
                   <ModalInput type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required placeholder="OLT-01" />
                 </div>
                 <div>
-                  <ModalLabel required>IP Address</ModalLabel>
+                  <ModalLabel required>{t('network.ipAddress')}</ModalLabel>
                   <ModalInput type="text" value={formData.ipAddress} onChange={(e) => setFormData({ ...formData, ipAddress: e.target.value })} required placeholder="192.168.1.1" />
                 </div>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <ModalLabel required>GPS Location</ModalLabel>
+                  <ModalLabel required>{t('network.gpsLocation')}</ModalLabel>
                   <div className="flex gap-1">
                     <button type="button" onClick={() => setShowMapPicker(true)} className="inline-flex items-center px-2 py-0.5 text-[10px] bg-[#00f7ff] text-black font-bold rounded shadow-[0_0_10px_rgba(0,247,255,0.3)]">
                       <Map className="h-2.5 w-2.5 mr-1" /> Open Map
@@ -410,26 +497,26 @@ export default function OLTsPage() {
                 </ModalSelect>
               </div>
               <div>
-                <ModalLabel>Connected Routers (Uplinks)</ModalLabel>
+                <ModalLabel>{t('network.connectedRouters')}</ModalLabel>
                 <div className="border border-[#bc13fe]/30 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1 bg-[#0a0520]/50">
                   {routers.length === 0 ? (
-                    <p className="text-[10px] text-[#e0d0ff]/50">No routers available</p>
+                    <p className="text-[10px] text-muted-foreground">No routers available</p>
                   ) : (
                     routers.map((router) => (
                       <label key={router.id} className="flex items-center gap-2 p-1 hover:bg-[#bc13fe]/10 rounded cursor-pointer">
                         <input type="checkbox" checked={formData.routerIds.includes(router.id)} onChange={() => toggleRouter(router.id)} className="w-3 h-3 rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]" />
                         <RouterIcon className="h-3 w-3 text-[#00f7ff]" />
-                        <span className="text-xs text-[#e0d0ff]">{router.name}</span>
-                        <span className="text-[10px] text-[#e0d0ff]/50">({router.ipAddress})</span>
+                        <span className="text-xs text-foreground">{router.name}</span>
+                        <span className="text-[10px] text-muted-foreground">({router.ipAddress})</span>
                       </label>
                     ))
                   )}
                 </div>
-                <p className="text-[9px] text-[#e0d0ff]/50 mt-1">First selected = Primary uplink</p>
+                <p className="text-[9px] text-muted-foreground mt-1">First selected = Primary uplink</p>
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="followRoad" checked={formData.followRoad} onChange={(e) => setFormData({ ...formData, followRoad: e.target.checked })} className="w-3 h-3 rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]" />
-                <label htmlFor="followRoad" className="text-xs text-[#e0d0ff]">Follow road path on map</label>
+                <label htmlFor="followRoad" className="text-xs text-foreground">Follow road path on map</label>
               </div>
             </ModalBody>
             <ModalFooter>

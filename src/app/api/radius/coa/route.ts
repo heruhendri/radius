@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { 
   sendCoARequest, 
   sendDisconnectRequest, 
@@ -7,7 +7,7 @@ import {
   testCoAConnection,
   testLocalCoA,
   isRadclientAvailable 
-} from '@/lib/radius-coa';
+} from '@/server/services/radius/coa.service';
 
 /**
  * RADIUS CoA (Change of Authorization) API

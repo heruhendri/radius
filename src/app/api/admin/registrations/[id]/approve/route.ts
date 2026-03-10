@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { genCustomerId } from '@/lib/utils';
-import { sendRegistrationApproval } from '@/lib/whatsapp-notifications';
+import { sendRegistrationApproval } from '@/server/services/notifications/whatsapp-templates.service';
 import crypto from 'crypto';
+import { generateUniqueReferralCode } from '@/server/services/referral.service';
 
 // Helper to generate username from name and phone
 function generateUsername(name: string, phone: string): string {
@@ -109,6 +110,18 @@ export async function POST(
       expiredAt.setHours(23, 59, 59, 999);
     }
 
+    // Resolve referral code to referrer ID
+    let referredById: string | null = null;
+    if (registration.referralCode) {
+      const referrer = await prisma.pppoeUser.findUnique({
+        where: { referralCode: registration.referralCode },
+        select: { id: true },
+      });
+      if (referrer) {
+        referredById = referrer.id;
+      }
+    }
+
     // Create PPPoE user
     const pppoeUser = await prisma.pppoeUser.create({
       data: {
@@ -126,8 +139,70 @@ export async function POST(
         subscriptionType: subscriptionType as 'POSTPAID' | 'PREPAID',
         billingDay: validBillingDay,
         expiredAt: expiredAt,
+        referredById: referredById,
+        referralCode: await generateUniqueReferralCode(),
       } as any,
     });
+
+    // Process referral bonus (REGISTRATION type)
+    if (referredById) {
+      try {
+        const companyRef = await prisma.company.findFirst({
+          select: {
+            referralEnabled: true,
+            referralRewardAmount: true,
+            referralRewardType: true,
+            referralRewardBoth: true,
+            referralReferredAmount: true,
+          },
+        });
+
+        if (companyRef?.referralEnabled && companyRef.referralRewardType === 'REGISTRATION') {
+          const rewardAmount = companyRef.referralRewardAmount ?? 10000;
+
+          await prisma.$transaction([
+            prisma.referralReward.create({
+              data: {
+                referrerId: referredById,
+                referredId: pppoeUser.id,
+                amount: rewardAmount,
+                status: 'CREDITED',
+                type: 'REGISTRATION',
+                creditedAt: new Date(),
+              },
+            }),
+            prisma.pppoeUser.update({
+              where: { id: referredById },
+              data: { balance: { increment: rewardAmount } },
+            }),
+          ]);
+          console.log(`✅ Referral registration reward ${rewardAmount} credited to ${referredById}`);
+
+          // Also credit the referred customer if rewardBoth is enabled
+          if (companyRef.referralRewardBoth && (companyRef.referralReferredAmount ?? 0) > 0) {
+            await prisma.pppoeUser.update({
+              where: { id: pppoeUser.id },
+              data: { balance: { increment: companyRef.referralReferredAmount! } },
+            });
+            console.log(`✅ Referred registration bonus ${companyRef.referralReferredAmount} credited to ${pppoeUser.id}`);
+          }
+        } else if (companyRef?.referralEnabled && companyRef.referralRewardType === 'FIRST_PAYMENT') {
+          // Create PENDING reward to be credited on first payment
+          await prisma.referralReward.create({
+            data: {
+              referrerId: referredById,
+              referredId: pppoeUser.id,
+              amount: companyRef.referralRewardAmount ?? 10000,
+              status: 'PENDING',
+              type: 'FIRST_PAYMENT',
+            },
+          });
+          console.log(`✅ Referral PENDING reward created for ${referredById}`);
+        }
+      } catch (referralError) {
+        console.error('Referral bonus error:', referralError);
+      }
+    }
 
     // Sync to RADIUS (radcheck + radusergroup)
     // Password
@@ -270,7 +345,7 @@ export async function POST(
     // Send Email notification
     if (registration.email) {
       try {
-        const { EmailService } = await import('@/lib/email');
+        const { EmailService } = await import('@/server/services/notifications/email.service');
         await EmailService.sendRegistrationApprovalEmail({
           toEmail: registration.email,
           toName: registration.name,

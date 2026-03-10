@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Activity, Filter, Power, RefreshCw, Wifi, WifiOff, Search, Download } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface Session {
@@ -58,6 +59,7 @@ interface Router {
 
 export default function SessionsPage() {
   const { t } = useTranslation();
+  const { addToast, confirm } = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [allTimeStats, setAllTimeStats] = useState<AllTimeStats | null>(null);
@@ -71,6 +73,32 @@ export default function SessionsPage() {
   const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 25, totalPages: 1 });
   const [pageSize, setPageSize] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [exportEndDate, setExportEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [now, setNow] = useState(Date.now());
+
+  // 1-second ticker for live duration counter
+  useEffect(() => {
+    const ticker = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(ticker);
+  }, []);
+
+  const formatDuration = (seconds: number) => {
+    if (!seconds || seconds < 0) return '0s';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  };
+
+  const liveDuration = (startTimeStr: string | null) => {
+    if (!startTimeStr) return 0;
+    const startMs = new Date(startTimeStr).getTime();
+    return Math.max(0, Math.floor((now - startMs) / 1000));
+  };
 
   const fetchSessions = async (page: number = 1) => {
     try {
@@ -81,6 +109,7 @@ export default function SessionsPage() {
       // Full RADIUS mode dengan pagination
       params.set('page', pageNum.toString());
       params.set('limit', pageSize.toString());
+      params.set('live', 'true'); // Live bytes dari MikroTik API
       if (typeFilter) params.set('type', typeFilter);
       if (routerFilter) params.set('routerId', routerFilter);
       if (searchFilter) params.set('search', searchFilter);
@@ -127,10 +156,10 @@ export default function SessionsPage() {
 
   useEffect(() => {
     fetchSessions(1);
-    // Auto-refresh setiap 30 detik - gunakan currentPage state
+    // Auto-refresh setiap 10 detik - live bytes dari MikroTik API
     const interval = setInterval(() => {
       fetchSessions(currentPage);
-    }, 30000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [typeFilter, routerFilter, searchFilter, pageSize, currentPage]);
 
@@ -148,46 +177,29 @@ export default function SessionsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = `Sessions-Active-${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
-    } catch (error) { console.error('Export error:', error); await Swal.fire('Error', t('sessions.exportFailed'), 'error'); }
+    } catch (error) { console.error('Export error:', error); addToast({ type: 'error', title: 'Error', description: t('sessions.exportFailed') }); }
   };
 
-  const handleExportHistoryExcel = async () => {
-    const { value: dateRange } = await Swal.fire({
-      title: t('sessions.exportHistory'),
-      html: `
-        <div class="text-left text-sm">
-          <label class="block mb-1 font-medium">${t('time.from')}</label>
-          <input id="startDate" type="date" class="w-full px-3 py-2 border rounded mb-3" value="${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}">
-          <label class="block mb-1 font-medium">${t('time.to')}</label>
-          <input id="endDate" type="date" class="w-full px-3 py-2 border rounded" value="${new Date().toISOString().split('T')[0]}">
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: t('common.export'),
-      cancelButtonText: t('common.cancel'),
-      confirmButtonColor: '#0d9488',
-      preConfirm: () => ({
-        startDate: (document.getElementById('startDate') as HTMLInputElement).value,
-        endDate: (document.getElementById('endDate') as HTMLInputElement).value
-      })
-    });
-    
-    if (!dateRange) return;
-    
+  const handleExportHistoryExcel = () => {
+    setShowDateRangeModal(true);
+  };
+
+  const handlePerformHistoryExport = async () => {
+    setShowDateRangeModal(false);
     try {
       const params = new URLSearchParams();
       params.set('format', 'excel');
       params.set('mode', 'history');
-      params.set('startDate', dateRange.startDate);
-      params.set('endDate', dateRange.endDate);
+      params.set('startDate', exportStartDate);
+      params.set('endDate', exportEndDate);
       if (typeFilter) params.set('type', typeFilter);
       if (routerFilter) params.set('routerId', routerFilter);
       const res = await fetch(`/api/sessions/export?${params}`);
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `Sessions-History-${dateRange.startDate}-${dateRange.endDate}.xlsx`;
+      const a = document.createElement('a'); a.href = url; a.download = `Sessions-History-${exportStartDate}-${exportEndDate}.xlsx`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
-    } catch (error) { console.error('Export error:', error); await Swal.fire('Error', t('sessions.exportFailed'), 'error'); }
+    } catch (error) { console.error('Export error:', error); addToast({ type: 'error', title: 'Error', description: t('sessions.exportFailed') }); }
   };
 
   const handleExportPDF = async () => {
@@ -213,7 +225,7 @@ export default function SessionsPage() {
         }
         doc.save(`Sessions-Active-${new Date().toISOString().split('T')[0]}.pdf`);
       }
-    } catch (error) { console.error('PDF error:', error); await Swal.fire('Error', t('sessions.pdfExportFailed'), 'error'); }
+    } catch (error) { console.error('PDF error:', error); addToast({ type: 'error', title: 'Error', description: t('sessions.pdfExportFailed') }); }
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -235,18 +247,13 @@ export default function SessionsPage() {
   };
 
   const handleDisconnect = async (sessionIds: string[]) => {
-    const result = await Swal.fire({
+    if (!await confirm({
       title: t('sessions.disconnect') + '?',
-      text: `${t('sessions.disconnect')} ${sessionIds.length} ${t('sessions.title').toLowerCase()}?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#DC2626',
-      cancelButtonColor: '#6B7280',
-      confirmButtonText: t('sessions.disconnect'),
-      cancelButtonText: t('common.cancel')
-    });
-
-    if (!result.isConfirmed) return;
+      message: `${t('sessions.disconnect')} ${sessionIds.length} ${t('sessions.title').toLowerCase()}?`,
+      confirmText: t('sessions.disconnect'),
+      cancelText: t('common.cancel'),
+      variant: 'danger',
+    })) return;
 
     setDisconnecting(true);
     try {
@@ -259,19 +266,14 @@ export default function SessionsPage() {
       const data = await res.json();
       
       if (data.success) {
-        await Swal.fire({
-          title: t('notifications.success'),
-          html: `${t('sessions.disconnect')}: <strong>${data.summary.successful}</strong>`,
-          icon: 'success',
-          confirmButtonColor: '#0d9488'
-        });
+        addToast({ type: 'success', title: t('notifications.success'), description: `${t('sessions.disconnect')}: ${data.summary.successful}` });
         setSelectedSessions(new Set());
         await fetchSessions();
       } else {
-        await Swal.fire(t('notifications.error'), t('notifications.failed'), 'error');
+        addToast({ type: 'error', title: t('notifications.error'), description: t('notifications.failed') });
       }
     } catch (error) {
-      await Swal.fire(t('notifications.error'), t('notifications.failed'), 'error');
+      addToast({ type: 'error', title: t('notifications.error'), description: t('notifications.failed') });
     } finally {
       setDisconnecting(false);
     }
@@ -284,7 +286,7 @@ export default function SessionsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -295,7 +297,33 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <>
+    {showDateRangeModal && createPortal(
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowDateRangeModal(false)}>
+        <div className="bg-[#1e1b2e] border border-[#bc13fe]/30 rounded-lg w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between p-4 border-b border-[#bc13fe]/20">
+            <h2 className="text-base font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent">{t('sessions.exportHistory')}</h2>
+            <button onClick={() => setShowDateRangeModal(false)} className="text-muted-foreground hover:text-foreground text-xl">&times;</button>
+          </div>
+          <div className="p-4 space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">{t('time.from')}</label>
+              <input type="date" value={exportStartDate} onChange={(e) => setExportStartDate(e.target.value)} className="w-full px-3 py-2 border border-[#bc13fe]/30 rounded bg-[#1a0f35] text-gray-200 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">{t('time.to')}</label>
+              <input type="date" value={exportEndDate} onChange={(e) => setExportEndDate(e.target.value)} className="w-full px-3 py-2 border border-[#bc13fe]/30 rounded bg-[#1a0f35] text-gray-200 text-sm" />
+            </div>
+          </div>
+          <div className="flex gap-2 p-4 border-t border-[#bc13fe]/20">
+            <button onClick={() => setShowDateRangeModal(false)} className="flex-1 px-4 py-2 text-sm border border-gray-600 rounded text-muted-foreground hover:text-foreground">{t('common.cancel')}</button>
+            <button onClick={handlePerformHistoryExport} className="flex-1 px-4 py-2 text-sm font-bold bg-[#00f7ff] text-[#1a0f35] rounded">{t('common.export')}</button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    <div className="bg-background relative overflow-hidden">
       {/* Neon Cyberpunk Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
@@ -308,11 +336,11 @@ export default function SessionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
             <Activity className="w-6 h-6 text-[#00f7ff]" />
             {t('sessions.title')}
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('sessions.subtitle')}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('sessions.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -349,25 +377,25 @@ export default function SessionsPage() {
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('sessions.active')}</div>
-            <div className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.total}</div>
+            <div className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.total}</div>
           </div>
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="text-xs text-[#00f7ff] uppercase tracking-wide flex items-center gap-1">
               <Wifi className="w-4 h-4" /> PPPoE
             </div>
-            <div className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.pppoe}</div>
+            <div className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.pppoe}</div>
           </div>
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="text-xs text-[#00f7ff] uppercase tracking-wide flex items-center gap-1">
               <WifiOff className="w-4 h-4" /> Hotspot
             </div>
-            <div className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.hotspot}</div>
+            <div className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.hotspot}</div>
           </div>
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('dashboard.bandwidth')}</div>
-            <div className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.totalBandwidthFormatted}</div>
+            <div className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.totalBandwidthFormatted}</div>
           </div>
         </div>
       )}
@@ -524,7 +552,7 @@ export default function SessionsPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t('sessions.duration')}:</span>
-                    <span className="font-medium text-primary dark:text-primary">{session.durationFormatted}</span>
+                    <span className="font-medium text-primary dark:text-primary">{formatDuration(liveDuration(session.startTime))}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t('sessions.uploadDownload')}:</span>
@@ -618,7 +646,7 @@ export default function SessionsPage() {
                       {formatDateTime(session.lastUpdate)}
                     </td>
                     <td className="px-2 py-2 text-[10px] font-medium text-primary dark:text-primary">
-                      {session.durationFormatted}
+                      {formatDuration(liveDuration(session.startTime))}
                     </td>
                     <td className="px-2 py-2 text-[10px] text-success hidden lg:table-cell">{session.uploadFormatted}</td>
                     <td className="px-2 py-2 text-[10px] text-accent hidden lg:table-cell">{session.downloadFormatted}</td>
@@ -708,5 +736,6 @@ export default function SessionsPage() {
       </div>
       </div>
     </div>
+    </>
   );
 }

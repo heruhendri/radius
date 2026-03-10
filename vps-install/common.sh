@@ -1,8 +1,9 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ============================================================================
-# AIBILL RADIUS VPS Installer - Common Functions
+# SALFANET RADIUS VPS Installer - Common Functions
 # ============================================================================
 # Shared utilities, colors, logging, and configuration
+# Supports: Public VPS | Proxmox LXC | Proxmox VM | Bare Metal
 # ============================================================================
 
 # Colors for output
@@ -25,8 +26,17 @@ export DB_NAME="salfanet_radius"
 export DB_USER="salfanet_user"
 export DB_PASSWORD="salfanetradius123"
 export DB_ROOT_PASSWORD="root123"
-export INSTALL_LOG="/var/log/aibill-vps-install.log"
+export INSTALL_LOG="/var/log/salfanet-vps-install.log"
 export INSTALL_INFO_FILE="${APP_DIR}/INSTALLATION_INFO.txt"
+
+# Environment type — akan di-set oleh detect_environment() atau pilihan user
+# Nilai: vps | lxc | vm | bare
+export DEPLOY_ENV="${DEPLOY_ENV:-}"
+export DEPLOY_ENV_LABEL=""
+export IS_CONTAINER=false
+export HAS_SYSTEMD=true
+export HAS_UFW=true
+export SKIP_UFW=false
 
 # ============================================================================
 # LOGGING FUNCTIONS
@@ -68,6 +78,141 @@ export -f print_error
 export -f print_info
 export -f print_warning
 export -f print_step
+
+# ============================================================================
+# ENVIRONMENT DETECTION
+# ============================================================================
+
+# Deteksi otomatis apakah berjalan di LXC container
+is_proxmox_lxc() {
+    # Cek /proc/1/environ untuk container flag
+    if [ -f /proc/1/environ ] && grep -q "container=lxc" /proc/1/environ 2>/dev/null; then
+        return 0
+    fi
+    # Cek systemd-detect-virt
+    if command -v systemd-detect-virt &>/dev/null; then
+        local virt
+        virt=$(systemd-detect-virt 2>/dev/null)
+        if [[ "$virt" == "lxc" ]] || [[ "$virt" == "lxc-libvirt" ]]; then
+            return 0
+        fi
+    fi
+    # Cek /proc/vz atau /proc/bc (OpenVZ/LXC)
+    if [ -f /.dockerenv ] || [ -f /run/.containerenv ]; then
+        return 0
+    fi
+    # Cek cgroup
+    if grep -q "lxc" /proc/1/cgroup 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+# Deteksi apakah berjalan di VM (KVM/QEMU/VMware/VirtualBox)
+is_virtual_machine() {
+    if command -v systemd-detect-virt &>/dev/null; then
+        local virt
+        virt=$(systemd-detect-virt 2>/dev/null)
+        if [[ "$virt" =~ ^(kvm|qemu|vmware|virtualbox|xen|hyperv|oracle)$ ]]; then
+            return 0
+        fi
+    fi
+    # Cek DMI
+    if [ -f /sys/class/dmi/id/product_name ]; then
+        local prod
+        prod=$(cat /sys/class/dmi/id/product_name 2>/dev/null | tr '[:upper:]' '[:lower:]')
+        if [[ "$prod" =~ (kvm|qemu|vmware|virtualbox|virtual) ]]; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Cek apakah systemd berfungsi normal
+check_systemd() {
+    if ! command -v systemctl &>/dev/null; then
+        export HAS_SYSTEMD=false
+        return 1
+    fi
+    if ! systemctl list-units &>/dev/null 2>&1; then
+        export HAS_SYSTEMD=false
+        return 1
+    fi
+    export HAS_SYSTEMD=true
+    return 0
+}
+
+# Deteksi environment secara otomatis
+detect_environment() {
+    if [ -n "$DEPLOY_ENV" ]; then
+        # Sudah di-set manual, validasi saja
+        apply_environment_settings
+        return 0
+    fi
+
+    print_info "Mendeteksi environment..."
+
+    if is_proxmox_lxc; then
+        export DEPLOY_ENV="lxc"
+    elif is_virtual_machine; then
+        export DEPLOY_ENV="vm"
+    else
+        # Cek apakah ada public IP
+        local pub_ip
+        pub_ip=$(curl -s --connect-timeout 3 https://api.ipify.org 2>/dev/null || echo "")
+        if [[ "$pub_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && \
+           [[ ! "$pub_ip" =~ ^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.) ]]; then
+            export DEPLOY_ENV="vps"
+        else
+            export DEPLOY_ENV="bare"
+        fi
+    fi
+
+    apply_environment_settings
+}
+
+# Apply settings berdasarkan DEPLOY_ENV
+apply_environment_settings() {
+    case "$DEPLOY_ENV" in
+        lxc)
+            export DEPLOY_ENV_LABEL="Proxmox LXC Container"
+            export IS_CONTAINER=true
+            export SKIP_UFW=true        # UFW tidak support di LXC unprivileged
+            check_systemd || true       # LXC bisa jalan tanpa full systemd
+            ;;
+        vm)
+            export DEPLOY_ENV_LABEL="Proxmox VM / Local VM"
+            export IS_CONTAINER=false
+            export SKIP_UFW=false
+            export HAS_SYSTEMD=true
+            ;;
+        vps)
+            export DEPLOY_ENV_LABEL="Public VPS / Cloud Server"
+            export IS_CONTAINER=false
+            export SKIP_UFW=false
+            export HAS_SYSTEMD=true
+            ;;
+        bare)
+            export DEPLOY_ENV_LABEL="Bare Metal / Local Server"
+            export IS_CONTAINER=false
+            export SKIP_UFW=false
+            export HAS_SYSTEMD=true
+            ;;
+        *)
+            export DEPLOY_ENV="vps"
+            export DEPLOY_ENV_LABEL="Public VPS / Cloud Server"
+            export IS_CONTAINER=false
+            export SKIP_UFW=false
+            export HAS_SYSTEMD=true
+            ;;
+    esac
+}
+
+export -f is_proxmox_lxc
+export -f is_virtual_machine
+export -f check_systemd
+export -f detect_environment
+export -f apply_environment_settings
 
 # ============================================================================
 # IP ADDRESS DETECTION
@@ -132,11 +277,11 @@ export -f check_root
 
 check_directory() {
     local CURRENT_DIR=$(pwd)
-    if [[ "$CURRENT_DIR" != *"salfanet-radius-main"* ]] && [[ "$CURRENT_DIR" != *"AIBILL-RADIUS-main"* ]]; then
+    if [[ "$CURRENT_DIR" != *"salfanet-radius"* ]] && [[ "$CURRENT_DIR" != *"SALFANET-RADIUS-main"* ]]; then
         print_error "Please run this script from the source directory"
         echo "   Current directory: $CURRENT_DIR"
         echo ""
-        echo "   Expected: /root/salfanet-radius-main or /root/AIBILL-RADIUS-main"
+        echo "   Expected: /root/salfanet-radius or /root/SALFANET-RADIUS-main"
         exit 1
     fi
 }
@@ -255,8 +400,15 @@ print_banner() {
     clear
     echo ""
     echo -e "${CYAN}=============================================${NC}"
-    echo -e "${CYAN}  AIBILL RADIUS - VPS Installation Script${NC}"
+    echo -e "${CYAN}  SALFANET RADIUS - Installer v2.10.9${NC}"
+    echo -e "${CYAN}  Supports: Public VPS | Proxmox LXC/VM${NC}"
     echo -e "${CYAN}=============================================${NC}"
+    if [ -n "$DEPLOY_ENV_LABEL" ]; then
+        echo -e "  Environment: ${GREEN}${DEPLOY_ENV_LABEL}${NC}"
+        if [ "$SKIP_UFW" = "true" ]; then
+            echo -e "  ${YELLOW}[!] UFW Firewall: DILEWATI (tidak support di LXC)${NC}"
+        fi
+    fi
     echo ""
 }
 
@@ -266,24 +418,31 @@ show_installation_info() {
     local DETECTED_IP="$1"
     local IP_TYPE="$2"
     
-    echo -e "  Detected IP: ${CYAN}${DETECTED_IP}${NC} (${IP_TYPE})"
+    echo -e "  Environment : ${CYAN}${DEPLOY_ENV_LABEL:-Public VPS}${NC}"
+    echo -e "  Detected IP : ${CYAN}${DETECTED_IP}${NC} (${IP_TYPE})"
     echo ""
     echo "  Directory Structure:"
     echo "    Source Code: $(pwd)"
     echo "    Application: ${APP_DIR}"
     echo "    Logs: ${APP_DIR}/logs"
     echo ""
-    echo "  Estimated time: 20-25 minutes"
+    echo "  Estimasi waktu: 20-35 menit"
     echo "  Steps:"
-    echo "    1. System Update & Dependencies (2 min)"
-    echo "    2. Install Node.js ${NODE_VERSION} (2 min)"
-    echo "    3. Install & Configure MySQL (2 min)"
-    echo "    4. Setup Application & Database (10 min)"
-    echo "    5. Install & Configure FreeRADIUS (2 min)"
-    echo "    6. Install PM2, Nginx, Configs (2 min)"
-    echo "    7. Build & Start Application (5-10 min)"
+    echo "    1. System Update & Dependencies    (2-3 menit)"
+    echo "    2. Install Node.js ${NODE_VERSION} LTS             (2 menit)"
+    echo "    3. Install & Configure MySQL       (2 menit)"
+    echo "    4. Setup Application & Database    (10 menit)"
+    echo "    5. Install & Configure FreeRADIUS  (2 menit)"
+    echo "    6. Configure Nginx Reverse Proxy   (1 menit)"
+    echo "    7. Build & Start App (PM2)         (5-10 menit)"
+    echo "    8. [Opsional] Build Customer APK   (20-40 menit)"
+    if [ "${SKIP_UFW:-false}" = "true" ]; then
+        echo ""
+        echo -e "  ${YELLOW}[!] UFW firewall dilewati (Proxmox LXC).${NC}"
+        echo -e "  ${YELLOW}    Konfigurasi firewall di Proxmox host.${NC}"
+    fi
     echo ""
-    echo -e "${YELLOW}[!] IMPORTANT: Do not interrupt this process!${NC}"
+    echo -e "${YELLOW}[!] PENTING: Jangan hentikan proses ini!${NC}"
     echo ""
 }
 
@@ -299,7 +458,11 @@ initialize_user_selection() {
     # Detect current login user (not root)
     local CURRENT_USER=$(who am i | awk '{print $1}')
     if [ -z "$CURRENT_USER" ] || [ "$CURRENT_USER" = "root" ]; then
-        CURRENT_USER=$(logname 2>/dev/null || echo "ubuntu")
+        CURRENT_USER=$(logname 2>/dev/null || whoami 2>/dev/null || echo "root")
+        # If logname returned root or empty (non-interactive SSH), keep root
+        if [ -z "$CURRENT_USER" ]; then
+            CURRENT_USER="root"
+        fi
     fi
     
     echo -e "${CYAN}Application User Options:${NC}"

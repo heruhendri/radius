@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { randomBytes, randomUUID } from 'crypto';
 
 function generatePaymentToken(): string {
@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
     fs.appendFileSync(logPath, `[${new Date().toISOString()}] User email: ${user.email}\n`);
     if (user.email) {
       try {
-        const { EmailService } = await import('@/lib/email');
+        const { EmailService } = await import('@/server/services/notifications/email.service');
         const emailSettings = await EmailService.getSettings();
 
         fs.appendFileSync(logPath, `[${new Date().toISOString()}] Email settings enabled: ${emailSettings?.enabled}\n`);

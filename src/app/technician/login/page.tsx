@@ -15,6 +15,7 @@ export default function TechnicianLoginPage() {
   const [error, setError] = useState('');
   const [companyName, setCompanyName] = useState('AI-BILL RADIUS');
   const [footerText, setFooterText] = useState('Powered by AI-BILL RADIUS');
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
 
   // Fetch company name on mount
   useEffect(() => {
@@ -23,6 +24,9 @@ export default function TechnicianLoginPage() {
       .then(data => {
         if (data.company?.name) {
           setCompanyName(data.company.name);
+        }
+        if (data.company?.logo) {
+          setCompanyLogo(data.company.logo);
         }
         if (data.company?.footerTechnician) {
           setFooterText(data.company.footerTechnician);
@@ -123,12 +127,22 @@ export default function TechnicianLoginPage() {
       <div className="w-full max-w-md relative z-10">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-2xl mb-5 shadow-[0_0_40px_rgba(188,19,254,0.5)]">
-            <Wrench className="h-10 w-10 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+          <div className="flex items-center justify-center gap-3 mb-3">
+            {companyLogo ? (
+              <div className="inline-flex items-center justify-center rounded-xl p-0.5 flex-shrink-0 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] shadow-[0_0_30px_rgba(188,19,254,0.5)]">
+                <div className="rounded-[10px] bg-white px-3 py-2">
+                  <img src={companyLogo} alt={companyName} className="max-h-10 max-w-[100px] w-auto h-auto object-contain" />
+                </div>
+              </div>
+            ) : (
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-xl flex-shrink-0 shadow-[0_0_30px_rgba(188,19,254,0.5)]">
+                <Wrench className="h-6 w-6 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+              </div>
+            )}
+            <h1 className="text-xl sm:text-2xl font-bold leading-tight text-left text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] drop-shadow-[0_0_20px_rgba(0,247,255,0.5)] max-w-[200px]">
+              {t('technician.login')}
+            </h1>
           </div>
-          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] mb-3 drop-shadow-[0_0_20px_rgba(0,247,255,0.5)]">
-            {t('technician.login')}
-          </h1>
           <p className="text-sm text-[#e0d0ff]/70">
             {step === 'phone'
               ? t('technician.loginDesc')

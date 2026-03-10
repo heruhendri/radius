@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, Prisma } from '@prisma/client';
-import { toWIB, nowWIB } from '@/lib/timezone';
-
-const prisma = new PrismaClient();
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
+import { toWIB, nowWIB, WIB_TIMEZONE } from '@/lib/timezone';
+import { formatInTimeZone } from 'date-fns-tz';
+import { prisma } from '@/server/db/client';
 
 // GET - Get agent dashboard data
 export async function GET(request: NextRequest) {
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     // Get agent and update lastLogin
     const agent = await prisma.agent.update({
       where: { id: agentId },
-      data: { lastLogin: new Date() },
+      data: { lastLogin: nowWIB() },
     });
 
     if (!agent) {
@@ -79,20 +79,20 @@ export async function GET(request: NextRequest) {
     // Calculate statistics from all vouchers (not paginated)
     // Use WIB timezone for month calculation (UTC stored in DB)
     const now = nowWIB();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const currentMonth = now.getUTCMonth();
+    const currentYear = now.getUTCFullYear();
 
     // Calculate voucher statistics based on status
     const soldVouchers = allVouchersForStats.filter((v) => v.status === 'SOLD' || v.status === 'ACTIVE' || v.status === 'EXPIRED');
     const usedVouchers = allVouchersForStats.filter((v) => v.status === 'ACTIVE' || v.status === 'EXPIRED');
     
-    // Current month sold vouchers - Convert UTC to WIB before comparison
+    // Current month sold vouchers - Compare using UTC methods (WIB-as-UTC)
     const currentMonthSold = soldVouchers.filter((v) => {
       const usedDate = v.firstLoginAt ? toWIB(v.firstLoginAt) : null;
       if (!usedDate) return false;
       return (
-        usedDate.getMonth() === currentMonth &&
-        usedDate.getFullYear() === currentYear
+        usedDate.getUTCMonth() === currentMonth &&
+        usedDate.getUTCFullYear() === currentYear
       );
     });
     
@@ -104,9 +104,9 @@ export async function GET(request: NextRequest) {
     const currentMonthCommission = currentMonthSold.reduce((sum, v) => sum + (v.profile?.resellerFee || 0), 0);
     const allTimeCommission = soldVouchers.reduce((sum, v) => sum + (v.profile?.resellerFee || 0), 0);
 
-    // Calculate today's sales - Compare date only (ignore time)
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    // Calculate today's sales - Compare date only (WIB-as-UTC)
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
     
     const todaySold = soldVouchers.filter((v) => {
       const usedDate = v.firstLoginAt ? toWIB(v.firstLoginAt) : null;
@@ -164,6 +164,19 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Parse speed string (e.g. "10M/5M") to downloadSpeed / uploadSpeed numbers
+    const parseSpeed = (speed: string | null) => {
+      if (!speed) return { downloadSpeed: 0, uploadSpeed: 0 };
+      const part = speed.split(' ')[0]; // take first segment before space
+      const [dl, ul] = part.split('/');
+      const parse = (s: string | undefined) => {
+        if (!s) return 0;
+        const n = parseInt(s.replace(/[^0-9]/g, '')) || 0;
+        return s.toLowerCase().includes('k') ? Math.ceil(n / 1000) : n;
+      };
+      return { downloadSpeed: parse(dl), uploadSpeed: parse(ul) };
+    };
+
     return NextResponse.json({
       agent: {
         id: agent.id,
@@ -176,7 +189,7 @@ export async function GET(request: NextRequest) {
         voucherStock: stats.waiting,
       },
       stats,
-      profiles,
+      profiles: profiles.map((p) => ({ ...p, ...parseSpeed(p.speed) })),
       deposits: deposits.map((d) => ({
         id: d.id,
         amount: d.amount,
@@ -200,9 +213,9 @@ export async function GET(request: NextRequest) {
         sellingPrice: v.profile?.sellingPrice || 0,
         resellerFee: v.profile?.resellerFee || 0,
         routerName: v.router?.name || null,
-        firstLoginAt: v.firstLoginAt,
-        expiresAt: v.expiresAt,
-        createdAt: v.createdAt,
+        firstLoginAt: v.firstLoginAt ? v.firstLoginAt.toISOString().replace('Z', '') : null,
+        expiresAt: v.expiresAt ? v.expiresAt.toISOString().replace('Z', '') : null,
+        createdAt: formatInTimeZone(v.createdAt, WIB_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss.SSS"),
       })),
       pagination: {
         page,

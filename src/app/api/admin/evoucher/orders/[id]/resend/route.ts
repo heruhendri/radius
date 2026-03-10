@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { sendVoucherPurchaseSuccess } from '@/lib/whatsapp-notifications';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { sendVoucherPurchaseSuccess } from '@/server/services/notifications/whatsapp-templates.service';
 
 export async function POST(
   request: NextRequest,

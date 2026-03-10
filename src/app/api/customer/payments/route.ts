@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 
 /**
  * Customer Payments API
@@ -48,54 +48,152 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    // Get payments (manual payments created by customer)
-    const payments = await prisma.manualPayment.findMany({
-      where: { 
-        userId: user.id,
-      },
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit,
-      select: {
-        id: true,
-        invoiceId: true,
-        amount: true,
-        bankName: true,
-        accountName: true,
-        status: true,
-        notes: true,
-        receiptImage: true,
-        createdAt: true,
-        approvedAt: true,
-        invoice: {
-          select: {
-            invoiceNumber: true,
-            dueDate: true,
+    // Fetch from invoice table (covers ALL payment methods: gateway, admin mark-paid, manual transfer)
+    // Show: PAID invoices + any invoice that has a manualPayment (pending/rejected transfers)
+    const [invoices, total] = await Promise.all([
+      prisma.invoice.findMany({
+        where: {
+          userId: user.id,
+          OR: [
+            { status: 'PAID' },
+            { manualPayments: { some: {} } },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          invoiceNumber: true,
+          amount: true,
+          status: true,
+          dueDate: true,
+          paidAt: true,
+          createdAt: true,
+          invoiceType: true,
+          user: {
+            select: {
+              profile: { select: { name: true, price: true } },
+            },
+          },
+          // Gateway payments
+          payments: {
+            orderBy: { paidAt: 'desc' },
+            take: 1,
+            select: {
+              id: true,
+              method: true,
+              status: true,
+              paidAt: true,
+            },
+          },
+          manualPayments: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: {
+              id: true,
+              bankName: true,
+              accountNumber: true,
+              accountName: true,
+              status: true,
+              notes: true,
+              receiptImage: true,
+              createdAt: true,
+              approvedAt: true,
+              rejectionReason: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.invoice.count({
+        where: {
+          userId: user.id,
+          OR: [
+            { status: 'PAID' },
+            { manualPayments: { some: {} } },
+          ],
+        },
+      }),
+    ]);
 
-    const total = await prisma.manualPayment.count({
-      where: { userId: user.id },
+    const mapped = invoices.map(inv => {
+      const manual = inv.manualPayments[0] ?? null;
+      const gateway = inv.payments[0] ?? null;
+      const isPaid = inv.status === 'PAID';
+
+      // Determine exact payment source (used for display label)
+      // gateway: paid via payment gateway (Midtrans/Xendit/etc)
+      // manual: paid via manual transfer approved by admin
+      // admin: mark-paid directly by admin (no gateway/manual record)
+      let paymentSource: string;
+      let methodLabel: string;
+      let bankNameDisplay: string | null = null;
+
+      if (gateway && isPaid) {
+        paymentSource = 'gateway';
+        methodLabel = gateway.method
+          ? gateway.method.charAt(0).toUpperCase() + gateway.method.slice(1).replace(/_/g, ' ')
+          : 'Payment Gateway';
+      } else if (manual && (manual.status === 'APPROVED' || isPaid)) {
+        paymentSource = 'manual';
+        methodLabel = manual.bankName || 'Transfer Bank';
+        bankNameDisplay = manual.bankName || null;
+      } else if (manual) {
+        // Still pending/rejected
+        paymentSource = 'manual';
+        methodLabel = manual.bankName || 'Transfer Bank';
+        bankNameDisplay = manual.bankName || null;
+      } else if (isPaid) {
+        paymentSource = 'admin';
+        methodLabel = 'Dikonfirmasi Admin';
+      } else {
+        paymentSource = 'unknown';
+        methodLabel = 'Transfer Bank';
+      }
+
+      // Determine display status
+      let status: string;
+      if (isPaid && (paymentSource === 'gateway' || paymentSource === 'admin')) {
+        status = 'paid';
+      } else if (isPaid && manual?.status === 'APPROVED') {
+        status = 'approved';
+      } else if (manual) {
+        status = manual.status.toLowerCase();
+      } else {
+        status = 'pending';
+      }
+
+      return {
+        id: manual?.id || inv.id,
+        invoiceId: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        amount: Number(inv.amount),
+        method: methodLabel,
+        paymentSource,
+        bankName: bankNameDisplay,
+        accountNumber: manual?.accountNumber || null,
+        accountName: manual?.accountName || null,
+        status,
+        invoiceStatus: inv.status,
+        invoicePaidAt: inv.paidAt?.toISOString() || null,
+        invoiceDueDate: inv.dueDate?.toISOString() || null,
+        invoiceType: inv.invoiceType || null,
+        packageName: inv.user?.profile?.name || null,
+        notes: manual?.notes || null,
+        proofUrl: manual?.receiptImage || null,
+        createdAt: (manual?.createdAt || inv.createdAt).toISOString(),
+        confirmedAt: manual?.approvedAt?.toISOString() || inv.paidAt?.toISOString() || null,
+        rejectedAt: (manual?.status === 'REJECTED' && manual?.approvedAt)
+          ? manual.approvedAt.toISOString()
+          : null,
+        rejectionReason: manual?.rejectionReason || null,
+      };
     });
 
     return NextResponse.json({
       success: true,
       data: {
-        payments: payments.map(p => ({
-          id: p.id,
-          invoiceId: p.invoiceId,
-          invoiceNumber: p.invoice?.invoiceNumber || 'N/A',
-          amount: Number(p.amount),
-          method: p.bankName || 'bank_transfer',
-          status: p.status.toLowerCase(),
-          notes: p.notes,
-          proofUrl: p.receiptImage,
-          createdAt: p.createdAt.toISOString(),
-          confirmedAt: p.approvedAt?.toISOString() || null,
-          rejectedAt: null,
-        })),
+        payments: mapped,
         pagination: {
           page,
           limit,
@@ -124,11 +222,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { invoiceId, amount, method, notes } = await request.json();
+    const { invoiceId, amount, method, accountNumber, accountName, notes } = await request.json();
 
     if (!invoiceId || !amount || !method) {
       return NextResponse.json(
         { success: false, message: 'Invoice ID, amount, dan metode pembayaran harus diisi' },
+        { status: 400 }
+      );
+    }
+
+    if (!accountName) {
+      return NextResponse.json(
+        { success: false, message: 'Nama lengkap pengirim harus diisi' },
         { status: 400 }
       );
     }
@@ -155,7 +260,8 @@ export async function POST(request: NextRequest) {
         invoiceId,
         amount: parseFloat(amount),
         bankName: method || 'Bank Transfer',
-        accountName: user.name || 'Customer',
+        accountNumber: accountNumber || null,
+        accountName: accountName || user.name || 'Customer',
         paymentDate: new Date(),
         status: 'PENDING',
         notes: notes || null,
@@ -165,6 +271,8 @@ export async function POST(request: NextRequest) {
         invoiceId: true,
         amount: true,
         bankName: true,
+        accountNumber: true,
+        accountName: true,
         status: true,
         notes: true,
         createdAt: true,

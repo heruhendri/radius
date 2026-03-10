@@ -214,7 +214,7 @@ export default function AdminTicketDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -227,7 +227,7 @@ export default function AdminTicketDetailPage() {
   if (!ticket) {
     return (
       <div className="p-6 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-lg sm:text-2xl font-bold text-foreground mb-2">
           {t('ticket.ticketNotFound')}
         </h2>
         <Link href="/admin/tickets" className="text-primary hover:text-primary/80">
@@ -238,7 +238,7 @@ export default function AdminTicketDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -248,12 +248,12 @@ export default function AdminTicketDetailPage() {
       <div className="relative z-10 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin/tickets" className="text-gray-600 hover:text-gray-900">
+        <Link href="/admin/tickets" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft size={24} />
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-lg font-mono text-gray-500">#{ticket.ticketNumber}</span>
+            <span className="text-lg font-mono text-muted-foreground">#{ticket.ticketNumber}</span>
             
             {/* Status - Editable */}
             {editingStatus ? (
@@ -261,7 +261,7 @@ export default function AdminTicketDetailPage() {
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value as TicketStatus)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                  className="border border-border rounded px-2 py-1 text-sm bg-background text-foreground"
                 >
                   <option value="OPEN">{t('ticket.status_OPEN')}</option>
                   <option value="IN_PROGRESS">{t('ticket.status_IN_PROGRESS')}</option>
@@ -292,7 +292,7 @@ export default function AdminTicketDetailPage() {
                 <select
                   value={selectedPriority}
                   onChange={(e) => setSelectedPriority(e.target.value as TicketPriority)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                  className="border border-border rounded px-2 py-1 text-sm bg-background text-foreground"
                 >
                   <option value="LOW">{t('ticket.priority_LOW')}</option>
                   <option value="MEDIUM">{t('ticket.priority_MEDIUM')}</option>
@@ -318,14 +318,14 @@ export default function AdminTicketDetailPage() {
 
             {ticket.category && (
               <span
-                className="px-3 py-1 rounded-full text-xs font-medium text-white"
+                className="px-3 py-1 rounded-full text-xs font-medium text-foreground"
                 style={{ backgroundColor: ticket.category.color }}
               >
                 {ticket.category.name}
               </span>
             )}
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">{ticket.subject}</h1>
+          <h1 className="text-lg sm:text-2xl font-bold text-foreground">{ticket.subject}</h1>
         </div>
       </div>
 
@@ -333,32 +333,32 @@ export default function AdminTicketDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Ticket Info */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-3">
+          <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+            <h3 className="font-semibold text-foreground mb-3">
               {t('ticket.description')}
             </h3>
-            <p className="text-gray-700 whitespace-pre-wrap mb-4">
+            <p className="text-foreground/80 whitespace-pre-wrap mb-4">
               {ticket.description}
             </p>
-            <div className="border-t pt-4">
+            <div className="border-t border-border pt-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-600">{t('ticket.customer')}:</span>
-                  <p className="font-medium">{ticket.customerName}</p>
+                  <span className="text-muted-foreground">{t('ticket.customer')}:</span>
+                  <p className="font-medium text-foreground">{ticket.customerName}</p>
                 </div>
                 <div>
-                  <span className="text-gray-600">{t('ticket.customerPhone')}:</span>
-                  <p className="font-medium">{ticket.customerPhone}</p>
+                  <span className="text-muted-foreground">{t('ticket.customerPhone')}:</span>
+                  <p className="font-medium text-foreground">{ticket.customerPhone}</p>
                 </div>
                 {ticket.customerEmail && (
                   <div>
-                    <span className="text-gray-600">{t('ticket.customerEmail')}:</span>
-                    <p className="font-medium">{ticket.customerEmail}</p>
+                    <span className="text-muted-foreground">{t('ticket.customerEmail')}:</span>
+                    <p className="font-medium text-foreground">{ticket.customerEmail}</p>
                   </div>
                 )}
                 <div>
-                  <span className="text-gray-600">{t('ticket.created')}:</span>
-                  <p className="font-medium">
+                  <span className="text-muted-foreground">{t('ticket.created')}:</span>
+                  <p className="font-medium text-foreground">
                     {new Date(ticket.createdAt).toLocaleDateString('id-ID', {
                       day: 'numeric',
                       month: 'long',
@@ -374,38 +374,38 @@ export default function AdminTicketDetailPage() {
 
           {/* Messages */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-gray-900">{t('ticket.conversation')}</h3>
+            <h3 className="font-semibold text-foreground">{t('ticket.conversation')}</h3>
             {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={`rounded-lg shadow-sm border p-4 ${
                   msg.isInternal
-                    ? 'bg-yellow-50 border-yellow-200'
+                    ? 'bg-warning/10 border-warning/30'
                     : msg.senderType === 'SYSTEM'
-                    ? 'bg-gray-50 border-gray-200'
-                    : 'bg-white border-gray-200'
+                    ? 'bg-muted border-border'
+                    : 'bg-card border-border'
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      msg.isInternal ? 'bg-yellow-200' : 'bg-primary/10'
+                      msg.isInternal ? 'bg-warning/20' : 'bg-primary/10'
                     }`}>
-                      {msg.isInternal ? <Lock size={20} className="text-yellow-700" /> : <User size={20} className="text-primary" />}
+                      {msg.isInternal ? <Lock size={20} className="text-warning" /> : <User size={20} className="text-primary" />}
                     </div>
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="font-semibold text-gray-900">{msg.senderName}</span>
+                      <span className="font-semibold text-foreground">{msg.senderName}</span>
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${getSenderBadgeColor(msg.senderType)}`}>
                         {t(`ticket.senderType_${msg.senderType}`)}
                       </span>
                       {msg.isInternal && (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-200 text-yellow-800">
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-warning/20 text-warning">
                           {t('ticket.internal')}
                         </span>
                       )}
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Clock size={14} />
                         {new Date(msg.createdAt).toLocaleDateString('id-ID', {
                           day: 'numeric',
@@ -415,7 +415,7 @@ export default function AdminTicketDetailPage() {
                         })}
                       </div>
                     </div>
-                    <p className="text-gray-700 whitespace-pre-wrap">{msg.message}</p>
+                    <p className="text-foreground/80 whitespace-pre-wrap">{msg.message}</p>
                   </div>
                 </div>
               </div>
@@ -423,8 +423,8 @@ export default function AdminTicketDetailPage() {
           </div>
 
           {/* Reply Form */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">{t('ticket.addReply')}</h3>
+          <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+            <h3 className="font-semibold text-foreground mb-4">{t('ticket.addReply')}</h3>
             <form onSubmit={handleReply}>
               <div className="mb-4">
                 <label className="flex items-center gap-2 mb-3">
@@ -432,13 +432,13 @@ export default function AdminTicketDetailPage() {
                     type="checkbox"
                     checked={isInternal}
                     onChange={(e) => setIsInternal(e.target.checked)}
-                    className="rounded border-gray-300"
+                    className="rounded border-border"
                   />
-                  <Lock size={16} className="text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">
+                  <Lock size={16} className="text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">
                     {t('ticket.internalNote')}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     ({t('ticket.notVisibleToCustomer')})
                   </span>
                 </label>
@@ -446,7 +446,7 @@ export default function AdminTicketDetailPage() {
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   rows={4}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground placeholder:text-muted-foreground"
                   placeholder={isInternal ? t('ticket.internalNotePlaceholder') : t('ticket.replyPlaceholder')}
                   disabled={sending}
                 />
@@ -476,24 +476,24 @@ export default function AdminTicketDetailPage() {
 
         {/* Sidebar - Quick Actions */}
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-900 mb-4">{t('ticket.quickActions')}</h3>
+          <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+            <h3 className="font-semibold text-foreground mb-4">{t('ticket.quickActions')}</h3>
             <div className="space-y-3 text-sm">
               <div>
-                <span className="text-gray-600 block mb-1">{t('ticket.status')}:</span>
+                <span className="text-muted-foreground block mb-1">{t('ticket.status')}:</span>
                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
                   {t(`ticket.status_${ticket.status}`)}
                 </span>
               </div>
               <div>
-                <span className="text-gray-600 block mb-1">{t('ticket.priority')}:</span>
+                <span className="text-muted-foreground block mb-1">{t('ticket.priority')}:</span>
                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
                   {t(`ticket.priority_${ticket.priority}`)}
                 </span>
               </div>
               <div>
-                <span className="text-gray-600 block mb-1">{t('ticket.assigned')}:</span>
-                <span className="text-gray-900">
+                <span className="text-muted-foreground block mb-1">{t('ticket.assigned')}:</span>
+                <span className="text-foreground">
                   {ticket.assignedToId ? `${ticket.assignedToType} #${ticket.assignedToId}` : t('ticket.unassigned')}
                 </span>
               </div>

@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Smartphone, Lock, ArrowRight, Loader2, ChevronLeft, Wifi } from 'lucide-react';
+import { Shield, Smartphone, Lock, ArrowRight, Loader2, ChevronLeft, Wifi, Sun, Moon } from 'lucide-react';
 import { CyberCard } from '@/components/cyberpunk';
 import { CyberButton } from '@/components/cyberpunk';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function CustomerLoginPage() {
   const router = useRouter();
+  const { isDark, toggleTheme } = useTheme();
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [identifier, setIdentifier] = useState('');
   const [phone, setPhone] = useState(''); // Add phone state for OTP verification
@@ -16,16 +18,27 @@ export default function CustomerLoginPage() {
   const [error, setError] = useState('');
   const [expiresIn, setExpiresIn] = useState(5);
   const [companyName, setCompanyName] = useState('SALFANET RADIUS');
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [footerText, setFooterText] = useState('Powered by SALFANET RADIUS');
   const [otpSendFailed, setOtpSendFailed] = useState(false);
   const [userDataForBypass, setUserDataForBypass] = useState<any>(null);
 
   useEffect(() => {
+    // If already logged in as customer, redirect to customer portal
+    const existingToken = localStorage.getItem('customer_token');
+    if (existingToken) {
+      router.replace('/customer');
+      return;
+    }
+
     fetch('/api/public/company')
       .then(res => res.json())
       .then(data => {
         if (data.success && data.company.name) {
           setCompanyName(data.company.name);
+        }
+        if (data.success && data.company.logo) {
+          setCompanyLogo(data.company.logo);
         }
         if (data.success && data.company.footerCustomer) {
           setFooterText(data.company.footerCustomer);
@@ -34,7 +47,7 @@ export default function CustomerLoginPage() {
         }
       })
       .catch(err => console.error('Load company name error:', err));
-  }, []);
+  }, [router]);
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,36 +144,88 @@ export default function CustomerLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Cyberpunk Background Effects - Neon Purple Theme */}
+    <div className={`min-h-screen flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300 ${
+      isDark ? 'bg-[#1a0f35]' : 'bg-slate-100'
+    }`}>
+      {/* Cyberpunk Background Effects */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#bc13fe]/35 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#ff44cc]/25 rounded-full blur-[100px]" />
-        <div className="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] w-[60%] h-[60%] bg-[#00f7ff]/15 rounded-full blur-[150px]" />
-        {/* Grid pattern - Purple tint */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.1)_1px,transparent_1px)] bg-[size:50px_50px]" />
+        {isDark && (
+          <>
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#bc13fe]/35 rounded-full blur-[100px]" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#ff44cc]/25 rounded-full blur-[100px]" />
+            <div className="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] w-[60%] h-[60%] bg-[#00f7ff]/15 rounded-full blur-[150px]" />
+          </>
+        )}
+        {/* Grid pattern */}
+        <div className={`absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.1)_1px,transparent_1px)] bg-[size:50px_50px] ${
+          isDark ? 'opacity-100' : 'opacity-20'
+        }`} />
       </div>
+
+      {/* Theme toggle button */}
+      <button
+        onClick={toggleTheme}
+        className={`absolute top-4 right-4 z-20 p-2 rounded-xl border transition-all ${
+          isDark
+            ? 'border-[#bc13fe]/30 bg-[#bc13fe]/10 hover:bg-[#bc13fe]/20 text-[#bc13fe]'
+            : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-600'
+        }`}
+        title={isDark ? 'Mode Terang' : 'Mode Gelap'}
+      >
+        {isDark
+          ? <Sun className="w-4 h-4 text-yellow-400" />
+          : <Moon className="w-4 h-4 text-slate-500" />
+        }
+      </button>
 
       <div className="w-full max-w-md relative z-10">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-[#281441]/80 backdrop-blur-md border-2 border-[#bc13fe]/50 rounded-2xl shadow-[0_0_40px_rgba(188,19,254,0.5)] mb-6 group">
-            <Shield className="w-10 h-10 text-[#bc13fe] group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_15px_rgba(188,19,254,0.9)]" />
+          <div className="flex items-center justify-center gap-3 mb-3">
+            {companyLogo ? (
+              <div className={`inline-flex items-center justify-center bg-white p-2 border-2 rounded-xl shadow-[0_0_30px_rgba(188,19,254,0.5)] px-3 py-2 flex-shrink-0 ${
+                isDark ? 'border-[#bc13fe]/50' : 'border-purple-300'
+              }`}>
+                <img src={companyLogo} alt={companyName} className="max-h-10 max-w-[100px] w-auto h-auto object-contain" />
+              </div>
+            ) : (
+              <div className={`inline-flex items-center justify-center w-12 h-12 bg-white p-2 border-2 rounded-xl shadow-[0_0_30px_rgba(188,19,254,0.5)] flex-shrink-0 group ${
+                isDark ? 'border-[#bc13fe]/50' : 'border-purple-300'
+              }`}>
+                <Shield className="w-6 h-6 text-[#bc13fe] group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_15px_rgba(188,19,254,0.9)]" />
+              </div>
+            )}
+            <h1 className={`text-xl sm:text-2xl font-bold leading-tight text-left max-w-[200px] ${
+              isDark
+                ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] drop-shadow-[0_0_25px_rgba(188,19,254,0.6)]'
+                : 'text-slate-800'
+            }`}>
+              {companyName}
+            </h1>
           </div>
-          <h1 className="text-3xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] drop-shadow-[0_0_25px_rgba(188,19,254,0.6)]">
-            {companyName}
-          </h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-2 tracking-[0.3em] uppercase font-medium">
+          <p className={`text-sm tracking-[0.3em] uppercase font-medium ${
+            isDark ? 'text-[#e0d0ff]/80' : 'text-slate-500'
+          }`}>
             Secure Access Terminal
           </p>
         </div>
 
         {/* Login Form */}
-        <CyberCard className="p-8 bg-[#281441]/90 backdrop-blur-xl border-2 border-[#bc13fe]/30 shadow-[0_0_50px_rgba(188,19,254,0.2)]">
+        <CyberCard className={`p-8 backdrop-blur-xl border-2 shadow-[0_0_50px_rgba(188,19,254,0.2)] ${
+          isDark ? 'bg-[#281441]/90 border-[#bc13fe]/30' : 'bg-white border-purple-200'
+        }`}>
           {error && (
-            <div className="mb-6 p-4 bg-[#ff3366]/10 border border-[#ff3366]/50 rounded-lg shadow-[0_0_20px_rgba(255,51,102,0.3)]">
-              <p className="text-sm text-[#ff3366] font-medium flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#ff3366] animate-pulse" />
+            <div className={`mb-6 p-4 rounded-lg ${
+              isDark
+                ? 'bg-[#ff3366]/10 border border-[#ff3366]/50 shadow-[0_0_20px_rgba(255,51,102,0.3)]'
+                : 'bg-red-50 border border-red-200'
+            }`}>
+              <p className={`text-sm font-medium flex items-center gap-2 ${
+                isDark ? 'text-[#ff3366]' : 'text-red-600'
+              }`}>
+                <span className={`w-2 h-2 rounded-full animate-pulse ${
+                  isDark ? 'bg-[#ff3366]' : 'bg-red-500'
+                }`} />
                 {error}
               </p>
             </div>
@@ -169,7 +234,9 @@ export default function CustomerLoginPage() {
           {step === 'phone' ? (
             <form onSubmit={handleSendOTP} className="space-y-6">
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-bold text-[#00f7ff] mb-2 uppercase tracking-wider drop-shadow-[0_0_8px_rgba(0,247,255,0.6)]">
+                <label className={`flex items-center gap-2 text-sm font-bold mb-2 uppercase tracking-wider ${
+                  isDark ? 'text-[#00f7ff] drop-shadow-[0_0_8px_rgba(0,247,255,0.6)]' : 'text-purple-700'
+                }`}>
                   <Smartphone className="w-4 h-4" />
                   Identity / Phone
                 </label>
@@ -179,13 +246,17 @@ export default function CustomerLoginPage() {
                     required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    className="w-full px-4 py-3 text-sm bg-[#1f1040]/80 border-2 border-[#bc13fe]/30 rounded-lg text-white placeholder:text-[#e0d0ff]/50 focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/30 focus:shadow-[0_0_25px_rgba(188,19,254,0.4)] transition-all duration-300 outline-none"
+                    className={`w-full px-4 py-3 text-sm border-2 rounded-lg transition-all duration-300 outline-none ${
+                      isDark
+                        ? 'bg-[#1f1040]/80 border-[#bc13fe]/30 text-white placeholder:text-[#e0d0ff]/50 focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/30 focus:shadow-[0_0_25px_rgba(188,19,254,0.4)]'
+                        : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-200'
+                    }`}
                     placeholder="08123456789 or ID"
                     disabled={loading}
                   />
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#bc13fe]/10 to-[#ff44cc]/10 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300" />
+                  {isDark && <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#bc13fe]/10 to-[#ff44cc]/10 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300" />}
                 </div>
-                <p className="text-xs text-[#e0d0ff]/60">
+                <p className={`text-xs ${ isDark ? 'text-[#e0d0ff]/60' : 'text-slate-500' }`}>
                   Enter registered WhatsApp number or 8-digit Customer ID
                 </p>
               </div>
@@ -246,7 +317,9 @@ export default function CustomerLoginPage() {
           ) : (
             <form onSubmit={handleVerifyOTP} className="space-y-6">
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-bold text-[#00f7ff] mb-2 uppercase tracking-wider drop-shadow-[0_0_8px_rgba(0,247,255,0.6)]">
+                <label className={`flex items-center gap-2 text-sm font-bold mb-2 uppercase tracking-wider ${
+                  isDark ? 'text-[#00f7ff] drop-shadow-[0_0_8px_rgba(0,247,255,0.6)]' : 'text-purple-700'
+                }`}>
                   <Lock className="w-4 h-4" />
                   Security Code
                 </label>
@@ -255,14 +328,18 @@ export default function CustomerLoginPage() {
                   required
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').substring(0, 6))}
-                  className="w-full px-4 py-3 text-2xl text-center font-mono tracking-[0.5em] bg-[#1f1040]/80 border-2 border-[#bc13fe]/30 rounded-lg text-[#00f7ff] focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/30 focus:shadow-[0_0_30px_rgba(188,19,254,0.5)] transition-all duration-300 outline-none"
+                  className={`w-full px-4 py-3 text-2xl text-center font-mono tracking-[0.5em] border-2 rounded-lg transition-all duration-300 outline-none ${
+                    isDark
+                      ? 'bg-[#1f1040]/80 border-[#bc13fe]/30 text-[#00f7ff] focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/30 focus:shadow-[0_0_30px_rgba(188,19,254,0.5)]'
+                      : 'bg-slate-50 border-slate-200 text-purple-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-200'
+                  }`}
                   placeholder="000000"
                   maxLength={6}
                   disabled={loading}
                   autoFocus
                 />
-                <p className="text-xs text-[#e0d0ff]/60 text-center">
-                  Code sent to <strong className="text-[#00f7ff]">{identifier}</strong>
+                <p className={`text-xs text-center ${ isDark ? 'text-[#e0d0ff]/60' : 'text-slate-500' }`}>
+                  Code sent to <strong className={isDark ? 'text-[#00f7ff]' : 'text-purple-600'}>{identifier}</strong>
                   <br />
                   Expires in {expiresIn} minutes
                 </p>
@@ -312,8 +389,10 @@ export default function CustomerLoginPage() {
 
           {/* Register Buttons */}
           {step === 'phone' && (
-            <div className="mt-8 pt-6 border-t border-[#bc13fe]/20">
-              <p className="text-xs text-[#e0d0ff]/60 mb-4 text-center uppercase tracking-[0.2em] font-medium">
+              <div className={`mt-8 pt-6 border-t ${ isDark ? 'border-[#bc13fe]/20' : 'border-slate-200' }`}>
+                <p className={`text-xs mb-4 text-center uppercase tracking-[0.2em] font-medium ${
+                  isDark ? 'text-[#e0d0ff]/60' : 'text-slate-500'
+                }`}>
                 New Connection Request
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -351,8 +430,21 @@ export default function CustomerLoginPage() {
         </CyberCard>
 
         {/* Footer */}
-        <p className="text-center text-xs text-[#bc13fe]/40 mt-8 font-mono tracking-wider">
+        <p className={`text-center text-xs mt-8 font-mono tracking-wider ${
+          isDark ? 'text-[#bc13fe]/40' : 'text-slate-400'
+        }`}>
           {footerText}
+        </p>
+        {/* Admin access link */}
+        <p className="text-center mt-3">
+          <a
+            href="/admin/login"
+            className={`text-xs transition-colors font-mono tracking-wider ${
+              isDark ? 'text-[#e0d0ff]/30 hover:text-[#00f7ff]/70' : 'text-slate-400 hover:text-purple-600'
+            }`}
+          >
+            Admin? Login here →
+          </a>
         </p>
       </div>
     </div>

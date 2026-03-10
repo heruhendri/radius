@@ -1,17 +1,22 @@
-import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+﻿import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const company = await prisma.company.findFirst();
     
     if (!company) {
       // Return default if no company exists
       return NextResponse.json({
         name: 'SALFANET RADIUS',
-        email: 'admin@aibill.com',
+        email: 'admin@salfanet.com',
         phone: '+62 812-3456-7890',
         address: 'Jakarta, Indonesia',
         baseUrl: 'http://localhost:3000',
@@ -22,7 +27,6 @@ export async function GET() {
         footerAdmin: 'Powered by SALFANET RADIUS',
         footerCustomer: 'Powered by SALFANET RADIUS',
         footerTechnician: 'Powered by SALFANET RADIUS',
-        footerCoordinator: 'Powered by SALFANET RADIUS',
       });
     }
 
@@ -102,7 +106,7 @@ export async function POST(request: Request) {
     // If timezone changed, update configuration files
     if (data.timezone && data.timezone !== existingCompany?.timezone) {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
         const timezoneUpdateResponse = await fetch(`${baseUrl}/api/settings/timezone`, {
           method: 'POST',
           headers: {

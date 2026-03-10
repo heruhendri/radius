@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { generateTransactionId, generateCategoryId } from '@/lib/invoice-generator';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
+import { generateTransactionId, generateCategoryId } from '@/server/services/billing/invoice.service';
+import { redisDel, RedisKeys } from '@/server/cache/redis';
 
 export async function POST(
   request: NextRequest,
@@ -15,6 +16,21 @@ export async function POST(
     }
 
     const { id } = await context.params;
+
+    // Fetch user with profile data needed for RADIUS restoration
+    const userRecord = await prisma.pppoeUser.findUnique({
+      where: { id },
+      select: {
+        username: true,
+        password: true,
+        ipAddress: true,
+        profile: { select: { groupName: true } },
+      },
+    });
+
+    if (!userRecord) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
     // Get unpaid invoices for user
     const unpaidInvoices = await prisma.invoice.findMany({
@@ -79,10 +95,67 @@ export async function POST(
     }
 
     // Update user status to active
-    await prisma.pppoeUser.update({
+    const updatedUser = await prisma.pppoeUser.update({
       where: { id },
       data: { status: 'active' },
+      select: { username: true },
     });
+
+    // Invalidate Redis auth cache so RADIUS picks up restored status immediately
+    await redisDel(RedisKeys.radiusAuth(updatedUser.username));
+
+    // Restore RADIUS tables so the user reconnects with correct profile.
+    // Critical when user was isolated (radusergroup = 'isolir') — without this
+    // they would still get restricted isolir access even after paying.
+    if (userRecord.profile) {
+      try {
+        // Remove any old rejection/suspension markers
+        await prisma.radcheck.deleteMany({
+          where: { username: userRecord.username, attribute: 'Auth-Type' },
+        });
+        await prisma.radcheck.deleteMany({
+          where: { username: userRecord.username, attribute: 'NAS-IP-Address' },
+        });
+        await prisma.radreply.deleteMany({
+          where: { username: userRecord.username, attribute: 'Reply-Message' },
+        });
+
+        // Ensure password exists in radcheck
+        await prisma.$executeRaw`
+          INSERT INTO radcheck (username, attribute, op, value)
+          VALUES (${userRecord.username}, 'Cleartext-Password', ':=', ${userRecord.password})
+          ON DUPLICATE KEY UPDATE value = ${userRecord.password}
+        `;
+
+        // Restore original subscription group
+        await prisma.$executeRaw`
+          DELETE FROM radusergroup WHERE username = ${userRecord.username}
+        `;
+        await prisma.$executeRaw`
+          INSERT INTO radusergroup (username, groupname, priority)
+          VALUES (${userRecord.username}, ${userRecord.profile.groupName}, 1)
+        `;
+
+        // Restore static IP
+        await prisma.radreply.deleteMany({
+          where: { username: userRecord.username, attribute: 'Framed-IP-Address' },
+        });
+        if (userRecord.ipAddress) {
+          await prisma.$executeRaw`
+            INSERT INTO radreply (username, attribute, op, value)
+            VALUES (${userRecord.username}, 'Framed-IP-Address', ':=', ${userRecord.ipAddress})
+            ON DUPLICATE KEY UPDATE value = ${userRecord.ipAddress}
+          `;
+        }
+
+        // Send CoA disconnect so user immediately reconnects with restored profile
+        const { disconnectPPPoEUser } = await import('@/server/services/radius/coa-handler.service');
+        const coaResult = await disconnectPPPoEUser(userRecord.username);
+        console.log(`[MarkPaid] RADIUS restored + CoA disconnect for ${userRecord.username}:`, coaResult);
+      } catch (radiusError: any) {
+        console.error('[MarkPaid] RADIUS restore error (non-fatal):', radiusError?.message);
+      }
+    }
 
     return NextResponse.json({
       success: true,

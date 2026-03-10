@@ -1,9 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { nanoid } from 'nanoid';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 
 // GET - List all providers
 export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const providers = await prisma.whatsapp_providers.findMany({
       orderBy: { priority: 'asc' },

@@ -63,13 +63,16 @@ export default function CustomerTicketsPage() {
     
     try {
       setLoading(true);
+      const token = localStorage.getItem('customer_token');
       const params = new URLSearchParams();
       params.append('customerId', customerId);
       if (statusFilter !== 'all') {
         params.append('status', statusFilter);
       }
       
-      const res = await fetch(`/api/tickets?${params.toString()}`);
+      const res = await fetch(`/api/tickets?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res.ok) {
         const data = await res.json();
         setTickets(data);

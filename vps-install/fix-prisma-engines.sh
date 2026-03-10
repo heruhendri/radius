@@ -1,6 +1,6 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ============================================================================
-# AIBILL RADIUS - Fix Prisma Engine Permissions
+# SALFANET RADIUS - Fix Prisma Engine Permissions
 # ============================================================================
 # Fix "spawn schema-engine EACCES" error
 # ============================================================================

@@ -1,6 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { WhatsAppService } from '@/lib/whatsapp';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
+import { nowWIB } from '@/lib/timezone';
+// ⚠️ TZ NOTE: CustomerSession.createdAt uses @default(now()) = MySQL CURRENT_TIMESTAMP.
+// MySQL timezone = WIB (+07:00) → stored as WIB wall clock. Prisma reads back as WIB-as-UTC.
+// All datetime comparisons against createdAt MUST use nowWIB() (not Date.now() or new Date()).
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,7 +54,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check rate limiting - max 3 OTP per 15 minutes
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    // Use nowWIB() because createdAt is stored as MySQL CURRENT_TIMESTAMP (WIB-as-UTC).
+    // Using Date.now() here would create a 7-hour window instead of 15 minutes.
+    const fifteenMinutesAgo = new Date(nowWIB().getTime() - 15 * 60 * 1000);
     const recentOTPs = await prisma.customerSession.count({
       where: {
         phone: cleanPhone,

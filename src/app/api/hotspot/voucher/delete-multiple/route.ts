@@ -1,9 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
 
 // POST - Hapus multiple vouchers
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await request.json();
     const { voucherIds } = body;
 
@@ -14,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Get voucher codes untuk hapus dari radcheck
     const vouchers = await prisma.hotspotVoucher.findMany({
       where: { id: { in: voucherIds } },
-      select: { id: true, code: true },
+      select: { id: true, code: true, agentId: true, profile: { select: { name: true } } },
     });
 
     const voucherCodes = vouchers.map(v => v.code);
@@ -31,6 +37,30 @@ export async function POST(request: NextRequest) {
     const result = await prisma.hotspotVoucher.deleteMany({
       where: { id: { in: voucherIds } },
     });
+
+    // Notify agents whose vouchers were deleted
+    const agentVouchers = vouchers.filter(v => v.agentId);
+    const agentGrouped = agentVouchers.reduce<Record<string, { count: number; profileName: string }>>((acc, v) => {
+      if (v.agentId) {
+        if (!acc[v.agentId]) acc[v.agentId] = { count: 0, profileName: v.profile.name };
+        acc[v.agentId].count++;
+      }
+      return acc;
+    }, {});
+    for (const [agentId, info] of Object.entries(agentGrouped)) {
+      try {
+        await prisma.agentNotification.create({
+          data: {
+            id: Math.random().toString(36).substring(2, 15),
+            agentId,
+            type: 'voucher_deleted',
+            title: 'Voucher Dihapus',
+            message: `Admin telah menghapus ${info.count} voucher ${info.profileName} dari akun Anda.`,
+            link: null,
+          },
+        });
+      } catch (_) { /* non-critical */ }
+    }
 
     return NextResponse.json({
       success: true,

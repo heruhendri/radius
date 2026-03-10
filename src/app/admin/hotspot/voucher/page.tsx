@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { Plus, Loader2, Trash2, Ticket, Printer, Check, Download, Upload, FileSpreadsheet, MessageCircle, Wifi } from "lucide-react"
+import { Plus, Loader2, Trash2, Ticket, Printer, Check, Download, Upload, FileSpreadsheet, MessageCircle, Wifi, Pencil } from "lucide-react"
 import { renderVoucherTemplate, getPrintableHtml } from '@/lib/utils/templateRenderer'
 import { Switch } from "@/components/ui/switch"
 import { useTranslation } from '@/hooks/useTranslation'
@@ -39,6 +39,11 @@ export default function HotspotVoucherPage() {
   const [batches, setBatches] = useState<string[]>([])
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [genOverlay, setGenOverlay] = useState<{
+    open: boolean; current: number; total: number;
+    phase: '' | 'generating' | 'done' | 'error';
+    batchCode: string; count: number; errorMsg: string;
+  }>({ open: false, current: 0, total: 0, phase: '', batchCode: '', count: 0, errorMsg: '' })
   const [deleteBatchCode, setDeleteBatchCode] = useState<string | null>(null)
   const [selectedVouchers, setSelectedVouchers] = useState<string[]>([])
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false)
@@ -53,6 +58,11 @@ export default function HotspotVoucherPage() {
   const [filterStatus, setFilterStatus] = useState("")
   const [filterRouter, setFilterRouter] = useState("")
   const [filterAgent, setFilterAgent] = useState("")
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editTargetIds, setEditTargetIds] = useState<string[]>([])
+  const [editMode, setEditMode] = useState<'single' | 'batch'>('single')
+  const [editForm, setEditForm] = useState({ profileId: '', routerId: '', agentId: '', clearAgent: false, clearRouter: false })
+  const [editSaving, setEditSaving] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importProfileId, setImportProfileId] = useState('')
@@ -66,6 +76,10 @@ export default function HotspotVoucherPage() {
   const [pageSize, setPageSize] = useState(100)
   const [stats, setStats] = useState({ total: 0, waiting: 0, active: 0, expired: 0, totalValue: 0 })
   const [isSSEConnected, setIsSSEConnected] = useState(false)
+  const [deleteOverlay, setDeleteOverlay] = useState<{
+    open: boolean; phase: '' | 'deleting' | 'done' | 'error';
+    count: number; label: string; errorMsg: string;
+  }>({ open: false, phase: '', count: 0, label: '', errorMsg: '' })
   
   // SSE Handler for real-time updates
   const handleSSEMessage = useCallback((event: string, data: any) => {
@@ -174,31 +188,78 @@ export default function HotspotVoucherPage() {
     } catch (e) { console.error(e); } finally { setLoading(false); }
   }
 
+  const CHUNK_SIZE = 2000;
   const handleGenerate = async (e: React.FormEvent) => {
-    e.preventDefault(); setGenerating(true);
+    e.preventDefault();
+    const totalQty = parseInt(formData.quantity);
+    if (!totalQty || totalQty < 1) return;
+
+    // Close form dialog, show progress overlay immediately
+    setIsGenerateDialogOpen(false);
+    setGenerating(true);
+    setGenOverlay({ open: true, current: 0, total: totalQty, phase: 'generating', batchCode: '', count: 0, errorMsg: '' });
+
+    // Generate a shared batchCode prefix for all chunks
+    const sharedBatch = `BATCH-${Date.now()}`;
+    let totalGenerated = 0;
+    let lastBatchCode = '';
+    let remaining = totalQty;
+
     try {
-      const res = await fetch('/api/hotspot/voucher', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, quantity: parseInt(formData.quantity), codeLength: parseInt(formData.codeLength) }) });
-      const data = await res.json();
-      if (res.ok) { 
-        setIsGenerateDialogOpen(false); // Close dialog first
-        setFormData({ quantity: "", profileId: "", routerId: "", agentId: "", codeLength: "6", prefix: "", voucherType: "same", codeType: "alpha-upper", lockMac: false }); 
-        await showSuccess(t('hotspot.vouchersGenerated').replace('{count}', data.count) + '\n' + t('hotspot.batchPrefix').replace('{batch}', data.batchCode)); // Show notification after dialog closed
-        loadVouchers(); 
+      while (remaining > 0) {
+        const chunkQty = Math.min(CHUNK_SIZE, remaining);
+        const res = await fetch('/api/hotspot/voucher', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...formData,
+            quantity: chunkQty,
+            codeLength: parseInt(formData.codeLength),
+            batchCode: sharedBatch,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setGenOverlay(prev => ({ ...prev, phase: 'error', errorMsg: data.error || t('common.failed') }));
+          if (totalGenerated > 0) loadVouchers();
+          return;
+        }
+        totalGenerated += Number(data.count) || 0;
+        lastBatchCode = data.batchCode || lastBatchCode;
+        remaining -= chunkQty;
+        setGenOverlay(prev => ({ ...prev, current: totalGenerated, batchCode: lastBatchCode }));
       }
-      else { await showError(data.error); }
-    } catch (e) { console.error(e); await showError(t('common.failed')); } finally { setGenerating(false); }
+
+      setGenOverlay(prev => ({ ...prev, phase: 'done', count: totalGenerated, batchCode: lastBatchCode }));
+      setFormData({ quantity: "", profileId: "", routerId: "", agentId: "", codeLength: "6", prefix: "", voucherType: "same", codeType: "alpha-upper", lockMac: false });
+      loadVouchers();
+      setTimeout(() => setGenOverlay({ open: false, current: 0, total: 0, phase: '', batchCode: '', count: 0, errorMsg: '' }), 3500);
+    } catch (err) {
+      console.error(err);
+      setGenOverlay(prev => ({ ...prev, phase: 'error', errorMsg: t('common.failed') }));
+      if (totalGenerated > 0) loadVouchers();
+    } finally {
+      setGenerating(false);
+    }
   }
 
   const handleDeleteBatch = async () => {
     if (!deleteBatchCode) return;
     const confirmed = await showConfirm(t('hotspot.deleteUnusedFromBatch').replace('{batch}', deleteBatchCode));
     if (!confirmed) { setDeleteBatchCode(null); return; }
+    const label = `Batch: ${deleteBatchCode}`;
+    setDeleteOverlay({ open: true, phase: 'deleting', count: 0, label, errorMsg: '' });
     try {
       const res = await fetch(`/api/hotspot/voucher?batchCode=${deleteBatchCode}`, { method: 'DELETE' });
       const data = await res.json();
-      if (res.ok) { await showSuccess(t('hotspot.countDeleted').replace('{count}', data.count)); loadVouchers(); }
-      else { await showError(data.error); }
-    } catch (e) { console.error(e); await showError(t('common.failed')); } finally { setDeleteBatchCode(null); }
+      if (res.ok) {
+        setDeleteOverlay({ open: true, phase: 'done', count: data.count, label, errorMsg: '' });
+        loadVouchers();
+        setTimeout(() => setDeleteOverlay({ open: false, phase: '', count: 0, label: '', errorMsg: '' }), 2500);
+      } else {
+        setDeleteOverlay({ open: true, phase: 'error', count: 0, label, errorMsg: data.error || t('common.failed') });
+      }
+    } catch (e) { console.error(e); setDeleteOverlay({ open: true, phase: 'error', count: 0, label, errorMsg: t('common.failed') }); } finally { setDeleteBatchCode(null); }
   }
 
   const handleDeleteVoucher = async (voucherId: string, code: string) => {
@@ -206,7 +267,7 @@ export default function HotspotVoucherPage() {
     if (!confirmed) return;
     try {
       const res = await fetch(`/api/hotspot/voucher/${voucherId}`, { method: 'DELETE' });
-      const data = await res.json();
+      const data = res.headers.get('content-type')?.includes('application/json') ? await res.json() : {};
       if (res.ok) { await showSuccess(t('common.deleted')); loadVouchers(); }
       else { await showError(data.error); }
     } catch (e) { console.error(e); await showError(t('common.failed')); }
@@ -216,13 +277,21 @@ export default function HotspotVoucherPage() {
     if (selectedVouchers.length === 0) { await showError(t('hotspot.selectVouchersFirst')); return; }
     const confirmed = await showConfirm(t('hotspot.deleteVouchersConfirm').replace('{count}', String(selectedVouchers.length)));
     if (!confirmed) return;
+    const label = `${selectedVouchers.length} voucher dipilih`;
+    setDeleteOverlay({ open: true, phase: 'deleting', count: selectedVouchers.length, label, errorMsg: '' });
     setDeletingVouchers(true);
     try {
       const res = await fetch('/api/hotspot/voucher/delete-multiple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ voucherIds: selectedVouchers }) });
       const data = await res.json();
-      if (res.ok) { await showSuccess(t('hotspot.countDeleted').replace('{count}', data.deleted)); setSelectedVouchers([]); loadVouchers(); }
-      else { await showError(data.error); }
-    } catch (e) { console.error(e); await showError(t('common.failed')); } finally { setDeletingVouchers(false); }
+      if (res.ok) {
+        setDeleteOverlay({ open: true, phase: 'done', count: data.deleted, label: '', errorMsg: '' });
+        setSelectedVouchers([]);
+        loadVouchers();
+        setTimeout(() => setDeleteOverlay({ open: false, phase: '', count: 0, label: '', errorMsg: '' }), 2500);
+      } else {
+        setDeleteOverlay({ open: true, phase: 'error', count: 0, label, errorMsg: data.error || t('common.failed') });
+      }
+    } catch (e) { console.error(e); setDeleteOverlay({ open: true, phase: 'error', count: 0, label, errorMsg: t('common.failed') }); } finally { setDeletingVouchers(false); }
   }
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
@@ -261,7 +330,7 @@ export default function HotspotVoucherPage() {
       },
       router: v.router ? { name: v.router.name, shortname: v.router.shortname } : undefined
     }));
-    const firstRouter = vouchersToPrint.find(v => v.router)?.router?.name || 'AIBILL';
+    const firstRouter = vouchersToPrint.find(v => v.router)?.router?.name || 'SALFANET';
     const rendered = renderVoucherTemplate(template.htmlTemplate, voucherData, { currencyCode: 'Rp', companyName: firstRouter });
     const printHtml = getPrintableHtml(rendered);
     const printWindow = window.open('', '_blank');
@@ -386,12 +455,186 @@ export default function HotspotVoucherPage() {
     } catch (e) { console.error(e); await showError(t('common.failed')); } finally { setImporting(false); }
   }
 
+  const openEditSingle = (v: Voucher) => {
+    const matchedProfile = profiles.find(p => p.name === v.profile.name)
+    setEditTargetIds([v.id])
+    setEditMode('single')
+    setEditForm({
+      profileId: matchedProfile?.id || '',
+      routerId: v.router?.id || '',
+      agentId: v.agent?.id || '',
+      clearAgent: false,
+      clearRouter: false,
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const openEditBatch = () => {
+    setEditTargetIds([...selectedVouchers])
+    setEditMode('batch')
+    setEditForm({ profileId: '', routerId: '', agentId: '', clearAgent: false, clearRouter: false })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditSave = async () => {
+    if (editTargetIds.length === 0) return
+    setEditSaving(true)
+    try {
+      const body: any = { ids: editTargetIds }
+      if (editForm.profileId) body.profileId = editForm.profileId
+      if (editForm.routerId) body.routerId = editForm.routerId
+      else if (editForm.clearRouter) body.clearRouter = true
+      if (editForm.agentId) body.agentId = editForm.agentId
+      else if (editForm.clearAgent) body.clearAgent = true
+
+      if (!body.profileId && !body.routerId && !body.agentId && !body.clearRouter && !body.clearAgent) {
+        await showError('Pilih setidaknya satu field untuk diubah')
+        setEditSaving(false)
+        return
+      }
+      const res = await fetch('/api/hotspot/voucher', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const data = await res.json()
+      if (res.ok) {
+        await showSuccess(`${data.updated} voucher berhasil diperbarui`)
+        setIsEditDialogOpen(false)
+        setSelectedVouchers([])
+        loadVouchers()
+      } else {
+        await showError(data.error)
+      }
+    } catch (e) {
+      console.error(e)
+      await showError('Terjadi kesalahan')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
   const selectedProfile = profiles.find(p => p.id === formData.profileId);
-  if (loading) { return <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden"><div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div></div><Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" /></div>; }
+  if (loading) { return <div className="flex items-center justify-center min-h-[60vh]"><div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div></div><Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" /></div>; }
   // Stats are now loaded from API
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
+      {/* ─── Delete Progress Overlay ─── */}
+      {deleteOverlay.open && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-sm">
+          <div className="bg-card border-2 border-red-500/60 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-[0_0_80px_rgba(239,68,68,0.4)]">
+            <div className="flex justify-center mb-5">
+              {deleteOverlay.phase === 'done' ? (
+                <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-400 flex items-center justify-center">
+                  <Check className="h-8 w-8 text-green-400" />
+                </div>
+              ) : deleteOverlay.phase === 'error' ? (
+                <div className="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-400 flex items-center justify-center">
+                  <Trash2 className="h-8 w-8 text-red-400" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center animate-pulse">
+                  <Loader2 className="h-8 w-8 text-red-400 animate-spin" />
+                </div>
+              )}
+            </div>
+            <h3 className="text-center text-base font-bold text-foreground mb-1">
+              {deleteOverlay.phase === 'done'  ? 'Voucher Berhasil Dihapus!' :
+               deleteOverlay.phase === 'error' ? 'Hapus Gagal' :
+               'Sedang Menghapus Voucher...'}
+            </h3>
+            {deleteOverlay.phase === 'deleting' && (
+              <>
+                <p className="text-center text-xs text-muted-foreground mt-1">Mohon jangan tutup halaman ini</p>
+                {deleteOverlay.label && <p className="text-center text-xs text-muted-foreground mt-2 font-medium">{deleteOverlay.label}</p>}
+              </>
+            )}
+            {deleteOverlay.phase === 'done' && (
+              <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-center">
+                <p className="text-sm font-semibold text-green-400">{deleteOverlay.count.toLocaleString()} voucher berhasil dihapus</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Halaman akan diperbarui otomatis...</p>
+              </div>
+            )}
+            {deleteOverlay.phase === 'error' && (
+              <div className="mt-4 space-y-3">
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-center">
+                  <p className="text-sm text-red-400">{deleteOverlay.errorMsg}</p>
+                </div>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setDeleteOverlay({ open: false, phase: '', count: 0, label: '', errorMsg: '' })}>Tutup</Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* ─── Generate Progress Overlay ─── */}
+      {genOverlay.open && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-sm">
+          <div className="bg-card border-2 border-[#bc13fe]/60 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-[0_0_80px_rgba(188,19,254,0.5)]">
+            {/* Icon */}
+            <div className="flex justify-center mb-5">
+              {genOverlay.phase === 'done' ? (
+                <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-400 flex items-center justify-center">
+                  <Check className="h-8 w-8 text-green-400" />
+                </div>
+              ) : genOverlay.phase === 'error' ? (
+                <div className="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-400 flex items-center justify-center">
+                  <Ticket className="h-8 w-8 text-red-400" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-[#bc13fe]/20 border-2 border-[#bc13fe] flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 text-[#bc13fe] animate-spin" />
+                </div>
+              )}
+            </div>
+            {/* Title */}
+            <h3 className="text-center text-base font-bold text-foreground mb-1">
+              {genOverlay.phase === 'done'  ? 'Voucher Berhasil Dibuat!' :
+               genOverlay.phase === 'error' ? 'Generate Gagal' :
+               'Sedang Generate Voucher...'}
+            </h3>
+            {genOverlay.phase === 'generating' && (
+              <p className="text-center text-xs text-muted-foreground mb-5">Mohon jangan tutup halaman ini</p>
+            )}
+            {/* Progress bar */}
+            {genOverlay.phase !== 'error' && (
+              <div className="mt-4">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                  <span>Voucher dibuat</span>
+                  <span className="font-medium text-foreground">{genOverlay.current.toLocaleString()} / {genOverlay.total.toLocaleString()}</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                  <div
+                    className="h-3 rounded-full transition-all duration-500 bg-gradient-to-r from-[#bc13fe] via-[#ff44cc] to-[#00f7ff]"
+                    style={{ width: `${genOverlay.total > 0 ? Math.round((genOverlay.current / genOverlay.total) * 100) : 0}%` }}
+                  />
+                </div>
+                <p className="text-center text-sm font-bold text-[#00f7ff] mt-2">
+                  {genOverlay.total > 0 ? Math.round((genOverlay.current / genOverlay.total) * 100) : 0}%
+                </p>
+              </div>
+            )}
+            {/* Success info */}
+            {genOverlay.phase === 'done' && (
+              <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-center">
+                <p className="text-sm font-semibold text-green-400">{genOverlay.count.toLocaleString()} voucher berhasil dibuat</p>
+                {genOverlay.batchCode && <p className="text-xs text-muted-foreground mt-1">Batch: {genOverlay.batchCode}</p>}
+                <p className="text-xs text-muted-foreground mt-0.5">Halaman akan diperbarui otomatis...</p>
+              </div>
+            )}
+            {/* Error info */}
+            {genOverlay.phase === 'error' && (
+              <div className="mt-4 space-y-3">
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-center">
+                  <p className="text-sm text-red-400">{genOverlay.errorMsg}</p>
+                  {genOverlay.current > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">{genOverlay.current.toLocaleString()} voucher sudah berhasil sebelum error</p>
+                  )}
+                </div>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setGenOverlay({ open: false, current: 0, total: 0, phase: '', batchCode: '', count: 0, errorMsg: '' })}>
+                  Tutup
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {/* Neon Cyberpunk Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
@@ -404,8 +647,8 @@ export default function HotspotVoucherPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('hotspot.title')}</h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('hotspot.generateVoucher')}</p>
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('hotspot.title')}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('hotspot.generateVoucher')}</p>
         </div>
         <div className="flex gap-1.5 flex-wrap">
           <Button variant="outline" size="sm" onClick={handleDownloadTemplate} className="h-7 text-[10px] px-2"><Download className="h-3 w-3 mr-1" />{t('nav.template')}</Button>
@@ -413,7 +656,7 @@ export default function HotspotVoucherPage() {
           <Button variant="outline" size="sm" onClick={handleExportPDFList} className="h-7 text-[10px] px-2 border-destructive text-destructive hover:bg-destructive/10"><Download className="h-3 w-3 mr-1" />PDF</Button>
           <Button variant="outline" size="sm" onClick={handleExportVoucherCards} className="h-7 text-[10px] px-2 border-primary text-primary hover:bg-primary/10"><Printer className="h-3 w-3 mr-1" />Cards</Button>
           <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)} className="h-7 text-[10px] px-2"><Upload className="h-3 w-3 mr-1" />{t('common.import')}</Button>
-          <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
+          <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen} modal={false}>
             <DialogTrigger asChild><Button size="sm" className="h-7 text-[10px] px-2"><Plus className="h-3 w-3 mr-1" />{t('hotspot.generateVoucher')}</Button></DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader className="border-b pb-3">
@@ -453,7 +696,7 @@ export default function HotspotVoucherPage() {
                       placeholder="Max 25,000"
                       required 
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Maximum 25,000 vouchers per batch</p>
+                    <p className="text-xs text-muted-foreground mt-1">{t('hotspot.maxPerBatch')}</p>
                   </div>
                 </div>
 
@@ -462,11 +705,11 @@ export default function HotspotVoucherPage() {
                   <div className="p-4 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs opacity-90">Total Value</p>
-                        <p className="text-2xl font-bold">{formatCurrency(selectedProfile.sellingPrice * parseInt(formData.quantity || '0'))}</p>
+                        <p className="text-xs opacity-90">{t('hotspot.totalValue')}</p>
+                        <p className="text-lg sm:text-2xl font-bold">{formatCurrency(selectedProfile.sellingPrice * parseInt(formData.quantity || '0'))}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs opacity-90">Items</p>
+                        <p className="text-xs opacity-90">{t('hotspot.items')}</p>
                         <p className="text-xl font-semibold">{parseInt(formData.quantity || '0').toLocaleString()}</p>
                       </div>
                     </div>
@@ -477,7 +720,7 @@ export default function HotspotVoucherPage() {
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Ticket className="h-4 w-4 text-primary" />
-                    Code Configuration
+                    {t('hotspot.codeConfiguration')}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
@@ -487,8 +730,8 @@ export default function HotspotVoucherPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="same">User=Pass (Same)</SelectItem>
-                          <SelectItem value="different">User≠Pass (Different)</SelectItem>
+                          <SelectItem value="same">{t('hotspot.userPassSame')}</SelectItem>
+                          <SelectItem value="different">{t('hotspot.userPassDiff')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -499,17 +742,17 @@ export default function HotspotVoucherPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="alpha-upper">UPPERCASE (ABCDEF)</SelectItem>
-                          <SelectItem value="alpha-lower">lowercase (abcdef)</SelectItem>
-                          <SelectItem value="numeric">Numeric (123456)</SelectItem>
-                          <SelectItem value="alphanumeric-upper">AlphaNum (ABC123)</SelectItem>
+                          <SelectItem value="alpha-upper">{t('hotspot.uppercase')}</SelectItem>
+                          <SelectItem value="alpha-lower">{t('hotspot.lowercase')}</SelectItem>
+                          <SelectItem value="numeric">{t('hotspot.numeric')}</SelectItem>
+                          <SelectItem value="alphanumeric-upper">{t('hotspot.alphaNum')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs text-muted-foreground">Prefix (Optional)</Label>
+                      <Label className="text-xs text-muted-foreground">{t('hotspot.prefixOptional')}</Label>
                       <Input 
                         value={formData.prefix} 
                         onChange={(e) => setFormData({ ...formData, prefix: e.target.value.toUpperCase() })} 
@@ -519,7 +762,7 @@ export default function HotspotVoucherPage() {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">Length (4-10)</Label>
+                      <Label className="text-xs text-muted-foreground">{t('hotspot.lengthLabel')}</Label>
                       <Input 
                         type="number" 
                         min="4" 
@@ -535,7 +778,7 @@ export default function HotspotVoucherPage() {
 
                 {/* Assignment & Options */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">Assignment & Options</h3>
+                  <h3 className="text-sm font-semibold text-foreground">{t('hotspot.assignmentOptions')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-muted-foreground">{t('nav.router')}</Label>
@@ -544,7 +787,7 @@ export default function HotspotVoucherPage() {
                           <SelectValue placeholder={t('common.all')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Routers (Global)</SelectItem>
+                          <SelectItem value="all">{t('hotspot.allRoutersGlobal')}</SelectItem>
                           {routers.map(r => (
                             <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                           ))}
@@ -555,10 +798,10 @@ export default function HotspotVoucherPage() {
                       <Label className="text-xs text-muted-foreground">{t('nav.agent')}</Label>
                       <Select value={formData.agentId} onValueChange={(v) => setFormData({ ...formData, agentId: v === 'none' ? '' : v })}>
                         <SelectTrigger className="h-9 text-sm mt-1">
-                          <SelectValue placeholder="No Agent" />
+                          <SelectValue placeholder={t('hotspot.noAgent')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">No Agent</SelectItem>
+                          <SelectItem value="none">{t('hotspot.noAgent')}</SelectItem>
                           {agents.map(a => (
                             <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                           ))}
@@ -568,8 +811,8 @@ export default function HotspotVoucherPage() {
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border">
                     <div>
-                      <Label className="text-sm font-medium">Lock MAC Address</Label>
-                      <p className="text-xs text-muted-foreground mt-0.5">Bind voucher to first device that uses it</p>
+                      <Label className="text-sm font-medium">{t('hotspot.lockMacAddress')}</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">{t('hotspot.lockMacDesc')}</p>
                     </div>
                     <Switch 
                       checked={formData.lockMac} 
@@ -616,20 +859,20 @@ export default function HotspotVoucherPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all relative">
-          <div className="flex items-center justify-between"><div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('common.total')}</p><p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.total}</p></div><Ticket className="h-6 w-6 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.6)]" /></div>
+          <div className="flex items-center justify-between"><div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('common.total')}</p><p className="text-lg sm:text-2xl font-bold text-foreground drop-shadow-none mt-1">{stats.total}</p></div><Ticket className="h-6 w-6 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.6)]" /></div>
           {isSSEConnected && <div className="absolute top-2 right-2" title="Real-time updates active"><Wifi className="h-3 w-3 text-green-400 animate-pulse" /></div>}
         </div>
         <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
-          <div className="flex items-center justify-between"><div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('hotspot.waiting')}</p><p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.waiting}</p></div><Ticket className="h-6 w-6 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.6)]" /></div>
+          <div className="flex items-center justify-between"><div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('hotspot.waiting')}</p><p className="text-lg sm:text-2xl font-bold text-foreground drop-shadow-none mt-1">{stats.waiting}</p></div><Ticket className="h-6 w-6 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.6)]" /></div>
         </div>
         <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
-          <div className="flex items-center justify-between"><div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('hotspot.active')}</p><p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.active}</p></div><Ticket className="h-6 w-6 text-green-400 drop-shadow-[0_0_15px_rgba(34,197,94,0.6)]" /></div>
+          <div className="flex items-center justify-between"><div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('hotspot.active')}</p><p className="text-lg sm:text-2xl font-bold text-foreground drop-shadow-none mt-1">{stats.active}</p></div><Ticket className="h-6 w-6 text-green-400 drop-shadow-[0_0_15px_rgba(34,197,94,0.6)]" /></div>
         </div>
         <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
-          <div className="flex items-center justify-between"><div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('hotspot.expired')}</p><p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{stats.expired}</p></div><Ticket className="h-6 w-6 text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]" /></div>
+          <div className="flex items-center justify-between"><div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('hotspot.expired')}</p><p className="text-lg sm:text-2xl font-bold text-foreground drop-shadow-none mt-1">{stats.expired}</p></div><Ticket className="h-6 w-6 text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]" /></div>
         </div>
         <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between"><div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('common.total')} {t('common.price')}</p><p className="text-xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{formatCurrency(stats.totalValue)}</p></div><Ticket className="h-6 w-6 text-[#ff44cc] drop-shadow-[0_0_15px_rgba(255,68,204,0.6)]" /></div>
+          <div className="flex items-center justify-between"><div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('common.total')} {t('common.price')}</p><p className="text-xl font-bold text-foreground drop-shadow-none mt-1">{formatCurrency(stats.totalValue)}</p></div><Ticket className="h-6 w-6 text-[#ff44cc] drop-shadow-[0_0_15px_rgba(255,68,204,0.6)]" /></div>
         </div>
       </div>
 
@@ -652,16 +895,99 @@ export default function HotspotVoucherPage() {
             {selectedVouchers.length > 0 && (
               <>
                 <button onClick={handleDeleteSelected} disabled={deletingVouchers} className="px-2 py-1 text-[10px] bg-destructive text-destructive-foreground rounded flex items-center gap-0.5">{deletingVouchers ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Trash2 className="h-2.5 w-2.5" />}{t('common.delete')} ({selectedVouchers.length})</button>
+                <button onClick={openEditBatch} className="px-2 py-1 text-[10px] bg-primary text-primary-foreground rounded flex items-center gap-0.5"><Pencil className="h-2.5 w-2.5" />Edit ({selectedVouchers.length})</button>
                 <button onClick={handleSendWhatsApp} className="px-2 py-1 text-[10px] bg-success text-success-foreground rounded flex items-center gap-0.5"><MessageCircle className="h-2.5 w-2.5" />WA ({selectedVouchers.length})</button>
                 <button onClick={handlePrintSelected} className="px-2 py-1 text-[10px] bg-primary text-white rounded flex items-center gap-0.5"><Printer className="h-2.5 w-2.5" />{t('common.print')} ({selectedVouchers.length})</button>
               </>
             )}
             {filterBatch && filterBatch !== 'all' && <button onClick={handlePrintBatch} className="px-2 py-1 text-[10px] bg-muted-foreground text-background rounded flex items-center gap-0.5"><Printer className="h-2.5 w-2.5" />Batch</button>}
-            {stats.expired > 0 && <button onClick={async () => { const c = await showConfirm(`${t('common.delete')} ${t('hotspot.expired')}?`); if (!c) return; const res = await fetch('/api/hotspot/voucher/delete-expired', { method: 'POST' }); const data = await res.json(); if (res.ok) { await showSuccess(`${data.count} ${t('notifications.deleted')}`); loadVouchers(); } else { await showError(data.error); } }} className="px-2 py-1 text-[10px] bg-destructive text-destructive-foreground rounded flex items-center gap-0.5"><Trash2 className="h-2.5 w-2.5" />{t('hotspot.expired')} ({stats.expired})</button>}
+            {stats.expired > 0 && <button onClick={async () => { const c = await showConfirm(`${t('common.delete')} ${t('hotspot.expired')}?`); if (!c) return; setDeleteOverlay({ open: true, phase: 'deleting', count: stats.expired, label: `${stats.expired} voucher expired`, errorMsg: '' }); const res = await fetch('/api/hotspot/voucher/delete-expired', { method: 'POST' }); const data = await res.json(); if (res.ok) { setDeleteOverlay({ open: true, phase: 'done', count: data.count, label: '', errorMsg: '' }); loadVouchers(); setTimeout(() => setDeleteOverlay({ open: false, phase: '', count: 0, label: '', errorMsg: '' }), 2500); } else { setDeleteOverlay({ open: true, phase: 'error', count: 0, label: '', errorMsg: data.error || t('common.failed') }); } }} className="px-2 py-1 text-[10px] bg-destructive text-destructive-foreground rounded flex items-center gap-0.5"><Trash2 className="h-2.5 w-2.5" />{t('hotspot.expired')} ({stats.expired})</button>}
             {filterBatch && filterBatch !== 'all' && <button onClick={() => setDeleteBatchCode(filterBatch)} className="px-2 py-1 text-[10px] bg-destructive text-destructive-foreground rounded flex items-center gap-0.5"><Trash2 className="h-2.5 w-2.5" />{t('common.delete')} Batch</button>}
           </div>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3 p-3">
+          {vouchers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-xs">{t('table.noResults')}</div>
+          ) : (
+            vouchers.map((v) => (
+              <div key={v.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3 space-y-2">
+                {/* Header: Checkbox + Code + Status + Delete */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {v.status === 'WAITING' && (
+                      <input type="checkbox" checked={selectedVouchers.includes(v.id)} onChange={() => handleSelectVoucher(v.id)} className="rounded border-border w-4 h-4 shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <span className="font-mono font-bold text-sm text-foreground">{v.code}</span>
+                      {v.password && v.voucherType === 'different' && (
+                        <div className="text-[10px] text-muted-foreground">P: {v.password}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {v.status === 'WAITING' && <Badge className="text-[10px] px-1.5 py-0.5 bg-warning/10 text-warning">{t('hotspot.waiting')}</Badge>}
+                    {v.status === 'ACTIVE' && <Badge className="text-[10px] px-1.5 py-0.5 bg-success/10 text-success">{t('hotspot.active')}</Badge>}
+                    {v.status === 'EXPIRED' && <Badge className="text-[10px] px-1.5 py-0.5 bg-destructive/10 text-destructive">{t('hotspot.expired')}</Badge>}
+                    <button onClick={() => openEditSingle(v)} className="p-2 text-primary hover:bg-primary/10 rounded"><Pencil className="h-4 w-4" /></button>
+                    <button onClick={() => handleDeleteVoucher(v.id, v.code)} className="p-2 text-destructive hover:bg-destructive/10 rounded">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground">{t('hotspot.profile')}</span>
+                    <span className="text-sm text-foreground font-medium truncate">{v.profile.name}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground">{t('hotspot.price')}</span>
+                    <span className="text-sm text-foreground font-medium">{formatCurrency(v.profile.sellingPrice)}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground">{t('nav.router')}</span>
+                    <span>{v.router ? <Badge variant="outline" className="text-[9px] px-1 mt-0.5">{v.router.shortname || v.router.name}</Badge> : <span className="text-xs text-muted-foreground">Global</span>}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground">{t('nav.agent')}</span>
+                    <span>{v.agent ? <Badge variant="secondary" className="text-[9px] px-1 mt-0.5">{v.agent.name}</Badge> : <span className="text-xs text-muted-foreground">-</span>}</span>
+                  </div>
+                  {v.batchCode && (
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-muted-foreground">Batch</span>
+                      <span className="font-mono text-[10px] text-muted-foreground">{v.batchCode}</span>
+                    </div>
+                  )}
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground">{t('hotspot.generated')}</span>
+                    <span className="text-[11px]">{formatLocal(v.createdAt, 'dd/MM/yy HH:mm')}</span>
+                  </div>
+                  {v.firstLoginAt && (
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-muted-foreground">{t('hotspot.firstLogin')}</span>
+                      <span className="text-[11px]">{formatLocal(v.firstLoginAt, 'dd/MM/yy HH:mm')}</span>
+                    </div>
+                  )}
+                  {v.expiresAt && (
+                    <div className="flex flex-col col-span-2">
+                      <span className="text-[10px] text-muted-foreground">{t('hotspot.validUntil')}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px]">{formatLocal(v.expiresAt, 'dd/MM/yy HH:mm')}</span>
+                        {v.status === 'ACTIVE' && <span className="text-primary font-medium text-[10px]">{timeLeft(v.expiresAt)}</span>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -670,11 +996,11 @@ export default function HotspotVoucherPage() {
                 <TableHead className="text-[10px] py-2 hidden sm:table-cell">{t('hotspot.profile')}</TableHead>
                 <TableHead className="text-[10px] py-2 hidden md:table-cell">{t('nav.router')}</TableHead>
                 <TableHead className="text-[10px] py-2 hidden lg:table-cell">{t('nav.agent')}</TableHead>
-                <TableHead className="text-[10px] py-2 hidden xl:table-cell">Batch</TableHead>
+                <TableHead className="text-[10px] py-2 hidden xl:table-cell">{t('hotspot.batch')}</TableHead>
                 <TableHead className="text-[10px] py-2">{t('hotspot.price')}</TableHead>
                 <TableHead className="text-[10px] py-2">{t('common.status')}</TableHead>
-                <TableHead className="text-[10px] py-2 hidden lg:table-cell">Generated</TableHead>
-                <TableHead className="text-[10px] py-2 hidden sm:table-cell">First Login</TableHead>
+                <TableHead className="text-[10px] py-2 hidden lg:table-cell">{t('hotspot.generated')}</TableHead>
+                <TableHead className="text-[10px] py-2 hidden sm:table-cell">{t('hotspot.firstLogin')}</TableHead>
                 <TableHead className="text-[10px] py-2 hidden md:table-cell">{t('hotspot.validUntil')}</TableHead>
                 <TableHead className="text-[10px] py-2 text-right"></TableHead>
               </TableRow>
@@ -700,7 +1026,12 @@ export default function HotspotVoucherPage() {
                     <TableCell className="py-1.5 text-[10px] hidden lg:table-cell">{v.createdAt ? <div><div>{formatLocal(v.createdAt, 'dd/MM/yyyy')}</div><div className="text-muted-foreground">{formatLocal(v.createdAt, 'HH:mm:ss')}</div></div> : <span className="text-muted-foreground">-</span>}</TableCell>
                     <TableCell className="py-1.5 text-[10px] hidden sm:table-cell">{v.firstLoginAt ? <div><div>{formatLocal(v.firstLoginAt, 'dd/MM/yyyy')}</div><div className="text-muted-foreground">{formatLocal(v.firstLoginAt, 'HH:mm:ss')}</div></div> : <span className="text-muted-foreground italic">-</span>}</TableCell>
                     <TableCell className="py-1.5 text-[10px] hidden md:table-cell">{v.expiresAt ? <div><div>{formatLocal(v.expiresAt, 'dd/MM/yyyy')}</div>{v.status === 'ACTIVE' && <div className="text-primary font-medium">{timeLeft(v.expiresAt)}</div>}</div> : <span className="text-muted-foreground">-</span>}</TableCell>
-                    <TableCell className="py-1.5 text-right"><button onClick={() => handleDeleteVoucher(v.id, v.code)} className="p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-3 w-3" /></button></TableCell>
+                    <TableCell className="py-1.5 text-right">
+                      <div className="flex items-center justify-end gap-0.5">
+                        <button onClick={() => openEditSingle(v)} className="p-1 text-primary hover:bg-primary/10 rounded"><Pencil className="h-3 w-3" /></button>
+                        <button onClick={() => handleDeleteVoucher(v.id, v.code)} className="p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-3 w-3" /></button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -709,25 +1040,25 @@ export default function HotspotVoucherPage() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-card">
-          <div className="flex items-center gap-4">
-            <div className="text-xs text-muted-foreground">
-              Showing {vouchers.length === 0 ? 0 : ((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalVouchers)} of {totalVouchers.toLocaleString()} vouchers
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-4 py-3 border-t border-border bg-card">
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-center sm:justify-start">
+            <div className="text-[10px] sm:text-xs text-muted-foreground">
+              {t('hotspot.showing')} {vouchers.length === 0 ? 0 : ((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalVouchers)} {t('hotspot.of')} {totalVouchers.toLocaleString()} {t('nav.voucher')}
             </div>
             <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(parseInt(v)); setCurrentPage(1); }}>
               <SelectTrigger className="h-8 w-[100px] text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="50">50 / page</SelectItem>
-                <SelectItem value="100">100 / page</SelectItem>
-                <SelectItem value="200">200 / page</SelectItem>
-                <SelectItem value="500">500 / page</SelectItem>
-                <SelectItem value="1000">1000 / page</SelectItem>
+                <SelectItem value="50">50 {t('hotspot.perPage')}</SelectItem>
+                <SelectItem value="100">100 {t('hotspot.perPage')}</SelectItem>
+                <SelectItem value="200">200 {t('hotspot.perPage')}</SelectItem>
+                <SelectItem value="500">500 {t('hotspot.perPage')}</SelectItem>
+                <SelectItem value="1000">1000 {t('hotspot.perPage')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
             <Button
               variant="outline"
               size="sm"
@@ -735,7 +1066,7 @@ export default function HotspotVoucherPage() {
               disabled={currentPage === 1}
               className="h-8 text-xs px-3"
             >
-              First
+              {t('hotspot.first')}
             </Button>
             <Button
               variant="outline"
@@ -744,7 +1075,7 @@ export default function HotspotVoucherPage() {
               disabled={currentPage === 1}
               className="h-8 text-xs px-3"
             >
-              Previous
+              {t('hotspot.previous')}
             </Button>
             <div className="flex items-center gap-1">
               {[...Array(Math.min(5, totalPages))].map((_, idx) => {
@@ -778,7 +1109,7 @@ export default function HotspotVoucherPage() {
               disabled={currentPage === totalPages}
               className="h-8 text-xs px-3"
             >
-              Next
+              {t('hotspot.next')}
             </Button>
             <Button
               variant="outline"
@@ -787,11 +1118,92 @@ export default function HotspotVoucherPage() {
               disabled={currentPage === totalPages}
               className="h-8 text-xs px-3"
             >
-              Last
+              {t('hotspot.last')}
             </Button>
           </div>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} modal={false}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="border-b pb-3">
+            <DialogTitle className="text-base font-semibold flex items-center gap-2">
+              <Pencil className="h-4 w-4 text-primary" />
+              {editMode === 'batch' ? `Edit ${editTargetIds.length} Voucher` : 'Edit Voucher'}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {editMode === 'batch'
+                ? `Ubah data untuk ${editTargetIds.length} voucher sekaligus. Field yang dikosongkan tidak akan diubah.`
+                : 'Ubah assignment agen, router, atau profil voucher ini.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {/* Profile */}
+            <div>
+              <Label className="text-xs font-medium">{t('hotspot.profile')}{editMode === 'batch' && <span className="text-muted-foreground ml-1">(kosong = tidak berubah)</span>}</Label>
+              <Select
+                value={editForm.profileId || 'keep'}
+                onValueChange={(v) => setEditForm({ ...editForm, profileId: v === 'keep' ? '' : v })}
+              >
+                <SelectTrigger className="h-9 text-sm mt-1">
+                  <SelectValue placeholder={editMode === 'batch' ? 'Tidak diubah' : t('common.select')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {editMode === 'batch' && <SelectItem value="keep">— Tidak diubah —</SelectItem>}
+                  {profiles.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name} ({formatCurrency(p.sellingPrice)})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Router */}
+            <div>
+              <Label className="text-xs font-medium">{t('nav.router')}{editMode === 'batch' && <span className="text-muted-foreground ml-1">(kosong = tidak berubah)</span>}</Label>
+              <Select
+                value={editForm.clearRouter ? 'clear' : editForm.routerId || 'keep'}
+                onValueChange={(v) => setEditForm({ ...editForm, routerId: v === 'keep' || v === 'clear' ? '' : v, clearRouter: v === 'clear' })}
+              >
+                <SelectTrigger className="h-9 text-sm mt-1">
+                  <SelectValue placeholder={editMode === 'batch' ? 'Tidak diubah' : t('common.all')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {editMode === 'batch' && <SelectItem value="keep">— Tidak diubah —</SelectItem>}
+                  <SelectItem value="clear">Global (hapus router)</SelectItem>
+                  {routers.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Agent */}
+            <div>
+              <Label className="text-xs font-medium">{t('nav.agent')}{editMode === 'batch' && <span className="text-muted-foreground ml-1">(kosong = tidak berubah)</span>}</Label>
+              <Select
+                value={editForm.clearAgent ? 'clear' : editForm.agentId || 'keep'}
+                onValueChange={(v) => setEditForm({ ...editForm, agentId: v === 'keep' || v === 'clear' ? '' : v, clearAgent: v === 'clear' })}
+              >
+                <SelectTrigger className="h-9 text-sm mt-1">
+                  <SelectValue placeholder={editMode === 'batch' ? 'Tidak diubah' : t('hotspot.noAgent')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {editMode === 'batch' && <SelectItem value="keep">— Tidak diubah —</SelectItem>}
+                  <SelectItem value="clear">{t('hotspot.noAgent')} (hapus agen)</SelectItem>
+                  {agents.map(a => (
+                    <SelectItem key={a.id} value={a.id}>{a.name} ({a.phone})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 pt-4 border-t">
+            <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(false)} className="h-9 text-sm">{t('common.cancel')}</Button>
+            <Button size="sm" onClick={handleEditSave} disabled={editSaving} className="h-9 text-sm px-6">
+              {editSaving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('common.loading')}</> : <><Check className="h-4 w-4 mr-2" />Simpan</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* WhatsApp Dialog */}
       <Dialog open={isWhatsAppDialogOpen} onOpenChange={setIsWhatsAppDialogOpen}>
@@ -803,7 +1215,7 @@ export default function HotspotVoucherPage() {
       </Dialog>
 
       {/* Print Dialog */}
-      <Dialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen}>
+      <Dialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen} modal={false}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle className="text-sm">{t('hotspot.printVoucher')}</DialogTitle><DialogDescription className="text-xs">{t('common.select')} {t('nav.template')} ({selectedVouchers.length} voucher)</DialogDescription></DialogHeader>
           <div><Label className="text-[10px]">{t('nav.template')}</Label><Select value={selectedTemplate} onValueChange={setSelectedTemplate}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('common.select')} /></SelectTrigger><SelectContent>{templates.map(t => <SelectItem key={t.id} value={t.id}>{t.name} {t.isDefault && '(Default)'}</SelectItem>)}</SelectContent></Select></div>
@@ -813,13 +1225,13 @@ export default function HotspotVoucherPage() {
       </Dialog>
 
       {/* Import Dialog */}
-      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen} modal={false}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle className="text-sm">{t('common.import')} CSV</DialogTitle><DialogDescription className="text-xs">{t('common.upload')} {t('hotspot.code')}</DialogDescription></DialogHeader>
           <div className="space-y-3">
-            <div><Label className="text-[10px]">CSV File *</Label><div className="flex items-center gap-2"><Input type="file" accept=".csv" onChange={(e) => setImportFile(e.target.files?.[0] || null)} className="flex-1 h-8 text-xs" />{importFile && <FileSpreadsheet className="h-4 w-4 text-success" />}</div></div>
+            <div><Label className="text-[10px]">{t('hotspot.csvFile')} *</Label><div className="flex items-center gap-2"><Input type="file" accept=".csv" onChange={(e) => setImportFile(e.target.files?.[0] || null)} className="flex-1 h-8 text-xs" />{importFile && <FileSpreadsheet className="h-4 w-4 text-success" />}</div></div>
             <div><Label className="text-[10px]">{t('hotspot.profile')} *</Label><Select value={importProfileId} onValueChange={setImportProfileId}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('common.select')} /></SelectTrigger><SelectContent>{profiles.map(p => <SelectItem key={p.id} value={p.id}>{p.name} - {formatCurrency(p.sellingPrice)}</SelectItem>)}</SelectContent></Select></div>
-            <div><Label className="text-[10px]">Batch Code</Label><Input value={importBatchCode} onChange={(e) => setImportBatchCode(e.target.value)} className="h-8 text-xs" placeholder="Auto-generate" /></div>
+            <div><Label className="text-[10px]">{t('hotspot.batchCode')}</Label><Input value={importBatchCode} onChange={(e) => setImportBatchCode(e.target.value)} className="h-8 text-xs" placeholder={t('hotspot.autoGenerate')} /></div>
             {importResult && <div className="p-2 border border-border rounded bg-muted text-xs"><div className="flex items-center gap-1 text-success"><Check className="h-3 w-3" />{importResult.success} {t('notifications.success')}</div>{importResult.failed > 0 && <div className="text-destructive">{importResult.failed} {t('notifications.failed')}</div>}</div>}
           </div>
           <DialogFooter className="gap-2"><Button variant="outline" size="sm" onClick={() => { setIsImportDialogOpen(false); setImportFile(null); setImportProfileId(''); setImportBatchCode(''); setImportResult(null); }} className="h-7 text-xs">{t('common.cancel')}</Button><Button size="sm" onClick={handleImport} disabled={!importFile || !importProfileId || importing} className="h-7 text-xs">{importing ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />{t('common.loading')}</> : <><Upload className="h-3 w-3 mr-1" />{t('common.import')}</>}</Button></DialogFooter>

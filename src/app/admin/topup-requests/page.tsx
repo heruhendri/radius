@@ -119,7 +119,7 @@ export default function TopUpRequestsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -130,7 +130,7 @@ export default function TopUpRequestsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -140,8 +140,8 @@ export default function TopUpRequestsPage() {
       <div className="relative z-10 space-y-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] mb-2">{t('topup.requestsTitle')}</h1>
-        <p className="text-sm text-[#e0d0ff]/80">
+        <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] mb-2">{t('topup.requestsTitle')}</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           {t('topup.requestsDesc')}
         </p>
       </div>
@@ -158,7 +158,7 @@ export default function TopUpRequestsPage() {
             <p className="text-xs text-muted-foreground uppercase">{t('topup.pending')}</p>
             <Clock className="w-5 h-5 text-warning" />
           </div>
-          <p className="text-2xl font-bold text-warning">{pendingCount}</p>
+          <p className="text-lg sm:text-2xl font-bold text-warning">{pendingCount}</p>
         </button>
 
         <button
@@ -171,7 +171,7 @@ export default function TopUpRequestsPage() {
             <p className="text-xs text-muted-foreground uppercase">{t('topup.approved')}</p>
             <CheckCircle2 className="w-5 h-5 text-success" />
           </div>
-          <p className="text-2xl font-bold text-success">{approvedCount}</p>
+          <p className="text-lg sm:text-2xl font-bold text-success">{approvedCount}</p>
         </button>
 
         <button
@@ -184,7 +184,7 @@ export default function TopUpRequestsPage() {
             <p className="text-xs text-muted-foreground uppercase">{t('topup.rejected')}</p>
             <XCircle className="w-5 h-5 text-destructive" />
           </div>
-          <p className="text-2xl font-bold text-destructive">{rejectedCount}</p>
+          <p className="text-lg sm:text-2xl font-bold text-destructive">{rejectedCount}</p>
         </button>
 
         <button
@@ -197,7 +197,7 @@ export default function TopUpRequestsPage() {
             <p className="text-xs text-muted-foreground uppercase">{t('common.total')}</p>
             <AlertCircle className="w-5 h-5 text-primary" />
           </div>
-          <p className="text-2xl font-bold text-primary">{requests.length}</p>
+          <p className="text-lg sm:text-2xl font-bold text-primary">{requests.length}</p>
         </button>
       </div>
 

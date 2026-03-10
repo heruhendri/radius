@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { logActivity } from '@/lib/activity-log';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { logActivity } from '@/server/services/activity-log.service';
+import { nowWIB } from '@/lib/timezone';
 
 /**
  * POST /api/agent/deposit/webhook
@@ -175,6 +176,7 @@ export async function POST(request: NextRequest) {
           title: 'Agent Deposit',
           message: `${deposit.agent.name} deposit Rp ${deposit.amount.toLocaleString('id-ID')} via ${gateway}`,
           link: '/admin/hotspot/agent',
+          createdAt: nowWIB(),
         },
       });
 

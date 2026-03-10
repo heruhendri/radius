@@ -1,12 +1,12 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ============================================================================
-# AIBILL RADIUS VPS Uninstaller - Complete Removal
+# SALFANET RADIUS VPS Uninstaller - Complete Removal
 # ============================================================================
 # DANGER: This will remove ALL installed components and data
 # ============================================================================
 
-set -e  # Exit on error
-set -o pipefail  # Catch errors in pipes
+# NOTE: No 'set -e' here — removal steps should continue even if individual
+# packages/services are already gone. Each function uses '|| true' to be safe.
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,7 +29,7 @@ DB_NAME="salfanet_radius"
 DB_USER="salfanet_user"
 
 # Backup directory
-BACKUP_DIR="/root/aibill-backup-$(date +%Y%m%d-%H%M%S)"
+BACKUP_DIR="/root/salfanet-backup-$(date +%Y%m%d-%H%M%S)"
 
 # ============================================================================
 # CONFIRMATION & WARNING
@@ -40,7 +40,7 @@ show_warning() {
     echo -e "${RED}╔═══════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${RED}║                      ⚠️  WARNING  ⚠️                              ║${NC}"
     echo -e "${RED}║                                                                   ║${NC}"
-    echo -e "${RED}║  This script will COMPLETELY REMOVE all AIBILL RADIUS components ║${NC}"
+    echo -e "${RED}║  This script will COMPLETELY REMOVE all SALFANET RADIUS components ║${NC}"
     echo -e "${RED}║  including databases, configurations, and application files.     ║${NC}"
     echo -e "${RED}║                                                                   ║${NC}"
     echo -e "${RED}║  This action is IRREVERSIBLE unless you create a backup first!   ║${NC}"
@@ -59,7 +59,7 @@ show_warning() {
 }
 
 ask_backup() {
-    read -p "Do you want to backup database before removal? [Y/n]: " BACKUP_CONFIRM
+    read -p "Do you want to backup database before removal? [Y/n]: " BACKUP_CONFIRM </dev/tty
     
     if [[ ! "$BACKUP_CONFIRM" =~ ^[Nn]$ ]]; then
         return 0  # Yes, backup
@@ -70,7 +70,7 @@ ask_backup() {
 
 ask_confirmation() {
     echo -e "${YELLOW}Type 'REMOVE EVERYTHING' to confirm removal:${NC}"
-    read -r CONFIRM_TEXT
+    read -r CONFIRM_TEXT </dev/tty
     
     if [ "$CONFIRM_TEXT" = "REMOVE EVERYTHING" ]; then
         return 0
@@ -84,15 +84,39 @@ ask_confirmation() {
 # BACKUP FUNCTIONS
 # ============================================================================
 
+prompt_db_root_password() {
+    if [ -n "${DB_ROOT_PASSWORD:-}" ]; then
+        return 0
+    fi
+
+    # Try to read from .env first
+    if [ -f "${APP_DIR}/.env" ]; then
+        local ENV_PASS
+        ENV_PASS=$(grep -E '^DATABASE_URL=' "${APP_DIR}/.env" 2>/dev/null | sed 's|.*://[^:]*:\([^@]*\)@.*|\1|' || true)
+        if [ -n "$ENV_PASS" ]; then
+            DB_ROOT_PASSWORD="$ENV_PASS"
+            print_info "DB password read from .env"
+            return 0
+        fi
+    fi
+
+    # Fall back to prompt
+    echo -n "MySQL root password (leave empty if no password): "
+    read -rs DB_ROOT_PASSWORD </dev/tty
+    echo ""
+    export DB_ROOT_PASSWORD
+}
+
 backup_database() {
     print_step "Creating database backup"
     
     mkdir -p "$BACKUP_DIR"
     
     if command -v mysql >/dev/null 2>&1; then
+        prompt_db_root_password
         print_info "Backing up database to: $BACKUP_DIR"
         
-        mysqldump -u root -p${DB_ROOT_PASSWORD} ${DB_NAME} > "$BACKUP_DIR/database.sql" 2>/dev/null || {
+        mysqldump -u root ${DB_ROOT_PASSWORD:+-p"${DB_ROOT_PASSWORD}"} ${DB_NAME} > "$BACKUP_DIR/database.sql" 2>/dev/null || {
             print_warning "Database backup failed (database may not exist)"
         }
         
@@ -130,7 +154,7 @@ backup_configs() {
 kill_port_processes() {
     print_step "Killing processes on application ports"
     
-    # Ports used by AIBILL RADIUS
+    # Ports used by SALFANET RADIUS
     local PORTS=(3000 1812 1813 3799 1814)
     
     for PORT in "${PORTS[@]}"; do
@@ -199,14 +223,18 @@ remove_database() {
     print_step "Removing MySQL database and user"
     
     if command -v mysql >/dev/null 2>&1; then
+        prompt_db_root_password
+        local MYSQL_ARGS="-u root"
+        [ -n "${DB_ROOT_PASSWORD:-}" ] && MYSQL_ARGS="$MYSQL_ARGS -p${DB_ROOT_PASSWORD}"
+
         print_info "Dropping database: $DB_NAME"
-        mysql -u root -p${DB_ROOT_PASSWORD} -e "DROP DATABASE IF EXISTS ${DB_NAME};" 2>/dev/null || {
+        mysql $MYSQL_ARGS -e "DROP DATABASE IF EXISTS ${DB_NAME};" 2>/dev/null || {
             print_warning "Database removal failed (may not exist)"
         }
         
         print_info "Dropping user: $DB_USER"
-        mysql -u root -p${DB_ROOT_PASSWORD} -e "DROP USER IF EXISTS '${DB_USER}'@'localhost';" 2>/dev/null || true
-        mysql -u root -p${DB_ROOT_PASSWORD} -e "FLUSH PRIVILEGES;" 2>/dev/null || true
+        mysql $MYSQL_ARGS -e "DROP USER IF EXISTS '${DB_USER}'@'localhost';" 2>/dev/null || true
+        mysql $MYSQL_ARGS -e "FLUSH PRIVILEGES;" 2>/dev/null || true
         
         print_success "Database and user removed"
     else
@@ -222,17 +250,22 @@ remove_freeradius() {
     systemctl disable freeradius 2>/dev/null || true
     
     # Remove packages (optional)
-    read -p "Remove FreeRADIUS packages? [y/N]: " REMOVE_FREERADIUS
+    read -p "Remove FreeRADIUS packages? [y/N]: " REMOVE_FREERADIUS </dev/tty
     if [[ "$REMOVE_FREERADIUS" =~ ^[Yy]$ ]]; then
         print_info "Removing FreeRADIUS packages..."
-        apt-get purge -y freeradius freeradius-mysql freeradius-utils freeradius-rest 2>/dev/null || true
+        apt-get purge -y freeradius freeradius-config freeradius-common freeradius-mysql freeradius-utils freeradius-rest 2>/dev/null || true
         apt-get autoremove -y 2>/dev/null || true
     fi
     
-    # Remove configurations
+    # Remove configurations and runtime files
     print_info "Removing FreeRADIUS configurations..."
     rm -rf /etc/freeradius 2>/dev/null || true
     rm -rf /var/log/freeradius 2>/dev/null || true
+    rm -rf /var/run/freeradius 2>/dev/null || true
+
+    # Remove sudoers entry created by installer
+    rm -f /etc/sudoers.d/${APP_USER}-freeradius
+    print_info "Sudoers entry removed"
     
     print_success "FreeRADIUS removed"
 }
@@ -244,9 +277,20 @@ remove_nginx_config() {
     print_info "Removing Nginx site configuration..."
     rm -f /etc/nginx/sites-available/salfanet-radius
     rm -f /etc/nginx/sites-enabled/salfanet-radius
+
+    # Remove self-signed SSL cert generated by installer
+    rm -f /etc/ssl/certs/nginx-selfsigned.crt
+    rm -f /etc/ssl/private/nginx-selfsigned.key
+    print_info "Self-signed SSL cert removed"
+
+    # Remove Let's Encrypt cert if it exists
+    if [ -n "${VPS_DOMAIN:-}" ] && [ -d "/etc/letsencrypt/live/${VPS_DOMAIN}" ]; then
+        certbot delete --cert-name "${VPS_DOMAIN}" --non-interactive 2>/dev/null || true
+        print_info "Let's Encrypt cert removed for ${VPS_DOMAIN}"
+    fi
     
-    # Enable default site
-    if [ ! -L "/etc/nginx/sites-enabled/default" ]; then
+    # Restore default site if it exists
+    if [ -f "/etc/nginx/sites-available/default" ] && [ ! -L "/etc/nginx/sites-enabled/default" ]; then
         ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default 2>/dev/null || true
     fi
     
@@ -289,7 +333,14 @@ remove_user() {
 remove_pm2() {
     print_step "Removing PM2"
     
-    read -p "Remove PM2 globally? [y/N]: " REMOVE_PM2
+    # Remove PM2 systemd startup service regardless of whether we remove PM2 pkg
+    print_info "Removing PM2 systemd startup service..."
+    pm2 unstartup systemd 2>/dev/null || true
+    # Also remove any pm2-*.service files left behind
+    rm -f /etc/systemd/system/pm2-*.service 2>/dev/null || true
+    systemctl daemon-reload 2>/dev/null || true
+
+    read -p "Remove PM2 globally? [y/N]: " REMOVE_PM2 </dev/tty
     if [[ "$REMOVE_PM2" =~ ^[Yy]$ ]]; then
         print_info "Removing PM2..."
         npm uninstall -g pm2 2>/dev/null || true
@@ -297,14 +348,36 @@ remove_pm2() {
         rm -rf /home/$APP_USER/.pm2 2>/dev/null || true
         print_success "PM2 removed"
     else
-        print_info "PM2 kept (skipping)"
+        print_info "PM2 package kept (startup service removed)"
+    fi
+}
+
+remove_redis() {
+    print_step "Removing Redis"
+
+    if command -v redis-cli >/dev/null 2>&1 || systemctl list-units --all 2>/dev/null | grep -q redis; then
+        print_info "Stopping Redis service..."
+        systemctl stop redis-server 2>/dev/null || systemctl stop redis 2>/dev/null || true
+        systemctl disable redis-server 2>/dev/null || systemctl disable redis 2>/dev/null || true
+
+        read -p "Remove Redis packages? [y/N]: " REMOVE_REDIS </dev/tty
+        if [[ "$REMOVE_REDIS" =~ ^[Yy]$ ]]; then
+            apt-get purge -y redis-server redis-tools 2>/dev/null || true
+            apt-get autoremove -y 2>/dev/null || true
+            rm -rf /etc/redis /var/lib/redis /var/log/redis 2>/dev/null || true
+            print_success "Redis removed"
+        else
+            print_info "Redis package kept (service stopped)"
+        fi
+    else
+        print_info "Redis not installed (skipping)"
     fi
 }
 
 remove_nodejs() {
     print_step "Removing Node.js"
     
-    read -p "Remove Node.js? [y/N]: " REMOVE_NODEJS
+    read -p "Remove Node.js? [y/N]: " REMOVE_NODEJS </dev/tty
     if [[ "$REMOVE_NODEJS" =~ ^[Yy]$ ]]; then
         print_info "Removing Node.js..."
         apt-get purge -y nodejs 2>/dev/null || true
@@ -320,10 +393,10 @@ remove_nodejs() {
 remove_mysql() {
     print_step "Removing MySQL"
     
-    read -p "Remove MySQL completely? (DANGER: All databases will be lost) [y/N]: " REMOVE_MYSQL
+    read -p "Remove MySQL completely? (DANGER: All databases will be lost) [y/N]: " REMOVE_MYSQL </dev/tty
     if [[ "$REMOVE_MYSQL" =~ ^[Yy]$ ]]; then
         print_warning "This will remove ALL MySQL databases!"
-        read -p "Are you absolutely sure? Type 'YES' to confirm: " CONFIRM_MYSQL
+        read -p "Are you absolutely sure? Type 'YES' to confirm: " CONFIRM_MYSQL </dev/tty
         
         if [ "$CONFIRM_MYSQL" = "YES" ]; then
             print_info "Removing MySQL..."
@@ -345,12 +418,20 @@ remove_mysql() {
 clean_firewall() {
     print_step "Cleaning firewall rules"
     
-    read -p "Remove RADIUS firewall rules? [Y/n]: " CLEAN_FIREWALL
+    read -p "Remove all application firewall rules? [Y/n]: " CLEAN_FIREWALL </dev/tty
     if [[ ! "$CLEAN_FIREWALL" =~ ^[Nn]$ ]]; then
         print_info "Removing UFW rules..."
+        # RADIUS ports
         ufw delete allow 1812/udp 2>/dev/null || true
         ufw delete allow 1813/udp 2>/dev/null || true
         ufw delete allow 3799/udp 2>/dev/null || true
+        # L2TP/IPSec ports (opened by install-freeradius.sh)
+        ufw delete allow 500/udp  2>/dev/null || true
+        ufw delete allow 4500/udp 2>/dev/null || true
+        ufw delete allow 1701/udp 2>/dev/null || true
+        # HTTP/HTTPS (opened by install-nginx.sh)
+        ufw delete allow 80/tcp   2>/dev/null || true
+        ufw delete allow 443/tcp  2>/dev/null || true
         print_success "Firewall rules removed"
     fi
 }
@@ -359,7 +440,7 @@ clean_logs() {
     print_step "Cleaning logs"
     
     print_info "Removing application logs..."
-    rm -rf /var/log/aibill-vps-install.log
+    rm -rf /var/log/salfanet-vps-install.log
     rm -rf /var/log/freeradius
     rm -rf /var/log/nginx/salfanet-radius-*
     
@@ -393,12 +474,16 @@ main() {
     print_info "Starting removal process..."
     echo ""
     
+    # Prompt for DB root password once (used by backup and remove_database)
+    prompt_db_root_password
+
     # Execute removal steps
     stop_all_services
     remove_application
     remove_database
     remove_freeradius
     remove_nginx_config
+    remove_redis
     remove_user
     remove_pm2
     clean_firewall
@@ -439,7 +524,7 @@ main() {
     echo -e "${CYAN}System is now clean and ready for fresh installation.${NC}"
     echo ""
     echo "To reinstall, run:"
-    echo "  cd /root/AIBILL-RADIUS-main/vps-install"
+    echo "  cd /root/SALFANET-RADIUS-main/vps-install"
     echo "  ./vps-installer.sh"
     echo ""
 }

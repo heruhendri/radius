@@ -172,13 +172,13 @@ export default function HotspotProfilePage() {
         setIsDialogOpen(false)
         resetForm()
         loadProfiles()
-        await showSuccess('Profile saved successfully')
+        await showSuccess(t('hotspot.profileSavedSuccess'))
       } else {
         const error = await res.json()
-        await showError('Failed: ' + error.error)
+        await showError(t('hotspot.failedPrefix', { error: error.error }))
       }
     } catch (error) {
-      await showError('Failed to save profile')
+      await showError(t('hotspot.failedSaveProfile'))
     } finally {
       setSaving(false)
     }
@@ -190,13 +190,13 @@ export default function HotspotProfilePage() {
       const res = await fetch(`/api/hotspot/profiles?id=${deleteProfileId}`, { method: 'DELETE' })
       if (res.ok) {
         loadProfiles()
-        await showSuccess('Profile deleted successfully')
+        await showSuccess(t('hotspot.profileDeletedSuccess'))
       } else {
         const error = await res.json()
-        await showError('Failed: ' + error.error)
+        await showError(t('hotspot.failedPrefix', { error: error.error }))
       }
     } catch (error) {
-      await showError('Failed to delete profile')
+      await showError(t('hotspot.failedDeleteProfile'))
     } finally {
       setDeleteProfileId(null)
     }
@@ -240,7 +240,7 @@ export default function HotspotProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -251,7 +251,7 @@ export default function HotspotProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -262,11 +262,11 @@ export default function HotspotProfilePage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <Ticket className="w-5 h-5 text-[#00f7ff]" />
               {t('hotspot.profiles')}
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('hotspot.profilesSubtitle')}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('hotspot.profilesSubtitle')}</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -286,7 +286,7 @@ export default function HotspotProfilePage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div className="bg-card p-2.5 rounded-lg border border-border">
             <div className="flex items-center justify-between">
               <div>
@@ -318,8 +318,65 @@ export default function HotspotProfilePage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3">
+          {profiles.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-xs">{t('hotspot.noProfiles')}</div>
+          ) : (
+            profiles.map((profile) => (
+              <div key={profile.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <div className="font-medium text-sm text-foreground">{profile.name}</div>
+                    {profile.groupProfile && (
+                      <div className="text-[10px] text-muted-foreground">({profile.groupProfile})</div>
+                    )}
+                  </div>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${profile.isActive ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                    {profile.isActive ? t('common.active') : t('common.inactive')}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">{t('hotspot.speed')}</div>
+                    <div className="font-mono text-xs">{profile.speed}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">{t('hotspot.validity')}</div>
+                    <div>{formatValidity(profile.validityValue, profile.validityUnit)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">Kuota</div>
+                    <div>{formatQuota(profile.usageQuota)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">Durasi</div>
+                    <div>{formatDuration(profile.usageDuration, profile.usageDurationUnit)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">{t('hotspot.costPrice')}</div>
+                    <div>{formatCurrency(profile.costPrice)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">{t('hotspot.sellingPrice')}</div>
+                    <div className="font-medium text-success">{formatCurrency(profile.sellingPrice)}</div>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-1 border-t border-border pt-2">
+                  <button onClick={() => handleEdit(profile)} className="p-2 text-muted-foreground hover:bg-muted rounded" title="Edit">
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setDeleteProfileId(profile.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Delete">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Table - Desktop */}
+        <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted border-b border-border">
@@ -417,7 +474,7 @@ export default function HotspotProfilePage() {
                     </div>
                   </div>
                   <div className="bg-[#00ff88]/10 p-2 rounded-lg border border-[#00ff88]/30">
-                    <div className="text-[10px] text-[#e0d0ff]/70">{t('hotspot.sellingPrice')}</div>
+                    <div className="text-[10px] text-muted-foreground">{t('hotspot.sellingPrice')}</div>
                     <div className="text-base font-bold text-[#00ff88] drop-shadow-[0_0_10px_rgba(0,255,136,0.5)]">{formatCurrency(sellingPrice)}</div>
                   </div>
                   <div>
@@ -430,7 +487,7 @@ export default function HotspotProfilePage() {
                       <ModalInput type="number" min={1} value={formData.sharedUsers} onChange={(e) => setFormData({ ...formData, sharedUsers: e.target.value })} required />
                     </div>
                     <div>
-                      <ModalLabel required>Masa Aktif</ModalLabel>
+                      <ModalLabel required>{t('hotspot.activePeriod')}</ModalLabel>
                       <ModalInput type="number" min={1} value={formData.validityValue} onChange={(e) => setFormData({ ...formData, validityValue: e.target.value })} required />
                     </div>
                     <div>
@@ -447,17 +504,17 @@ export default function HotspotProfilePage() {
                 {/* Kolom Kanan */}
                 <div className="space-y-3">
                   <div>
-                    <ModalLabel required>MikroTik Rate Limit</ModalLabel>
+                    <ModalLabel required>{t('hotspot.rateLimitMikrotik')}</ModalLabel>
                     <ModalInput value={formData.speed} onChange={(e) => setFormData({ ...formData, speed: e.target.value })} placeholder="1M/1500k 0/0 0/0 8 0/0" required className="font-mono" />
-                    <p className="text-[9px] text-[#e0d0ff]/50 mt-1">Format: rx-rate[/tx-rate] [rx-burst-rate[/tx-burst-rate]]</p>
+                    <p className="text-[9px] text-muted-foreground mt-1">Format: rx-rate[/tx-rate] [rx-burst-rate[/tx-burst-rate]]</p>
                     <p className="text-[9px] text-[#00f7ff] mt-0.5">Contoh: 1M/1500k 0/0 0/0 8 0/0 atau 5M/5M (simple)</p>
                   </div>
                   <div className="border border-[#00f7ff]/30 rounded-lg p-3 bg-[#00f7ff]/5">
                     <div className="text-[10px] font-medium text-[#00f7ff] mb-2">⏱️ Pembatasan Penggunaan</div>
-                    <p className="text-[9px] text-[#e0d0ff]/50 mb-3">Masa aktif adalah waktu voucher berlaku sejak pertama kali digunakan. Kuota & Durasi adalah batasan penggunaan selama masa aktif tersebut.</p>
+                    <p className="text-[9px] text-muted-foreground mb-3">Masa aktif adalah waktu voucher berlaku sejak pertama kali digunakan. Kuota & Durasi adalah batasan penggunaan selama masa aktif tersebut.</p>
                     <div className="space-y-3">
                       <div>
-                        <ModalLabel>Kuota Data</ModalLabel>
+                        <ModalLabel>{t('hotspot.dataQuotaLabel')}</ModalLabel>
                         <div className="flex gap-2">
                           <ModalInput type="number" min={0} step={0.1} value={formData.usageQuota} onChange={(e) => setFormData({ ...formData, usageQuota: e.target.value })} placeholder="0 = Unlimited" className="flex-1" />
                           <ModalSelect value={formData.usageQuotaUnit} onChange={(e) => setFormData({ ...formData, usageQuotaUnit: e.target.value })} className="w-20">
@@ -465,10 +522,10 @@ export default function HotspotProfilePage() {
                             <option value="GB" className="bg-[#0a0520]">GB</option>
                           </ModalSelect>
                         </div>
-                        <p className="text-[9px] text-[#e0d0ff]/50 mt-1">Kosongkan untuk unlimited</p>
+                        <p className="text-[9px] text-muted-foreground mt-1">Kosongkan untuk unlimited</p>
                       </div>
                       <div>
-                        <ModalLabel>Durasi Penggunaan</ModalLabel>
+                        <ModalLabel>{t('hotspot.usageDurationLabel')}</ModalLabel>
                         <div className="flex gap-2">
                           <ModalInput type="number" min={0} value={formData.usageDuration} onChange={(e) => setFormData({ ...formData, usageDuration: e.target.value })} placeholder="0 = Unlimited" className="flex-1" />
                           <ModalSelect value={formData.usageDurationUnit} onChange={(e) => setFormData({ ...formData, usageDurationUnit: e.target.value })} className="w-20">
@@ -478,7 +535,7 @@ export default function HotspotProfilePage() {
                             <option value="MONTHS" className="bg-[#0a0520]">Bulan</option>
                           </ModalSelect>
                         </div>
-                        <p className="text-[9px] text-[#e0d0ff]/50 mt-1">Total waktu penggunaan (kosongkan = unlimited)</p>
+                        <p className="text-[9px] text-muted-foreground mt-1">Total waktu penggunaan (kosongkan = unlimited)</p>
                       </div>
                     </div>
                   </div>
@@ -486,11 +543,11 @@ export default function HotspotProfilePage() {
                     <div className="text-[10px] font-medium text-[#bc13fe] mb-2">🔐 Access Control</div>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={formData.agentAccess} onChange={(e) => setFormData({ ...formData, agentAccess: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]" />
-                      <span className="text-xs text-[#e0d0ff]">{t('hotspot.agentAccess')}</span>
+                      <span className="text-xs text-foreground">{t('hotspot.agentAccess')}</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={formData.eVoucherAccess} onChange={(e) => setFormData({ ...formData, eVoucherAccess: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]" />
-                      <span className="text-xs text-[#e0d0ff]">{t('hotspot.eVoucherAccess')}</span>
+                      <span className="text-xs text-foreground">{t('hotspot.eVoucherAccess')}</span>
                     </label>
                   </div>
                 </div>
@@ -511,8 +568,8 @@ export default function HotspotProfilePage() {
             <div className="w-14 h-14 bg-[#ff4466]/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-[#ff4466]/50">
               <Trash2 className="w-7 h-7 text-[#ff6b8a]" />
             </div>
-            <h2 className="text-base font-bold text-white mb-2">{t('hotspot.deleteProfile')}</h2>
-            <p className="text-xs text-[#e0d0ff]/70">{t('hotspot.confirmDeleteProfile')}</p>
+            <h2 className="text-base font-bold text-foreground mb-2">{t('hotspot.deleteProfile')}</h2>
+            <p className="text-xs text-muted-foreground">{t('hotspot.confirmDeleteProfile')}</p>
           </ModalBody>
           <ModalFooter className="justify-center">
             <ModalButton variant="secondary" onClick={() => setDeleteProfileId(null)}>{t('common.cancel')}</ModalButton>

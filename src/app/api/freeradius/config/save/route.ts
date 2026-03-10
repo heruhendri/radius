@@ -1,4 +1,6 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 import fs from 'fs/promises';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -22,6 +24,10 @@ const ALLOWED_DIRS = [
 
 export async function POST(req: Request) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
         const { filename, content } = await req.json();
 
         if (!filename) {

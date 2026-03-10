@@ -1,14 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { reloadFreeRadius } from '@/lib/freeradius';
-import { logActivity } from '@/lib/activity-log';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { reloadFreeRadius } from '@/server/services/radius/freeradius.service';
+import { logActivity } from '@/server/services/activity-log.service';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/server/auth/config';
 import crypto from 'crypto';
 import os from 'os';
 const RouterOSAPI = require('node-routeros').RouterOSAPI;
-
-const prisma = new PrismaClient();
+import { prisma } from '@/server/db/client';
 
 // Auto-detect server IP from network interfaces
 const getServerIp = (): string => {
@@ -29,6 +27,10 @@ const getRadiusServerIp = () => process.env.RADIUS_SERVER_IP || process.env.VPS_
 
 // GET - Load all routers
 export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const radiusServerIp = getRadiusServerIp();
     

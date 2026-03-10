@@ -1,7 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 
 // GET - Get agent sales history grouped by month
 // Gets data from used vouchers (ACTIVE/EXPIRED) with agentId

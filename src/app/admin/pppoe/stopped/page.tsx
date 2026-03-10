@@ -185,7 +185,7 @@ export default function StoppedSubscriptionsPage() {
   if (!hasPermission('customers.view')) return <div className="flex items-center justify-center h-screen text-destructive">{t('pppoe.accessDenied')}</div>;
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 space-y-6">
       {/* Header */}
@@ -193,8 +193,8 @@ export default function StoppedSubscriptionsPage() {
         <div className="flex items-center gap-2">
           <Users className="h-6 w-6 text-[#00f7ff]" />
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('pppoe.stoppedSubscriptions')}</h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('pppoe.stoppedSubscriptionsDesc')}</p>
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('pppoe.stoppedSubscriptions')}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('pppoe.stoppedSubscriptionsDesc')}</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -270,8 +270,69 @@ export default function StoppedSubscriptionsPage() {
           </div>
         </div>
 
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3 p-3">
+          {loading ? (
+            <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground text-xs">
+              <RefreshCcw className="h-4 w-4 animate-spin" />
+              {t('pppoe.loadingData')}
+            </div>
+          ) : paginatedUsers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-xs">
+              {users.length === 0 ? t('pppoe.noStoppedCustomers') : t('pppoe.noMatchingData')}
+            </div>
+          ) : (
+            paginatedUsers.map((user) => (
+              <div key={user.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.has(user.id)}
+                      onChange={() => toggleSelectUser(user.id)}
+                      className="rounded border-border w-3.5 h-3.5 mt-0.5 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{user.username}</p>
+                    </div>
+                  </div>
+                  <span className="px-1.5 py-0.5 text-[10px] font-medium rounded-full ml-2 shrink-0 bg-destructive/20 text-destructive">
+                    Stopped
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-2">
+                  <div><span className="text-muted-foreground">{t('pppoe.profile')}:</span> <span className="text-foreground">{user.profile.name}</span></div>
+                  <div><span className="text-muted-foreground">{t('nav.areas')}:</span> <span className="text-foreground">{user.area?.name || '-'}</span></div>
+                  <div><span className="text-muted-foreground">{t('pppoe.phoneNumber')}:</span> <span className="text-foreground">{user.phone}</span></div>
+                  {user.email && <div className="truncate"><span className="text-muted-foreground">Email:</span> <span className="text-foreground">{user.email}</span></div>}
+                  <div><span className="text-muted-foreground">{t('pppoe.registrationDate')}:</span> <span className="text-foreground text-[10px]">{user.createdAt ? formatWIB(user.createdAt, 'dd/MM/yyyy') : '-'}</span></div>
+                  <div><span className="text-muted-foreground">{t('pppoe.stopDate')}:</span> <span className="text-foreground text-[10px]">{user.stoppedAt ? formatWIB(user.stoppedAt, 'dd/MM/yyyy') : user.expiredAt ? formatWIB(user.expiredAt, 'dd/MM/yyyy') : '-'}</span></div>
+                  {user.note && <div className="col-span-2 truncate"><span className="text-muted-foreground">{t('pppoe.note')}:</span> <span className="text-foreground">{user.note}</span></div>}
+                </div>
+                <div className="flex items-center gap-2 pt-2 border-t border-border">
+                  <button
+                    onClick={() => handleReactivate(user.id)}
+                    className="p-2 text-success hover:bg-success/20 rounded border border-transparent hover:border-success/40 transition-all"
+                    title={t('pppoe.reactivate')}
+                  >
+                    <Shield className="h-4 w-4 drop-shadow-[0_0_3px_rgba(0,255,136,0.5)]" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(user.id)}
+                    className="p-2 text-destructive hover:bg-destructive/20 rounded border border-transparent hover:border-destructive/40 transition-all"
+                    title={t('pppoe.permanentDelete')}
+                  >
+                    <Trash2 className="h-4 w-4 drop-shadow-[0_0_3px_rgba(255,51,102,0.5)]" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted">
               <tr>

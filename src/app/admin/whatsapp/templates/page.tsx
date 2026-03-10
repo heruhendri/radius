@@ -276,6 +276,7 @@ export default function WhatsAppTemplatesPage() {
           </div>
         </div>
 
+        <div className="lg:grid lg:grid-cols-2 lg:divide-x divide-border">
         <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
           {!template ? (
             <div className="text-center py-8 sm:py-12 text-muted-foreground">
@@ -386,19 +387,88 @@ export default function WhatsAppTemplatesPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
                   <span className="hidden sm:inline">{t('whatsapp.copy')}</span>
-                  <span className="sm:hidden">Copy</span>
+                  <span className="sm:hidden">{t('whatsapp.copyBtn')}</span>
                 </button>
               </div>
             </>
           )}
         </div>
+
+        {/* WhatsApp Live Preview Pane */}
+        <div className="p-3 sm:p-4 border-t lg:border-t-0 border-border bg-[#0B141A]/20">
+          <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 sm:mb-3 flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5 text-green-500" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            Preview Pesan
+          </p>
+          {!template ? (
+            <div className="flex items-center justify-center h-40 rounded-lg bg-[#0B141A]/60">
+              <p className="text-xs text-white/30">Belum ada template</p>
+            </div>
+          ) : (
+            <div className="bg-[#0B141A] rounded-xl min-h-[220px] p-3 relative overflow-hidden">
+              <div className="absolute inset-0 opacity-[0.03]" style={{backgroundImage: 'repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%)' , backgroundSize: '20px 20px'}}></div>
+              <div className="relative max-w-[90%] ml-auto">
+                <div className="bg-[#005C4B] text-white rounded-lg rounded-tr-sm p-2.5 sm:p-3 shadow-lg relative">
+                  <div
+                    className="text-[11px] sm:text-xs leading-relaxed whitespace-pre-wrap break-words"
+                    dangerouslySetInnerHTML={{ __html: (() => {
+                      const sampleVars: Record<string, string> = {
+                        '{{customerName}}': 'Budi Santoso', '{{namaPelanggan}}': 'Budi Santoso', '{{nama}}': 'Budi Santoso', '{{name}}': 'Budi Santoso',
+                        '{{customerUsername}}': 'budi123', '{{username}}': 'budi123',
+                        '{{amount}}': 'Rp 150.000', '{{jumlah}}': 'Rp 150.000', '{{totalAmount}}': 'Rp 150.000', '{{harga}}': 'Rp 150.000',
+                        '{{invoiceNumber}}': 'INV-202501-001', '{{nomorInvoice}}': 'INV-202501-001',
+                        '{{dueDate}}': '31 Januari 2025', '{{tanggalJatuhTempo}}': '31 Januari 2025',
+                        '{{packageName}}': 'Paket 20 Mbps', '{{paket}}': 'Paket 20 Mbps', '{{package}}': 'Paket 20 Mbps',
+                        '{{phone}}': '08123456789', '{{telepon}}': '08123456789',
+                        '{{address}}': 'Jl. Merdeka No. 10, RT 05/RW 03', '{{alamat}}': 'Jl. Merdeka No. 10',
+                        '{{date}}': '15 Januari 2025', '{{tanggal}}': '15 Januari 2025', '{{tanggalBayar}}': '15 Januari 2025',
+                        '{{companyName}}': 'Salfanet ISP', '{{perusahaan}}': 'Salfanet ISP',
+                        '{{technicianName}}': 'Ahmad (Teknisi)', '{{teknisi}}': 'Ahmad (Teknisi)',
+                        '{{issueDescription}}': 'Gangguan pada kabel backbone', '{{masalah}}': 'Gangguan kabel backbone',
+                        '{{estimatedTime}}': '2-3 jam', '{{estimasi}}': '2-3 jam',
+                        '{{status}}': 'AKTIF', '{{period}}': 'Januari 2025', '{{periode}}': 'Januari 2025',
+                        '{{remainingDays}}': '5', '{{sisaHari}}': '5',
+                        '{{speedUp}}': '20 Mbps', '{{speedDown}}': '20 Mbps', '{{kecepatan}}': '20 Mbps',
+                        '{{paymentMethod}}': 'Transfer Bank BCA', '{{metodeBayar}}': 'Transfer Bank',
+                        '{{activationDate}}': '15 Januari 2025', '{{tanggalAktif}}': '15 Januari 2025',
+                        '{{installationDate}}': '10 Januari 2025', '{{tanggalPasang}}': '10 Januari 2025',
+                        '{{notes}}': 'Terima kasih atas pembayarannya', '{{catatan}}': '-',
+                        '{{otp}}': '123456', '{{kode}}': '123456', '{{token}}': 'TKN-ABC123',
+                        '{{link}}': 'https://salfanet.net/bayar', '{{url}}': 'https://salfanet.net',
+                        '{{year}}': new Date().getFullYear().toString(),
+                        '{{month}}': new Date().toLocaleDateString('id-ID', { month: 'long' }),
+                      };
+                      let rendered = message;
+                      Object.entries(sampleVars).forEach(([k, v]) => {
+                        rendered = rendered.replace(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), v);
+                      });
+                      rendered = rendered.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                      rendered = rendered
+                        .replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>')
+                        .replace(/_([^_\n]+)_/g, '<em>$1</em>')
+                        .replace(/~([^~\n]+)~/g, '<del class="opacity-70">$1</del>')
+                        .replace(/```([^`]+)```/g, '<code class="bg-black/30 px-0.5 rounded font-mono">$1</code>');
+                      return rendered;
+                    })() }}
+                  />
+                  <div className="absolute -right-[5px] top-0 w-0 h-0 border-l-[6px] border-l-[#005C4B] border-b-[6px] border-b-transparent"></div>
+                  <p className="text-[9px] text-white/40 text-right mt-1.5 select-none">12:00 ✓✓</p>
+                </div>
+              </div>
+              <p className="text-[9px] text-white/25 text-center mt-3">{message.length} karakter · data contoh</p>
+            </div>
+          )}
+        </div>
+        </div> {/* close lg:grid */}
       </div>
     );
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -409,7 +479,7 @@ export default function WhatsAppTemplatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -420,34 +490,32 @@ export default function WhatsAppTemplatesPage() {
         <div className="max-w-6xl mx-auto space-y-3 sm:space-y-4">
         {/* Header */}
         <div className="px-1 sm:px-0">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
             <svg className="w-5 h-5 sm:w-6 sm:h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <span className="hidden sm:inline">{t('whatsapp.templatesTitle')}</span>
-            <span className="sm:hidden">Template WhatsApp</span>
+            <span className="sm:hidden">{t('whatsapp.templateWhatsapp')}</span>
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('whatsapp.templatesSubtitle')}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('whatsapp.templatesSubtitle')}</p>
         </div>
 
-        {/* Tabs - Scrollable on mobile */}
+        {/* Tabs - Wrapping on mobile */}
         <div className="bg-card rounded-lg border border-border p-1 overflow-hidden">
-          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
-            <div className="flex gap-1 min-w-max sm:flex-wrap sm:min-w-0">
-              {templateTypes.map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setActiveTab(type)}
-                  className={`px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-medium rounded transition-colors whitespace-nowrap ${
-                    activeTab === type
-                      ? 'bg-teal-600 text-white'
-                      : 'text-muted-foreground dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  {templateConfig[type].title}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-1 sm:gap-1.5">
+            {templateTypes.map((type) => (
+              <button
+                key={type}
+                onClick={() => setActiveTab(type)}
+                className={`px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-medium rounded transition-colors ${
+                  activeTab === type
+                    ? 'bg-teal-600 text-white'
+                    : 'text-muted-foreground dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                {templateConfig[type].title}
+              </button>
+            ))}
           </div>
         </div>
 

@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { syncVoucherToRadius } from '@/lib/hotspot-radius-sync';
-import { sendPaymentSuccess, sendVoucherPurchaseSuccess } from '@/lib/whatsapp-notifications';
-import { WhatsAppService } from '@/lib/whatsapp';
-import { logActivity } from '@/lib/activity-log';
+﻿import { NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { syncVoucherToRadius } from '@/server/services/radius/hotspot-sync.service';
+import { sendPaymentSuccess, sendVoucherPurchaseSuccess } from '@/server/services/notifications/whatsapp-templates.service';
+import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
+import { logActivity } from '@/server/services/activity-log.service';
+import { disconnectPPPoEUser } from '@/server/services/radius/coa-handler.service';
 import crypto from 'crypto';
 import { nanoid } from 'nanoid';
 
@@ -470,7 +471,7 @@ async function handleVoucherOrder(
 
       // Create notification using NotificationService
       try {
-        const { NotificationService } = await import('@/lib/notifications');
+        const { NotificationService } = await import('@/server/services/notifications/dispatcher.service');
         await NotificationService.notifyPaymentReceived({
           amount: order.totalAmount,
           customerName: order.customerName,
@@ -934,7 +935,7 @@ async function handleCustomerTopUp(
 
       // Create notification using NotificationService
       try {
-        const { NotificationService } = await import('@/lib/notifications');
+        const { NotificationService } = await import('@/server/services/notifications/dispatcher.service');
         await NotificationService.notifyPaymentReceived({
           amount: topupAmount,
           invoiceId: invoice.id,
@@ -1174,7 +1175,7 @@ async function handleInvoicePayment(
       // Create notification using NotificationService
       try {
         const customerName = invoice.customerName || invoice.user?.name || 'Unknown';
-        const { NotificationService } = await import('@/lib/notifications');
+        const { NotificationService } = await import('@/server/services/notifications/dispatcher.service');
         await NotificationService.notifyPaymentReceived({
           amount: invoice.amount,
           invoiceId: invoice.id,
@@ -1257,16 +1258,15 @@ async function handleInvoicePayment(
         // PREPAID vs POSTPAID logic
         let newExpiredAt: Date | null = null;
 
-        if (user.subscriptionType === 'PREPAID') {
-          // PREPAID: Extend expiredAt based on validity
-          // Use current expiredAt as base, or now if not set or already expired
+        // Both PREPAID and POSTPAID: Extend expiredAt by validity period
+        // Base date: use current expiredAt if still in the future, otherwise use now (payment date)
+        // This ensures user always gets a full validity period after each payment
+        {
           let baseDate = user.expiredAt ? new Date(user.expiredAt) : now;
-
           if (baseDate < now) {
-            baseDate = now;
+            baseDate = now; // Expired already → start fresh from payment date
           }
 
-          // Calculate new expiry date
           newExpiredAt = new Date(baseDate);
 
           switch (profile.validityUnit) {
@@ -1283,9 +1283,6 @@ async function handleInvoicePayment(
               newExpiredAt.setMinutes(newExpiredAt.getMinutes() + profile.validityValue);
               break;
           }
-        } else {
-          // POSTPAID: Keep expiredAt as null (no expiry)
-          newExpiredAt = null;
         }
 
         // Determine if user should be activated (include blocked status)
@@ -1294,31 +1291,36 @@ async function handleInvoicePayment(
 
         // Check if this is a package upgrade invoice
         let newProfileId = user.profileId;
+        let isPackageChange = false;
         if (invoice.additionalFees && typeof invoice.additionalFees === 'object') {
           const additionalFeesObj = invoice.additionalFees as any;
           if (additionalFeesObj.items && Array.isArray(additionalFeesObj.items)) {
             const upgradeItem = additionalFeesObj.items.find((item: any) =>
-              item.metadata?.type === 'package_upgrade' && item.metadata?.newPackageId
+              (item.metadata?.type === 'package_upgrade' || item.metadata?.type === 'package_change') && item.metadata?.newPackageId
             );
             if (upgradeItem) {
               newProfileId = upgradeItem.metadata.newPackageId;
-              console.log(`📦 Package upgrade detected: ${upgradeItem.metadata.oldPackageName} → ${upgradeItem.metadata.newPackageName}`);
+              isPackageChange = true;
+              console.log(`📦 Package change detected: ${upgradeItem.metadata.oldPackageName} → ${upgradeItem.metadata.newPackageName} (expiry PRESERVED)`);
             }
           }
         }
+
+        // For package change: keep existing expiredAt, do NOT extend
+        const finalExpiredAt = isPackageChange ? user.expiredAt : newExpiredAt;
 
         // Update user
         await prisma.pppoeUser.update({
           where: { id: user.id },
           data: {
-            expiredAt: newExpiredAt,
+            expiredAt: finalExpiredAt,
             status: newStatus,
             profileId: newProfileId
           }
         });
 
         console.log(`✅ User ${user.username} updated (${user.subscriptionType}):`);
-        console.log(`   - Expiry: ${user.expiredAt?.toISOString() || 'null'} → ${newExpiredAt?.toISOString() || 'null'}`);
+        console.log(`   - Expiry: ${user.expiredAt?.toISOString() || 'null'} → ${finalExpiredAt?.toISOString() || 'null'} ${isPackageChange ? '(package change, preserved)' : ''}`);
         console.log(`   - Status: ${user.status} → ${newStatus}`);
         if (newProfileId !== user.profileId) {
           console.log(`   - Profile: ${user.profileId} → ${newProfileId}`);
@@ -1409,6 +1411,78 @@ async function handleInvoicePayment(
           }
         }
 
+        // ============================================
+        // PROCESS REFERRAL BONUS (FIRST PAYMENT)
+        // ============================================
+        try {
+          // Check if user was referred
+          const fullUser = await prisma.pppoeUser.findUnique({
+            where: { id: user.id },
+            select: { id: true, referredById: true, name: true },
+          });
+
+          if (fullUser?.referredById) {
+            // Get referral config
+            const companyRef = await prisma.company.findFirst({
+              select: {
+                referralEnabled: true,
+                referralRewardAmount: true,
+                referralRewardType: true,
+                referralRewardBoth: true,
+                referralReferredAmount: true,
+              },
+            });
+
+            if (companyRef?.referralEnabled && companyRef.referralRewardType === 'FIRST_PAYMENT') {
+              // Check if reward already exists (idempotency)
+              const existingReward = await prisma.referralReward.findFirst({
+                where: { referrerId: fullUser.referredById, referredId: user.id },
+              });
+
+              if (!existingReward) {
+                // Check if this is the first paid invoice for this user
+                const paidInvoiceCount = await prisma.invoice.count({
+                  where: { userId: user.id, status: 'PAID' },
+                });
+
+                if (paidInvoiceCount <= 1) {
+                  const rewardAmount = companyRef.referralRewardAmount ?? 10000;
+
+                  // Create reward and credit referrer balance atomically
+                  await prisma.$transaction([
+                    prisma.referralReward.create({
+                      data: {
+                        referrerId: fullUser.referredById,
+                        referredId: user.id,
+                        amount: rewardAmount,
+                        status: 'CREDITED',
+                        type: 'FIRST_PAYMENT',
+                        creditedAt: new Date(),
+                      },
+                    }),
+                    prisma.pppoeUser.update({
+                      where: { id: fullUser.referredById },
+                      data: { balance: { increment: rewardAmount } },
+                    }),
+                  ]);
+                  console.log(`✅ Referral reward ${rewardAmount} credited to referrer ${fullUser.referredById}`);
+
+                  // Also credit the referred customer if rewardBoth is enabled
+                  if (companyRef.referralRewardBoth && (companyRef.referralReferredAmount ?? 0) > 0) {
+                    await prisma.pppoeUser.update({
+                      where: { id: user.id },
+                      data: { balance: { increment: companyRef.referralReferredAmount! } },
+                    });
+                    console.log(`✅ Referred bonus ${companyRef.referralReferredAmount} credited to ${user.id}`);
+                  }
+                }
+              }
+            }
+          }
+        } catch (referralError) {
+          console.error('Referral bonus error:', referralError);
+        }
+
         if (wasDisabled) {
           console.log(`   - Status: ${user.status} → ${newStatus}`);
 
@@ -1440,7 +1514,10 @@ async function handleInvoicePayment(
                 ON DUPLICATE KEY UPDATE value = ${user.password}
               `;
 
-            // 2. Restore radusergroup
+            // 2. Restore radusergroup — DELETE first to remove 'isolir' row, then insert real group
+            await prisma.$executeRaw`
+                DELETE FROM radusergroup WHERE username = ${user.username}
+              `;
             await prisma.$executeRaw`
                 INSERT INTO radusergroup (username, groupname, priority)
                 VALUES (${user.username}, ${profile.groupName}, 0)
@@ -1484,26 +1561,15 @@ async function handleInvoicePayment(
             }
 
             // 5. Send CoA Disconnect to force re-authentication
-            if (user.routerId) {
-              try {
-                // Get base URL from company settings
-                const company = await prisma.company.findFirst();
-                const baseUrl = company?.baseUrl || process.env.NEXT_PUBLIC_APP_URL;
-
-                if (baseUrl) {
-                  const coaRes = await fetch(`${baseUrl}/api/coa/disconnect`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: user.username })
-                  });
-
-                  if (coaRes.ok) {
-                    console.log(`✅ CoA disconnect sent for ${user.username}`);
-                  }
-                }
-              } catch (coaError) {
-                console.error('CoA disconnect failed:', coaError);
+            try {
+              const coaResult = await disconnectPPPoEUser(user.username);
+              if (coaResult.success) {
+                console.log(`✅ CoA disconnect sent for ${user.username}`);
+              } else {
+                console.log(`⚠️ CoA disconnect: ${coaResult.error || 'No active session'}`);
               }
+            } catch (coaError) {
+              console.error('CoA disconnect failed:', coaError);
             }
           } catch (radiusError) {
             console.error('RADIUS sync error:', radiusError);

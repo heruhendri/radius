@@ -1,8 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { RouterOSAPI } from 'node-routeros';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/server/db/client';
 
 export async function POST(
   request: NextRequest,
@@ -50,7 +48,7 @@ export async function POST(
       );
     }
 
-    const comment = 'AIBILL RADIUS - Dont Delete';
+    const comment = 'SALFANET RADIUS - Dont Delete';
 
     try {
       // 1. Create IP Pool for isolir

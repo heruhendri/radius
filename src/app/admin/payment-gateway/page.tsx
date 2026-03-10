@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from '@/hooks/useTranslation';
 import { showSuccess, showError, showConfirm, showToast } from '@/lib/sweetalert';
 import { formatWIB } from '@/lib/timezone';
@@ -205,7 +206,7 @@ export default function PaymentGatewayPage() {
   const tripayActive = configs.find(c => c.provider === 'tripay')?.isActive;
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -218,7 +219,7 @@ export default function PaymentGatewayPage() {
         <div className="flex items-center gap-2">
           <CreditCard className="w-5 h-5" />
           <div>
-            <h1 className="text-2xl font-bold">{t('paymentGateway.title')}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">{t('paymentGateway.title')}</h1>
             <p className="text-sm text-white/80 mt-1">{t('paymentGateway.subtitle')}</p>
           </div>
         </div>
@@ -243,7 +244,7 @@ export default function PaymentGatewayPage() {
             {copied === 'webhook' ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
           </button>
         </div>
-        <p className="text-[10px] text-info mt-1">??? {t('paymentGateway.webhookNote')}</p>
+        <p className="text-[10px] text-info mt-1">ℹ️ {t('paymentGateway.webhookNote')}</p>
       </div>
 
       {/* Tabs */}
@@ -315,14 +316,51 @@ export default function PaymentGatewayPage() {
                 </button>
               </div>
 
+              {/* Mobile Card View */}
+              <div className="block md:hidden space-y-3">
+                {logsLoading ? (
+                  <div className="text-center py-6"><Loader2 className="w-4 h-4 animate-spin mx-auto text-primary" /></div>
+                ) : webhookLogs.length === 0 ? (
+                  <div className="text-center py-6 text-muted-foreground text-xs">{t('paymentGateway.noLogs')}</div>
+                ) : (
+                  webhookLogs.map((log) => (
+                    <div key={log.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-mono text-foreground truncate">{log.orderId}</p>
+                          <p className="text-[10px] text-muted-foreground">{formatWIB(new Date(log.createdAt), 'dd/MM HH:mm')}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                          {log.success ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <AlertCircle className="w-3.5 h-3.5 text-destructive" />}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-2">
+                        <div><span className="text-muted-foreground">{t('paymentGateway.gatewayLabel')}:</span> <span className="px-1.5 py-0.5 text-[10px] font-medium bg-muted rounded">{log.gateway}</span></div>
+                        <div><span className="text-muted-foreground">{t('common.amount')}:</span> <span className="text-foreground">{formatAmount(log.amount)}</span></div>
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">{t('common.status')}:</span>{' '}
+                          <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${
+                            log.status === 'settlement' ? 'bg-success/10 text-success' :
+                            log.status === 'pending' ? 'bg-warning/10 text-warning' : 'bg-destructive/10 text-destructive'
+                          }`}>{log.status}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center pt-2 border-t border-border">
+                        <button onClick={() => setSelectedLog(log)} className="p-2 text-xs text-primary hover:underline">{t('paymentGateway.detailLabel')}</button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
               {/* Logs Table */}
-              <div className="overflow-x-auto">
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-border">
                       <th className="text-left py-1.5 px-2 text-[10px] font-semibold text-muted-foreground uppercase">{t('common.time')}</th>
-                      <th className="text-left py-1.5 px-2 text-[10px] font-semibold text-muted-foreground uppercase">Gateway</th>
-                      <th className="text-left py-1.5 px-2 text-[10px] font-semibold text-muted-foreground uppercase">Order ID</th>
+                      <th className="text-left py-1.5 px-2 text-[10px] font-semibold text-muted-foreground uppercase">{t('paymentGateway.gatewayLabel')}</th>
+                      <th className="text-left py-1.5 px-2 text-[10px] font-semibold text-muted-foreground uppercase">{t('paymentGateway.orderIdLabel')}</th>
                       <th className="text-left py-1.5 px-2 text-[10px] font-semibold text-muted-foreground uppercase">{t('common.status')}</th>
                       <th className="text-left py-1.5 px-2 text-[10px] font-semibold text-muted-foreground uppercase hidden md:table-cell">{t('common.amount')}</th>
                       <th className="text-center py-1.5 px-2 text-[10px] font-semibold text-muted-foreground uppercase">{t('paymentGateway.result')}</th>
@@ -353,7 +391,7 @@ export default function PaymentGatewayPage() {
                             {log.success ? <CheckCircle2 className="w-3 h-3 text-success mx-auto" /> : <AlertCircle className="w-3 h-3 text-destructive mx-auto" />}
                           </td>
                           <td className="py-1.5 px-2 text-right">
-                            <button onClick={() => setSelectedLog(log)} className="text-[10px] text-primary hover:underline">Detail</button>
+                            <button onClick={() => setSelectedLog(log)} className="text-[10px] text-primary hover:underline">{t('paymentGateway.detailLabel')}</button>
                           </td>
                         </tr>
                       ))
@@ -385,7 +423,7 @@ export default function PaymentGatewayPage() {
               <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
                 <div>
                   <p className="text-xs font-medium">{t('paymentGateway.enableMidtrans')}</p>
-                  <p className="text-[10px] text-muted-foreground">Snap payment gateway</p>
+                  <p className="text-[10px] text-muted-foreground">{t('paymentGateway.snapDesc')}</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={midtransForm.isActive} onChange={(e) => setMidtransForm({ ...midtransForm, isActive: e.target.checked })} className="sr-only peer" />
@@ -393,14 +431,14 @@ export default function PaymentGatewayPage() {
                 </label>
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">Environment</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.environmentLabel')}</label>
                 <select value={midtransForm.environment} onChange={(e) => setMidtransForm({ ...midtransForm, environment: e.target.value })} className="w-full mt-1 px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card">
                   <option value="sandbox">Sandbox</option>
                   <option value="production">Production</option>
                 </select>
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">Client Key</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.clientKeyLabel')}</label>
                 <div className="relative mt-1">
                   <input type={showSecrets['mt-client'] ? 'text' : 'password'} value={midtransForm.clientKey} onChange={(e) => setMidtransForm({ ...midtransForm, clientKey: e.target.value })} className="w-full px-2.5 py-1.5 text-sm font-mono border border-border rounded-lg bg-card pr-8" placeholder="SB-Mid-client-xxxxx" />
                   <button type="button" onClick={() => toggleSecret('mt-client')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -409,7 +447,7 @@ export default function PaymentGatewayPage() {
                 </div>
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">Server Key</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.serverKeyLabel')}</label>
                 <div className="relative mt-1">
                   <input type={showSecrets['mt-server'] ? 'text' : 'password'} value={midtransForm.serverKey} onChange={(e) => setMidtransForm({ ...midtransForm, serverKey: e.target.value })} className="w-full px-2.5 py-1.5 text-sm font-mono border border-border rounded-lg bg-card pr-8" placeholder="SB-Mid-server-xxxxx" />
                   <button type="button" onClick={() => toggleSecret('mt-server')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -430,7 +468,7 @@ export default function PaymentGatewayPage() {
               <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
                 <div>
                   <p className="text-xs font-medium">{t('paymentGateway.enableXendit')}</p>
-                  <p className="text-[10px] text-muted-foreground">Payment gateway Indonesia</p>
+                  <p className="text-[10px] text-muted-foreground">{t('paymentGateway.paymentGatewayId')}</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={xenditForm.isActive} onChange={(e) => setXenditForm({ ...xenditForm, isActive: e.target.checked })} className="sr-only peer" />
@@ -438,14 +476,14 @@ export default function PaymentGatewayPage() {
                 </label>
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">Environment</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.environmentLabel')}</label>
                 <select value={xenditForm.environment} onChange={(e) => setXenditForm({ ...xenditForm, environment: e.target.value })} className="w-full mt-1 px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card">
                   <option value="sandbox">Sandbox</option>
                   <option value="production">Production</option>
                 </select>
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">API Key (Secret Key)</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.apiKeyLabel')}</label>
                 <div className="relative mt-1">
                   <input type={showSecrets['xn-api'] ? 'text' : 'password'} value={xenditForm.apiKey} onChange={(e) => setXenditForm({ ...xenditForm, apiKey: e.target.value })} className="w-full px-2.5 py-1.5 text-sm font-mono border border-border rounded-lg bg-card pr-8" placeholder="xnd_development_xxxxx" />
                   <button type="button" onClick={() => toggleSecret('xn-api')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -454,7 +492,7 @@ export default function PaymentGatewayPage() {
                 </div>
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">Webhook Token (Optional)</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.webhookTokenLabel')}</label>
                 <div className="relative mt-1">
                   <input type={showSecrets['xn-webhook'] ? 'text' : 'password'} value={xenditForm.webhookToken} onChange={(e) => setXenditForm({ ...xenditForm, webhookToken: e.target.value })} className="w-full px-2.5 py-1.5 text-sm font-mono border border-border rounded-lg bg-card pr-8" placeholder="Optional verification token" />
                   <button type="button" onClick={() => toggleSecret('xn-webhook')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -475,7 +513,7 @@ export default function PaymentGatewayPage() {
               <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
                 <div>
                   <p className="text-xs font-medium">{t('paymentGateway.enableDuitku')}</p>
-                  <p className="text-[10px] text-muted-foreground">Payment gateway Indonesia</p>
+                  <p className="text-[10px] text-muted-foreground">{t('paymentGateway.paymentGatewayId')}</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={duitkuForm.isActive} onChange={(e) => setDuitkuForm({ ...duitkuForm, isActive: e.target.checked })} className="sr-only peer" />
@@ -483,18 +521,18 @@ export default function PaymentGatewayPage() {
                 </label>
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">Environment</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.environmentLabel')}</label>
                 <select value={duitkuForm.environment} onChange={(e) => setDuitkuForm({ ...duitkuForm, environment: e.target.value })} className="w-full mt-1 px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card">
                   <option value="sandbox">Sandbox</option>
                   <option value="production">Production</option>
                 </select>
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">Merchant Code</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.merchantCodeLabel')}</label>
                 <input type="text" value={duitkuForm.merchantCode} onChange={(e) => setDuitkuForm({ ...duitkuForm, merchantCode: e.target.value })} className="w-full mt-1 px-2.5 py-1.5 text-sm font-mono border border-border rounded-lg bg-card" placeholder="D1234" />
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">API Key</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.apiKeySimple')}</label>
                 <div className="relative mt-1">
                   <input type={showSecrets['dk-api'] ? 'text' : 'password'} value={duitkuForm.apiKey} onChange={(e) => setDuitkuForm({ ...duitkuForm, apiKey: e.target.value })} className="w-full px-2.5 py-1.5 text-sm font-mono border border-border rounded-lg bg-card pr-8" placeholder="Your Duitku API Key" />
                   <button type="button" onClick={() => toggleSecret('dk-api')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -514,8 +552,8 @@ export default function PaymentGatewayPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
                 <div>
-                  <p className="text-xs font-medium">Enable Tripay</p>
-                  <p className="text-[10px] text-muted-foreground">Payment gateway Indonesia</p>
+                  <p className="text-xs font-medium">{t('paymentGateway.enableTripay')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('paymentGateway.paymentGatewayId')}</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={tripayForm.isActive} onChange={(e) => setTripayForm({ ...tripayForm, isActive: e.target.checked })} className="sr-only peer" />
@@ -523,18 +561,18 @@ export default function PaymentGatewayPage() {
                 </label>
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">Environment</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.environmentLabel')}</label>
                 <select value={tripayForm.environment} onChange={(e) => setTripayForm({ ...tripayForm, environment: e.target.value })} className="w-full mt-1 px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card">
                   <option value="sandbox">Sandbox</option>
                   <option value="production">Production</option>
                 </select>
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">Merchant Code</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.merchantCodeLabel')}</label>
                 <input type="text" value={tripayForm.merchantCode} onChange={(e) => setTripayForm({ ...tripayForm, merchantCode: e.target.value })} className="w-full mt-1 px-2.5 py-1.5 text-sm font-mono border border-border rounded-lg bg-card" placeholder="T1234" />
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">API Key</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.apiKeySimple')}</label>
                 <div className="relative mt-1">
                   <input type={showSecrets['tp-api'] ? 'text' : 'password'} value={tripayForm.apiKey} onChange={(e) => setTripayForm({ ...tripayForm, apiKey: e.target.value })} className="w-full px-2.5 py-1.5 text-sm font-mono border border-border rounded-lg bg-card pr-8" placeholder="Your Tripay API Key" />
                   <button type="button" onClick={() => toggleSecret('tp-api')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -543,7 +581,7 @@ export default function PaymentGatewayPage() {
                 </div>
               </div>
               <div>
-                <label className="text-[11px] font-medium text-foreground">Private Key</label>
+                <label className="text-[11px] font-medium text-foreground">{t('paymentGateway.privateKeyLabel')}</label>
                 <div className="relative mt-1">
                   <input type={showSecrets['tp-private'] ? 'text' : 'password'} value={tripayForm.privateKey} onChange={(e) => setTripayForm({ ...tripayForm, privateKey: e.target.value })} className="w-full px-2.5 py-1.5 text-sm font-mono border border-border rounded-lg bg-card pr-8" placeholder="Your Tripay Private Key" />
                   <button type="button" onClick={() => toggleSecret('tp-private')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -561,8 +599,8 @@ export default function PaymentGatewayPage() {
       </div>
 
       {/* Log Detail Modal */}
-      {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedLog(null)}>
+      {selectedLog && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedLog(null)}>
           <div className="bg-card rounded-lg border border-border max-w-2xl w-full max-h-[85vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-3 border-b border-border">
               <h3 className="text-sm font-semibold">{t('paymentGateway.logDetail')}</h3>
@@ -572,30 +610,31 @@ export default function PaymentGatewayPage() {
             </div>
             <div className="p-3 space-y-3 overflow-y-auto max-h-[70vh]">
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div><span className="text-[10px] text-muted-foreground block">Timestamp</span><span className="font-medium">{formatWIB(new Date(selectedLog.createdAt), 'dd MMM yyyy HH:mm:ss')}</span></div>
-                <div><span className="text-[10px] text-muted-foreground block">Gateway</span><span className="font-medium capitalize">{selectedLog.gateway}</span></div>
-                <div><span className="text-[10px] text-muted-foreground block">Order ID</span><span className="font-mono text-[10px]">{selectedLog.orderId}</span></div>
-                <div><span className="text-[10px] text-muted-foreground block">Transaction ID</span><span className="font-mono text-[10px]">{selectedLog.transactionId || '-'}</span></div>
+                <div><span className="text-[10px] text-muted-foreground block">{t('paymentGateway.timestampLabel')}</span><span className="font-medium">{formatWIB(new Date(selectedLog.createdAt), 'dd MMM yyyy HH:mm:ss')}</span></div>
+                <div><span className="text-[10px] text-muted-foreground block">{t('paymentGateway.gatewayLabel')}</span><span className="font-medium capitalize">{selectedLog.gateway}</span></div>
+                <div><span className="text-[10px] text-muted-foreground block">{t('paymentGateway.orderIdLabel')}</span><span className="font-mono text-[10px]">{selectedLog.orderId}</span></div>
+                <div><span className="text-[10px] text-muted-foreground block">{t('paymentGateway.transactionIdLabel')}</span><span className="font-mono text-[10px]">{selectedLog.transactionId || '-'}</span></div>
                 <div><span className="text-[10px] text-muted-foreground block">Status</span><span className="font-medium">{selectedLog.status}</span></div>
-                <div><span className="text-[10px] text-muted-foreground block">Amount</span><span className="font-medium">{formatAmount(selectedLog.amount)}</span></div>
-                <div><span className="text-[10px] text-muted-foreground block">Success</span><span className="font-medium">{selectedLog.success ? '??? Yes' : '??? No'}</span></div>
-                {selectedLog.errorMessage && <div className="col-span-2"><span className="text-[10px] text-destructive block">Error</span><span className="text-destructive text-[10px]">{selectedLog.errorMessage}</span></div>}
+                <div><span className="text-[10px] text-muted-foreground block">{t('paymentGateway.amountLabel')}</span><span className="font-medium">{formatAmount(selectedLog.amount)}</span></div>
+                <div><span className="text-[10px] text-muted-foreground block">{t('paymentGateway.successLabel')}</span><span className="font-medium">{selectedLog.success ? '✅ Yes' : '❌ No'}</span></div>
+                {selectedLog.errorMessage && <div className="col-span-2"><span className="text-[10px] text-destructive block">{t('paymentGateway.errorLabel')}</span><span className="text-destructive text-[10px]">{selectedLog.errorMessage}</span></div>}
               </div>
               {selectedLog.payload && (
                 <div>
-                  <span className="text-[10px] text-muted-foreground block mb-1">Payload</span>
+                  <span className="text-[10px] text-muted-foreground block mb-1">{t('paymentGateway.payloadLabel')}</span>
                   <pre className="bg-zinc-900 text-zinc-100 p-2 rounded text-[10px] overflow-x-auto">{JSON.stringify(JSON.parse(selectedLog.payload), null, 2)}</pre>
                 </div>
               )}
               {selectedLog.response && (
                 <div>
-                  <span className="text-[10px] text-muted-foreground block mb-1">Response</span>
+                  <span className="text-[10px] text-muted-foreground block mb-1">{t('paymentGateway.responseLabel')}</span>
                   <pre className="bg-zinc-900 text-zinc-100 p-2 rounded text-[10px] overflow-x-auto">{JSON.stringify(JSON.parse(selectedLog.response), null, 2)}</pre>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       </div>
     </div>

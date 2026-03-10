@@ -1,8 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { NotificationService } from '@/lib/notifications';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { NotificationService } from '@/server/services/notifications/dispatcher.service';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     // Handle empty body - default to 'all'
     let type = 'all';
     try {

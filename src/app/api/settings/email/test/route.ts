@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { EmailService } from '@/lib/email';
-import { requirePermission } from '@/lib/apiAuth';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { EmailService } from '@/server/services/notifications/email.service';
+import { requirePermission } from '@/server/middleware/api-auth';
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,12 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { disconnectPPPoEUser } from '@/lib/services/coaService';
-import { sendPaymentSuccess } from '@/lib/whatsapp-notifications';
+﻿import { NextRequest } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { disconnectPPPoEUser } from '@/server/services/radius/coa-handler.service';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { sendPaymentSuccess } from '@/server/services/notifications/whatsapp-templates.service';
+import { sendPushToUser } from '@/server/services/notifications/push-templates.service';
 import { randomBytes } from 'crypto';
 import { nanoid } from 'nanoid';
-
-const prisma = new PrismaClient();
-
+import { startOfDayWIBtoUTC, endOfDayWIBtoUTC } from '@/lib/timezone';
+import { ok, created, badRequest, unauthorized, notFound, serverError } from '@/lib/api-response';
 // Generate secure random token for payment link
 function generatePaymentToken(): string {
   return randomBytes(32).toString('hex');
@@ -19,93 +21,58 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
     const ids = searchParams.get('ids'); // comma-separated IDs for bulk delete
 
-    if (!id && !ids) {
-      return NextResponse.json(
-        { error: 'Invoice ID or IDs are required' },
-        { status: 400 }
-      );
-    }
+    if (!id && !ids) return badRequest('Invoice ID or IDs are required');
 
     // Bulk delete
     if (ids) {
       const idList = ids.split(',').map(i => i.trim()).filter(Boolean);
 
-      if (idList.length === 0) {
-        return NextResponse.json(
-          { error: 'No valid IDs provided' },
-          { status: 400 }
-        );
-      }
+      if (idList.length === 0) return badRequest('No valid IDs provided');
 
       // Delete related payments first
-      await prisma.payment.deleteMany({
-        where: {
-          invoiceId: { in: idList },
-        },
-      });
+      await prisma.payment.deleteMany({ where: { invoiceId: { in: idList } } });
 
-      // Delete invoices
-      const result = await prisma.invoice.deleteMany({
-        where: {
-          id: { in: idList },
-        },
-      });
+      const result = await prisma.invoice.deleteMany({ where: { id: { in: idList } } });
 
-      return NextResponse.json({
-        success: true,
-        message: `${result.count} invoice(s) deleted`,
-        deletedCount: result.count,
-      });
+      return ok({ success: true, message: `${result.count} invoice(s) deleted`, deletedCount: result.count });
     }
 
-    // Single delete
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Invoice ID is required' },
-        { status: 400 }
-      );
-    }
+    if (!id) return badRequest('Invoice ID is required');
 
-    const existingInvoice = await prisma.invoice.findUnique({
-      where: { id },
-    });
+    const existingInvoice = await prisma.invoice.findUnique({ where: { id } });
+    if (!existingInvoice) return notFound('Invoice');
 
-    if (!existingInvoice) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-    }
+    await prisma.payment.deleteMany({ where: { invoiceId: id } });
+    await prisma.invoice.delete({ where: { id } });
 
-    // Delete related payments first
-    await prisma.payment.deleteMany({
-      where: { invoiceId: id },
-    });
-
-    // Delete the invoice
-    await prisma.invoice.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Invoice deleted successfully',
-    });
+    return ok({ success: true, message: 'Invoice deleted successfully' });
   } catch (error) {
     console.error('Delete invoice error:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete invoice' },
-      { status: 500 }
-    );
+    return serverError('Failed to delete invoice');
   }
 }
 
 // GET - List invoices with filters
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return unauthorized();
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status'); // UNPAID, PAID, PENDING, OVERDUE
     const userId = searchParams.get('userId');
     const limit = parseInt(searchParams.get('limit') || '100');
+    const monthParam = searchParams.get('month'); // YYYY-MM
 
     const where: any = {};
+
+    // Month filter — applies to paidAt for PAID invoices, createdAt for others
+    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+      const [y, m] = monthParam.split('-').map(Number);
+      const start = startOfDayWIBtoUTC(new Date(Date.UTC(y, m - 1, 1)));
+      const end = endOfDayWIBtoUTC(new Date(Date.UTC(y, m, 0))); // last day of month
+      const isPaidTab = status === 'PAID';
+      where[isPaidTab ? 'paidAt' : 'createdAt'] = { gte: start, lte: end };
+    }
 
     if (status && status !== 'all') {
       // UNPAID atau PENDING mencakup PENDING dan OVERDUE
@@ -167,7 +134,7 @@ export async function GET(request: NextRequest) {
       }),
     };
 
-    return NextResponse.json({
+    return ok({
       invoices,
       stats: {
         ...stats,
@@ -177,10 +144,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get invoices error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch invoices' },
-      { status: 500 }
-    );
+    return serverError('Failed to fetch invoices');
   }
 }
 
@@ -190,12 +154,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userId, amount, dueDate, notes } = body;
 
-    if (!userId || !amount) {
-      return NextResponse.json(
-        { error: 'User ID and amount are required' },
-        { status: 400 }
-      );
-    }
+    if (!userId || !amount) return badRequest('User ID and amount are required');
 
     // Verify user exists
     const user = await prisma.pppoeUser.findUnique({
@@ -203,9 +162,7 @@ export async function POST(request: NextRequest) {
       include: { profile: true },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    if (!user) return notFound('User');
 
     // Generate invoice number: INV-YYYYMM-0001
     const now = new Date();
@@ -226,8 +183,16 @@ export async function POST(request: NextRequest) {
       : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     // Get company base URL for payment link
+    // Priority: company.baseUrl → request Host header → env → localhost
     const company = await prisma.company.findFirst();
-    const baseUrl = company?.baseUrl || 'http://localhost:3000';
+    const forwardedProto = request.headers.get('x-forwarded-proto') || 'http';
+    const forwardedHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || '';
+    const inferredBase = forwardedHost ? `${forwardedProto}://${forwardedHost}` : '';
+    const baseUrl = (company?.baseUrl && !company.baseUrl.includes('localhost'))
+      ? company.baseUrl
+      : (inferredBase && !inferredBase.includes('localhost'))
+        ? inferredBase
+        : company?.baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
     // Generate payment token and link
     const paymentToken = generatePaymentToken();
@@ -258,13 +223,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ invoice }, { status: 201 });
+    return created({ invoice });
   } catch (error) {
     console.error('Create invoice error:', error);
-    return NextResponse.json(
-      { error: 'Failed to create invoice' },
-      { status: 500 }
-    );
+    return serverError('Failed to create invoice');
   }
 }
 
@@ -274,12 +236,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { id, status, paidAt } = body;
 
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Invoice ID is required' },
-        { status: 400 }
-      );
-    }
+    if (!id) return badRequest('Invoice ID is required');
 
     // Get existing invoice with user and profile
     const existingInvoice = await prisma.invoice.findUnique({
@@ -293,9 +250,7 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    if (!existingInvoice) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-    }
+    if (!existingInvoice) return notFound('Invoice');
 
     const updateData: any = {};
 
@@ -329,25 +284,27 @@ export async function PUT(request: NextRequest) {
 
       if (!user) {
         console.log('[Invoice Payment] User not found, skipping activation');
-        return NextResponse.json({ invoice });
+        return ok({ invoice });
       }
 
       const profile = user.profile;
 
       if (profile) {
-        // Calculate new expiredAt - ALWAYS extend from current expiredAt
-        // This keeps the billing date consistent (e.g., always on 5th of month)
-        // Even if user pays late, next billing date stays on same day
-        const currentExpiry = user.expiredAt || new Date();
-        let newExpiry = new Date(currentExpiry);
+        // Calculate new expiredAt
+        // Base: use current expiredAt if still in the future, otherwise use now (payment date)
+        // Both PREPAID and POSTPAID get a full validity period after each payment
+        const now = new Date();
+        let baseDate = user.expiredAt ? new Date(user.expiredAt) : now;
+        if (baseDate < now) {
+          baseDate = now; // Expired already → start fresh from payment date
+        }
+        let newExpiry = new Date(baseDate);
 
-        // Extend based on profile validity
         switch (profile.validityUnit) {
           case 'DAYS':
             newExpiry.setDate(newExpiry.getDate() + profile.validityValue);
             break;
           case 'MONTHS':
-            // Keep the same day of month (e.g., 5 Nov → 5 Dec → 5 Jan)
             newExpiry.setMonth(newExpiry.getMonth() + profile.validityValue);
             break;
           case 'HOURS':
@@ -358,19 +315,67 @@ export async function PUT(request: NextRequest) {
             break;
         }
 
-        // Update user expiredAt and activate if isolated/suspended/expired
+        // Check if this is a package change invoice, update profileId accordingly
+        let targetProfileId = user.profileId;
+        let targetProfile = profile;
+        let isPackageChange = false;
+        if (existingInvoice.additionalFees && typeof existingInvoice.additionalFees === 'object') {
+          const feesObj = existingInvoice.additionalFees as any;
+          if (feesObj.items && Array.isArray(feesObj.items)) {
+            const pkgItem = feesObj.items.find((item: any) =>
+              (item.metadata?.type === 'package_change' || item.metadata?.type === 'package_upgrade') &&
+              item.metadata?.newPackageId
+            );
+            if (pkgItem) {
+              isPackageChange = true;
+              targetProfileId = pkgItem.metadata.newPackageId;
+              const foundProfile = await prisma.pppoeProfile.findUnique({ where: { id: targetProfileId } });
+              if (foundProfile) {
+                targetProfile = foundProfile as any;
+                console.log(`  - Package change: ${pkgItem.metadata.oldPackageName} → ${pkgItem.metadata.newPackageName} (expiry PRESERVED)`);
+              }
+            }
+          }
+        }
+
+        // For package change: preserve existing expiredAt, do NOT extend
+        const finalExpiry = isPackageChange ? (user.expiredAt || new Date()) : newExpiry;
+
+        // Update user expiredAt, activate if isolated/suspended/expired, and update profileId if package changed
         const shouldActivate = ['isolated', 'suspended', 'expired'].includes(user.status);
 
         await prisma.pppoeUser.update({
           where: { id: user.id },
           data: {
-            expiredAt: newExpiry,
+            expiredAt: finalExpiry,
             status: shouldActivate ? 'active' : user.status,
+            ...(targetProfileId !== user.profileId && { profileId: targetProfileId }),
           },
         });
 
         console.log(`[Invoice Payment] User ${user.name}:`);
-        console.log(`  - ExpiredAt: ${currentExpiry.toISOString()} → ${newExpiry.toISOString()}`);
+        console.log(`  - ExpiredAt: ${user.expiredAt?.toISOString() || 'null'} → ${finalExpiry.toISOString()} ${isPackageChange ? '(package change, preserved)' : '(extended)'}`);
+
+        // ============================================
+        // UPDATE MANUAL PAYMENTS TO APPROVED
+        // ============================================
+        try {
+          const updatedManualPayments = await prisma.manualPayment.updateMany({
+            where: {
+              invoiceId: id,
+              status: 'PENDING',
+            },
+            data: {
+              status: 'APPROVED',
+              approvedAt: new Date(),
+            },
+          });
+          if (updatedManualPayments.count > 0) {
+            console.log(`  - Manual Payments: ${updatedManualPayments.count} payment(s) marked as APPROVED`);
+          }
+        } catch (mpError) {
+          console.error('  - Manual Payment update error:', mpError);
+        }
 
         // ============================================
         // AUTO-SYNC TO KEUANGAN TRANSACTIONS
@@ -412,7 +417,7 @@ export async function PUT(request: NextRequest) {
               customerPhone: user.phone,
               username: user.username,
               password: user.password,
-              profileName: profile.name,
+              profileName: targetProfile ? targetProfile.name : profile.name,
               invoiceNumber: existingInvoice.invoiceNumber,
               amount: existingInvoice.amount,
             });
@@ -423,26 +428,45 @@ export async function PUT(request: NextRequest) {
           }
         }
 
-        if (shouldActivate) {
-          console.log(`  - Status: ${user.status} → active`);
+        // ============================================
+        // SEND FCM PUSH NOTIFICATION TO CUSTOMER APP
+        // ============================================
+        try {
+          const pushCompany = await prisma.company.findFirst();
+          await sendPushToUser(user.id, 'payment-success', {
+            customerName: user.name,
+            username: user.username,
+            invoiceNumber: existingInvoice.invoiceNumber,
+            amount: existingInvoice.amount,
+            profileName: targetProfile ? targetProfile.name : profile.name,
+            expiredDate: finalExpiry,
+            companyName: pushCompany?.name || '',
+            companyPhone: pushCompany?.phone || '',
+          });
+          console.log(`  - FCM Push: Payment success notification sent`);
+        } catch (pushError) {
+          console.error(`  - FCM Push: Failed to send notification:`, pushError);
+          // Don't fail the payment if push notification fails
+        }
+
+        // Run RADIUS sync if user was isolated/suspended OR if package changed
+        const packageChanged = targetProfileId !== user.profileId;
+        if (shouldActivate || packageChanged) {
+          console.log(`  - Status: ${user.status} → ${shouldActivate ? 'active' : user.status}`);
+          if (packageChanged) console.log(`  - RADIUS: Updating group to ${targetProfile?.groupName || targetProfileId}`);
 
           // Restore RADIUS to active profile
           try {
-            // Remove forced reject (if any) from previous SUSPENDED state
-            await prisma.radcheck.deleteMany({
-              where: {
-                username: user.username,
-                attribute: 'Auth-Type'
-              }
-            });
-
-            // Remove NAS-IP-Address restriction (can prevent login if NAS-IP differs)
-            await prisma.radcheck.deleteMany({
-              where: {
-                username: user.username,
-                attribute: 'NAS-IP-Address'
-              }
-            });
+            if (shouldActivate) {
+              // Remove forced reject (if any) from previous SUSPENDED state
+              await prisma.radcheck.deleteMany({
+                where: { username: user.username, attribute: 'Auth-Type' }
+              });
+              // Remove NAS-IP-Address restriction
+              await prisma.radcheck.deleteMany({
+                where: { username: user.username, attribute: 'NAS-IP-Address' }
+              });
+            }
 
             // 1. Ensure password in radcheck
             await prisma.$executeRaw`
@@ -451,25 +475,25 @@ export async function PUT(request: NextRequest) {
               ON DUPLICATE KEY UPDATE value = ${user.password}
             `;
 
-            // 2. Restore to original group
+            // 2. Set group to target profile (new or existing)
+            const groupName = targetProfile?.groupName || profile.groupName;
             await prisma.$executeRaw`
               DELETE FROM radusergroup WHERE username = ${user.username}
             `;
             await prisma.$executeRaw`
               INSERT INTO radusergroup (username, groupname, priority)
-              VALUES (${user.username}, ${profile.groupName}, 1)
+              VALUES (${user.username}, ${groupName}, 1)
             `;
 
-            // 3. Remove isolated message from radreply
-            await prisma.radreply.deleteMany({
-              where: {
-                username: user.username,
-                attribute: 'Reply-Message'
-              }
-            });
-            console.log(`  - Removed isolated message from radreply`);
+            if (shouldActivate) {
+              // 3. Remove isolated message from radreply
+              await prisma.radreply.deleteMany({
+                where: { username: user.username, attribute: 'Reply-Message' }
+              });
+              console.log(`  - Removed isolated message from radreply`);
+            }
 
-            // 4. Restore static IP if exists
+            // 4. Restore / update static IP if exists
             if (user.ipAddress) {
               await prisma.$executeRaw`
                 INSERT INTO radreply (username, attribute, op, value)
@@ -477,51 +501,44 @@ export async function PUT(request: NextRequest) {
                 ON DUPLICATE KEY UPDATE value = ${user.ipAddress}
               `;
             } else {
-              // Remove static IP if not configured
               await prisma.$executeRaw`
                 DELETE FROM radreply WHERE username = ${user.username} AND attribute = 'Framed-IP-Address'
               `;
             }
 
-            console.log(`  - RADIUS: Restored to active profile (${profile.groupName})`);
+            console.log(`  - RADIUS: Profile set to ${groupName}`);
 
-            // Update registration status to ACTIVE if this is installation invoice
-            const registration = await prisma.registrationRequest.findFirst({
-              where: {
-                pppoeUserId: user.id,
-                status: 'INSTALLED'
-              }
-            });
-
-            if (registration) {
-              await prisma.registrationRequest.update({
-                where: { id: registration.id },
-                data: { status: 'ACTIVE' }
+            if (shouldActivate) {
+              // Update registration status to ACTIVE if this is installation invoice
+              const registration = await prisma.registrationRequest.findFirst({
+                where: { pppoeUserId: user.id, status: 'INSTALLED' }
               });
-              console.log(`  - Registration status updated to ACTIVE`);
+              if (registration) {
+                await prisma.registrationRequest.update({
+                  where: { id: registration.id },
+                  data: { status: 'ACTIVE' }
+                });
+                console.log(`  - Registration status updated to ACTIVE`);
+              }
             }
 
             // 5. Send CoA disconnect to force re-auth with new profile
             const coaResult = await disconnectPPPoEUser(user.username);
             if (coaResult.success) {
-              console.log(`  - CoA: User disconnected, will reconnect with active profile`);
+              console.log(`  - CoA: User disconnected, will reconnect with ${groupName}`);
             } else {
               console.log(`  - CoA: ${coaResult.error || 'No active session'}`);
             }
           } catch (radiusError) {
             console.error(`  - RADIUS sync error:`, radiusError);
-            // Don't fail the payment if RADIUS sync fails
           }
         }
       }
     }
 
-    return NextResponse.json({ invoice });
+    return ok({ invoice });
   } catch (error) {
     console.error('Update invoice error:', error);
-    return NextResponse.json(
-      { error: 'Failed to update invoice' },
-      { status: 500 }
-    );
+    return serverError('Failed to update invoice');
   }
 }

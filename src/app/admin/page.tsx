@@ -1,14 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Users,
   Wifi,
-  Receipt,
-  TrendingUp,
   Activity,
   Clock,
-  DollarSign,
   Loader2,
   Server,
   Database,
@@ -17,64 +14,49 @@ import {
   XCircle,
   RotateCw,
   RefreshCw,
+  ShieldBan,
+  UserX,
+  Ticket,
+  Receipt,
+  TrendingUp,
+  DollarSign,
   BarChart3,
   PieChart as PieChartIcon,
-  LineChart as LineChartIcon,
+  Store,
+  ShieldCheck,
+  ShieldX,
+  LogIn,
+  CreditCard,
+  Settings,
+  MessageSquare,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Network,
+  Globe,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Swal from 'sweetalert2';
-import { formatWIB, getTimezoneInfo } from '@/lib/timezone';
+import { useToast } from '@/components/cyberpunk/CyberToast';
+import { formatWIB, getTimezoneInfo, nowWIB } from '@/lib/timezone';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
-  RevenueLineChart,
-  CategoryBarChart,
   UserStatusPieChart,
-  UserGrowthChart,
-  VoucherSalesChart,
-  VoucherStatusPieChart,
-  SessionsChart,
-  BandwidthChart,
   IncomeExpenseChart,
-  TopRevenueSources,
   ChartCard,
 } from '@/components/charts';
-import TrafficMonitor from '@/components/TrafficMonitor';
-import TrafficChartMonitor from '@/components/TrafficChartMonitor';
-import AlertWidget from '@/components/dashboard/AlertWidget';
 
-interface StatCard {
-  title: string;
-  value: string | number;
-  change?: string | null;
-  icon: React.ReactNode;
-  color: string;
-}
-
-interface DashboardData {
-  stats: {
-    totalUsers: { value: number; change: string };
-    pppoeUsers?: { value: number; change: string | null };
-    hotspotVouchers?: { value: number; active: number; change: string | null };
-    activeSessions: { value: number; pppoe?: number; hotspot?: number; change: string | null };
-    pendingInvoices: { value: number; change: string };
-    revenue: { value: string; change: string };
-  };
-  network: {
-    pppoeUsers: number;
-    hotspotSessions: number;
-    bandwidth: string;
-  };
-  activities: RecentActivity[];
-  systemStatus?: {
-    radius: boolean;
-    database: boolean;
-    api: boolean;
-  };
-}
-
-interface RadiusStatus {
-  status: 'running' | 'stopped';
-  uptime: string;
+interface DashboardStats {
+  totalPppoeUsers: number;
+  activeSessionsPPPoE: number;
+  activeSessionsHotspot: number;
+  unusedVouchers: number;
+  isolatedCount: number;
+  suspendedCount: number;
+  voucherRevenue: number;
+  voucherRevenueFormatted: string;
+  invoiceRevenue: number;
+  invoiceRevenueFormatted: string;
 }
 
 interface RecentActivity {
@@ -85,72 +67,171 @@ interface RecentActivity {
   status: 'success' | 'warning' | 'error';
 }
 
+interface ActivityLogEntry {
+  id: string;
+  username: string;
+  userRole?: string;
+  action: string;
+  description: string;
+  module: string;
+  status: 'success' | 'warning' | 'error';
+  ipAddress?: string;
+  createdAt: string;
+}
+
+const MODULE_CONFIG: Record<string, { label: string; color: string; Icon: any }> = {
+  auth:        { label: 'Login',     color: 'text-blue-400 bg-blue-500/20 border-blue-500/30',        Icon: LogIn },
+  payment:     { label: 'Bayar',     color: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30', Icon: CreditCard },
+  pppoe:       { label: 'PPPoE',     color: 'text-cyan-400 bg-cyan-500/20 border-cyan-500/30',         Icon: Network },
+  hotspot:     { label: 'Hotspot',   color: 'text-violet-400 bg-violet-500/20 border-violet-500/30',   Icon: Wifi },
+  voucher:     { label: 'Voucher',   color: 'text-amber-400 bg-amber-500/20 border-amber-500/30',      Icon: Ticket },
+  invoice:     { label: 'Tagihan',   color: 'text-pink-400 bg-pink-500/20 border-pink-500/30',         Icon: FileText },
+  transaction: { label: 'Transaksi', color: 'text-teal-400 bg-teal-500/20 border-teal-500/30',         Icon: Receipt },
+  settings:    { label: 'Setting',   color: 'text-orange-400 bg-orange-500/20 border-orange-500/30',   Icon: Settings },
+  system:      { label: 'Sistem',    color: 'text-red-400 bg-red-500/20 border-red-500/30',            Icon: Server },
+  whatsapp:    { label: 'WA',        color: 'text-green-400 bg-green-500/20 border-green-500/30',      Icon: MessageSquare },
+  network:     { label: 'Jaringan',  color: 'text-indigo-400 bg-indigo-500/20 border-indigo-500/30',  Icon: Globe },
+  session:     { label: 'Sesi',      color: 'text-slate-400 bg-slate-500/20 border-slate-500/30',     Icon: Clock },
+  user:        { label: 'User',      color: 'text-fuchsia-400 bg-fuchsia-500/20 border-fuchsia-500/30',Icon: Users },
+  agent:       { label: 'Agen',      color: 'text-lime-400 bg-lime-500/20 border-lime-500/30',        Icon: Store },
+};
+
+const ACTIVITY_TABS = [
+  { key: 'all',     label: 'Semua' },
+  { key: 'auth',    label: 'Login' },
+  { key: 'payment', label: 'Pembayaran' },
+  { key: 'pppoe',   label: 'PPPoE' },
+  { key: 'system',  label: 'Sistem' },
+  { key: 'settings',label: 'Setting' },
+];
+
+function timeAgo(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}d`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}j`;
+  const d = Math.floor(h / 24);
+  return `${d}hr`;
+}
+
+interface RadiusStatus {
+  status: 'running' | 'stopped';
+  uptime: string;
+}
+
 interface AnalyticsData {
-  revenue?: {
-    monthly: { month: string; revenue: number }[];
-    byCategory: { category: string; amount: number }[];
-  };
   users?: {
     byStatus: { name: string; value: number }[];
-    growth: { month: string; newUsers: number; totalUsers: number }[];
-  };
-  hotspot?: {
-    salesByProfile: { profile: string; sold: number }[];
-    byStatus: { name: string; value: number }[];
-  };
-  sessions?: {
-    hourly: { time: string; pppoe: number; hotspot: number }[];
-    bandwidth: { time: string; upload: number; download: number }[];
   };
   financial?: {
     incomeExpense: { month: string; income: number; expense: number }[];
-    topSources: { source: string; amount: number }[];
   };
+}
+
+interface AgentSaleEntry {
+  agentId: string;
+  agentName: string;
+  sold: number;
+  revenue: number;
+}
+
+interface RadiusAuthEntry {
+  username: string;
+  reply: string;
+  authdate: string;
+}
+
+type IconElement = React.ReactElement<{ className?: string }>;
+
+interface StatCard {
+  title: string;
+  value: string;
+  subtitle?: string;
+  icon: IconElement;
+  gradient: string;
+  bgGlow: string;
 }
 
 export default function AdminDashboard() {
   const [mounted, setMounted] = useState(false);
   const tzInfo = getTimezoneInfo();
   const [currentTime, setCurrentTime] = useState('');
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [currentDate, setCurrentDate] = useState('');
+
+  const DAY_NAMES_ID = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  const MONTH_NAMES_ID_DATE = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  function getIndonesianDate(d: Date): string {
+    return `${DAY_NAMES_ID[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTH_NAMES_ID_DATE[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  }
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activities, setActivities] = useState<RecentActivity[]>([]);
+  const [systemStatus, setSystemStatus] = useState<{ radius: boolean; database: boolean; api: boolean } | null>(null);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [agentSales, setAgentSales] = useState<AgentSaleEntry[]>([]);
+  const [agentSalesTotal, setAgentSalesTotal] = useState({ count: 0, revenue: 0 });
+  const [radiusAuthLog, setRadiusAuthLog] = useState<RadiusAuthEntry[]>([]);
+  const [radiusAuthStats, setRadiusAuthStats] = useState({ acceptToday: 0, rejectToday: 0 });
+  const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
+  const [activityModule, setActivityModule] = useState('all');
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityTotal, setActivityTotal] = useState(0);
+  const [activityOffset, setActivityOffset] = useState(0);
+  const [activityHasMore, setActivityHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [radiusStatus, setRadiusStatus] = useState<RadiusStatus | null>(null);
   const [restarting, setRestarting] = useState(false);
+  // Month filter for revenue stats
+  const [dashboardMonth, setDashboardMonth] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [periodLabel, setPeriodLabel] = useState<string>('');
   const { t } = useTranslation();
+  const { addToast, confirm } = useToast();
 
-  // System alerts example data
-  const [systemAlerts] = useState([
-    {
-      id: '1',
-      type: 'success' as const,
-      title: 'System Healthy',
-      message: 'All services running normally',
-      timestamp: new Date(),
-    },
-    {
-      id: '2',
-      type: 'info' as const,
-      title: 'Update Available',
-      message: 'SALFANET RADIUS v2.10.0 is available',
-      timestamp: new Date(),
-    },
-  ]);
-
-  const loadDashboardData = useCallback(async () => {
+  const loadActivityLog = useCallback(async (module: string, offset: number, append = false) => {
+    setActivityLoading(true);
     try {
-      const res = await fetch('/api/dashboard/stats');
+      const params = new URLSearchParams({ module, limit: '20', offset: String(offset) });
+      const res = await fetch(`/api/admin/activity-logs?${params}`);
       const data = await res.json();
       if (data.success) {
-        setDashboardData(data);
+        setActivityLog(prev => append ? [...prev, ...data.activities] : data.activities);
+        setActivityTotal(data.total);
+        setActivityHasMore(data.hasMore);
+      }
+    } catch (e) {
+      console.error('Failed to load activity log:', e);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, []);
+
+  const loadDashboardData = useCallback(async (month?: string) => {
+    try {
+      const m = month || dashboardMonth;
+      const res = await fetch(`/api/dashboard/stats?month=${m}`);
+      const data = await res.json();
+      if (data.success) {
+        setStats(data.stats);
+        setActivities(data.activities || []);
+        setSystemStatus(data.systemStatus);
+        setAgentSales(data.agentSales || []);
+        setAgentSalesTotal(data.agentSalesTotal || { count: 0, revenue: 0 });
+        setRadiusAuthLog(data.radiusAuthLog || []);
+        setRadiusAuthStats(data.radiusAuthStats || { acceptToday: 0, rejectToday: 0 });
+        if (data.periodLabel) setPeriodLabel(data.periodLabel);
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dashboardMonth]);
 
   const loadAnalyticsData = useCallback(async () => {
     try {
@@ -184,10 +265,15 @@ export default function AdminDashboard() {
     loadDashboardData();
     loadRadiusStatus();
     loadAnalyticsData();
-    setCurrentTime(formatWIB(new Date(), 'HH:mm:ss'));
-    
+    loadActivityLog('all', 0);
+    const now0 = nowWIB();
+    setCurrentTime(formatWIB(now0, 'HH:mm:ss'));
+    setCurrentDate(getIndonesianDate(now0));
+
     const timeInterval = setInterval(() => {
-      setCurrentTime(formatWIB(new Date(), 'HH:mm:ss'));
+      const now = nowWIB();
+      setCurrentTime(formatWIB(now, 'HH:mm:ss'));
+      setCurrentDate(getIndonesianDate(now));
     }, 1000);
 
     const dataInterval = setInterval(() => {
@@ -195,7 +281,6 @@ export default function AdminDashboard() {
       loadRadiusStatus();
     }, 30000);
 
-    // Analytics refresh every 5 minutes
     const analyticsInterval = setInterval(() => {
       loadAnalyticsData();
     }, 300000);
@@ -205,20 +290,26 @@ export default function AdminDashboard() {
       clearInterval(dataInterval);
       clearInterval(analyticsInterval);
     };
-  }, [loadDashboardData, loadRadiusStatus, loadAnalyticsData]);
+  }, [loadDashboardData, loadRadiusStatus, loadAnalyticsData, loadActivityLog]);
+
+  // Navigate months
+  const shiftMonth = (delta: number) => {
+    const [y, m] = dashboardMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    const next = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    setDashboardMonth(next);
+    setLoading(true);
+    loadDashboardData(next);
+  };
 
   const handleRestartRadius = async () => {
-    const result = await Swal.fire({
+    if (!await confirm({
       title: t('system.restartRadius'),
-      text: t('system.restartRadiusWarning'),
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: t('common.yes') + ', ' + t('system.restart'),
-      cancelButtonText: t('common.cancel'),
-      confirmButtonColor: '#ef4444',
-    });
-
-    if (!result.isConfirmed) return;
+      message: t('system.restartRadiusWarning'),
+      confirmText: t('common.yes') + ', ' + t('system.restart'),
+      cancelText: t('common.cancel'),
+      variant: 'danger',
+    })) return;
 
     setRestarting(true);
     try {
@@ -230,81 +321,83 @@ export default function AdminDashboard() {
 
       const data = await res.json();
       if (data.success) {
-        Swal.fire(t('notifications.success'), t('notifications.radiusRestarted'), 'success');
+        addToast({ type: 'success', title: t('notifications.success'), description: t('notifications.radiusRestarted') });
         loadRadiusStatus();
         loadDashboardData();
       } else {
-        Swal.fire(t('notifications.error'), data.error || t('errors.restartFailed'), 'error');
+        addToast({ type: 'error', title: t('notifications.error'), description: data.error || t('errors.restartFailed') });
       }
     } catch (error) {
-      Swal.fire(t('notifications.error'), t('errors.restartFailed'), 'error');
+      addToast({ type: 'error', title: t('notifications.error'), description: t('errors.restartFailed') });
     } finally {
       setRestarting(false);
     }
   };
 
-  const getStats = (): StatCard[] => {
-    const placeholder = { value: '-', change: null };
-    const data = dashboardData?.stats || {
-      totalUsers: placeholder,
-      pppoeUsers: placeholder,
-      hotspotVouchers: { value: '-', active: '-', change: null },
-      activeSessions: placeholder,
-      pendingInvoices: placeholder,
-      revenue: placeholder,
-    };
-
-    const cards: StatCard[] = [
-      {
-        title: t('dashboard.pppoeUsers'),
-        value: typeof data.pppoeUsers?.value === 'number' ? data.pppoeUsers.value.toLocaleString() : '-',
-        change: data.pppoeUsers?.change,
-        icon: <Users className="w-4 h-4" />,
-        color: 'text-primary bg-primary/10',
-      },
-      {
-        title: t('dashboard.hotspotVouchers'),
-        value: typeof data.hotspotVouchers?.value === 'number' 
-          ? `${data.hotspotVouchers.value.toLocaleString()} (${data.hotspotVouchers.active} ${t('dashboard.active')})` 
-          : '-',
-        change: data.hotspotVouchers?.change,
-        icon: <Wifi className="w-4 h-4" />,
-        color: 'text-accent bg-accent/10',
-      },
-      {
-        title: t('dashboard.activeSessions'),
-        value: typeof data.activeSessions.value === 'number' 
-          ? `${data.activeSessions.value.toLocaleString()} (PPPoE: ${'pppoe' in data.activeSessions ? data.activeSessions.pppoe || 0 : 0}, Hotspot: ${'hotspot' in data.activeSessions ? data.activeSessions.hotspot || 0 : 0})` 
-          : '-',
-        change: data.activeSessions.change,
-        icon: <Activity className="w-4 h-4" />,
-        color: 'text-success bg-success/10',
-      },
-      {
-        title: t('dashboard.pendingInvoices'),
-        value: typeof data.pendingInvoices.value === 'number' ? data.pendingInvoices.value.toLocaleString() : '-',
-        change: data.pendingInvoices.change,
-        icon: <Receipt className="w-4 h-4" />,
-        color: 'text-warning bg-warning/10',
-      },
-      {
-        title: t('dashboard.revenue'),
-        value: data.revenue.value || '-',
-        change: data.revenue.change,
-        icon: <DollarSign className="w-4 h-4" />,
-        color: 'text-info bg-info/10',
-      },
-    ];
-
-    return cards;
-  };
-
-  const handleRefreshAnalytics = () => {
-    loadAnalyticsData();
-  };
+  // Define stat cards with data
+  const statCards: StatCard[] = stats ? [
+    {
+      title: t('dashboard.totalPppoeUsers'),
+      value: stats.totalPppoeUsers.toLocaleString(),
+      icon: <Users className="w-5 h-5" />,
+      gradient: 'from-blue-500 to-cyan-400',
+      bgGlow: 'bg-blue-500/20',
+    },
+    {
+      title: t('dashboard.activePppoeSessions'),
+      value: stats.activeSessionsPPPoE.toLocaleString(),
+      icon: <Activity className="w-5 h-5" />,
+      gradient: 'from-emerald-500 to-green-400',
+      bgGlow: 'bg-emerald-500/20',
+    },
+    {
+      title: t('dashboard.activeHotspotSessions'),
+      value: stats.activeSessionsHotspot.toLocaleString(),
+      icon: <Wifi className="w-5 h-5" />,
+      gradient: 'from-violet-500 to-purple-400',
+      bgGlow: 'bg-violet-500/20',
+    },
+    {
+      title: t('dashboard.unusedVouchers'),
+      value: stats.unusedVouchers.toLocaleString(),
+      icon: <Ticket className="w-5 h-5" />,
+      gradient: 'from-amber-500 to-yellow-400',
+      bgGlow: 'bg-amber-500/20',
+    },
+    {
+      title: t('dashboard.isolatedCustomers'),
+      value: stats.isolatedCount.toLocaleString(),
+      icon: <ShieldBan className="w-5 h-5" />,
+      gradient: 'from-red-500 to-rose-400',
+      bgGlow: 'bg-red-500/20',
+    },
+    {
+      title: t('dashboard.suspendedCustomers'),
+      value: stats.suspendedCount.toLocaleString(),
+      icon: <UserX className="w-5 h-5" />,
+      gradient: 'from-orange-500 to-amber-400',
+      bgGlow: 'bg-orange-500/20',
+    },
+    {
+      title: t('dashboard.voucherRevenue'),
+      value: stats.voucherRevenueFormatted,
+      subtitle: periodLabel || t('dashboard.thisMonth'),
+      icon: <DollarSign className="w-5 h-5" />,
+      gradient: 'from-pink-500 to-rose-400',
+      bgGlow: 'bg-pink-500/20',
+    },
+    {
+      title: t('dashboard.invoiceRevenue'),
+      value: stats.invoiceRevenueFormatted,
+      subtitle: periodLabel || t('dashboard.thisMonth'),
+      icon: <Receipt className="w-5 h-5" />,
+      gradient: 'from-cyan-500 to-teal-400',
+      bgGlow: 'bg-cyan-500/20',
+    },
+  ] : [];
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       {/* Neon Cyberpunk Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
@@ -312,417 +405,434 @@ export default function AdminDashboard() {
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div>
         <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       </div>
-      
-      <div className="relative z-10 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('dashboard.title')}</h1>
-          <p className="text-sm text-[#e0d0ff]/80 flex items-center gap-2 mt-1">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.6)]"></span>
-            {tzInfo.name} • {currentTime}
-          </p>
-        </div>
-        <button
-          onClick={handleRefreshAnalytics}
-          disabled={analyticsLoading}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[#00f7ff]/10 border-2 border-[#00f7ff]/30 text-[#00f7ff] rounded-lg hover:bg-[#00f7ff]/20 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(0,247,255,0.2)]"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${analyticsLoading ? 'animate-spin' : ''}`} />
-          {t('common.refresh')}
-        </button>
-      </div>
 
-      {/* Stats Grid - 5 columns */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="relative z-10 space-y-6">
+            {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">
+              {t('dashboard.title')}
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 mt-1">
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.6)]"></span>
+              {tzInfo.name} &bull; {currentDate} &bull; {currentTime}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Month navigator */}
+            <div className="flex items-center gap-1 bg-[#00f7ff]/5 border border-[#00f7ff]/20 rounded-lg px-1 py-1">
+              <button
+                onClick={() => shiftMonth(-1)}
+                className="p-1 rounded hover:bg-[#00f7ff]/15 text-[#00f7ff]/70 hover:text-[#00f7ff] transition-colors"
+                title="Bulan sebelumnya"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-xs font-medium text-[#00f7ff] min-w-[90px] text-center">
+                {periodLabel || '...'}
+              </span>
+              <button
+                onClick={() => shiftMonth(1)}
+                disabled={dashboardMonth >= (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`; })()}
+                className="p-1 rounded hover:bg-[#00f7ff]/15 text-[#00f7ff]/70 hover:text-[#00f7ff] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Bulan berikutnya"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+            <button
+              onClick={() => { loadDashboardData(); loadAnalyticsData(); }}
+              disabled={loading || analyticsLoading}
+              className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium bg-[#00f7ff]/10 border-2 border-[#00f7ff]/30 text-[#00f7ff] rounded-lg hover:bg-[#00f7ff]/20 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(0,247,255,0.2)]"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${(loading || analyticsLoading) ? 'animate-spin' : ''}`} />
+              {t('common.refresh')}
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Grid - 4 columns */}
         {loading ? (
-          <div className="col-span-full flex items-center justify-center py-12">
+          <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
           </div>
         ) : (
-          getStats().map((stat) => (
-            <div
-              key={stat.title}
-              className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 hover:border-[#bc13fe]/50 hover:shadow-[0_0_30px_rgba(188,19,254,0.3)] transition-all"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-[#00f7ff] uppercase tracking-wide truncate">
-                    {stat.title}
-                  </p>
-                  <p className="text-xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">
-                    {stat.value}
-                  </p>
-                  {stat.change && (
-                    <p className={`text-xs font-medium mt-1 ${
-                      stat.change.startsWith('+') ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {stat.change}
-                    </p>
-                  )}
-                </div>
-                <div className={`p-2 rounded-lg ${stat.color} shadow-lg`}>
-                  {stat.icon}
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            {statCards.map((card) => (
+              <div
+                key={card.title}
+                className="relative bg-card/60 backdrop-blur-xl rounded-xl border border-white/10 p-3 sm:p-4 hover:border-white/20 hover:shadow-[0_0_30px_rgba(188,19,254,0.2)] transition-all group overflow-hidden"
+              >
+                {/* Background glow */}
+                <div className={`absolute -top-8 -right-8 w-24 h-24 ${card.bgGlow} rounded-full blur-2xl opacity-50 group-hover:opacity-80 transition-opacity`} />
 
-      {/* System Alerts Widget */}
-      {systemAlerts.length > 0 && (
-        <div className="mb-3">
-          <AlertWidget alerts={systemAlerts} maxAlerts={3} />
-        </div>
-      )}
-
-      {/* Traffic Monitor Section - Moved below stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <div className="lg:col-span-2">
-          <TrafficChartMonitor />
-        </div>
-        
-        {/* Recent Activities */}
-        <div className="bg-card rounded-lg border border-border p-3">
-          <h2 className="text-sm font-semibold text-card-foreground mb-3">{t('dashboard.recentActivities')}</h2>
-          <div className="space-y-2">
-            {!dashboardData || dashboardData.activities.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground">
-                <Activity className="h-5 w-5 mx-auto mb-1 opacity-50" />
-                <p className="text-xs">{t('dashboard.noRecentActivities')}</p>
-              </div>
-            ) : (
-              dashboardData.activities.slice(0, 5).map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
-                >
+                <div className="relative flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-card-foreground truncate">
-                      {activity.user}
+                    <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground uppercase tracking-wider truncate">
+                      {card.title}
                     </p>
-                    <p className="text-[10px] text-muted-foreground truncate">
-                      {activity.action}
+                    <p className="text-lg sm:text-2xl font-bold text-foreground mt-1 sm:mt-1.5 truncate">
+                      {card.value}
                     </p>
+                    {card.subtitle && (
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5">{card.subtitle}</p>
+                    )}
                   </div>
-                  <div className="text-right ml-2 flex-shrink-0">
-                    <p className="text-[10px] text-muted-foreground">{formatWIB(activity.time, 'HH:mm')}</p>
-                    <span className={`inline-block px-1.5 py-0.5 text-[9px] font-medium rounded ${
-                      activity.status === 'success'
-                        ? 'bg-success/10 text-success'
-                        : activity.status === 'warning'
-                        ? 'bg-warning/10 text-warning'
-                        : 'bg-destructive/10 text-destructive'
-                    }`}>
-                      {activity.status}
-                    </span>
+                  <div className={`p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl bg-gradient-to-br ${card.gradient} text-white shadow-lg flex-shrink-0`}>
+                    {React.cloneElement(card.icon, { className: 'w-4 h-4 sm:w-5 sm:h-5' })}
                   </div>
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Charts Row 1: Revenue */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <div className="lg:col-span-2">
-          <ChartCard 
-            title={t('dashboard.monthlyRevenue')} 
-            subtitle={t('dashboard.last12Months')}
-            action={<LineChartIcon className="w-4 h-4 text-muted-foreground" />}
+        {/* Charts + Activities Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* User Status Pie Chart */}
+          <ChartCard
+            title={t('dashboard.customerStatus')}
+            subtitle={t('dashboard.pppoeUsers')}
+            action={<PieChartIcon className="w-4 h-4 text-muted-foreground" />}
           >
-            <RevenueLineChart 
-              data={analyticsData?.revenue?.monthly || []} 
+            <UserStatusPieChart
+              data={analyticsData?.users?.byStatus || []}
               loading={analyticsLoading}
               height={220}
             />
           </ChartCard>
-        </div>
-        <ChartCard 
-          title={t('dashboard.revenueByCategory')} 
-          subtitle={t('dashboard.thisMonth')}
-          action={<BarChart3 className="w-4 h-4 text-muted-foreground" />}
-        >
-          <CategoryBarChart 
-            data={analyticsData?.revenue?.byCategory || []} 
-            loading={analyticsLoading}
-            height={220}
-          />
-        </ChartCard>
-      </div>
 
-      {/* Charts Row 2: Users & Hotspot */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <ChartCard 
-          title={t('dashboard.userByStatus')} 
-          subtitle={t('dashboard.pppoeUsers')}
-          action={<PieChartIcon className="w-4 h-4 text-muted-foreground" />}
-        >
-          <UserStatusPieChart 
-            data={analyticsData?.users?.byStatus || []} 
-            loading={analyticsLoading}
-            height={180}
-          />
-        </ChartCard>
-
-        <ChartCard 
-          title={t('dashboard.userGrowth')} 
-          subtitle={t('dashboard.last12Months')}
-          action={<TrendingUp className="w-4 h-4 text-muted-foreground" />}
-        >
-          <UserGrowthChart 
-            data={analyticsData?.users?.growth || []} 
-            loading={analyticsLoading}
-            height={180}
-          />
-        </ChartCard>
-
-        <ChartCard 
-          title={t('dashboard.voucherSales')} 
-          subtitle={t('dashboard.perProfileThisMonth')}
-          action={<BarChart3 className="w-4 h-4 text-muted-foreground" />}
-        >
-          <VoucherSalesChart 
-            data={analyticsData?.hotspot?.salesByProfile || []} 
-            loading={analyticsLoading}
-            height={180}
-          />
-        </ChartCard>
-
-        <ChartCard 
-          title={t('dashboard.voucherStatus')} 
-          subtitle={t('dashboard.allVouchers')}
-          action={<PieChartIcon className="w-4 h-4 text-muted-foreground" />}
-        >
-          <VoucherStatusPieChart 
-            data={analyticsData?.hotspot?.byStatus || []} 
-            loading={analyticsLoading}
-            height={180}
-          />
-        </ChartCard>
-      </div>
-
-      {/* Charts Row 3: Sessions & Financial */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <ChartCard 
-          title={t('dashboard.activeSessions')} 
-          subtitle={t('dashboard.last24Hours')}
-          action={<Activity className="w-4 h-4 text-muted-foreground" />}
-        >
-          <SessionsChart 
-            data={analyticsData?.sessions?.hourly || []} 
-            loading={analyticsLoading}
-            height={200}
-          />
-        </ChartCard>
-
-        <ChartCard 
-          title={t('dashboard.bandwidthUsage')} 
-          subtitle={t('dashboard.last7Days')}
-          action={<TrendingUp className="w-4 h-4 text-muted-foreground" />}
-        >
-          <BandwidthChart 
-            data={analyticsData?.sessions?.bandwidth || []} 
-            loading={analyticsLoading}
-            height={200}
-          />
-        </ChartCard>
-      </div>
-
-      {/* Charts Row 4: Financial Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <div className="lg:col-span-2">
-          <ChartCard 
-            title={t('dashboard.incomeVsExpense')} 
+          {/* Income vs Expense */}
+          <ChartCard
+            title={t('dashboard.incomeVsExpense')}
             subtitle={t('dashboard.last6Months')}
             action={<BarChart3 className="w-4 h-4 text-muted-foreground" />}
           >
-            <IncomeExpenseChart 
-              data={analyticsData?.financial?.incomeExpense || []} 
+            <IncomeExpenseChart
+              data={analyticsData?.financial?.incomeExpense || []}
               loading={analyticsLoading}
-              height={200}
+              height={220}
             />
           </ChartCard>
-        </div>
-        <ChartCard 
-          title={t('dashboard.topRevenueSources')} 
-          subtitle={t('dashboard.thisMonth')}
-          action={<DollarSign className="w-4 h-4 text-muted-foreground" />}
-        >
-          <TopRevenueSources 
-            data={analyticsData?.financial?.topSources || []} 
-            loading={analyticsLoading}
-            height={200}
-          />
-        </ChartCard>
-      </div>
 
-      {/* Network Overview - Full Width */}
-      <div className="grid grid-cols-1 gap-3">
-        <div className="bg-card rounded-lg border border-border p-3">
-          <h2 className="text-sm font-semibold text-foreground mb-3">{t('dashboard.networkOverview')}</h2>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+          {/* Activity Log — compact panel beside charts */}
+          <div className="bg-card/60 backdrop-blur-xl rounded-xl border border-white/10 flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-3 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-teal-50 dark:bg-teal-900/20 rounded-md flex items-center justify-center">
-                  <Wifi className="w-3.5 h-3.5 text-primary dark:text-teal-400" />
+                <div className="p-1.5 rounded-lg bg-[#00f7ff]/10 border border-[#00f7ff]/20">
+                  <Activity className="w-3.5 h-3.5 text-[#00f7ff]" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-foreground">{t('dashboard.pppoeUsers')}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('dashboard.activeConnections')}</p>
+                  <h2 className="text-xs font-semibold text-foreground">Activity Log</h2>
+                  <p className="text-[10px] text-[#e0d0ff]/40">
+                    {activityTotal > 0 ? `${activityTotal} aktivitas` : 'Log aktivitas'}
+                  </p>
                 </div>
               </div>
-              <p className="text-sm font-semibold text-foreground">
-                {dashboardData?.network.pppoeUsers.toLocaleString() || '-'}
-              </p>
+              <div className="flex items-center gap-1.5">
+                {/* Filter tabs */}
+                <div className="flex items-center gap-0.5 flex-wrap">
+                  {ACTIVITY_TABS.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => {
+                        setActivityModule(tab.key);
+                        setActivityOffset(0);
+                        loadActivityLog(tab.key, 0);
+                      }}
+                      className={`px-1.5 py-0.5 text-[9px] font-medium rounded transition-all border ${
+                        activityModule === tab.key
+                          ? 'bg-[#00f7ff]/20 text-[#00f7ff] border-[#00f7ff]/40'
+                          : 'bg-white/5 text-muted-foreground border-white/10 hover:text-white/70'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => { setActivityOffset(0); loadActivityLog(activityModule, 0); }}
+                  disabled={activityLoading}
+                  className="p-1 text-muted-foreground hover:text-[#00f7ff] bg-white/5 border border-white/10 rounded transition-all"
+                >
+                  <RefreshCw className={`w-3 h-3 ${activityLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between p-2 bg-muted rounded-md">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-emerald-50 dark:bg-emerald-900/20 rounded-md flex items-center justify-center">
-                  <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            {/* Entries list */}
+            <div className="flex-1 overflow-y-auto divide-y divide-white/5 max-h-[250px]">
+              {activityLoading && activityLog.length === 0 ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#00f7ff]" />
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-foreground">{t('dashboard.hotspotSessions')}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('dashboard.activeVouchers')}</p>
+              ) : activityLog.length === 0 ? (
+                <div className="text-center py-10">
+                  <Activity className="h-5 w-5 mx-auto mb-1 text-[#e0d0ff]/20" />
+                  <p className="text-[10px] text-[#e0d0ff]/40">Belum ada aktivitas</p>
                 </div>
-              </div>
-              <p className="text-sm font-semibold text-foreground">
-                {dashboardData?.network.hotspotSessions.toLocaleString() || '-'}
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between p-2 bg-muted rounded-md">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-violet-50 dark:bg-violet-900/20 rounded-md flex items-center justify-center">
-                  <TrendingUp className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-foreground">{t('dashboard.bandwidth')}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('dashboard.allTimeUsage')}</p>
-                </div>
-              </div>
-              <p className="text-sm font-semibold text-foreground">
-                {dashboardData?.network.bandwidth || '-'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* System Status */}
-      <div className="bg-card rounded-lg border border-border p-3">
-        <h2 className="text-sm font-semibold text-foreground mb-3">{t('dashboard.systemStatus')}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {/* RADIUS Server */}
-          <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-            <div className={`w-7 h-7 rounded-md flex items-center justify-center ${
-              radiusStatus?.status === 'running'
-                ? 'bg-success/10'
-                : 'bg-destructive/10'
-            }`}>
-              <Server className={`w-3.5 h-3.5 ${
-                radiusStatus?.status === 'running'
-                  ? 'text-success'
-                  : 'text-destructive'
-              }`} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-foreground">{t('system.radius')}</p>
-              <div className="flex items-center gap-1">
-                {radiusStatus?.status === 'running' ? (
-                  <>
-                    <CheckCircle2 className="w-2.5 h-2.5 text-success" />
-                    <span className="text-[10px] text-success truncate">{radiusStatus.uptime}</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-2.5 h-2.5 text-destructive" />
-                    <span className="text-[10px] text-destructive">{t('system.offline')}</span>
-                  </>
-                )}
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleRestartRadius}
-              disabled={restarting}
-              className="h-6 w-6 p-0"
-            >
-              {restarting ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
-                <RotateCw className="h-3 w-3" />
+                activityLog.map((entry) => {
+                  const cfg = MODULE_CONFIG[entry.module] || { label: entry.module, color: 'text-slate-400 bg-slate-500/20 border-slate-500/30', Icon: Activity };
+                  const IconComp = cfg.Icon;
+                  return (
+                    <div key={entry.id} className={`flex items-center gap-2 px-3 py-2 hover:bg-white/[0.03] transition-colors ${
+                      entry.status === 'error' ? 'bg-red-500/5' : entry.status === 'warning' ? 'bg-amber-500/5' : ''
+                    }`}>
+                      <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 border ${cfg.color}`}>
+                        <IconComp className="w-3 h-3" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-medium text-foreground truncate">{entry.description}</p>
+                        <p className="text-[10px] text-[#e0d0ff]/40 truncate">{entry.username} &bull; {entry.action}</p>
+                      </div>
+                      <div className="flex flex-col items-end flex-shrink-0">
+                        <span className="text-[9px] text-[#e0d0ff]/40">{timeAgo(entry.createdAt)}</span>
+                        <span className={`text-[9px] font-medium ${
+                          entry.status === 'success' ? 'text-green-400' : entry.status === 'warning' ? 'text-amber-400' : 'text-red-400'
+                        }`}>
+                          {entry.status === 'success' ? 'OK' : entry.status === 'warning' ? 'warn' : 'err'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
               )}
-            </Button>
-          </div>
-
-          {/* Database */}
-          <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-            <div className={`w-7 h-7 rounded-md flex items-center justify-center ${
-              dashboardData?.systemStatus?.database
-                ? 'bg-success/10'
-                : 'bg-destructive/10'
-            }`}>
-              <Database className={`w-3.5 h-3.5 ${
-                dashboardData?.systemStatus?.database
-                  ? 'text-success'
-                  : 'text-destructive'
-              }`} />
             </div>
-            <div className="flex-1">
-              <p className="text-xs font-medium text-foreground">{t('system.database')}</p>
-              <div className="flex items-center gap-1">
-                {dashboardData?.systemStatus?.database ? (
-                  <>
-                    <CheckCircle2 className="w-2.5 h-2.5 text-success" />
-                    <span className="text-[10px] text-success">{t('system.connected')}</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-2.5 h-2.5 text-destructive" />
-                    <span className="text-[10px] text-destructive">{t('system.disconnected')}</span>
-                  </>
-                )}
+
+            {/* Load More */}
+            {activityHasMore && (
+              <div className="p-2 border-t border-white/5 text-center">
+                <button
+                  onClick={() => {
+                    const next = activityOffset + 20;
+                    setActivityOffset(next);
+                    loadActivityLog(activityModule, next, true);
+                  }}
+                  disabled={activityLoading}
+                  className="flex items-center gap-1 mx-auto px-2.5 py-1 text-[10px] font-medium bg-[#00f7ff]/10 border border-[#00f7ff]/30 text-[#00f7ff] rounded-lg hover:bg-[#00f7ff]/20 disabled:opacity-50 transition-all"
+                >
+                  {activityLoading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                  Muat lebih banyak
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Agent Voucher Sales + RADIUS Auth Log Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+          {/* Agent Voucher Sales */}
+          <div className="bg-card/60 backdrop-blur-xl rounded-xl border border-white/10 p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Store className="w-4 h-4 text-[#bc13fe]" />
+                  {t('dashboard.agentVoucherSales')}
+                </h2>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{t('dashboard.agentVoucherSalesSubtitle')}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 text-[10px] font-medium bg-[#bc13fe]/20 text-[#bc13fe] rounded-lg border border-[#bc13fe]/30">
+                  {agentSalesTotal.count} {t('dashboard.agentVouchersSold')}
+                </span>
               </div>
             </div>
+            {agentSales.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Store className="h-5 w-5 mx-auto mb-1 opacity-50" />
+                <p className="text-xs">{t('dashboard.noAgentSales')}</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="grid grid-cols-3 gap-2 px-2 mb-1">
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{t('dashboard.agentName')}</span>
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">{t('dashboard.agentVouchersSold')}</span>
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-right">{t('dashboard.agentRevenue')}</span>
+                </div>
+                {agentSales.map((agent, i) => (
+                  <div key={agent.agentId} className="grid grid-cols-3 gap-2 items-center p-2 bg-white/5 rounded-lg">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-5 h-5 rounded-full bg-gradient-to-br from-[#bc13fe] to-[#ff44cc] flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0">
+                        {i + 1}
+                      </span>
+                      <span className="text-xs font-medium text-foreground truncate">{agent.agentName}</span>
+                    </div>
+                    <span className="text-xs font-bold text-[#00f7ff] text-center">{agent.sold.toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground text-right">
+                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(agent.revenue)}
+                    </span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between p-2 border-t border-white/10 mt-1">
+                  <span className="text-[10px] text-muted-foreground">{t('dashboard.agentTotalRevenue')}</span>
+                  <span className="text-xs font-bold text-[#bc13fe]">
+                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(agentSalesTotal.revenue)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* API */}
-          <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-            <div className={`w-7 h-7 rounded-md flex items-center justify-center ${
-              dashboardData?.systemStatus?.api
-                ? 'bg-success/10'
-                : 'bg-destructive/10'
-            }`}>
-              <Zap className={`w-3.5 h-3.5 ${
-                dashboardData?.systemStatus?.api
-                  ? 'text-success'
-                  : 'text-destructive'
-              }`} />
+          {/* RADIUS Auth Log */}
+          <div className="bg-card/60 backdrop-blur-xl rounded-xl border border-white/10 p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#00f7ff]" />
+                  {t('dashboard.radiusAuthLog')}
+                </h2>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{t('dashboard.radiusAuthLogSubtitle')}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 text-[10px] font-medium bg-green-500/20 text-green-400 rounded-lg border border-green-500/30">
+                  &#10003; {radiusAuthStats.acceptToday} {t('dashboard.todayAccepted')}
+                </span>
+                <span className="px-2 py-1 text-[10px] font-medium bg-red-500/20 text-red-400 rounded-lg border border-red-500/30">
+                  &#10007; {radiusAuthStats.rejectToday} {t('dashboard.todayRejected')}
+                </span>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-xs font-medium text-foreground">{t('system.api')}</p>
-              <div className="flex items-center gap-1">
-                {dashboardData?.systemStatus?.api ? (
-                  <>
-                    <CheckCircle2 className="w-2.5 h-2.5 text-success" />
-                    <span className="text-[10px] text-success">{t('system.running')}</span>
-                  </>
+            {radiusAuthLog.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <ShieldX className="h-5 w-5 mx-auto mb-1 opacity-50" />
+                <p className="text-xs">{t('dashboard.noAuthLogs')}</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
+                {radiusAuthLog.map((entry, i) => {
+                  const isAccepted = entry.reply === 'Access-Accept';
+                  return (
+                    <div key={i} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isAccepted ? (
+                          <ShieldCheck className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+                        ) : (
+                          <ShieldX className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                        )}
+                        <span className="text-xs font-medium text-foreground truncate">{entry.username}</span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                          isAccepted ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {isAccepted ? t('dashboard.loginSuccess') : t('dashboard.loginFailed')}
+                        </span>
+                        <span className="text-[9px] text-[#e0d0ff]/40">
+                          {entry.authdate ? formatWIB(entry.authdate, 'HH:mm:ss') : ''}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* System Status */}
+        <div className="bg-card/60 backdrop-blur-xl rounded-xl border border-white/10 p-3 sm:p-4">
+          <h2 className="text-sm font-semibold text-foreground mb-3">{t('dashboard.systemStatus')}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+            {/* RADIUS Server */}
+            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                radiusStatus?.status === 'running' ? 'bg-green-500/20' : 'bg-red-500/20'
+              }`}>
+                <Server className={`w-4 h-4 ${
+                  radiusStatus?.status === 'running' ? 'text-green-400' : 'text-red-400'
+                }`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground">{t('system.radius')}</p>
+                <div className="flex items-center gap-1">
+                  {radiusStatus?.status === 'running' ? (
+                    <>
+                      <CheckCircle2 className="w-2.5 h-2.5 text-green-400" />
+                      <span className="text-[10px] text-green-400 truncate">{radiusStatus.uptime}</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-2.5 h-2.5 text-red-400" />
+                      <span className="text-[10px] text-red-400">{t('system.offline')}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleRestartRadius}
+                disabled={restarting}
+                className="h-7 w-7 p-0 text-white/50 hover:text-white"
+              >
+                {restarting ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
-                  <>
-                    <XCircle className="w-2.5 h-2.5 text-destructive" />
-                    <span className="text-[10px] text-destructive">{t('system.stopped')}</span>
-                  </>
+                  <RotateCw className="h-3 w-3" />
                 )}
+              </Button>
+            </div>
+
+            {/* Database */}
+            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                systemStatus?.database ? 'bg-green-500/20' : 'bg-red-500/20'
+              }`}>
+                <Database className={`w-4 h-4 ${
+                  systemStatus?.database ? 'text-green-400' : 'text-red-400'
+                }`} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-medium text-foreground">{t('system.database')}</p>
+                <div className="flex items-center gap-1">
+                  {systemStatus?.database ? (
+                    <>
+                      <CheckCircle2 className="w-2.5 h-2.5 text-green-400" />
+                      <span className="text-[10px] text-green-400">{t('system.connected')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-2.5 h-2.5 text-red-400" />
+                      <span className="text-[10px] text-red-400">{t('system.disconnected')}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* API */}
+            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                systemStatus?.api ? 'bg-green-500/20' : 'bg-red-500/20'
+              }`}>
+                <Zap className={`w-4 h-4 ${
+                  systemStatus?.api ? 'text-green-400' : 'text-red-400'
+                }`} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-medium text-foreground">{t('system.api')}</p>
+                <div className="flex items-center gap-1">
+                  {systemStatus?.api ? (
+                    <>
+                      <CheckCircle2 className="w-2.5 h-2.5 text-green-400" />
+                      <span className="text-[10px] text-green-400">{t('system.running')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-2.5 h-2.5 text-red-400" />
+                      <span className="text-[10px] text-red-400">{t('system.stopped')}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+
+
       </div>
     </div>
   );

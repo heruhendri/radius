@@ -1,6 +1,6 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ============================================================================
-# AIBILL RADIUS VPS Installer - MySQL Module
+# SALFANET RADIUS VPS Installer - MySQL Module
 # ============================================================================
 # Step 3: Install & configure MySQL 8.0
 # ============================================================================
@@ -73,7 +73,8 @@ create_database() {
             
             # Keep existing database, ensure user exists
             mysql -u root -p${DB_ROOT_PASSWORD} <<EOF 2>/dev/null || true
-CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
+CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
+ALTER USER IF EXISTS '${DB_USER}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
 EOF
@@ -87,7 +88,7 @@ EOF
             # Create fresh database
             mysql -u root -p${DB_ROOT_PASSWORD} <<EOF
 CREATE DATABASE ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
+CREATE USER '${DB_USER}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
 EOF
@@ -97,7 +98,7 @@ EOF
         print_info "Creating fresh database and user..."
         mysql -u root -p${DB_ROOT_PASSWORD} <<EOF
 CREATE DATABASE ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
+CREATE USER '${DB_USER}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
 EOF
@@ -112,12 +113,28 @@ configure_mysql_timezone() {
     # Create MySQL config for timezone persistence
     cat > /etc/mysql/mysql.conf.d/timezone.cnf <<EOF
 [mysqld]
-# Timezone Configuration for AIBILL RADIUS
+# Timezone Configuration for SALFANET RADIUS
 # Must match system timezone (Asia/Jakarta / WIB)
 default-time-zone = '+07:00'
 
 # Allow stored functions/procedures
 log_bin_trust_function_creators = 1
+
+# Character set
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Enable mysql_native_password plugin (required for FreeRADIUS compatibility)
+mysql_native_password = ON
+
+# Performance tuning for VPS
+max_allowed_packet = 64M
+skip-name-resolve = ON
+wait_timeout = 28800
+interactive_timeout = 28800
+innodb_buffer_pool_size = 256M
+innodb_log_file_size = 64M
+max_connections = 200
 EOF
     
     # Set timezone immediately

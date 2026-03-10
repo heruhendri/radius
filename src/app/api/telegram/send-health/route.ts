@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { sendHealthReport } from '@/lib/telegram';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
+import { sendHealthReport } from '@/server/services/notifications/telegram.service';
 
 // POST - Send health check to Telegram
 export async function POST(request: NextRequest) {

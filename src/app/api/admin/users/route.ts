@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import bcrypt from 'bcryptjs';
-import { requirePermission } from '@/lib/apiAuth';
+import { requirePermission } from '@/server/middleware/api-auth';
 
 /**
  * GET /api/admin/users - Get all admin users

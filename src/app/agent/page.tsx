@@ -14,25 +14,25 @@ export default function AgentLoginPage() {
   const [error, setError] = useState('');
   const [companyPhone, setCompanyPhone] = useState('6281234567890');
   const [poweredBy, setPoweredBy] = useState('SALFANET RADIUS');
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState('Portal Agen');
 
   useEffect(() => {
-    const fetchCompanySettings = async () => {
-      try {
-        const res = await fetch('/api/company');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.phone) {
-            let formattedPhone = data.phone.replace(/^0/, '62');
+    fetch('/api/settings/company')
+      .then(res => res.json())
+      .then(data => {
+        if (data.company) {
+          if (data.company.logo) setCompanyLogo(data.company.logo);
+          if (data.company.name) { setCompanyName(data.company.name); setPoweredBy(data.company.name); }
+          if (data.company.phone) {
+            let formattedPhone = data.company.phone.replace(/[^0-9]/g, '');
+            if (formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
             if (!formattedPhone.startsWith('62')) formattedPhone = '62' + formattedPhone;
             setCompanyPhone(formattedPhone);
           }
-          if (data.poweredBy) {
-            setPoweredBy(data.poweredBy);
-          }
         }
-      } catch (error) { console.error('Failed to fetch company settings:', error); }
-    };
-    fetchCompanySettings();
+      })
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,9 +77,17 @@ export default function AgentLoginPage() {
       <div className="max-w-sm w-full relative z-10">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-2xl shadow-[0_0_40px_rgba(188,19,254,0.5)] mb-4">
-            <Ticket className="w-8 h-8 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
-          </div>
+          {companyLogo ? (
+            <div className="inline-flex items-center justify-center rounded-2xl p-0.5 mb-4 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] shadow-[0_0_40px_rgba(188,19,254,0.5)]">
+              <div className="rounded-[14px] bg-white px-4 py-2">
+                <img src={companyLogo} alt={companyName} className="max-h-12 max-w-[120px] w-auto h-auto object-contain" />
+              </div>
+            </div>
+          ) : (
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-2xl shadow-[0_0_40px_rgba(188,19,254,0.5)] mb-4">
+              <Ticket className="w-8 h-8 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+            </div>
+          )}
           <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">
             {t('agent.portal.title')}
           </h1>

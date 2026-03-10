@@ -1,7 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 
 // GET - Get invoice by payment token
 export async function GET(
@@ -30,9 +28,26 @@ export async function GET(
             phone: true,
             email: true,
             username: true,
+            address: true,
+            customerId: true,
+            subscriptionType: true,
+            status: true,
             profile: {
               select: {
                 name: true,
+                price: true,
+                downloadSpeed: true,
+                uploadSpeed: true,
+              },
+            },
+            area: {
+              select: {
+                name: true,
+              },
+            },
+            router: {
+              select: {
+                shortname: true,
               },
             },
           },

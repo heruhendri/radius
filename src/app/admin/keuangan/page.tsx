@@ -101,12 +101,9 @@ export default function KeuanganPage() {
   const [filterType, setFilterType] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   
-  // Initialize with current month date range
-  const now = new Date();
-  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const [startDate, setStartDate] = useState(firstDayOfMonth.toISOString().split("T")[0]);
-  const [endDate, setEndDate] = useState(lastDayOfMonth.toISOString().split("T")[0]);
+  // Default: show all transactions (no date filter)
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -350,18 +347,27 @@ export default function KeuanganPage() {
   };
 
   const handleExport = async (format: "excel" | "pdf") => {
-    if (!startDate || !endDate) {
-      await showError(t('keuangan.selectDateRange'));
-      return;
-    }
     try {
-      const url = `/api/keuangan/export?format=${format}&startDate=${startDate}&endDate=${endDate}&type=${filterType}`;
+      let url = `/api/keuangan/export?format=${format}&type=${filterType}`;
+      if (startDate && endDate) url += `&startDate=${startDate}&endDate=${endDate}`;
+      if (filterCategory !== "all") url += `&categoryId=${filterCategory}`;
+      if (debouncedSearch) url += `&search=${encodeURIComponent(debouncedSearch)}`;
+
       if (format === "excel") {
-        window.open(url, "_blank");
+        const res = await fetch(url);
+        if (!res.ok) { await showError(t('keuangan.exportFailed')); return; }
+        const blob = await res.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        const suffix = startDate && endDate ? `${startDate}-${endDate}` : "semua";
+        a.download = `Laporan-Keuangan-${suffix}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(a.href);
       } else {
         const res = await fetch(url);
         const data = await res.json();
         if (data.transactions) generatePDF(data.transactions, data.stats);
+        else await showError(t('keuangan.exportFailed'));
       }
     } catch (error) {
       await showError(t('keuangan.exportFailed'));
@@ -369,30 +375,30 @@ export default function KeuanganPage() {
   };
 
   const generatePDF = async (transactions: any[], stats: any) => {
-    const { jsPDF } = await import("jspdf");
+    const jsPDF = (await import("jspdf")).default;
     const autoTable = (await import("jspdf-autotable")).default;
     const doc = new jsPDF();
 
     doc.setFontSize(14);
-    doc.text("Laporan Keuangan", 14, 15);
+    doc.text(t('keuangan.pdfTitle'), 14, 15);
     doc.setFontSize(9);
     doc.text(`Periode: ${formatDate(startDate)} - ${formatDate(endDate)}`, 14, 21);
 
-    const tableData = transactions.map((t: any) => [formatDate(t.date), t.description, t.category.name, t.type, formatCurrency(t.amount)]);
-    autoTable(doc, { head: [["Tanggal", "Deskripsi", "Kategori", "Tipe", "Jumlah"]], body: tableData, startY: 26, styles: { fontSize: 8 } });
+    const tableData = transactions.map((tx: any) => [formatDate(tx.date), tx.description, tx.category.name, tx.type, formatCurrency(tx.amount)]);
+    autoTable(doc, { head: [[t('keuangan.pdfDate'), t('keuangan.pdfDescription'), t('keuangan.pdfCategory'), t('keuangan.pdfType'), t('keuangan.pdfAmount')]], body: tableData, startY: 26, styles: { fontSize: 8 } });
 
     const finalY = (doc as any).lastAutoTable.finalY + 8;
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text(`Income: ${formatCurrency(stats.totalIncome)}`, 14, finalY);
-    doc.text(`Expense: ${formatCurrency(stats.totalExpense)}`, 14, finalY + 5);
-    doc.text(`Balance: ${formatCurrency(stats.balance)}`, 14, finalY + 10);
-    doc.save(`Laporan-${startDate}-${endDate}.pdf`);
+    doc.text(`${t('keuangan.pdfIncome')} ${formatCurrency(stats.totalIncome)}`, 14, finalY);
+    doc.text(`${t('keuangan.pdfExpense')} ${formatCurrency(stats.totalExpense)}`, 14, finalY + 5);
+    doc.text(`${t('keuangan.pdfBalance')} ${formatCurrency(stats.balance)}`, 14, finalY + 10);
+    doc.save(`${t('keuangan.pdfFilenamePrefix')}${startDate}-${endDate}.pdf`);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -403,7 +409,7 @@ export default function KeuanganPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -413,9 +419,9 @@ export default function KeuanganPage() {
       <div className="relative z-10 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('keuangan.title')}</h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('keuangan.transactions')}</p>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('keuangan.title')}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('keuangan.transactions')}</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={handleAddCategory} variant="outline" size="sm" className="h-8 text-xs">
@@ -430,56 +436,56 @@ export default function KeuanganPage() {
       </div>
 
       {/* Stats - Cyberpunk Style */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 hover:border-[#bc13fe]/50 hover:shadow-[0_0_30px_rgba(188,19,254,0.3)] transition-all">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 sm:p-4 hover:border-[#bc13fe]/50 hover:shadow-[0_0_30px_rgba(188,19,254,0.3)] transition-all">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-[#00f7ff] uppercase tracking-wide">{t('keuangan.income')}</p>
-              <p className="text-xl font-bold text-white drop-shadow-[0_0_10px_rgba(16,185,129,0.5)] mt-1">{formatCurrency(stats.totalIncome)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{stats.incomeCount} trans</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-medium text-[#00f7ff] uppercase tracking-wide">{t('keuangan.income')}</p>
+              <p className="text-lg sm:text-xl font-bold text-foreground drop-shadow-none mt-1 truncate">{formatCurrency(stats.totalIncome)}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{stats.incomeCount} trans</p>
             </div>
-            <div className="p-2 rounded-lg bg-success/10 shadow-lg">
-              <TrendingUp className="w-5 h-5 text-success" />
+            <div className="p-1.5 sm:p-2 rounded-lg bg-success/10 shadow-lg flex-shrink-0">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
             </div>
           </div>
-          <div className="mt-3 pt-3 border-t border-[#bc13fe]/20 space-y-1 text-xs">
+          <div className="mt-3 pt-3 border-t border-[#bc13fe]/20 space-y-1 text-[10px] sm:text-xs">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">PPPoE:</span>
-              <span className="font-medium text-white">{formatCurrency(stats.pppoeIncome || 0)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Hotspot:</span>
-              <span className="font-medium text-white">{formatCurrency(stats.hotspotIncome || 0)}</span>
+              <span className="text-muted-foreground">{t('keuangan.pppoeLabel')}</span>
+              <span className="font-medium text-foreground truncate ml-2">{formatCurrency(stats.pppoeIncome || 0)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Install:</span>
-              <span className="font-medium text-white">{formatCurrency(stats.installIncome || 0)}</span>
+              <span className="text-muted-foreground">{t('keuangan.hotspotLabel')}</span>
+              <span className="font-medium text-foreground truncate ml-2">{formatCurrency(stats.hotspotIncome || 0)}</span>
             </div>
-          </div>
-        </div>
-
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 hover:border-[#bc13fe]/50 hover:shadow-[0_0_30px_rgba(188,19,254,0.3)] transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-[#00f7ff] uppercase tracking-wide">{t('keuangan.expense')}</p>
-              <p className="text-xl font-bold text-white drop-shadow-[0_0_10px_rgba(239,68,68,0.5)] mt-1">{formatCurrency(stats.totalExpense)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{stats.expenseCount} trans</p>
-            </div>
-            <div className="p-2 rounded-lg bg-destructive/10 shadow-lg">
-              <TrendingDown className="w-5 h-5 text-destructive" />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t('keuangan.installLabel')}</span>
+              <span className="font-medium text-foreground truncate ml-2">{formatCurrency(stats.installIncome || 0)}</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 hover:border-[#bc13fe]/50 hover:shadow-[0_0_30px_rgba(188,19,254,0.3)] transition-all">
+        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 sm:p-4 hover:border-[#bc13fe]/50 hover:shadow-[0_0_30px_rgba(188,19,254,0.3)] transition-all">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-[#00f7ff] uppercase tracking-wide">{t('keuangan.balance')}</p>
-              <p className={`text-xl font-bold text-white mt-1 ${stats.balance >= 0 ? "drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]" : "drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]"}`}>{formatCurrency(stats.balance)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t('keuangan.income')} - {t('keuangan.expense')}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-medium text-[#00f7ff] uppercase tracking-wide">{t('keuangan.expense')}</p>
+              <p className="text-lg sm:text-xl font-bold text-foreground drop-shadow-none mt-1 truncate">{formatCurrency(stats.totalExpense)}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{stats.expenseCount} trans</p>
             </div>
-            <div className={`p-2 rounded-lg shadow-lg ${stats.balance >= 0 ? "bg-info/10" : "bg-warning/10"}`}>
-              <Wallet className={`w-5 h-5 ${stats.balance >= 0 ? "text-info" : "text-warning"}`} />
+            <div className="p-1.5 sm:p-2 rounded-lg bg-destructive/10 shadow-lg flex-shrink-0">
+              <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-3 sm:p-4 hover:border-[#bc13fe]/50 hover:shadow-[0_0_30px_rgba(188,19,254,0.3)] transition-all">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-medium text-[#00f7ff] uppercase tracking-wide">{t('keuangan.balance')}</p>
+              <p className={`text-lg sm:text-xl font-bold text-foreground mt-1 truncate`}>{formatCurrency(stats.balance)}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{t('keuangan.income')} - {t('keuangan.expense')}</p>
+            </div>
+            <div className={`p-1.5 sm:p-2 rounded-lg shadow-lg flex-shrink-0 ${stats.balance >= 0 ? "bg-info/10" : "bg-warning/10"}`}>
+              <Wallet className={`w-4 h-4 sm:w-5 sm:h-5 ${stats.balance >= 0 ? "text-info" : "text-warning"}`} />
             </div>
           </div>
         </div>
@@ -514,7 +520,7 @@ export default function KeuanganPage() {
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder={t('keuangan.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-7 pr-3 py-1.5 text-xs bg-muted border border-border rounded-md"
@@ -556,7 +562,7 @@ export default function KeuanganPage() {
 
       {/* Transactions */}
       <div className="bg-card rounded-lg border border-border">
-        <div className="p-3 border-b border-border flex items-center justify-between">
+        <div className="p-3 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span className="text-xs font-medium text-foreground">{t('keuangan.transactions')}</span>
           <div className="flex gap-1">
             <button
@@ -578,7 +584,51 @@ export default function KeuanganPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="block sm:hidden divide-y divide-border">
+          {transactions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-xs">
+              {t('common.noData')}
+            </div>
+          ) : (
+            transactions.map((tx) => (
+              <div key={tx.id} className="p-3 space-y-2 active:bg-muted transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-foreground truncate">{tx.description}</p>
+                    {tx.notes && <p className="text-[10px] text-muted-foreground truncate">{tx.notes}</p>}
+                  </div>
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <button onClick={() => handleEditTransaction(tx)} className="p-1.5 hover:bg-muted rounded">
+                      <Edit className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+                    <button onClick={() => handleDeleteTransaction(tx)} className="p-1.5 hover:bg-destructive/10 rounded">
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={`text-[9px] px-1.5 py-0 ${tx.type === "INCOME" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                      {tx.type}
+                    </Badge>
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0">{tx.category.name}</Badge>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {formatDate(tx.date)}
+                    </span>
+                  </div>
+                  <span className={`text-xs font-medium flex-shrink-0 ${tx.type === "INCOME" ? "text-success" : "text-destructive"}`}>
+                    {tx.type === "INCOME" ? "+" : "-"}{formatCurrency(tx.amount)}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="overflow-x-auto hidden sm:block">
           <Table>
             <TableHeader>
               <TableRow className="text-[10px]">

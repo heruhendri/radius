@@ -1,17 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { ok, badRequest, unauthorized, serverError } from '@/lib/api-response';
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return unauthorized();
   try {
     const { searchParams } = request.nextUrl;
     const unreadOnly = searchParams.get('unreadOnly') === 'true';
     const type = searchParams.get('type');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const sinceParam = searchParams.get('since');
 
     // Build where clause
     const where: any = {};
     if (unreadOnly) where.isRead = false;
     if (type) where.type = type;
+    if (sinceParam) where.createdAt = { gte: new Date(sinceParam) };
 
     const notifications = await prisma.notification.findMany({
       where,
@@ -38,18 +45,10 @@ export async function GET(request: NextRequest) {
       categoryCounts[item.type] = item._count.id;
     });
 
-    return NextResponse.json({
-      success: true,
-      notifications,
-      unreadCount,
-      categoryCounts,
-    });
-  } catch (error: any) {
+    return ok({ success: true, notifications, unreadCount, categoryCounts });
+  } catch (error: unknown) {
     console.error('Get notifications error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    return serverError();
   }
 }
 
@@ -72,22 +71,13 @@ export async function PUT(request: NextRequest) {
         data: { isRead: true },
       });
     } else {
-      return NextResponse.json(
-        { success: false, error: 'Invalid request' },
-        { status: 400 }
-      );
+      return badRequest('Invalid request: supply notificationIds[] or markAll');
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Notifications marked as read',
-    });
-  } catch (error: any) {
+    return ok({ message: 'Notifications marked as read' });
+  } catch (error: unknown) {
     console.error('Update notifications error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    return serverError();
   }
 }
 
@@ -101,47 +91,18 @@ export async function DELETE(request: NextRequest) {
     if (ids) {
       const idArray = ids.split(',').filter(Boolean);
       
-      if (idArray.length === 0) {
-        return NextResponse.json(
-          { success: false, error: 'No IDs provided' },
-          { status: 400 }
-        );
-      }
+      if (idArray.length === 0) return badRequest('No IDs provided');
 
-      await prisma.notification.deleteMany({
-        where: {
-          id: { in: idArray },
-        },
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: `${idArray.length} notifications deleted`,
-        count: idArray.length,
-      });
+      await prisma.notification.deleteMany({ where: { id: { in: idArray } } });
+      return ok({ message: `${idArray.length} notifications deleted`, count: idArray.length });
     }
 
-    // Single delete
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: 'Notification ID required' },
-        { status: 400 }
-      );
-    }
+    if (!id) return badRequest('Notification ID required');
 
-    await prisma.notification.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Notification deleted',
-    });
-  } catch (error: any) {
+    await prisma.notification.delete({ where: { id } });
+    return ok({ message: 'Notification deleted' });
+  } catch (error: unknown) {
     console.error('Delete notification error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    return serverError();
   }
 }

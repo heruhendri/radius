@@ -234,7 +234,7 @@ export default function InventoryItemsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -245,7 +245,7 @@ export default function InventoryItemsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -255,18 +255,18 @@ export default function InventoryItemsPage() {
       <div className="relative z-10 space-y-6">
         <div className="space-y-4">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <Package className="h-6 w-6 text-[#00f7ff]" />
               {t('inventory.items')}
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               {t('inventory.itemsDesc')}
             </p>
           </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('inventory.totalItems')}</p>
@@ -278,7 +278,7 @@ export default function InventoryItemsPage() {
               </div>
             </div>
 
-            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('inventory.lowStock')}</p>
@@ -288,7 +288,7 @@ export default function InventoryItemsPage() {
               </div>
             </div>
 
-            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('inventory.outOfStock')}</p>
@@ -298,7 +298,7 @@ export default function InventoryItemsPage() {
               </div>
             </div>
 
-            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('inventory.totalValue')}</p>
@@ -387,8 +387,54 @@ export default function InventoryItemsPage() {
             </div>
           </div>
 
+          {/* Mobile Card View */}
+          <div className="block md:hidden space-y-3">
+            {filteredItems.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">{t('inventory.noItems')}</div>
+            ) : (
+              filteredItems.map((item) => (
+                <div key={item.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+                      <p className="text-xs font-mono text-muted-foreground">{item.sku}</p>
+                    </div>
+                    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded-full ml-2 shrink-0 ${
+                      item.stockStatus === 'out_of_stock' ? 'bg-destructive/20 text-destructive' :
+                      item.stockStatus === 'low_stock' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300' :
+                      'bg-success/20 text-success'
+                    }`}>
+                      {item.stockStatus === 'out_of_stock' ? t('inventory.outOfStock') :
+                       item.stockStatus === 'low_stock' ? t('inventory.lowStock') : t('inventory.inStock')}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-2">
+                    <div><span className="text-muted-foreground">Category:</span> <span className="text-foreground">{item.category?.name || '-'}</span></div>
+                    <div><span className="text-muted-foreground">Unit:</span> <span className="text-foreground">{item.unit}</span></div>
+                    <div>
+                      <span className="text-muted-foreground">Stock:</span>{' '}
+                      <span className={`font-medium ${item.stockStatus === 'out_of_stock' ? 'text-destructive' : item.stockStatus === 'low_stock' ? 'text-orange-600' : 'text-success'}`}>{item.currentStock}</span>
+                      <span className="text-muted-foreground text-[10px]"> (min: {item.minimumStock})</span>
+                    </div>
+                    {item.location && <div><span className="text-muted-foreground">📍</span> <span className="text-foreground">{item.location}</span></div>}
+                    <div><span className="text-muted-foreground">Buy:</span> <span className="text-foreground">Rp {item.purchasePrice.toLocaleString('id-ID')}</span></div>
+                    <div><span className="text-muted-foreground">Sell:</span> <span className="text-foreground">Rp {item.sellingPrice.toLocaleString('id-ID')}</span></div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2 border-t border-border">
+                    <button onClick={() => handleEdit(item)} className="p-2 text-primary hover:text-blue-800 dark:text-primary dark:hover:text-blue-300">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => handleDelete(item)} className="p-2 text-destructive hover:text-red-800 dark:text-destructive dark:hover:text-red-300">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
           {/* Items Table */}
-          <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+          <div className="hidden md:block bg-card rounded-lg shadow-sm border border-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-muted">
@@ -554,7 +600,7 @@ export default function InventoryItemsPage() {
                   <div>
                     <ModalLabel>{t('inventory.currentStock')}</ModalLabel>
                     <ModalInput type="number" value={formData.currentStock} onChange={(e) => setFormData({ ...formData, currentStock: parseInt(e.target.value) || 0 })} disabled={!!editingItem} />
-                    {editingItem && <p className="text-[9px] text-[#e0d0ff]/50 mt-1">{t('inventory.movements')}</p>}
+                    {editingItem && <p className="text-[9px] text-muted-foreground mt-1">{t('inventory.movements')}</p>}
                   </div>
                   <div>
                     <ModalLabel>{t('inventory.minimumStock')}</ModalLabel>
@@ -569,7 +615,7 @@ export default function InventoryItemsPage() {
                     <ModalInput type="number" value={formData.sellingPrice} onChange={(e) => setFormData({ ...formData, sellingPrice: parseInt(e.target.value) || 0 })} />
                   </div>
                   <div className="md:col-span-2">
-                    <ModalLabel>Description</ModalLabel>
+                    <ModalLabel>{t('inventory.descriptionLabel')}</ModalLabel>
                     <ModalTextarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} />
                   </div>
                   <div className="md:col-span-2">
@@ -577,7 +623,7 @@ export default function InventoryItemsPage() {
                     <ModalTextarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={2} />
                   </div>
                   <div className="md:col-span-2 flex items-center gap-3">
-                    <label className="flex items-center gap-2 text-sm text-[#e0d0ff] cursor-pointer">
+                    <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                       <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff] w-4 h-4" />
                       <span>{t('common.active')}</span>
                     </label>

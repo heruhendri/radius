@@ -1,31 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { NextRequest } from 'next/server';
+import { ok, notFound, serverError } from '@/lib/api-response';
+import { getPppoeUserById } from '@/server/services/pppoe.service';
 
-const prisma = new PrismaClient();
-
-// GET - Get single user with password
+// GET - Get single user with active session info
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-
-    const user = await prisma.pppoeUser.findUnique({
-      where: { id },
-      include: {
-        profile: true,
-        router: true,
-      },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ user });
+    const result = await getPppoeUserById(id);
+    if (!result) return notFound('User');
+    return ok(result);
   } catch (error) {
     console.error('Get user error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return serverError();
   }
 }

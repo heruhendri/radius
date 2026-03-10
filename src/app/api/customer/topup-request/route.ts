@@ -1,40 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
+import { rateLimit } from '@/server/middleware/rate-limit';
 
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await rateLimit(request, { max: 5, windowMs: 60 * 1000 });
+  if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    // Authenticate via customer Bearer token
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user data
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Get PPPoE user - try by email first, then by name
-    let pppoeUser = await prisma.pppoeUser.findFirst({
+    const session = await prisma.customerSession.findFirst({
       where: {
-        OR: [
-          { email: user.email },
-          { name: user.name }
-        ]
-      }
+        token,
+        verified: true,
+        expiresAt: { gte: new Date() },
+      },
     });
 
-    // If still not found, get any pppoeUser (for testing)
-    if (!pppoeUser) {
-      pppoeUser = await prisma.pppoeUser.findFirst();
+    if (!session) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
+
+    // Get PPPoE user directly from session
+    const pppoeUser = await prisma.pppoeUser.findUnique({
+      where: { id: session.userId },
+    });
 
     if (!pppoeUser) {
       return NextResponse.json({ error: 'PPPoE user not found' }, { status: 404 });
@@ -98,7 +94,7 @@ export async function POST(request: NextRequest) {
       status: 'PENDING',
       pppoeUserId: pppoeUser.id,
       pppoeUsername: pppoeUser.username,
-      requestedBy: user.name || pppoeUser.name,
+      requestedBy: pppoeUser.name,
       paymentMethod: paymentMethod,
       note: note,
       proofPath: proofPath,
@@ -115,7 +111,7 @@ export async function POST(request: NextRequest) {
         description: `Top-up request dari ${pppoeUser.name} (@${pppoeUser.username})`,
         reference: `TOPUP-${pppoeUser.id}-${timestamp}`,
         notes: JSON.stringify(requestData),
-        createdBy: user.id,
+        createdBy: pppoeUser.id,
       },
     });
 

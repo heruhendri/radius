@@ -1,16 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { startOfDayWIBtoUTC, endOfDayWIBtoUTC } from "@/lib/timezone";
-import { logActivity } from "@/lib/activity-log";
+import { logActivity } from "@/server/services/activity-log.service";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-
-const prisma = new PrismaClient();
+import { authOptions } from "@/server/auth/config";
+import { prisma } from '@/server/db/client';
 
 // GET - List transactions with filters & stats
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type"); // INCOME, EXPENSE, or all
     const categoryId = searchParams.get("categoryId");
@@ -26,11 +29,9 @@ export async function GET(request: NextRequest) {
     let startFilter: Date | undefined;
     let endFilter: Date | undefined;
     if (startDate && endDate) {
-      // Convert WIB date string to UTC Date for database query
-      // startDate "2025-11-01" (WIB) → "2025-10-31 17:00:00" (UTC)
-      startFilter = startOfDayWIBtoUTC(new Date(startDate + 'T00:00:00'));
-      // endDate "2025-11-01" (WIB) → "2025-11-01 16:59:59" (UTC)
-      endFilter = endOfDayWIBtoUTC(new Date(endDate + 'T23:59:59'));
+      // Convert WIB date string to WIB-as-UTC Date for database query
+      startFilter = startOfDayWIBtoUTC(startDate);
+      endFilter = endOfDayWIBtoUTC(endDate);
     }
 
     // Build where clause
@@ -109,12 +110,18 @@ export async function GET(request: NextRequest) {
     const totalExpense = expenseTotal._sum.amount || 0;
     const balance = Number(totalIncome) - Number(totalExpense);
 
-    // Get count by type
+    // Get count by type — scoped to current date filter
     const incomeCount = await prisma.transaction.count({
-      where: { type: "INCOME" },
+      where: {
+        type: "INCOME",
+        ...(startFilter && endFilter ? { date: { gte: startFilter, lte: endFilter } } : {}),
+      },
     });
     const expenseCount = await prisma.transaction.count({
-      where: { type: "EXPENSE" },
+      where: {
+        type: "EXPENSE",
+        ...(startFilter && endFilter ? { date: { gte: startFilter, lte: endFilter } } : {}),
+      },
     });
 
     // Get income breakdown by category

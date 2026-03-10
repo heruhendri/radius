@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { sendInstallationInvoice } from '@/lib/whatsapp-notifications';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { sendInstallationInvoice } from '@/server/services/notifications/whatsapp-templates.service';
 import crypto from 'crypto';
 
 export async function POST(

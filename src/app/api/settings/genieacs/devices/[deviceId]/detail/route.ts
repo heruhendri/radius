@@ -638,13 +638,21 @@ export async function GET(
     // GenieACS uses query filter to get specific device, not direct /devices/{id}
     // The query format is: {"_id": "deviceId"}
     const query = JSON.stringify({ _id: deviceId });
-    const response = await fetch(`${host}/devices/?query=${encodeURIComponent(query)}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': authHeader,
-        'Accept': 'application/json',
-      },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    let response: Response;
+    try {
+      response = await fetch(`${host}/devices/?query=${encodeURIComponent(query)}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': authHeader,
+          'Accept': 'application/json',
+        },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       throw new Error(`GenieACS API returned ${response.status}`);
@@ -767,6 +775,12 @@ export async function GET(
 
   } catch (error: unknown) {
     console.error('Error fetching device detail:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json(
+        { success: false, error: 'Koneksi ke GenieACS timeout. Periksa apakah server GenieACS berjalan.' },
+        { status: 200 }
+      );
+    }
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch device';
     return NextResponse.json(
       { success: false, error: errorMessage },

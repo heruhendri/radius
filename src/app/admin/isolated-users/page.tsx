@@ -1,25 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { 
-  Shield, 
-  Users, 
-  Wifi, 
-  WifiOff, 
-  DollarSign, 
-  Clock,
-  RefreshCw,
-  Search,
-  Download,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Phone,
-  Mail,
-  Calendar,
-  TrendingUp,
-  Activity,
+import { useEffect, useState, useCallback } from 'react';
+import {
+  Shield, Users, Wifi, WifiOff, DollarSign, RefreshCw, Search, Download,
+  AlertTriangle, CheckCircle, XCircle, Phone, Calendar, TrendingUp, Activity,
+  ChevronDown, ChevronUp, Copy, ExternalLink, Check, CreditCard, Eye,
+  FileText, Clock, Ban, MapPin, Hash,
 } from 'lucide-react';
+
+interface UnpaidInvoice {
+  id: string;
+  invoiceNumber: string;
+  amount: number;
+  dueDate: string;
+  status: string;
+  paymentLink: string | null;
+  paymentToken: string | null;
+}
 
 interface IsolatedUser {
   id: string;
@@ -29,6 +26,8 @@ interface IsolatedUser {
   email: string;
   status: string;
   expiredAt: string;
+  customerId: string | null;
+  areaName: string | null;
   profileName: string;
   profilePrice: number;
   unpaidInvoicesCount: number;
@@ -37,12 +36,7 @@ interface IsolatedUser {
   ipAddress: string | null;
   loginTime: string | null;
   nasIp: string | null;
-  unpaidInvoices: Array<{
-    id: string;
-    invoiceNumber: string;
-    amount: number;
-    dueDate: string;
-  }>;
+  unpaidInvoices: UnpaidInvoice[];
 }
 
 interface Stats {
@@ -60,401 +54,443 @@ export default function IsolatedUsersMonitorPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline'>('all');
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchData();
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(() => {
-      fetchData(true);
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchData = async (silent = false) => {
+  const fetchData = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       else setRefreshing(true);
-      
       const res = await fetch('/api/admin/isolated-users');
       const data = await res.json();
-
       if (data.success) {
         setUsers(data.data);
         setStats(data.stats);
       }
-    } catch (error) {
-      console.error('Failed to fetch isolated users:', error);
+    } catch (err) {
+      console.error('Failed to fetch isolated users:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(() => fetchData(true), 30000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  const copyLink = (link: string, id: string) => {
+    navigator.clipboard.writeText(link);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('id-ID', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const formatDateTime = (d: string) =>
+    new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-  const getStatusColor = (status: string) => {
-    switch (status.toUpperCase()) {
-      case 'ISOLATED': return 'text-[#ff44cc] bg-[#ff44cc]/10 border-[#ff44cc]/30';
-      case 'SUSPENDED': return 'text-[#ff4466] bg-[#ff4466]/10 border-[#ff4466]/30';
-      default: return 'text-gray-400 bg-gray-400/10 border-gray-400/30';
-    }
-  };
+  const getPayLink = (inv: UnpaidInvoice) =>
+    inv.paymentLink || (inv.paymentToken ? `/pay/${inv.paymentToken}` : null);
 
-  const filteredUsers = users.filter(user => {
-    // Search filter
-    const matchesSearch = 
-      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.phone?.includes(searchQuery);
-
-    // Status filter
-    const matchesStatus = 
-      filterStatus === 'all' ? true :
-      filterStatus === 'online' ? user.isOnline :
-      !user.isOnline;
-
-    return matchesSearch && matchesStatus;
+  const filteredUsers = users.filter((u) => {
+    const matchSearch =
+      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.phone && u.phone.includes(searchQuery));
+    const matchStatus =
+      filterStatus === 'all' ? true : filterStatus === 'online' ? u.isOnline : !u.isOnline;
+    return matchSearch && matchStatus;
   });
 
   const exportToCSV = () => {
-    const headers = ['Username', 'Name', 'Phone', 'Status', 'Expired', 'Online', 'IP', 'Unpaid Invoices', 'Total Unpaid'];
-    const rows = filteredUsers.map(user => [
-      user.username,
-      user.name,
-      user.phone || '-',
-      user.status,
-      formatDate(user.expiredAt),
-      user.isOnline ? 'Online' : 'Offline',
-      user.ipAddress || '-',
-      user.unpaidInvoicesCount,
-      user.totalUnpaid,
+    const headers = ['Username', 'Nama', 'Telepon', 'Status', 'Profil', 'Expired', 'Online', 'IP', 'Jumlah Invoice', 'Total Belum Bayar'];
+    const rows = filteredUsers.map((u) => [
+      u.username, u.name, u.phone || '-', u.status, u.profileName,
+      formatDate(u.expiredAt), u.isOnline ? 'Online' : 'Offline',
+      u.ipAddress || '-', u.unpaidInvoicesCount, u.totalUnpaid,
     ]);
-
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = URL.createObjectURL(blob);
     a.download = `isolated-users-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden flex items-center justify-center">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse"></div>
-        </div>
-        <div className="text-center relative z-10">
-          <RefreshCw className="w-10 h-10 animate-spin mx-auto text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] mb-3" />
-          <p className="text-sm text-[#e0d0ff]/70">Loading isolated users...</p>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
+          <p className="text-sm text-muted-foreground">Memuat data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
-      {/* Background Effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+    <div className="space-y-4 pb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Shield className="w-5 h-5 text-destructive" />
+            Isolated Users Monitor
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Real-time monitoring user yang diisolir
+          </p>
+        </div>
+        <button
+          onClick={() => fetchData()}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-all text-sm text-primary"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Memperbarui...' : 'Refresh'}
+        </button>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#ff4466] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(255,68,102,0.5)]">
-                <Shield className="w-6 h-6 text-[#ff4466] drop-shadow-[0_0_20px_rgba(255,68,102,0.6)] inline mr-2" />
-                Isolated Users Monitor
-              </h1>
-              <p className="text-sm text-[#e0d0ff]/70 mt-1">
-                Real-time monitoring user yang diisolir
-              </p>
+      {/* Stats */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="bg-card border border-red-500/20 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <Users className="w-4 h-4 text-red-500" />
+              <TrendingUp className="w-3.5 h-3.5 text-red-500/40" />
             </div>
-            <button
-              onClick={() => fetchData()}
-              disabled={refreshing}
-              className="flex items-center gap-2 px-4 py-2 bg-[#00f7ff]/10 border border-[#00f7ff]/30 rounded-lg hover:bg-[#00f7ff]/20 transition-all text-sm text-[#00f7ff]"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
+            <div className="text-xl font-bold text-foreground">{stats.totalIsolated}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">Total Diisolir</div>
+          </div>
+          <div className="bg-card border border-emerald-500/20 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <Wifi className="w-4 h-4 text-emerald-500" />
+              <Activity className="w-3.5 h-3.5 text-emerald-500/40" />
+            </div>
+            <div className="text-xl font-bold text-foreground">{stats.totalOnline}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">Online</div>
+          </div>
+          <div className="bg-card border border-gray-500/20 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <WifiOff className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className="text-xl font-bold text-foreground">{stats.totalOffline}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">Offline</div>
+          </div>
+          <div className="bg-card border border-amber-500/20 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              <FileText className="w-3.5 h-3.5 text-amber-500/40" />
+            </div>
+            <div className="text-xl font-bold text-foreground">{stats.totalUnpaidInvoices}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">Invoice Belum Bayar</div>
+          </div>
+          <div className="bg-card border border-cyan-500/20 rounded-xl p-3 col-span-2 md:col-span-1">
+            <div className="flex items-center justify-between mb-1.5">
+              <DollarSign className="w-4 h-4 text-cyan-500" />
+            </div>
+            <div className="text-base font-bold text-foreground">{formatCurrency(stats.totalUnpaidAmount)}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">Total Tunggakan</div>
           </div>
         </div>
+      )}
 
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            {/* Total Isolated */}
-            <div className="bg-gradient-to-br from-[#ff4466]/10 to-[#ff44cc]/10 border border-[#ff4466]/30 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Users className="w-5 h-5 text-[#ff6b8a]" />
-                <TrendingUp className="w-4 h-4 text-[#ff6b8a]/50" />
-              </div>
-              <div className="text-2xl font-bold text-white">{stats.totalIsolated}</div>
-              <div className="text-xs text-[#e0d0ff]/70">Total Isolated</div>
-            </div>
-
-            {/* Online */}
-            <div className="bg-gradient-to-br from-[#00ff88]/10 to-[#00f7ff]/10 border border-[#00ff88]/30 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Wifi className="w-5 h-5 text-[#00ff88]" />
-                <Activity className="w-4 h-4 text-[#00ff88]/50" />
-              </div>
-              <div className="text-2xl font-bold text-white">{stats.totalOnline}</div>
-              <div className="text-xs text-[#e0d0ff]/70">Online</div>
-            </div>
-
-            {/* Offline */}
-            <div className="bg-gradient-to-br from-gray-500/10 to-gray-600/10 border border-gray-500/30 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <WifiOff className="w-5 h-5 text-gray-400" />
-              </div>
-              <div className="text-2xl font-bold text-white">{stats.totalOffline}</div>
-              <div className="text-xs text-[#e0d0ff]/70">Offline</div>
-            </div>
-
-            {/* Unpaid Invoices */}
-            <div className="bg-gradient-to-br from-[#ff44cc]/10 to-[#bc13fe]/10 border border-[#ff44cc]/30 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <AlertTriangle className="w-5 h-5 text-[#ff44cc]" />
-              </div>
-              <div className="text-2xl font-bold text-white">{stats.totalUnpaidInvoices}</div>
-              <div className="text-xs text-[#e0d0ff]/70">Unpaid Invoices</div>
-            </div>
-
-            {/* Total Unpaid Amount */}
-            <div className="bg-gradient-to-br from-[#00f7ff]/10 to-[#bc13fe]/10 border border-[#00f7ff]/30 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <DollarSign className="w-5 h-5 text-[#00f7ff]" />
-              </div>
-              <div className="text-lg font-bold text-white">{formatCurrency(stats.totalUnpaidAmount)}</div>
-              <div className="text-xs text-[#e0d0ff]/70">Total Unpaid</div>
-            </div>
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="bg-[#1a0f35]/80 backdrop-blur-xl border border-[#bc13fe]/20 rounded-lg p-4 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#e0d0ff]/50" />
-              <input
-                type="text"
-                placeholder="Search username, name, or phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-[#0a0520] border border-[#bc13fe]/30 rounded-lg text-sm text-white placeholder-[#e0d0ff]/50 focus:outline-none focus:border-[#00f7ff]/50"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFilterStatus('all')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  filterStatus === 'all'
-                    ? 'bg-[#bc13fe]/20 text-[#bc13fe] border border-[#bc13fe]/50'
-                    : 'bg-[#0a0520] text-[#e0d0ff]/70 border border-[#bc13fe]/20 hover:border-[#bc13fe]/40'
-                }`}
-              >
-                All ({users.length})
-              </button>
-              <button
-                onClick={() => setFilterStatus('online')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  filterStatus === 'online'
-                    ? 'bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/50'
-                    : 'bg-[#0a0520] text-[#e0d0ff]/70 border border-[#bc13fe]/20 hover:border-[#bc13fe]/40'
-                }`}
-              >
-                Online ({stats?.totalOnline || 0})
-              </button>
-              <button
-                onClick={() => setFilterStatus('offline')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  filterStatus === 'offline'
-                    ? 'bg-gray-500/20 text-gray-400 border border-gray-500/50'
-                    : 'bg-[#0a0520] text-[#e0d0ff]/70 border border-[#bc13fe]/20 hover:border-[#bc13fe]/40'
-                }`}
-              >
-                Offline ({stats?.totalOffline || 0})
-              </button>
-            </div>
-
-            {/* Export */}
-            <button
-              onClick={exportToCSV}
-              className="px-4 py-2 bg-[#00f7ff]/10 border border-[#00f7ff]/30 rounded-lg hover:bg-[#00f7ff]/20 transition-all text-sm text-[#00f7ff] flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </button>
-          </div>
+      {/* Filters */}
+      <div className="bg-card border border-border rounded-xl p-3 flex flex-col md:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Cari username, nama, atau telepon..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+          />
         </div>
+        <div className="flex gap-2">
+          {(['all', 'online', 'offline'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setFilterStatus(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                filterStatus === s
+                  ? s === 'online'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                    : s === 'offline'
+                    ? 'bg-gray-500/15 text-gray-500 border-gray-500/30'
+                    : 'bg-primary/15 text-primary border-primary/30'
+                  : 'bg-input text-muted-foreground border-border hover:border-primary/30'
+              }`}
+            >
+              {s === 'all' ? `Semua (${users.length})` : s === 'online' ? `Online (${stats?.totalOnline || 0})` : `Offline (${stats?.totalOffline || 0})`}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={exportToCSV}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-all text-xs text-primary"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Export CSV
+        </button>
+      </div>
 
-        {/* Users Table */}
-        <div className="bg-[#1a0f35]/80 backdrop-blur-xl border border-[#bc13fe]/20 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-[#bc13fe]/20 bg-[#0a0520]/50">
-                  <th className="text-left p-4 text-xs font-semibold text-[#e0d0ff]/70">Status</th>
-                  <th className="text-left p-4 text-xs font-semibold text-[#e0d0ff]/70">User</th>
-                  <th className="text-left p-4 text-xs font-semibold text-[#e0d0ff]/70">Profile</th>
-                  <th className="text-left p-4 text-xs font-semibold text-[#e0d0ff]/70">Expired</th>
-                  <th className="text-left p-4 text-xs font-semibold text-[#e0d0ff]/70">Connection</th>
-                  <th className="text-left p-4 text-xs font-semibold text-[#e0d0ff]/70">Unpaid</th>
-                  <th className="text-left p-4 text-xs font-semibold text-[#e0d0ff]/70">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center p-8 text-[#e0d0ff]/50">
-                      <CheckCircle className="w-12 h-12 mx-auto mb-3 text-[#00ff88]/50" />
-                      <p>No isolated users found</p>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredUsers.map((user) => (
-                    <tr key={user.id} className="border-b border-[#bc13fe]/10 hover:bg-[#bc13fe]/5 transition-colors">
-                      {/* Status */}
-                      <td className="p-4">
-                        <div className="flex flex-col gap-2">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg border ${getStatusColor(user.status)}`}>
-                            <XCircle className="w-3 h-3" />
-                            {user.status}
-                          </span>
-                          {user.isOnline ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg border text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30">
-                              <Wifi className="w-3 h-3" />
-                              Online
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg border text-gray-400 bg-gray-400/10 border-gray-400/30">
-                              <WifiOff className="w-3 h-3" />
-                              Offline
-                            </span>
-                          )}
-                        </div>
-                      </td>
+      {/* User List */}
+      <div className="space-y-2">
+        {filteredUsers.length === 0 ? (
+          <div className="bg-card border border-border rounded-xl p-10 text-center">
+            <CheckCircle className="w-10 h-10 mx-auto mb-3 text-success/50" />
+            <p className="text-muted-foreground text-sm">Tidak ada user yang diisolir.</p>
+          </div>
+        ) : (
+          filteredUsers.map((user) => {
+            const isExpanded = expandedUser === user.id;
+            const hasUnpaid = user.unpaidInvoicesCount > 0;
+            const firstPayLink = user.unpaidInvoices.length > 0 ? getPayLink(user.unpaidInvoices[0]) : null;
 
-                      {/* User Info */}
-                      <td className="p-4">
-                        <div className="flex flex-col gap-1">
-                          <div className="font-semibold text-white">{user.username}</div>
-                          <div className="text-sm text-[#e0d0ff]/70">{user.name}</div>
+            return (
+              <div key={user.id} className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 transition-colors">
+                {/* Main Row */}
+                <div className="p-3 sm:p-4">
+                  <div className="flex items-start gap-3">
+                    {/* Status badges */}
+                    <div className="flex flex-col gap-1.5 shrink-0 pt-0.5">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded border
+                        ${user.status === 'isolated'
+                          ? 'text-pink-500 bg-pink-500/10 border-pink-500/30'
+                          : 'text-destructive bg-destructive/10 border-destructive/30'}`}>
+                        {user.status === 'isolated' ? <XCircle className="w-2.5 h-2.5" /> : <Ban className="w-2.5 h-2.5" />}
+                        {user.status}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded border
+                        ${user.isOnline
+                          ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+                          : 'text-gray-400 bg-gray-400/10 border-gray-400/30'}`}>
+                        {user.isOnline ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
+                        {user.isOnline ? 'Online' : 'Offline'}
+                      </span>
+                    </div>
+
+                    {/* User Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-semibold text-sm text-foreground">{user.username}</div>
+                          <div className="text-xs text-muted-foreground">{user.name}</div>
                           {user.phone && (
-                            <div className="text-xs text-[#e0d0ff]/50 flex items-center gap-1">
-                              <Phone className="w-3 h-3" />
-                              {user.phone}
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
+                              <Phone className="w-2.5 h-2.5" /> {user.phone}
                             </div>
                           )}
                         </div>
-                      </td>
 
-                      {/* Profile */}
-                      <td className="p-4">
-                        <div className="flex flex-col gap-1">
-                          <div className="text-sm text-white">{user.profileName}</div>
-                          <div className="text-xs text-[#00f7ff]">{formatCurrency(user.profilePrice)}</div>
-                        </div>
-                      </td>
-
-                      {/* Expired */}
-                      <td className="p-4">
-                        <div className="flex items-center gap-1 text-sm text-[#ff6b8a]">
-                          <Calendar className="w-3 h-3" />
-                          {formatDate(user.expiredAt)}
-                        </div>
-                      </td>
-
-                      {/* Connection */}
-                      <td className="p-4">
-                        {user.isOnline ? (
-                          <div className="flex flex-col gap-1 text-xs">
-                            <div className="text-white font-mono">{user.ipAddress}</div>
-                            <div className="text-[#e0d0ff]/50">Since {formatDateTime(user.loginTime!)}</div>
-                            <div className="text-[#e0d0ff]/50">NAS: {user.nasIp}</div>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-[#e0d0ff]/50">Not connected</div>
-                        )}
-                      </td>
-
-                      {/* Unpaid */}
-                      <td className="p-4">
-                        <div className="flex flex-col gap-1">
-                          <div className="text-sm font-semibold text-[#ff44cc]">
-                            {user.unpaidInvoicesCount} invoice(s)
-                          </div>
-                          <div className="text-xs text-white">
-                            {formatCurrency(user.totalUnpaid)}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="p-4">
-                        <div className="flex gap-2">
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1 shrink-0">
                           <a
                             href={`/admin/pppoe/users/${user.id}`}
-                            className="px-3 py-1 bg-[#00f7ff]/10 border border-[#00f7ff]/30 rounded text-xs text-[#00f7ff] hover:bg-[#00f7ff]/20 transition-all"
+                            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-primary/10 border border-primary/30 rounded text-primary hover:bg-primary/20 transition-all"
                           >
+                            <Eye className="w-3 h-3" />
                             View
                           </a>
                           <a
                             href={`/isolated?username=${user.username}`}
                             target="_blank"
-                            className="px-3 py-1 bg-[#ff44cc]/10 border border-[#ff44cc]/30 rounded text-xs text-[#ff44cc] hover:bg-[#ff44cc]/20 transition-all"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-muted border border-border rounded text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all"
                           >
                             Preview
                           </a>
                         </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                      </div>
 
-        {/* Footer Info */}
-        <div className="mt-4 text-center text-xs text-[#e0d0ff]/50">
-          Last updated: {new Date().toLocaleTimeString('id-ID')} • Auto-refresh every 30s
-        </div>
+                      {/* Detail grid */}
+                      <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5 text-[11px]">
+                        <div>
+                          <span className="text-muted-foreground block">Profil</span>
+                          <span className="text-foreground font-medium">{user.profileName}</span>
+                          <span className="text-primary block">{formatCurrency(user.profilePrice)}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Customer ID</span>
+                          {user.customerId ? (
+                            <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded text-foreground inline-flex items-center gap-1">
+                              <Hash className="w-2.5 h-2.5" />{user.customerId}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Area</span>
+                          {user.areaName ? (
+                            <span className="text-foreground flex items-center gap-1">
+                              <MapPin className="w-2.5 h-2.5 text-primary" />{user.areaName}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Jatuh Tempo</span>
+                          <span className="text-destructive flex items-center gap-1">
+                            <Calendar className="w-2.5 h-2.5" />
+                            {formatDate(user.expiredAt)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Koneksi</span>
+                          {user.isOnline ? (
+                            <>
+                              <span className="font-mono text-foreground">{user.ipAddress}</span>
+                              <span className="text-muted-foreground block">Sejak {formatDateTime(user.loginTime!)}</span>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">Tidak terhubung</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Tunggakan</span>
+                          {hasUnpaid ? (
+                            <>
+                              <span className="text-pink-600 dark:text-pink-400 font-semibold">{user.unpaidInvoicesCount} invoice</span>
+                              <span className="text-destructive font-bold block">{formatCurrency(user.totalUnpaid)}</span>
+                            </>
+                          ) : (
+                            <span className="text-success flex items-center gap-1">
+                              <CheckCircle className="w-2.5 h-2.5" /> Lunas
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom action bar (only if unpaid) */}
+                  {hasUnpaid && (
+                    <div className="mt-3 pt-3 border-t border-border flex items-center gap-2 flex-wrap">
+                      {firstPayLink && (
+                        <>
+                          <button
+                            onClick={() => copyLink(firstPayLink, `quick-${user.id}`)}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium bg-muted border border-border rounded hover:border-primary/40 text-muted-foreground hover:text-foreground transition-all"
+                          >
+                            {copiedId === `quick-${user.id}`
+                              ? <Check className="w-3 h-3 text-success" />
+                              : <Copy className="w-3 h-3" />}
+                            {copiedId === `quick-${user.id}` ? 'Disalin!' : 'Salin Link Bayar'}
+                          </button>
+                          <a
+                            href={firstPayLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium bg-primary/10 border border-primary/30 rounded text-primary hover:bg-primary/20 transition-all"
+                          >
+                            <CreditCard className="w-3 h-3" />
+                            Buka Link Bayar
+                          </a>
+                          {user.phone && (
+                            <a
+                              href={`https://wa.me/${user.phone.replace(/^0/, '62').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Halo ${user.name}, silakan lakukan pembayaran melalui link berikut: ${firstPayLink}`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium bg-green-500/10 border border-green-500/30 rounded text-green-600 dark:text-green-400 hover:bg-green-500/20 transition-all"
+                            >
+                              <Phone className="w-3 h-3" />
+                              Kirim WA
+                            </a>
+                          )}
+                        </>
+                      )}
+                      <button
+                        className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => setExpandedUser(isExpanded ? null : user.id)}
+                      >
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        {isExpanded ? 'Tutup' : `Lihat ${user.unpaidInvoicesCount} Invoice`}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Expandable invoice detail */}
+                {isExpanded && hasUnpaid && (
+                  <div className="border-t border-border bg-muted/30">
+                    <div className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Invoice Belum Dibayar
+                    </div>
+                    <div className="divide-y divide-border">
+                      {user.unpaidInvoices.map((inv) => {
+                        const payLink = getPayLink(inv);
+                        const isOverdue = inv.status === 'OVERDUE';
+                        return (
+                          <div key={inv.id} className="px-4 py-2.5 flex items-center gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <FileText className="w-3 h-3 text-muted-foreground shrink-0" />
+                                <span className="text-xs font-mono font-medium text-foreground">{inv.invoiceNumber}</span>
+                                <span className={`px-1.5 py-0.5 text-[9px] font-semibold rounded ${isOverdue ? 'bg-destructive/15 text-destructive' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'}`}>
+                                  {inv.status}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground">
+                                <Clock className="w-2.5 h-2.5" />
+                                Jatuh tempo: {formatDate(inv.dueDate)}
+                              </div>
+                            </div>
+                            <div className={`text-sm font-bold shrink-0 ${isOverdue ? 'text-destructive' : 'text-amber-600 dark:text-amber-400'}`}>
+                              {formatCurrency(Number(inv.amount))}
+                            </div>
+                            {payLink ? (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => copyLink(payLink, inv.id)}
+                                  title="Salin link pembayaran"
+                                  className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  {copiedId === inv.id
+                                    ? <Check className="w-3 h-3 text-success" />
+                                    : <Copy className="w-3 h-3" />}
+                                </button>
+                                <a
+                                  href={payLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Buka halaman pembayaran"
+                                  className="p-1.5 rounded hover:bg-primary/10 text-primary transition-colors"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground px-2 py-1 bg-muted rounded shrink-0">No link</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="px-4 py-2.5 bg-destructive/5 border-t border-destructive/20 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Total tunggakan</span>
+                      <span className="text-sm font-bold text-destructive">{formatCurrency(user.totalUnpaid)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="text-center text-[10px] text-muted-foreground">
+        Terakhir diperbarui: {new Date().toLocaleTimeString('id-ID')} · Auto-refresh setiap 30 detik
       </div>
     </div>
   );

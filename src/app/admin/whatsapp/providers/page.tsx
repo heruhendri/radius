@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import {
   SimpleModal,
   ModalHeader,
@@ -37,6 +37,7 @@ interface ProviderStatus {
 
 export default function WhatsAppProvidersPage() {
   const { t } = useTranslation();
+  const { addToast, confirm } = useToast();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -79,7 +80,7 @@ export default function WhatsAppProvidersPage() {
       setProviders(data.sort((a: Provider, b: Provider) => a.priority - b.priority));
     } catch (error) {
       console.error('Error fetching providers:', error);
-      Swal.fire('Error!', t('whatsapp.failedFetchProviders'), 'error');
+      addToast({ type: 'error', title: 'Error!', description: t('whatsapp.failedFetchProviders') });
     } finally {
       setLoading(false);
     }
@@ -112,17 +113,17 @@ export default function WhatsAppProvidersPage() {
     e.preventDefault();
 
     if (!formData.name || !formData.type || !formData.apiUrl) {
-      Swal.fire('Error!', t('whatsapp.nameTypeUrlRequired'), 'error');
+      addToast({ type: 'error', title: 'Error!', description: t('whatsapp.nameTypeUrlRequired') });
       return;
     }
 
     if ((formData.type === 'mpwa' || formData.type === 'gowa') && !formData.apiKey) {
-      Swal.fire('Error!', t('whatsapp.apiKeyRequiredFor').replace('{type}', formData.type.toUpperCase()), 'error');
+      addToast({ type: 'error', title: 'Error!', description: t('whatsapp.apiKeyRequiredFor').replace('{type}', formData.type.toUpperCase()) });
       return;
     }
 
     if (formData.type === 'mpwa' && !formData.senderNumber) {
-      Swal.fire('Error!', t('whatsapp.senderNumberRequiredMpwa'), 'error');
+      addToast({ type: 'error', title: 'Error!', description: t('whatsapp.senderNumberRequiredMpwa') });
       return;
     }
 
@@ -138,16 +139,16 @@ export default function WhatsAppProvidersPage() {
       });
 
       if (res.ok) {
-        Swal.fire(t('common.success'), editingProvider ? t('whatsapp.providerSaved') : t('whatsapp.providerSaved'), 'success');
+        addToast({ type: 'success', title: t('common.success'), description: t('whatsapp.providerSaved') });
         fetchProviders();
         resetForm();
       } else {
         const data = await res.json();
-        Swal.fire('Error!', data.error || t('whatsapp.failedSaveProvider'), 'error');
+        addToast({ type: 'error', title: 'Error!', description: data.error || t('whatsapp.failedSaveProvider') });
       }
     } catch (error) {
       console.error('Error saving provider:', error);
-      Swal.fire('Error!', t('whatsapp.failedSaveProvider'), 'error');
+      addToast({ type: 'error', title: 'Error!', description: t('whatsapp.failedSaveProvider') });
     }
   };
 
@@ -160,30 +161,25 @@ export default function WhatsAppProvidersPage() {
       });
 
       if (res.ok) {
-        Swal.fire(t('common.success'), !currentStatus ? t('whatsapp.providerActivated') : t('whatsapp.providerDeactivated'), 'success');
+        addToast({ type: 'success', title: t('common.success'), description: !currentStatus ? t('whatsapp.providerActivated') : t('whatsapp.providerDeactivated') });
         fetchProviders();
       } else {
-        Swal.fire('Error!', t('whatsapp.failedToggleProvider'), 'error');
+        addToast({ type: 'error', title: 'Error!', description: t('whatsapp.failedToggleProvider') });
       }
     } catch (error) {
       console.error('Error toggling provider:', error);
-      Swal.fire('Error!', t('whatsapp.failedToggleProvider'), 'error');
+      addToast({ type: 'error', title: 'Error!', description: t('whatsapp.failedToggleProvider') });
     }
   };
 
   const deleteProvider = async (id: string) => {
-    const result = await Swal.fire({
+    if (!await confirm({
       title: t('whatsapp.deleteProvider'),
-      text: t('whatsapp.deleteProviderConfirm'),
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: t('common.yesDelete'),
-      cancelButtonText: t('common.cancel')
-    });
-
-    if (!result.isConfirmed) return;
+      message: t('whatsapp.deleteProviderConfirm'),
+      confirmText: t('common.yesDelete'),
+      cancelText: t('common.cancel'),
+      variant: 'danger',
+    })) return;
 
     try {
       const res = await fetch(`/api/whatsapp/providers/${id}`, {
@@ -191,14 +187,14 @@ export default function WhatsAppProvidersPage() {
       });
 
       if (res.ok) {
-        Swal.fire(t('common.deleted'), t('whatsapp.providerDeleted'), 'success');
+        addToast({ type: 'success', title: t('common.deleted'), description: t('whatsapp.providerDeleted') });
         fetchProviders();
       } else {
-        Swal.fire('Error!', t('whatsapp.failedDeleteProvider'), 'error');
+        addToast({ type: 'error', title: 'Error!', description: t('whatsapp.failedDeleteProvider') });
       }
     } catch (error) {
       console.error('Error deleting provider:', error);
-      Swal.fire('Error!', t('whatsapp.failedDeleteProvider'), 'error');
+      addToast({ type: 'error', title: 'Error!', description: t('whatsapp.failedDeleteProvider') });
     }
   };
 
@@ -242,16 +238,13 @@ export default function WhatsAppProvidersPage() {
   };
 
   const restartSession = async (provider: Provider) => {
-    const result = await Swal.fire({
+    if (!await confirm({
       title: t('whatsapp.restartSessionTitle', { name: provider.name }),
-      html: `<p class="text-sm mb-2"><strong>${t('whatsapp.restartImportant')}</strong> ${t('whatsapp.restartInstructions')}</p><p class="text-sm">${t('whatsapp.restartDesc')}</p>`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: t('whatsapp.yesRestart'),
-      cancelButtonText: t('common.cancel')
-    });
-
-    if (!result.isConfirmed) return;
+      message: `${t('whatsapp.restartInstructions')} ${t('whatsapp.restartDesc')}`,
+      confirmText: t('whatsapp.yesRestart'),
+      cancelText: t('common.cancel'),
+      variant: 'warning',
+    })) return;
 
     setRestartingProvider(provider.id);
 
@@ -266,7 +259,7 @@ export default function WhatsAppProvidersPage() {
         throw new Error(data.error || data.details || 'Failed to restart session');
       }
 
-      Swal.fire(t('common.success'), t('whatsapp.sessionRestarted'), 'success');
+      addToast({ type: 'success', title: t('common.success'), description: t('whatsapp.sessionRestarted') });
       fetchAllStatuses();
 
       setTimeout(() => {
@@ -274,7 +267,7 @@ export default function WhatsAppProvidersPage() {
       }, 1000);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : t('whatsapp.failedRestartSession');
-      Swal.fire('Error!', errorMessage, 'error');
+      addToast({ type: 'error', title: 'Error!', description: errorMessage });
     } finally {
       setRestartingProvider(null);
     }
@@ -296,7 +289,7 @@ export default function WhatsAppProvidersPage() {
           if (data.status === 'qrcode' && data.qrcode) {
             setQrImage(data.qrcode);
           } else {
-            Swal.fire('Info', `${t('whatsapp.deviceStatusPrefix')}: ${data.message || data.status}`, 'info');
+            addToast({ type: 'info', title: 'Info', description: `${t('whatsapp.deviceStatusPrefix')}: ${data.message || data.status}` });
           }
         } else {
           const blob = await response.blob();
@@ -305,17 +298,17 @@ export default function WhatsAppProvidersPage() {
         }
       } else if (response.status === 422) {
         const errorData = await response.json();
-        Swal.fire('Info', errorData.error || t('whatsapp.deviceAlreadyConnected'), 'info');
+        addToast({ type: 'info', title: 'Info', description: errorData.error || t('whatsapp.deviceAlreadyConnected') });
         setShowQrModal(false);
         fetchAllStatuses();
       } else {
         const errorData = await response.json();
-        Swal.fire('Error!', errorData.error || t('whatsapp.failedFetchQr'), 'error');
+        addToast({ type: 'error', title: 'Error!', description: errorData.error || t('whatsapp.failedFetchQr') });
         setShowQrModal(false);
       }
     } catch (error) {
       console.error('Error fetching QR:', error);
-      Swal.fire('Error!', t('whatsapp.errorFetchingQr'), 'error');
+      addToast({ type: 'error', title: 'Error!', description: t('whatsapp.errorFetchingQr') });
       setShowQrModal(false);
     } finally {
       setQrLoading(false);
@@ -324,7 +317,7 @@ export default function WhatsAppProvidersPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -335,7 +328,7 @@ export default function WhatsAppProvidersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -347,8 +340,8 @@ export default function WhatsAppProvidersPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('whatsapp.providersTitle')}</h1>
-              <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('whatsapp.providersSubtitle')}</p>
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('whatsapp.providersTitle')}</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('whatsapp.providersSubtitle')}</p>
             </div>
             <button
               onClick={() => setShowForm(true)}
@@ -542,7 +535,7 @@ export default function WhatsAppProvidersPage() {
                 <div>
                   <ModalLabel required={(formData.type === 'mpwa' || formData.type === 'gowa')}>{t('whatsapp.apiKey')}</ModalLabel>
                   <ModalInput type="text" value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} placeholder={formData.type === 'gowa' ? 'username:password' : 'API Key or Token'} required={(formData.type === 'mpwa' || formData.type === 'gowa')} />
-                  {formData.type === 'gowa' && <p className="text-[9px] text-[#e0d0ff]/50 mt-0.5">Format: username:password</p>}
+                  {formData.type === 'gowa' && <p className="text-[9px] text-muted-foreground mt-0.5">Format: username:password</p>}
                 </div>
               </div>
               {formData.type === 'mpwa' && (
@@ -576,14 +569,14 @@ export default function WhatsAppProvidersPage() {
             {qrLoading ? (
               <div className="flex flex-col items-center space-y-2 py-8">
                 <div className="w-10 h-10 border-4 border-[#00f7ff] border-t-transparent rounded-full animate-spin drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]" />
-                <p className="text-xs text-[#e0d0ff]/70">{t('common.loading')}</p>
+                <p className="text-xs text-muted-foreground">{t('common.loading')}</p>
               </div>
             ) : qrImage ? (
               <>
                 <div className="p-3 bg-white rounded-lg shadow-[0_0_20px_rgba(0,247,255,0.3)]">
                   <img src={qrImage} alt="QR Code" className="w-48 h-48" />
                 </div>
-                <p className="text-[10px] text-[#e0d0ff]/70 text-center">{t('whatsapp.scanWhatsapp')}</p>
+                <p className="text-[10px] text-muted-foreground text-center">{t('whatsapp.scanWhatsapp')}</p>
                 <ModalButton variant="primary" onClick={() => showQrCode(qrProvider!)}>{t('whatsapp.refreshQr')}</ModalButton>
               </>
             ) : (

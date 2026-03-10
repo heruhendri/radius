@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 import { getGenieACSCredentials } from '../route';
 
 // Helper to safely convert any value to string
@@ -173,6 +175,10 @@ function getDeviceStatus(lastInform: string | null): string {
 // GET - Fetch devices from GenieACS
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const credentials = await getGenieACSCredentials();
 
     if (!credentials) {

@@ -5,6 +5,17 @@ interface RouteParams {
   params: Promise<{ deviceId: string }>;
 }
 
+// Helper: fetch with AbortController timeout (default 15s)
+async function fetchWithTimeout(url: string, options: RequestInit = {}, ms = 15000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 // Security mode mapping to TR-069 values
 const securityModeMap: Record<string, { beaconType: string; authMode: string; encryptionMode: string }> = {
   'None': { beaconType: 'None', authMode: 'None', encryptionMode: 'None' },
@@ -74,7 +85,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     };
 
     console.log('[Admin WiFi] Sending SSID task...');
-    const ssidResponse = await fetch(taskUrl, {
+    const ssidResponse = await fetchWithTimeout(taskUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -104,7 +115,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       };
 
       console.log('[Admin WiFi] Sending password task...');
-      const passwordResponse = await fetch(taskUrl, {
+      const passwordResponse = await fetchWithTimeout(taskUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,7 +144,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       const refreshUrl = `${host}/devices/${encodeURIComponent(deviceId)}/tasks?connection_request`;
       
-      await fetch(refreshUrl, {
+      await fetchWithTimeout(refreshUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,6 +173,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   } catch (error) {
     console.error('Error updating WiFi config:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json(
+        { success: false, error: 'Koneksi ke GenieACS timeout. Periksa apakah server GenieACS berjalan.' },
+        { status: 200 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Terjadi kesalahan' },
       { status: 500 }
@@ -209,7 +226,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const query = encodeURIComponent(JSON.stringify({ _id: deviceId }));
     const url = `${host}/devices?query=${query}&projection=${projection}`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'GET',
       headers: {
         'Authorization': `Basic ${authHeader}`

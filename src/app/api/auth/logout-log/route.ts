@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { logActivity } from '@/lib/activity-log';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { logActivity } from '@/server/services/activity-log.service';
 
 export async function POST(request: NextRequest) {
   try {

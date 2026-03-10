@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { nanoid } from 'nanoid';
 import crypto from 'crypto';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 
 // Simple encryption/decryption for password storage
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-encryption-key-change-this-32'; // Must be 32 chars
@@ -28,6 +30,11 @@ function decrypt(text: string): string {
 // GET - Get GenieACS settings
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const settings = await prisma.genieacsSettings.findFirst({
       where: { isActive: true },
     });

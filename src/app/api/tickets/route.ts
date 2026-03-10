@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 
 // Generate unique ticket number
 function generateTicketNumber(): string {
@@ -76,7 +78,28 @@ async function sendTicketNotification(
 // GET - List tickets (for customer or admin)
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+
+    // If no admin session, try customer Bearer token
+    let customerUserId: string | null = null;
+    if (!session) {
+      const bearerToken = req.headers.get('authorization')?.replace('Bearer ', '');
+      if (bearerToken) {
+        const customerSession = await prisma.customerSession.findFirst({
+          where: { token: bearerToken, verified: true, expiresAt: { gte: new Date() } },
+          select: { userId: true },
+        });
+        if (customerSession) {
+          customerUserId = customerSession.userId;
+        }
+      }
+      if (!customerUserId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
     const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
     const customerId = searchParams.get('customerId');
     const status = searchParams.get('status');
     const priority = searchParams.get('priority');
@@ -85,20 +108,32 @@ export async function GET(req: NextRequest) {
 
     const where: any = {};
 
-    if (customerId) {
-      where.customerId = customerId;
+    // Filter by single ticket ID (used by customer detail page)
+    if (id) {
+      where.id = id;
     }
 
+    // Customers can only see their own tickets
+    if (customerUserId) {
+      where.customerId = customerUserId;
+    } else {
+      // Admin can filter by arbitrary customerId
+      if (customerId) {
+        where.customerId = customerId;
+      }
+
+      if (priority) {
+        where.priority = priority;
+      }
+
+      if (categoryId) {
+        where.categoryId = categoryId;
+      }
+    }
+
+    // Status and search apply to both admin and customer
     if (status) {
       where.status = status;
-    }
-
-    if (priority) {
-      where.priority = priority;
-    }
-
-    if (categoryId) {
-      where.categoryId = categoryId;
     }
 
     if (search) {
@@ -220,6 +255,16 @@ export async function POST(req: NextRequest) {
 
     // Send WhatsApp notification
     await sendTicketNotification(customerPhone, ticketNumber, subject, true);
+
+    // Create admin notification (for real-time toast in admin panel)
+    await prisma.notification.create({
+      data: {
+        type: 'new_ticket',
+        title: 'Tiket Baru Masuk',
+        message: `${customerName} membuat tiket baru: "${subject}" (#${ticketNumber})`,
+        link: `/admin/tickets/${ticket.id}`,
+      },
+    });
 
     return NextResponse.json(ticket);
   } catch (error) {

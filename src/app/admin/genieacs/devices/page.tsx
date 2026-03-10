@@ -1,9 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Server, RefreshCw, Wifi, WifiOff, Search, Loader2, Power, Trash2, Eye, Settings2, CheckCircle, XCircle, RotateCcw, X, Globe, Network, Activity, Smartphone, Monitor, Radio, Edit, Save, Lock, Signal, Thermometer, Info, Shield } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import {
   SimpleModal,
   ModalHeader,
@@ -96,6 +98,7 @@ interface DeviceDetail {
 
 export default function GenieACSDevicesPage() {
   const { t } = useTranslation();
+  const { addToast, confirm } = useToast();
   const [devices, setDevices] = useState<GenieACSDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -152,125 +155,89 @@ export default function GenieACSDevicesPage() {
   };
 
   const handleReboot = async (deviceId: string) => {
-    const result = await Swal.fire({
+    if (!await confirm({
       title: t('genieacs.rebootDevice'),
-      text: t('genieacs.rebootWarning'),
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: t('genieacs.yesReboot'),
-      confirmButtonColor: '#f97316',
-      cancelButtonText: t('common.cancel')
-    });
-
-    if (result.isConfirmed) {
-      try {
-        Swal.fire({ title: t('common.sending'), text: t('genieacs.sendingReboot'), allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        const response = await fetch(`/api/settings/genieacs/devices/${encodeURIComponent(deviceId)}/reboot`, { method: 'POST' });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          Swal.fire({ icon: 'success', title: t('common.success'), text: t('genieacs.rebootSent'), timer: 2000, showConfirmButton: false });
-        } else {
-          throw new Error(data.error || t('genieacs.failedSendCommand'));
-        }
-      } catch (error: unknown) {
-        const msg = error instanceof Error ? error.message : t('genieacs.failedSendCommand');
-        Swal.fire({ icon: 'error', title: t('common.error'), text: msg });
+      message: t('genieacs.rebootWarning'),
+      confirmText: t('genieacs.yesReboot'),
+      cancelText: t('common.cancel'),
+      variant: 'warning',
+    })) return;
+    try {
+      const response = await fetch(`/api/settings/genieacs/devices/${encodeURIComponent(deviceId)}/reboot`, { method: 'POST' });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        addToast({ type: 'success', title: t('common.success'), description: t('genieacs.rebootSent'), duration: 3000 });
+      } else {
+        throw new Error(data.error || t('genieacs.failedSendCommand'));
       }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : t('genieacs.failedSendCommand');
+      addToast({ type: 'error', title: t('common.error'), description: msg });
     }
   };
 
   // Force connection request to execute pending tasks
   const handleForceSync = async (deviceId: string) => {
     try {
-      Swal.fire({
-        title: t('genieacs.syncDevice'),
-        text: t('genieacs.sendingConnectionRequest'),
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-      });
-
       const response = await fetch(`/api/genieacs/devices/${encodeURIComponent(deviceId)}/connection-request`, {
         method: 'POST'
       });
       const data = await response.json();
 
       if (response.ok && data.success) {
-        Swal.fire({
-          icon: 'success',
-          title: t('common.success'),
-          html: `
-            <div class="text-sm">
-              <p>${t('genieacs.connectionRequestSent')}</p>
-              <p class="text-muted-foreground mt-2">${t('genieacs.deviceWillProcess')}</p>
-            </div>
-          `,
-          timer: 3000,
-          showConfirmButton: false
-        });
-        // Refresh after a short delay
+        addToast({ type: 'success', title: t('common.success'), description: t('genieacs.connectionRequestSent'), duration: 3000 });
         setTimeout(() => handleRefresh(), 3000);
       } else {
         throw new Error(data.error || t('genieacs.failedSyncDevice'));
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : t('genieacs.failedSyncDevice');
-      Swal.fire({ icon: 'error', title: t('common.error'), text: msg });
+      addToast({ type: 'error', title: t('common.error'), description: msg });
     }
   };
 
   const handleDelete = async (deviceId: string) => {
-    const result = await Swal.fire({
+    if (!await confirm({
       title: t('genieacs.deleteDevice'),
-      text: t('genieacs.deleteDeviceWarning'),
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: t('common.yesDelete'),
-      confirmButtonColor: '#dc2626',
-      cancelButtonText: t('common.cancel')
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`/api/settings/genieacs/devices/${encodeURIComponent(deviceId)}`, { method: 'DELETE' });
-        if (response.ok) {
-          setDevices(devices.filter(d => d._id !== deviceId));
-          Swal.fire({ icon: 'success', title: t('common.success'), text: t('genieacs.deviceDeleted'), timer: 2000, showConfirmButton: false });
-        } else {
-          throw new Error(t('genieacs.failedDeleteDevice'));
-        }
-      } catch (error: unknown) {
-        const msg = error instanceof Error ? error.message : t('genieacs.failedDeleteDevice');
-        Swal.fire({ icon: 'error', title: t('common.error'), text: msg });
+      message: t('genieacs.deleteDeviceWarning'),
+      confirmText: t('common.yesDelete'),
+      cancelText: t('common.cancel'),
+      variant: 'danger',
+    })) return;
+    try {
+      const response = await fetch(`/api/settings/genieacs/devices/${encodeURIComponent(deviceId)}`, { method: 'DELETE' });
+      if (response.ok) {
+        setDevices(devices.filter(d => d._id !== deviceId));
+        addToast({ type: 'success', title: t('common.success'), description: t('genieacs.deviceDeleted'), duration: 2000 });
+      } else {
+        throw new Error(t('genieacs.failedDeleteDevice'));
       }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : t('genieacs.failedDeleteDevice');
+      addToast({ type: 'error', title: t('common.error'), description: msg });
     }
   };
 
   const handleRefreshParameters = async (deviceId: string, serialNumber: string) => {
-    const result = await Swal.fire({
+    if (!await confirm({
       title: t('genieacs.refreshParameters'),
-      text: t('genieacs.refreshParametersConfirm').replace('{serial}', serialNumber),
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: t('common.yesRefresh'),
-      confirmButtonColor: '#0d9488',
-      cancelButtonText: t('common.cancel')
-    });
-
-    if (result.isConfirmed) {
-      try {
-        Swal.fire({ title: t('common.refreshing'), text: t('genieacs.sendingRefreshTask'), allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        const response = await fetch(`/api/settings/genieacs/devices/${encodeURIComponent(deviceId)}/refresh`, { method: 'POST' });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          Swal.fire({ icon: 'success', title: t('common.success'), text: t('genieacs.refreshTaskSent'), timer: 2000, showConfirmButton: false });
-          setTimeout(() => handleRefresh(), 2000);
-        } else {
-          throw new Error(data.error || t('genieacs.failedSendTask'));
-        }
-      } catch (error: unknown) {
-        const msg = error instanceof Error ? error.message : t('genieacs.failedSendRefresh');
-        Swal.fire({ icon: 'error', title: t('common.error'), text: msg });
+      message: t('genieacs.refreshParametersConfirm').replace('{serial}', serialNumber),
+      confirmText: t('common.yesRefresh'),
+      cancelText: t('common.cancel'),
+      variant: 'info',
+    })) return;
+    try {
+      const response = await fetch(`/api/settings/genieacs/devices/${encodeURIComponent(deviceId)}/refresh`, { method: 'POST' });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        addToast({ type: 'success', title: t('common.success'), description: t('genieacs.refreshTaskSent'), duration: 2000 });
+        setTimeout(() => handleRefresh(), 2000);
+      } else {
+        throw new Error(data.error || t('genieacs.failedSendTask'));
       }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : t('genieacs.failedSendRefresh');
+      addToast({ type: 'error', title: t('common.error'), description: msg });
     }
   };
 
@@ -283,12 +250,12 @@ export default function GenieACSDevicesPage() {
       if (response.ok && data.success && data.device) {
         setSelectedDevice(data.device);
       } else {
-        Swal.fire({ icon: 'error', title: t('common.error'), text: data.error || t('genieacs.failedGetDetail') });
+        addToast({ type: 'error', title: t('common.error'), description: data.error || t('genieacs.failedGetDetail') });
         setShowDetailModal(false);
       }
     } catch (error) {
       console.error('Error fetching device detail:', error);
-      Swal.fire({ icon: 'error', title: t('common.error'), text: t('genieacs.failedGetDetail') });
+      addToast({ type: 'error', title: t('common.error'), description: t('genieacs.failedGetDetail') });
       setShowDetailModal(false);
     } finally {
       setLoadingDetail(false);
@@ -350,7 +317,7 @@ export default function GenieACSDevicesPage() {
   const handleSaveWifi = async () => {
     // Validation
     if (!editWifiData.ssid || editWifiData.ssid.length < 1 || editWifiData.ssid.length > 32) {
-      Swal.fire({ icon: 'warning', title: t('genieacs.validationTitle'), text: t('genieacs.ssidLength') });
+      addToast({ type: 'warning', title: t('genieacs.validationTitle'), description: t('genieacs.ssidLength') });
       return;
     }
 
@@ -360,38 +327,18 @@ export default function GenieACSDevicesPage() {
     // Password validation HANYA jika user benar-benar mengisi password
     if (trimmedPassword.length > 0) {
       if (trimmedPassword.length < 8 || trimmedPassword.length > 63) {
-        Swal.fire({
-          icon: 'warning',
-          title: t('genieacs.passwordValidation'),
-          html: `
-            <div class="text-left text-sm">
-              <p>${t('genieacs.passwordLength')}</p>
-              <p class="text-xs text-muted-foreground mt-2">${t('genieacs.currentPasswordLength').replace('{length}', String(trimmedPassword.length))}</p>
-              <p class="text-xs text-primary mt-1">💡 ${t('genieacs.leaveEmptyTip')}</p>
-            </div>
-          `
-        });
+        addToast({ type: 'warning', title: t('genieacs.passwordValidation'), description: `${t('genieacs.passwordLength')} (${t('genieacs.currentPasswordLength').replace('{length}', String(trimmedPassword.length))})` });
         return;
       }
     }
 
-    const result = await Swal.fire({
+    if (!await confirm({
       title: t('genieacs.updateWifiConfig'),
-      html: `
-        <div class="text-left text-sm">
-          <p><strong>SSID:</strong> ${editWifiData.ssid}</p>
-          <p><strong>WLAN Index:</strong> ${editWifiData.wlanIndex}</p>
-          <p class="text-xs text-muted-foreground mt-2">💡 ${t('genieacs.securityModeNote')}</p>
-        </div>
-      `,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: t('common.yesUpdate'),
-      confirmButtonColor: '#0d9488',
-      cancelButtonText: t('common.cancel')
-    });
-
-    if (result.isConfirmed) {
+      message: `SSID: ${editWifiData.ssid} | WLAN Index: ${editWifiData.wlanIndex}`,
+      confirmText: t('common.yesUpdate'),
+      cancelText: t('common.cancel'),
+      variant: 'info',
+    })) return;
       setSavingWifi(true);
       try {
         const response = await fetch(`/api/genieacs/devices/${encodeURIComponent(editWifiData.deviceId)}/wifi`, {
@@ -407,31 +354,16 @@ export default function GenieACSDevicesPage() {
         const data = await response.json();
         if (response.ok && data.success) {
           const isExecuted = data.taskStatus && data.taskStatus !== 'pending';
-
-          Swal.fire({
-            icon: isExecuted ? 'success' : 'info',
+          addToast({
+            type: isExecuted ? 'success' : 'info',
             title: isExecuted ? t('common.success') : t('genieacs.taskSent'),
-            html: `
-              <div class="text-left text-sm space-y-2">
-                <p class="text-foreground">${data.message || t('genieacs.wifiConfigSent')}</p>
-                ${data.info ? `<p class="${isExecuted ? 'text-success' : 'text-primary'} text-xs">${data.info}</p>` : ''}
-                ${data.taskStatus === 'fault' ? `<p class="text-destructive text-xs">⚠️ ${t('genieacs.taskFailed')}</p>` : ''}
-                ${data.taskId ? `<p class="text-muted-foreground text-xs font-mono mt-2">Task: ${data.taskId}</p>` : ''}
-              </div>
-            `,
-            showConfirmButton: true,
-            confirmButtonText: isExecuted ? 'OK' : t('genieacs.viewTasks'),
-            showCancelButton: !isExecuted,
-            cancelButtonText: t('common.close'),
-            confirmButtonColor: '#0d9488',
-            timer: isExecuted ? 3000 : undefined
-          }).then((result) => {
-            if (result.isConfirmed && !isExecuted) {
-              window.location.href = '/admin/genieacs/tasks';
-            }
+            description: data.message || t('genieacs.wifiConfigSent'),
+            duration: isExecuted ? 3000 : 5000,
           });
+          if (!isExecuted) {
+            setTimeout(() => { window.location.href = '/admin/genieacs/tasks'; }, 3000);
+          }
           closeEditWifiModal();
-          // Refresh device detail to see changes
           if (selectedDevice) {
             setTimeout(() => handleViewDetail(selectedDevice._id), isExecuted ? 3000 : 5000);
           }
@@ -440,11 +372,10 @@ export default function GenieACSDevicesPage() {
         }
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : t('genieacs.failedUpdateWifi');
-        Swal.fire({ icon: 'error', title: t('common.error'), text: msg });
+        addToast({ type: 'error', title: t('common.error'), description: msg });
       } finally {
         setSavingWifi(false);
       }
-    }
   };
 
   const InfoRow = ({ label, value, highlight = false }: { label: string; value: string | null | undefined; highlight?: boolean }) => (
@@ -470,7 +401,7 @@ export default function GenieACSDevicesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -482,7 +413,7 @@ export default function GenieACSDevicesPage() {
 
   if (!isConfigured) {
     return (
-      <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+      <div className="bg-background relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
           <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -493,13 +424,13 @@ export default function GenieACSDevicesPage() {
           <div className="space-y-4">
             {/* Header */}
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
                 <Server className="w-6 h-6 text-[#00f7ff]" />
                 <div>
                   <span>{t('genieacs.devicesTitle')}</span>
                 </div>
               </h1>
-              <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('genieacs.devicesSubtitle')}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('genieacs.devicesSubtitle')}</p>
             </div>
 
             {/* Not Configured */}
@@ -511,13 +442,13 @@ export default function GenieACSDevicesPage() {
               <p className="text-sm text-muted-foreground dark:text-muted-foreground mb-4">
                 {t('genieacs.configureFirst')}
               </p>
-              <a
+              <Link
                 href="/admin/settings/genieacs"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-white text-sm font-medium rounded-lg transition-colors"
               >
                 <Settings2 className="w-4 h-4" />
                 {t('genieacs.openSettings')}
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -526,7 +457,7 @@ export default function GenieACSDevicesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -537,21 +468,21 @@ export default function GenieACSDevicesPage() {
         <div className="space-y-3">
           {/* Header */}
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <Server className="w-6 h-6 text-[#00f7ff]" />
               <div>
                 <span>{t('genieacs.devicesTitle')}</span>
               </div>
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('common.manageCpe')}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('common.manageCpe')}</p>
             <div className="mt-2">
-              <a
+              <Link
                 href="/admin/settings/genieacs"
                 className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-white/20 hover:bg-white/30 rounded transition-colors"
               >
                 <Settings2 className="w-3 h-3" />
                 {t('genieacs.settings')}
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -610,7 +541,7 @@ export default function GenieACSDevicesPage() {
                 <button
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-foreground bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg disabled:opacity-50 transition-colors"
                 >
                   <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
                   {t('common.refresh')}
@@ -618,8 +549,98 @@ export default function GenieACSDevicesPage() {
               </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="block md:hidden space-y-3 p-3">
+              {filteredDevices.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Server className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs">{t('genieacs.noDevices')}</p>
+                </div>
+              ) : (
+                filteredDevices.map((device) => (
+                  <div key={device._id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground truncate">{device.serialNumber || '-'}</p>
+                        <p className="text-[10px] text-muted-foreground">{device.manufacturer || '-'} &middot; {device.model || '-'}</p>
+                      </div>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded ml-2 ${
+                        device.status === 'Online'
+                          ? 'bg-success/20 text-success dark:bg-green-900/30 dark:text-success'
+                          : 'bg-destructive/20 text-destructive dark:bg-red-900/30 dark:text-destructive'
+                      }`}>
+                        {device.status === 'Online' ? t('common.online') : t('common.offline')}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 text-[11px] mb-2">
+                      <div>
+                        <span className="text-muted-foreground">{t('genieacs.ipTr069')}</span>
+                        <p className="font-mono text-[10px] text-muted-foreground">{device.tr069IP || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">PPPoE</span>
+                        <p className="text-primary text-xs">{device.pppoeUsername || '-'}</p>
+                        {device.pppoeIP && device.pppoeIP !== '-' && (
+                          <p className="text-[10px] text-muted-foreground">{device.pppoeIP}</p>
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">{t('genieacs.ponMode')}</span>
+                        <p>
+                          {device.ponMode && device.ponMode !== '-' ? (
+                            <span className="px-1.5 py-0.5 text-[10px] font-medium bg-info/10 text-info rounded">{device.ponMode}</span>
+                          ) : <span className="text-xs">-</span>}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">{t('genieacs.rxPower')}</span>
+                        <p>
+                          {device.rxPower && device.rxPower !== '-' ? (
+                            <span className={`font-medium text-xs ${parseFloat(device.rxPower) > -25 ? 'text-success' : parseFloat(device.rxPower) > -28 ? 'text-warning' : 'text-destructive'}`}>
+                              {device.rxPower} dBm
+                            </span>
+                          ) : <span className="text-xs">-</span>}
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">{t('common.uptime')}</span>
+                        <p className="text-xs text-muted-foreground">{device.uptime || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 pt-2 border-t border-border/50">
+                      <button
+                        onClick={() => handleViewDetail(device._id)}
+                        className="flex-1 p-2 text-xs text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        {t('common.details')}
+                      </button>
+                      <button
+                        onClick={() => handleRefreshParameters(device._id, device.serialNumber)}
+                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleReboot(device._id)}
+                        className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
+                      >
+                        <Power className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(device._id)}
+                        className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="overflow-x-auto hidden md:block">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border bg-muted">
@@ -726,8 +747,8 @@ export default function GenieACSDevicesPage() {
           </div>
 
           {/* Device Detail Modal */}
-          {showDetailModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          {showDetailModal && createPortal(
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
               <div className="bg-card rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden mx-4">
                 {/* Modal Header */}
                 <div className="bg-gradient-to-r from-primary to-violet-500 p-3 text-white flex items-center justify-between">
@@ -793,7 +814,7 @@ export default function GenieACSDevicesPage() {
                         {selectedDevice.wlanConfigs && selectedDevice.wlanConfigs.length > 0 && (
                           <button
                             onClick={() => openEditWifiModal(selectedDevice._id, selectedDevice.wlanConfigs[0])}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors"
                           >
                             <Edit className="w-3 h-3" />
                             {t('genieacs.editWifi')}
@@ -1006,7 +1027,8 @@ export default function GenieACSDevicesPage() {
                   </button>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
 
           {/* Edit WiFi Modal */}
@@ -1025,7 +1047,7 @@ export default function GenieACSDevicesPage() {
               <div>
                 <ModalLabel required>{t('genieacs.ssidName')}</ModalLabel>
                 <ModalInput type="text" value={editWifiData.ssid} onChange={(e) => setEditWifiData({ ...editWifiData, ssid: e.target.value })} maxLength={32} placeholder={t('genieacs.wifiName')} autoComplete="off" />
-                <p className="text-[10px] text-[#e0d0ff]/50 mt-1">1-32 {t('common.characters')}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">1-32 {t('common.characters')}</p>
               </div>
               {(() => {
                 const currentWlan = selectedDevice?.wlanConfigs?.find(w => w.index === editWifiData.wlanIndex);
@@ -1034,11 +1056,11 @@ export default function GenieACSDevicesPage() {
                 return (
                   <div className="p-3 bg-[#0a0520]/50 rounded-lg border border-[#bc13fe]/30">
                     <div className="flex items-center gap-2 text-xs">
-                      <Shield className="w-3.5 h-3.5 text-[#e0d0ff]/60" />
-                      <span className="font-medium text-[#e0d0ff]">{t('genieacs.currentSecurity')}</span>
+                      <Shield className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="font-medium text-foreground">{t('genieacs.currentSecurity')}</span>
                       <span className={`px-2 py-0.5 rounded ${isOpenNetwork ? 'bg-[#ff8c00]/20 text-[#ff8c00]' : 'bg-[#00ff88]/20 text-[#00ff88]'}`}>{currentSecurity}</span>
                     </div>
-                    {isOpenNetwork && (<p className="text-[10px] text-[#e0d0ff]/50 mt-1">⚠️ {t('genieacs.openNetworkWarning')}</p>)}
+                    {isOpenNetwork && (<p className="text-[10px] text-muted-foreground mt-1">⚠️ {t('genieacs.openNetworkWarning')}</p>)}
                   </div>
                 );
               })()}
@@ -1054,14 +1076,14 @@ export default function GenieACSDevicesPage() {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#e0d0ff]/40" />
                       <ModalInput type="text" value={editWifiData.password} onChange={(e) => setEditWifiData({ ...editWifiData, password: e.target.value })} maxLength={63} placeholder={t('genieacs.passwordPlaceholder')} autoComplete="off" className="pl-10" />
                     </div>
-                    <p className="text-[10px] text-[#e0d0ff]/50 mt-1">💡 {t('genieacs.leaveEmptyNoChange')}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">💡 {t('genieacs.leaveEmptyNoChange')}</p>
                   </div>
                 );
               })()}
               <div className="flex items-center justify-between p-3 bg-[#0a0520]/50 border border-[#bc13fe]/30 rounded-lg">
                 <div>
-                  <p className="text-xs font-medium text-[#e0d0ff]">{t('genieacs.wifiStatus')}</p>
-                  <p className="text-[10px] text-[#e0d0ff]/50">{t('genieacs.enableDisableWifi')}</p>
+                  <p className="text-xs font-medium text-foreground">{t('genieacs.wifiStatus')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('genieacs.enableDisableWifi')}</p>
                 </div>
                 <button type="button" onClick={() => setEditWifiData({ ...editWifiData, enabled: !editWifiData.enabled })} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editWifiData.enabled ? 'bg-[#00f7ff] shadow-[0_0_10px_rgba(0,247,255,0.4)]' : 'bg-[#bc13fe]/30'}`}>
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editWifiData.enabled ? 'translate-x-6' : 'translate-x-1'}`} />

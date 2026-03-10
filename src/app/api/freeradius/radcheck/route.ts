@@ -1,7 +1,13 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma'; // Assuming prisma is set up
+﻿import { NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client'; // Assuming prisma is set up
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 
 export async function GET(req: Request) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     try {
         const { searchParams } = new URL(req.url);
         const search = searchParams.get('search') || '';
@@ -10,7 +16,7 @@ export async function GET(req: Request) {
         const skip = (page - 1) * limit;
 
         // This requires prisma.radcheck definition. If not exists, will fail.
-        // Assuming user has a 'radcheck' model or similar. AIBILL-RADIUS likely uses 'radcheck' table.
+        // Assuming user has a 'radcheck' model or similar. SALFANET-RADIUS likely uses 'radcheck' table.
         // If not, we'll try raw query or fallback.
 
         try {

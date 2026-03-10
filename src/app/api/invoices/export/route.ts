@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { generateExcelBuffer, formatCurrencyExport, formatDateExport, generatePDFBuffer, generateInvoicePDF } from '@/lib/utils/export';
-import { checkAuth } from '@/lib/apiAuth';
+import { checkAuth } from '@/server/middleware/api-auth';
+import { startOfDayWIBtoUTC, endOfDayWIBtoUTC } from '@/lib/timezone';
 
 export async function GET(req: NextRequest) {
   const auth = await checkAuth();
@@ -29,8 +30,8 @@ export async function GET(req: NextRequest) {
       
       if (startDate && endDate) {
         where.createdAt = {
-          gte: new Date(startDate),
-          lte: new Date(endDate + 'T23:59:59')
+          gte: startOfDayWIBtoUTC(startDate),
+          lte: endOfDayWIBtoUTC(endDate),
         };
       }
     }

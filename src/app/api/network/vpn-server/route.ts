@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { authOptions } from '@/server/auth/config'
+import { prisma } from '@/server/db/client'
 
 // GET - List all VPN servers
 export async function GET() {
@@ -27,9 +27,6 @@ export async function GET() {
         l2tpEnabled: true,
         sstpEnabled: true,
         pptpEnabled: true,
-        wgEnabled: true,
-        wgPublicKey: true,
-        wgPort: true,
         openVpnEnabled: true,
         openVpnPort: true,
         isActive: true,
@@ -73,7 +70,6 @@ export async function POST(request: Request) {
         l2tpEnabled: !!data.l2tpEnabled,
         sstpEnabled: !!data.sstpEnabled,
         pptpEnabled: !!data.pptpEnabled,
-        wgEnabled: !!data.wgEnabled,
         openVpnEnabled: !!data.openVpnEnabled,
       },
     })
@@ -111,7 +107,6 @@ export async function PUT(request: Request) {
       l2tpEnabled: !!data.l2tpEnabled,
       sstpEnabled: !!data.sstpEnabled,
       pptpEnabled: !!data.pptpEnabled,
-      wgEnabled: !!data.wgEnabled,
       openVpnEnabled: !!data.openVpnEnabled,
     }
 

@@ -1,12 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { applyProfileChangeToActiveSessions, isRadclientAvailable } from '@/lib/radius-coa';
-
-const prisma = new PrismaClient();
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { changePPPoERateLimit } from '@/server/services/mikrotik/rate-limit';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 
 // GET - List all PPPoE profiles with user count
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const profiles = await prisma.pppoeProfile.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
@@ -314,90 +319,77 @@ export async function PUT(request: NextRequest) {
           },
         });
 
-        // If speed changed, apply CoA to all active sessions using this profile
+        // If speed changed, apply rate limit change to all active sessions using this profile
         if (parsedFromRateLimit || bodyRateLimit) {
-          console.log(`[Profile Update] Speed changed for profile ${newGroupName}, applying CoA to active sessions...`);
+          console.log(`[Profile Update] Speed changed for profile ${newGroupName}, applying rate limit to active sessions...`);
 
-          // Check if CoA is available
-          const coaAvailable = await isRadclientAvailable();
+          // Find all users using this profile
+          const usersWithProfile = await prisma.pppoeUser.findMany({
+            where: { profileId: id },
+            select: { username: true },
+          });
 
-          if (coaAvailable) {
-            // Find all users using this profile
-            const usersWithProfile = await prisma.pppoeUser.findMany({
-              where: { profileId: id },
-              select: { username: true },
+          // For each user, find active session and apply new rate limit
+          const coaResults: any[] = [];
+          for (const user of usersWithProfile) {
+            const activeSession = await prisma.radacct.findFirst({
+              where: { username: user.username, acctstoptime: null },
+              select: { acctsessionid: true, nasipaddress: true, framedipaddress: true },
             });
 
-            // For each user, find active sessions and send CoA
-            const coaResults: any[] = [];
-            for (const user of usersWithProfile) {
-              // Find active session in radacct
-              const activeSession = await prisma.radacct.findFirst({
+            if (activeSession) {
+              // Get router config — prefer match by nasname/ipAddress from radacct
+              const routerRow = await prisma.router.findFirst({
                 where: {
-                  username: user.username,
-                  acctstoptime: null,
+                  OR: [
+                    { nasname: activeSession.nasipaddress ?? '' },
+                    { ipAddress: activeSession.nasipaddress ?? '' },
+                  ],
                 },
-                select: {
-                  acctsessionid: true,
-                  nasipaddress: true,
-                  framedipaddress: true,
-                },
+                select: { ipAddress: true, nasname: true, port: true, username: true, password: true, secret: true },
+              }) || await prisma.router.findFirst({
+                where: { isActive: true },
+                select: { ipAddress: true, nasname: true, port: true, username: true, password: true, secret: true },
               });
 
-              if (activeSession?.nasipaddress) {
-                // Get router secret for this NAS
-                const router = await prisma.router.findFirst({
-                  where: {
-                    OR: [
-                      { nasname: activeSession.nasipaddress },
-                      { ipAddress: activeSession.nasipaddress },
-                    ],
+              if (routerRow) {
+                const effectiveRateLimit = rateLimit; // Already the new rateLimit
+                const result = await changePPPoERateLimit(
+                  {
+                    ipAddress: routerRow.ipAddress,
+                    nasname: routerRow.nasname,
+                    port: routerRow.port,
+                    username: routerRow.username,
+                    password: routerRow.password,
+                    secret: routerRow.secret,
                   },
-                  select: { secret: true },
-                });
-
-                const result = await applyProfileChangeToActiveSessions(
                   user.username,
-                  [{
+                  effectiveRateLimit,
+                  {
                     acctSessionId: activeSession.acctsessionid || undefined,
-                    nasIpAddress: activeSession.nasipaddress,
+                    nasIpAddress: routerRow.ipAddress,
                     framedIpAddress: activeSession.framedipaddress || undefined,
-                    nasSecret: router?.secret || undefined,
-                  }],
-                  {
-                    downloadSpeed: newDownload,
-                    uploadSpeed: newUpload,
-                    groupName: newGroupName,
                   },
-                  {
-                    fallbackToDisconnect: true,
-                    secret: router?.secret || undefined,
-                  }
+                  { allowDisconnect: true }
                 );
 
-                coaResults.push({
-                  username: user.username,
-                  targetNas: activeSession.nasipaddress,
-                  ...result,
-                });
+                coaResults.push({ username: user.username, ...result });
               }
             }
-
-            console.log(`[Profile Update] CoA applied to ${coaResults.length} active sessions`);
-
-            return NextResponse.json({
-              success: true,
-              profile,
-              coaApplied: true,
-              coaResults: coaResults.map(r => ({
-                username: r.username,
-                success: r.success,
-                action: r.action,
-              })),
-            });
-          } else {
-            console.log('[Profile Update] CoA not available (radclient not installed)');
           }
+
+          console.log(`[Profile Update] Rate limit applied to ${coaResults.filter(r => r.success).length}/${coaResults.length} active sessions`);
+
+          return NextResponse.json({
+            success: true,
+            profile,
+            coaApplied: coaResults.some(r => r.success),
+            coaResults: coaResults.map(r => ({
+              username: r.username,
+              success: r.success,
+              method: r.method,
+            })),
+          });
         }
       } catch (syncError) {
         console.error('RADIUS re-sync error:', syncError);

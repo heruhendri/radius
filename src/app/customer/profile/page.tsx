@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Mail, Phone, CreditCard, Calendar, Package, LogOut, Shield, Clock } from 'lucide-react';
+import { User, Mail, Phone, CreditCard, Calendar, Package, LogOut, Shield, Edit3, Save, X, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { CyberCard, CyberButton } from '@/components/cyberpunk';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface CustomerData {
   id: string;
@@ -29,8 +30,19 @@ interface CustomerData {
 export default function CustomerProfilePage() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { addToast } = useToast();
   const [customer, setCustomer] = useState<CustomerData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Edit state
+  const [editing, setEditing]   = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [editName, setEditName]   = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+
+  const toast = (type: 'success' | 'error' | 'info', title: string, desc?: string) =>
+    addToast({ type, title, description: desc, duration: type === 'error' ? 8000 : 5000 });
 
   useEffect(() => {
     // Check authentication
@@ -65,7 +77,7 @@ export default function CustomerProfilePage() {
       const data = await response.json();
       if (data.success && data.user) {
         const user = data.user;
-        setCustomer({
+        const c = {
           id: user.id,
           username: user.username,
           name: user.name,
@@ -73,10 +85,14 @@ export default function CustomerProfilePage() {
           phone: user.phone,
           status: user.status,
           packageName: user.profile?.name || null,
-          packagePrice: null, // Price not in response
+          packagePrice: null,
           expiryDate: user.expiredAt,
           profile: user.profile
-        });
+        };
+        setCustomer(c);
+        setEditName(user.name || '');
+        setEditPhone(user.phone || '');
+        setEditEmail(user.email || '');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -89,6 +105,52 @@ export default function CustomerProfilePage() {
     localStorage.removeItem('customer_token');
     localStorage.removeItem('customer_user');
     router.push('/customer/login');
+  };
+
+  const handleSave = async () => {
+    const token = localStorage.getItem('customer_token');
+    if (!token) return;
+    if (!editName.trim() || editName.trim().length < 2) {
+      toast('error', 'Validasi', 'Nama minimal 2 karakter');
+      return;
+    }
+    if (editPhone && !/^[0-9+\-\s]{8,20}$/.test(editPhone)) {
+      toast('error', 'Validasi', 'Format nomor telepon tidak valid');
+      return;
+    }
+    if (editEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail)) {
+      toast('error', 'Validasi', 'Format email tidak valid');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch('/api/customer/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: editName.trim(), phone: editPhone.trim() || null, email: editEmail.trim() || null }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast('error', 'Gagal menyimpan', data.message || data.error || 'Terjadi kesalahan');
+        return;
+      }
+      const u = data.user;
+      setCustomer(prev => prev ? { ...prev, name: u.name, phone: u.phone, email: u.email } : prev);
+      setEditing(false);
+      toast('success', 'Profil diperbarui', 'Data berhasil disimpan');
+    } catch {
+      toast('error', 'Error', 'Terjadi kesalahan saat menyimpan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (!customer) return;
+    setEditName(customer.name || '');
+    setEditPhone(customer.phone || '');
+    setEditEmail(customer.email || '');
+    setEditing(false);
   };
 
   const getStatusBadge = (status: string) => {
@@ -144,38 +206,81 @@ export default function CustomerProfilePage() {
 
       {/* Contact Information */}
       <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-accent/30 shadow-[0_0_30px_rgba(0,247,255,0.15)]">
-        <h2 className="text-sm font-bold text-accent mb-3 flex items-center gap-2 uppercase tracking-wider drop-shadow-[0_0_5px_rgba(0,247,255,0.5)]">
-          <Mail size={16} className="drop-shadow-[0_0_5px_rgba(0,247,255,0.8)]" />
-          {t('profile.contactInfo')}
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold text-accent flex items-center gap-2 uppercase tracking-wider drop-shadow-[0_0_5px_rgba(0,247,255,0.5)]">
+            <Mail size={16} className="drop-shadow-[0_0_5px_rgba(0,247,255,0.8)]" />
+            {t('profile.contactInfo')}
+          </h2>
+          {!editing ? (
+            <CyberButton onClick={() => setEditing(true)} variant="outline" size="sm" className="text-xs px-2 py-1">
+              <Edit3 className="w-3.5 h-3.5 mr-1" />Edit
+            </CyberButton>
+          ) : (
+            <div className="flex gap-2">
+              <CyberButton onClick={handleSave} disabled={saving} variant="cyan" size="sm" className="text-xs px-2 py-1">
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Save className="w-3.5 h-3.5 mr-1" />Simpan</>}
+              </CyberButton>
+              <CyberButton onClick={handleCancelEdit} disabled={saving} variant="outline" size="sm" className="text-xs px-2 py-1">
+                <X className="w-3.5 h-3.5" />
+              </CyberButton>
+            </div>
+          )}
+        </div>
         <div className="space-y-3">
-          {customer.email && (
-            <div className="flex items-start gap-3">
-              <Mail size={16} className="text-accent mt-0.5" />
-              <div className="flex-1">
-                <p className="text-xs text-accent font-bold uppercase tracking-wide">{t('profile.email')}</p>
-                <p className="text-sm text-white">{customer.email}</p>
-              </div>
+          {/* Name */}
+          <div className="flex items-start gap-3">
+            <User size={16} className="text-accent mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-xs text-accent font-bold uppercase tracking-wide mb-1">Nama Lengkap</p>
+              {editing ? (
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  className="w-full bg-slate-800/60 border border-slate-600/50 focus:border-cyan-500/60 rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors"
+                  placeholder="Nama lengkap"
+                />
+              ) : (
+                <p className="text-sm text-white">{customer.name || '-'}</p>
+              )}
             </div>
-          )}
-          {customer.phone && (
-            <div className="flex items-start gap-3">
-              <Phone size={16} className="text-accent mt-0.5" />
-              <div className="flex-1">
-                <p className="text-xs text-accent font-bold uppercase tracking-wide">{t('profile.phone')}</p>
-                <p className="text-sm text-white">{customer.phone}</p>
-              </div>
+          </div>
+          {/* Email */}
+          <div className="flex items-start gap-3">
+            <Mail size={16} className="text-accent mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-xs text-accent font-bold uppercase tracking-wide mb-1">{t('profile.email')}</p>
+              {editing ? (
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={e => setEditEmail(e.target.value)}
+                  className="w-full bg-slate-800/60 border border-slate-600/50 focus:border-cyan-500/60 rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors"
+                  placeholder="email@contoh.com"
+                />
+              ) : (
+                <p className="text-sm text-white">{customer.email || <span className="text-slate-500 italic text-xs">Belum diisi</span>}</p>
+              )}
             </div>
-          )}
-          {customer.address && (
-            <div className="flex items-start gap-3">
-              <User size={16} className="text-accent mt-0.5" />
-              <div className="flex-1">
-                <p className="text-xs text-accent font-bold uppercase tracking-wide">{t('profile.address')}</p>
-                <p className="text-sm text-white">{customer.address}</p>
-              </div>
+          </div>
+          {/* Phone */}
+          <div className="flex items-start gap-3">
+            <Phone size={16} className="text-accent mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-xs text-accent font-bold uppercase tracking-wide mb-1">{t('profile.phone')}</p>
+              {editing ? (
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={e => setEditPhone(e.target.value)}
+                  className="w-full bg-slate-800/60 border border-slate-600/50 focus:border-cyan-500/60 rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors"
+                  placeholder="0812-3456-7890"
+                />
+              ) : (
+                <p className="text-sm text-white">{customer.phone || <span className="text-slate-500 italic text-xs">Belum diisi</span>}</p>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </CyberCard>
 

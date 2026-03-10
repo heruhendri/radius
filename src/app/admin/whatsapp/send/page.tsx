@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface User {
   id: string;
@@ -23,6 +23,7 @@ interface User {
 
 export default function SendMessagePage() {
   const { t } = useTranslation();
+  const { addToast, confirm } = useToast();
   const [activeTab, setActiveTab] = useState<'single' | 'broadcast'>('single');
   
   // Single message states
@@ -100,7 +101,7 @@ export default function SendMessagePage() {
     const template = templates.find((t) => t.id === templateId);
     if (template) {
       setBroadcastMessage(template.message);
-      Swal.fire({ icon: 'success', title: t('whatsapp.templateLoaded'), text: `${template.name} loaded.`, timer: 2000, showConfirmButton: false });
+      addToast({ type: 'success', title: t('whatsapp.templateLoaded'), description: `${template.name} loaded.`, duration: 2000 });
     }
   };
 
@@ -108,7 +109,7 @@ export default function SendMessagePage() {
     e.preventDefault();
 
     if (!phoneNumber || !singleMessage) {
-      Swal.fire(t('common.error'), t('whatsapp.phoneAndMessageRequired'), 'error');
+      addToast({ type: 'error', title: t('common.error'), description: t('whatsapp.phoneAndMessageRequired') });
       return;
     }
 
@@ -125,15 +126,15 @@ export default function SendMessagePage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        Swal.fire(t('common.success'), t('whatsapp.messageSentVia').replace('{provider}', data.provider), 'success');
+        addToast({ type: 'success', title: t('common.success'), description: t('whatsapp.messageSentVia').replace('{provider}', data.provider) });
         setResult({ success: true, provider: data.provider });
         setSingleMessage('');
       } else {
-        Swal.fire(t('common.error'), data.error || t('whatsapp.failedSendMessage'), 'error');
+        addToast({ type: 'error', title: t('common.error'), description: data.error || t('whatsapp.failedSendMessage') });
         setResult({ success: false, error: data.error });
       }
     } catch {
-      Swal.fire(t('common.error'), t('whatsapp.failedSendMessage'), 'error');
+      addToast({ type: 'error', title: t('common.error'), description: t('whatsapp.failedSendMessage') });
       setResult({ success: false, error: 'Network error' });
     } finally {
       setSending(false);
@@ -142,28 +143,25 @@ export default function SendMessagePage() {
 
   const handleBroadcast = async () => {
     if (selectedUsers.size === 0) {
-      Swal.fire(t('common.error'), t('whatsapp.selectAtLeastOneUser'), 'error');
+      addToast({ type: 'error', title: t('common.error'), description: t('whatsapp.selectAtLeastOneUser') });
       return;
     }
 
     if (!broadcastMessage) {
-      Swal.fire(t('common.error'), t('whatsapp.messageRequired'), 'error');
+      addToast({ type: 'error', title: t('common.error'), description: t('whatsapp.messageRequired') });
       return;
     }
 
     console.log('[Frontend] Broadcast message template:', broadcastMessage.substring(0, 200));
     console.log('[Frontend] Selected users:', Array.from(selectedUsers));
 
-    const confirmed = await Swal.fire({
+    if (!await confirm({
       title: t('whatsapp.confirmBroadcast'),
-      html: `${t('whatsapp.sendMessageTo')} <strong>${selectedUsers.size}</strong> ${t('whatsapp.users')}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: t('whatsapp.yesSend'),
-      cancelButtonText: t('common.cancel'),
-    });
-
-    if (!confirmed.isConfirmed) return;
+      message: `${t('whatsapp.sendMessageTo')} ${selectedUsers.size} ${t('whatsapp.users')}?`,
+      confirmText: t('whatsapp.yesSend'),
+      cancelText: t('common.cancel'),
+      variant: 'info',
+    })) return;
 
     setBroadcasting(true);
     setBroadcastResult(null);
@@ -187,15 +185,15 @@ export default function SendMessagePage() {
       console.log('[Frontend] Broadcast response:', data);
 
       if (data.success) {
-        Swal.fire(t('whatsapp.broadcastComplete'), `✅ ${t('whatsapp.success')}: ${data.successCount} | ❌ ${t('whatsapp.failed')}: ${data.failCount}`, 'success');
+        addToast({ type: 'success', title: t('whatsapp.broadcastComplete'), description: `✅ ${t('whatsapp.success')}: ${data.successCount} | ❌ ${t('whatsapp.failed')}: ${data.failCount}` });
         setBroadcastResult(data);
         setSelectedUsers(new Set());
       } else {
-        Swal.fire(t('common.error'), data.error || t('whatsapp.broadcastFailed'), 'error');
+        addToast({ type: 'error', title: t('common.error'), description: data.error || t('whatsapp.broadcastFailed') });
       }
     } catch (error) {
       console.error('[Frontend] Broadcast error:', error);
-      Swal.fire(t('common.error'), t('whatsapp.failedSendBroadcast'), 'error');
+      addToast({ type: 'error', title: t('common.error'), description: t('whatsapp.failedSendBroadcast') });
     } finally {
       setBroadcasting(false);
     }
@@ -224,7 +222,7 @@ export default function SendMessagePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -235,8 +233,8 @@ export default function SendMessagePage() {
         <div className="max-w-7xl mx-auto space-y-3">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('whatsapp.sendTitle')}</h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('whatsapp.sendSubtitle')}</p>
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('whatsapp.sendTitle')}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('whatsapp.sendSubtitle')}</p>
         </div>
 
         {/* Tabs */}
@@ -387,7 +385,7 @@ export default function SendMessagePage() {
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-0.5">
-                      <label className="text-[10px] font-medium text-muted-foreground dark:text-muted-foreground">ODP Location</label>
+                      <label className="text-[10px] font-medium text-muted-foreground dark:text-muted-foreground">{t('whatsapp.odpLocation')}</label>
                       {odpFilters.length > 0 && (
                         <button onClick={() => setOdpFilters([])} className="text-[9px] text-primary hover:underline">
                           {t('common.clear')} ({odpFilters.length})
@@ -421,7 +419,7 @@ export default function SendMessagePage() {
                 {/* Other Filters */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div>
-                    <label className="block text-[10px] font-medium text-muted-foreground dark:text-muted-foreground mb-0.5">Status</label>
+                    <label className="block text-[10px] font-medium text-muted-foreground dark:text-muted-foreground mb-0.5">{t('common.status')}</label>
                     <select
                       value={statusFilter || 'all'}
                       onChange={(e) => setStatusFilter(e.target.value === 'all' ? '' : e.target.value)}
@@ -434,7 +432,7 @@ export default function SendMessagePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-medium text-muted-foreground dark:text-muted-foreground mb-0.5">Profile</label>
+                    <label className="block text-[10px] font-medium text-muted-foreground dark:text-muted-foreground mb-0.5">{t('whatsapp.profileFilter')}</label>
                     <select
                       value={profileFilter || 'all'}
                       onChange={(e) => setProfileFilter(e.target.value === 'all' ? '' : e.target.value)}
@@ -447,7 +445,7 @@ export default function SendMessagePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-medium text-muted-foreground dark:text-muted-foreground mb-0.5">Router</label>
+                    <label className="block text-[10px] font-medium text-muted-foreground dark:text-muted-foreground mb-0.5">{t('whatsapp.routerFilter')}</label>
                     <select
                       value={routerFilter || 'all'}
                       onChange={(e) => setRouterFilter(e.target.value === 'all' ? '' : e.target.value)}
@@ -460,7 +458,7 @@ export default function SendMessagePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-medium text-muted-foreground dark:text-muted-foreground mb-0.5">Address</label>
+                    <label className="block text-[10px] font-medium text-muted-foreground dark:text-muted-foreground mb-0.5">{t('whatsapp.addressFilter')}</label>
                     <input
                       type="text"
                       placeholder={t('whatsapp.searchAddress')}
@@ -478,7 +476,50 @@ export default function SendMessagePage() {
                   </div>
                 ) : (
                   <div className="border border-border rounded-lg overflow-hidden">
-                    <div className="overflow-x-auto max-h-64">
+                    {/* Mobile Card View */}
+                    <div className="block md:hidden space-y-2 p-3 max-h-64 overflow-y-auto">
+                      {users.length === 0 ? (
+                        <div className="text-center py-6 text-[10px] text-muted-foreground">{t('whatsapp.noUsersFound')}</div>
+                      ) : (
+                        users.map((user) => (
+                          <div key={user.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedUsers.has(user.id)}
+                                onChange={() => toggleUser(user.id)}
+                                className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                              />
+                              <span className="text-xs font-medium text-foreground flex-1">{user.name}</span>
+                              <span className={`inline-flex px-1.5 py-0.5 text-[9px] font-medium rounded ${
+                                user.status === 'active' ? 'bg-success/20 text-success dark:bg-green-900/30 dark:text-success' : 'bg-gray-100 text-muted-foreground dark:bg-gray-800 dark:text-muted-foreground'
+                              }`}>
+                                {user.status}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1 text-[10px]">
+                              <div>
+                                <span className="text-muted-foreground">{t('common.phone')}</span>
+                                <p className="font-mono text-muted-foreground">{user.phone || '-'}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">{t('common.profile')}</span>
+                                <p className="text-muted-foreground">{user.profile?.name || '-'}</p>
+                              </div>
+                              {user.odpAssignment && (
+                                <div className="col-span-2">
+                                  <span className="text-muted-foreground">ODP</span>
+                                  <p className="text-muted-foreground">{user.odpAssignment.odp.name}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Desktop Table */}
+                    <div className="overflow-x-auto max-h-64 hidden md:block">
                       <table className="w-full">
                         <thead className="sticky top-0">
                           <tr className="bg-muted border-b border-border">

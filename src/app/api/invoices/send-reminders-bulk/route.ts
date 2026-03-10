@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { sendInvoiceReminders } from '@/lib/cron/voucher-sync';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { sendInvoiceReminders } from '@/server/jobs/voucher-sync';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/server/auth/config';
 
 /**
  * POST /api/invoices/send-reminders-bulk

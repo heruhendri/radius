@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Building2, Mail, Phone, MapPin, Globe, Save, Loader2, RotateCcw, Zap } from 'lucide-react';
+import { Building2, Mail, Phone, MapPin, Globe, Save, Loader2, RotateCcw, Zap, Upload, ImageIcon, X as XIcon } from 'lucide-react';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useAppStore } from '@/lib/store';
 import { setCurrentTimezone } from '@/lib/timezone';
-import Swal from 'sweetalert2';
 
 interface BankAccount {
   bankName: string;
@@ -26,13 +26,14 @@ interface CompanySettings {
   footerAdmin: string;
   footerCustomer: string;
   footerTechnician: string;
-  footerCoordinator: string;
   invoiceGenerateDays: number;
+  logo?: string;
 }
 
 export default function CompanySettingsPage() {
   const { t } = useTranslation();
   const { setCompany } = useAppStore();
+  const { addToast } = useToast();
   const [settings, setSettings] = useState<CompanySettings>({
     name: '',
     email: '',
@@ -45,14 +46,15 @@ export default function CompanySettingsPage() {
     footerAdmin: 'Powered by SALFANET RADIUS',
     footerCustomer: 'Powered by SALFANET RADIUS',
     footerTechnician: 'Powered by SALFANET RADIUS',
-    footerCoordinator: 'Powered by SALFANET RADIUS',
-    invoiceGenerateDays: 7
+    invoiceGenerateDays: 7,
+    logo: '',
   });
   const [numBankAccounts, setNumBankAccounts] = useState(0);
   const [initialTimezone, setInitialTimezone] = useState('Asia/Jakarta');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [restarting, setRestarting] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -78,8 +80,8 @@ export default function CompanySettingsPage() {
             footerAdmin: data.footerAdmin || 'Powered by SALFANET RADIUS',
             footerCustomer: data.footerCustomer || 'Powered by SALFANET RADIUS',
             footerTechnician: data.footerTechnician || 'Powered by SALFANET RADIUS',
-            footerCoordinator: data.footerCoordinator || 'Powered by SALFANET RADIUS',
             invoiceGenerateDays: data.invoiceGenerateDays || 7,
+            logo: data.logo || '',
           });
           setNumBankAccounts(bankAccounts.length);
           setInitialTimezone(data.timezone || 'Asia/Jakarta');
@@ -92,6 +94,30 @@ export default function CompanySettingsPage() {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/upload/logo', { method: 'POST', body: form });
+      const data = await res.json();
+      if (data.success) {
+        setSettings(prev => ({ ...prev, logo: data.url }));
+        setCompany({ logo: data.url });
+        addToast({ type: 'success', title: 'Logo uploaded', description: 'Logo akan tampil setelah simpan.', duration: 3000 });
+      } else {
+        addToast({ type: 'error', title: 'Upload gagal', description: data.error || 'Gagal upload logo.', duration: 4000 });
+      }
+    } catch {
+      addToast({ type: 'error', title: 'Upload gagal', description: 'Terjadi kesalahan saat upload.', duration: 4000 });
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = '';
+    }
+  };
+
   // Check if timezone has changed
   const timezoneChanged = settings.timezone !== initialTimezone;
 
@@ -99,21 +125,6 @@ export default function CompanySettingsPage() {
   const handleRestartServices = async () => {
     setRestarting(true);
     try {
-      Swal.fire({
-        title: 'Memproses...',
-        html: `
-          <div class="text-left">
-            <p class="mb-2">Menyimpan dan menerapkan perubahan timezone...</p>
-          </div>
-        `,
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      });
-
       const restartResponse = await fetch('/api/settings/restart-services', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,84 +135,27 @@ export default function CompanySettingsPage() {
 
       if (restartResult.success) {
         if (restartResult.autoRestarted) {
-          // Linux production - services will restart
-          Swal.fire({
-            icon: 'success',
-            title: 'Services Restarting',
-            html: `
-              <div class="text-left">
-                <p class="mb-2">✅ Settings tersimpan!</p>
-                <p class="mb-2">🔄 Timezone diupdate di semua komponen:</p>
-                <ul class="text-sm text-muted-foreground list-disc pl-5 space-y-1">
-                  <li>✅ System Timezone (timedatectl)</li>
-                  <li>✅ MySQL Timezone (NOW(), datetime functions)</li>
-                  <li>✅ Node.js/PM2 Environment (TZ)</li>
-                  <li>✅ Application Config (.env, ecosystem)</li>
-                  <li>🔄 PM2 sedang restart...</li>
-                  <li>🔄 FreeRADIUS sedang restart...</li>
-                </ul>
-                <p class="mt-3 text-xs text-muted-foreground">Halaman akan reload dalam 5 detik...</p>
-              </div>
-            `,
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            timer: 5000,
-          });
-          setTimeout(() => {
-            window.location.reload();
-          }, 5000);
+          addToast({ type: 'success', title: t('settings.servicesRestarting') || 'Services Restarting', description: t('settings.pageWillReload') || 'Page will reload in 5 seconds...', duration: 5000 });
+          setTimeout(() => { window.location.reload(); }, 5000);
         } else {
-          // Development mode (Windows/Mac) - no restart needed
-          Swal.fire({
-            icon: 'success',
-            title: 'Timezone Updated! ✅',
-            html: `
-              <div class="text-left">
-                <p class="mb-3 text-success font-medium">Perubahan timezone berhasil diterapkan!</p>
-                <div class="bg-primary/10 border border-primary/30 rounded-lg p-3 mb-3">
-                  <p class="text-sm text-blue-800">
-                    <strong>Development Mode:</strong> Timezone sudah langsung aktif di frontend.
-                  </p>
-                  <p class="text-xs text-muted-foreground mt-2">
-                    💡 Di production (Linux), MySQL timezone dan system timezone juga akan diupdate.
-                  </p>
-                </div>
-                ${restartResult.note ? `<p class="text-xs text-muted-foreground mt-2">💡 ${restartResult.note}</p>` : ''}
-              </div>
-            `,
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#14b8a6',
-          }).then(() => {
-            window.location.reload();
-          });
+          addToast({ type: 'success', title: 'Timezone Updated! ✅', description: t('settings.timezoneApplied') || 'Timezone applied. Page will reload.', duration: 4000 });
+          setTimeout(() => { window.location.reload(); }, 4000);
         }
       } else {
-        Swal.fire({
-          icon: 'warning',
+        addToast({
+          type: 'warning',
           title: 'Auto Restart Not Available',
-          html: `
-            <p class="mb-2">${restartResult.message}</p>
-            <p class="text-sm text-muted-foreground">Silakan restart manual dengan command:</p>
-            <div class="mt-3 p-3 bg-gray-900 text-gray-100 rounded text-xs font-mono text-left">
-              pm2 restart all --update-env<br/>
-              sudo systemctl restart freeradius
-            </div>
-          `,
+          description: `${restartResult.message || ''} ${t('settings.restartManually') || 'Please restart manually: pm2 restart all'}`,
+          duration: 8000
         });
       }
     } catch (error) {
       console.error('Restart error:', error);
-      Swal.fire({
-        icon: 'error',
+      addToast({
+        type: 'error',
         title: 'Restart Failed',
-        html: `
-          <p class="mb-2">Gagal restart services otomatis.</p>
-          <p class="text-sm text-muted-foreground">Silakan restart manual:</p>
-          <div class="mt-3 p-3 bg-gray-900 text-gray-100 rounded text-xs font-mono text-left">
-            pm2 restart all --update-env<br/>
-            sudo systemctl restart freeradius
-          </div>
-        `,
+        description: t('settings.autoRestartFailed') || 'Auto restart failed. Please restart manually.',
+        duration: 8000
       });
     } finally {
       setRestarting(false);
@@ -229,6 +183,7 @@ export default function CompanySettingsPage() {
           baseUrl: settings.baseUrl,
           timezone: settings.timezone,
           poweredBy: settings.poweredBy,
+          logo: settings.logo,
         });
         setCurrentTimezone(settings.timezone);
         setInitialTimezone(settings.timezone);
@@ -240,11 +195,7 @@ export default function CompanySettingsPage() {
       }
     } catch (error) {
       setSaving(false);
-      Swal.fire({
-        icon: 'error',
-        title: t('common.error'),
-        text: t('settings.saveSettingsFailed')
-      });
+      addToast({ type: 'error', title: t('common.error'), description: t('settings.saveSettingsFailed') });
     }
   };
 
@@ -269,28 +220,19 @@ export default function CompanySettingsPage() {
           baseUrl: settings.baseUrl,
           timezone: settings.timezone,
           poweredBy: settings.poweredBy,
+          logo: settings.logo,
         });
 
         // Update timezone library
         setCurrentTimezone(settings.timezone);
         setInitialTimezone(settings.timezone);
 
-        Swal.fire({
-          icon: 'success',
-          title: t('common.success'),
-          text: t('settings.companySaved'),
-          timer: 2000,
-          showConfirmButton: false
-        });
+        addToast({ type: 'success', title: t('common.success'), description: t('settings.companySaved'), duration: 2000 });
       } else {
         throw new Error(t('common.saveFailed'));
       }
     } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: t('common.error'),
-        text: t('settings.saveSettingsFailed')
-      });
+      addToast({ type: 'error', title: t('common.error'), description: t('settings.saveSettingsFailed') });
     } finally {
       setSaving(false);
     }
@@ -298,7 +240,7 @@ export default function CompanySettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -309,7 +251,7 @@ export default function CompanySettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -320,16 +262,65 @@ export default function CompanySettingsPage() {
         <div className="space-y-3">
           {/* Header */}
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <Building2 className="w-6 h-6 text-[#00f7ff]" />
               <span>{t('settings.companySettings')}</span>
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('settings.manageCompanyInfo')}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('settings.manageCompanyInfo')}</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="bg-card rounded-lg border border-border p-3">
             <div className="space-y-3">
+              {/* Logo Perusahaan */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[11px] font-medium text-foreground mb-1">
+                  <ImageIcon className="w-3 h-3" />
+                  Logo Perusahaan
+                </label>
+                <div className="flex items-center gap-3">
+                  {settings.logo ? (
+                    <div className="relative group">
+                      <img
+                        src={settings.logo}
+                        alt="Logo"
+                        className="w-14 h-14 object-contain rounded-lg border border-border bg-card p-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => { setSettings(prev => ({ ...prev, logo: '' })); setCompany({ logo: '' }); }}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <XIcon className="w-3 h-3 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 rounded-lg border-2 border-dashed border-border bg-card flex items-center justify-center text-muted-foreground">
+                      <ImageIcon className="w-5 h-5" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        className="hidden"
+                        onChange={handleLogoUpload}
+                        disabled={uploadingLogo}
+                      />
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border rounded-lg bg-card hover:bg-accent transition-colors cursor-pointer">
+                        {uploadingLogo ? (
+                          <><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</>
+                        ) : (
+                          <><Upload className="w-3 h-3" /> Upload Logo</>
+                        )}
+                      </div>
+                    </label>
+                    <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG, SVG, WebP · Maks 2MB</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Nama Perusahaan */}
               <div>
                 <label className="flex items-center gap-1.5 text-[11px] font-medium text-foreground mb-1">
@@ -577,20 +568,6 @@ export default function CompanySettingsPage() {
                       type="text"
                       value={settings.footerTechnician}
                       onChange={(e) => setSettings({ ...settings, footerTechnician: e.target.value })}
-                      className="w-full px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card focus:ring-1 focus:ring-ring focus:border-primary"
-                      placeholder="Powered by SALFANET RADIUS"
-                    />
-                  </div>
-
-                  {/* Coordinator Footer */}
-                  <div>
-                    <label className="flex items-center gap-1.5 text-[11px] font-medium text-foreground mb-1">
-                      📊 Footer Koordinator
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.footerCoordinator}
-                      onChange={(e) => setSettings({ ...settings, footerCoordinator: e.target.value })}
                       className="w-full px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card focus:ring-1 focus:ring-ring focus:border-primary"
                       placeholder="Powered by SALFANET RADIUS"
                     />

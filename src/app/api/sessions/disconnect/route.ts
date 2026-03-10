@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { RouterOSAPI } from 'node-routeros';
-import { sendDisconnectRequest, isRadclientAvailable } from '@/lib/radius-coa';
-import { logActivity } from '@/lib/activity-log';
+import { sendDisconnectRequest, isRadclientAvailable } from '@/server/services/radius/coa.service';
+import { logActivity } from '@/server/services/activity-log.service';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/server/auth/config';
 
 // Check if CoA is available (radclient installed)
 let coaAvailable: boolean | null = null;
@@ -217,11 +217,11 @@ export async function POST(request: NextRequest) {
 
     let results: any[] = [];
 
-    // If sessionIds provided, disconnect by session IDs (from radacct)
+    // If sessionIds provided, disconnect by session IDs (from radacct acctsessionid)
     if (sessionIds && Array.isArray(sessionIds)) {
       for (const sessionId of sessionIds) {
         try {
-          // Find session in radacct
+          // Look up session in radacct by acctsessionid
           const session = await prisma.radacct.findFirst({
             where: {
               acctsessionid: sessionId,
@@ -260,34 +260,38 @@ export async function POST(request: NextRequest) {
 
           let result: { success: boolean; error?: string };
           
-          // For PPPoE, prefer CoA if available
-          if (sessionType === 'pppoe' && coaAvailable) {
-            console.log(`[Disconnect] Using CoA for PPPoE user: ${username}`);
-            result = await disconnectPPPoEViaCoA(username, {
-              acctSessionId: session.acctsessionid || undefined,
-              nasIpAddress: session.nasipaddress || undefined,
-              framedIpAddress: session.framedipaddress || undefined,
-            });
-            
-            // If CoA failed and we have router, fallback to MikroTik API
-            if (!result.success && router) {
-              console.log(`[Disconnect] CoA failed, falling back to MikroTik API for: ${username}`);
+          // For PPPoE: use MikroTik API directly (faster, no CoA port needed).
+          // CoA via radclient only as fallback when MikroTik API is unreachable.
+          if (sessionType === 'pppoe') {
+            if (router) {
+              console.log(`[Disconnect] MikroTik API disconnect for PPPoE user: ${username}`);
               result = await disconnectPPPoEUser(router, username);
+            } else {
+              // Try all routers
+              result = { success: false, error: 'Router not found' };
+              for (const r of routers) {
+                result = await disconnectPPPoEUser(r, username);
+                if (result.success) { router = r; break; }
+              }
+            }
+            // CoA fallback if MikroTik API failed and radclient is available
+            if (!result.success && coaAvailable && session.nasipaddress) {
+              console.log(`[Disconnect] MikroTik API failed, trying CoA fallback for: ${username}`);
+              result = await disconnectPPPoEViaCoA(username, {
+                acctSessionId: session.acctsessionid || undefined,
+                nasIpAddress: session.nasipaddress || undefined,
+                framedIpAddress: session.framedipaddress || undefined,
+              });
             }
           } else if (router) {
-            // For Hotspot or if CoA not available, use MikroTik API
-            const disconnectFn = sessionType === 'pppoe' ? disconnectPPPoEUser : disconnectHotspotUser;
-            result = await disconnectFn(router, username);
+            // Hotspot: MikroTik API
+            result = await disconnectHotspotUser(router, username);
           } else {
-            // Try all routers
+            // Hotspot: try all routers
             result = { success: false, error: 'Router not found' };
             for (const r of routers) {
-              const disconnectFn = sessionType === 'pppoe' ? disconnectPPPoEUser : disconnectHotspotUser;
-              result = await disconnectFn(r, username);
-              if (result.success) {
-                router = r;
-                break;
-              }
+              result = await disconnectHotspotUser(r, username);
+              if (result.success) { router = r; break; }
             }
           }
 
@@ -296,7 +300,7 @@ export async function POST(request: NextRequest) {
             username,
             type: sessionType,
             router: router?.name || 'unknown',
-            method: (sessionType === 'pppoe' && coaAvailable) ? 'coa' : 'api',
+            method: 'api',
             ...result,
           });
 
@@ -344,28 +348,28 @@ export async function POST(request: NextRequest) {
           let usedRouter: any = null;
           let method = 'api';
 
-          // For PPPoE, prefer CoA if available
-          if (sessionType === 'pppoe' && coaAvailable) {
-            console.log(`[Disconnect] Using CoA for PPPoE user: ${username}`);
-            method = 'coa';
-            result = await disconnectPPPoEViaCoA(username, {
-              acctSessionId: activeSession?.acctsessionid || undefined,
-              nasIpAddress: activeSession?.nasipaddress || undefined,
-              framedIpAddress: activeSession?.framedipaddress || undefined,
-            });
-          }
-
-          // If CoA failed or not available, try MikroTik API
-          if (!result.success) {
-            method = 'api';
+          // For PPPoE: MikroTik API first (faster, reliable via VPN tunnel).
+          // CoA via radclient only as fallback when MikroTik API is unreachable.
+          if (sessionType === 'pppoe') {
             for (const router of routers) {
-              const disconnectFn = sessionType === 'pppoe' ? disconnectPPPoEUser : disconnectHotspotUser;
-              result = await disconnectFn(router, username);
-              
-              if (result.success) {
-                usedRouter = router;
-                break;
-              }
+              result = await disconnectPPPoEUser(router, username);
+              if (result.success) { usedRouter = router; break; }
+            }
+            // CoA fallback if MikroTik API failed and radclient is available
+            if (!result.success && coaAvailable) {
+              method = 'coa';
+              console.log(`[Disconnect] MikroTik API failed, trying CoA fallback for: ${username}`);
+              result = await disconnectPPPoEViaCoA(username, {
+                acctSessionId: activeSession?.acctsessionid || undefined,
+                nasIpAddress: activeSession?.nasipaddress || undefined,
+                framedIpAddress: activeSession?.framedipaddress || undefined,
+              });
+            }
+          } else {
+            // Hotspot: try all routers
+            for (const router of routers) {
+              result = await disconnectHotspotUser(router, username);
+              if (result.success) { usedRouter = router; break; }
             }
           }
 

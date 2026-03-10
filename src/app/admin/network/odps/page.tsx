@@ -224,7 +224,7 @@ export default function ODPsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -235,7 +235,7 @@ export default function ODPsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       {/* Neon Cyberpunk Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
@@ -247,11 +247,11 @@ export default function ODPsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
               <Box className="h-6 w-6 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.6)]" />
               ODP Management
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-2">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Manage Optical Distribution Points (ODP) for FTTH network
             </p>
           </div>
@@ -265,7 +265,7 @@ export default function ODPsPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           <div className="bg-card rounded-lg border border-border p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -353,8 +353,106 @@ export default function ODPsPage() {
           </div>
         </div>
 
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3">
+          {filteredOdps.length === 0 ? (
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-4 text-center text-muted-foreground text-xs">
+              No ODPs found. Click &quot;Add ODP&quot; to create one.
+            </div>
+          ) : (
+            filteredOdps.map((odp) => (
+              <div key={odp.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Box className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">{odp.name}</span>
+                    {(odp._count?.childOdps || 0) > 0 && (
+                      <span className="px-1 py-0.5 text-[9px] bg-orange-100 text-orange-700 rounded">
+                        {odp._count.childOdps} children
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    className={`px-1.5 py-0.5 text-[10px] rounded font-medium ${odp.status === 'active'
+                      ? 'bg-success/10 text-success'
+                      : 'bg-destructive/10 text-destructive'
+                    }`}
+                  >
+                    {odp.status}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">Connection</span>
+                    <div className="space-y-0.5 mt-0.5">
+                      <div className="flex items-center gap-1">
+                        <Server className="h-3 w-3 text-primary" />
+                        <span className="text-[10px]">{odp.olt?.name}</span>
+                      </div>
+                      {odp.odc && (
+                        <div className="flex items-center gap-1">
+                          <HardDrive className="h-3 w-3 text-orange-600" />
+                          <span className="text-[10px] text-muted-foreground">{odp.odc.name}</span>
+                        </div>
+                      )}
+                      {odp.parentOdp && (
+                        <div className="flex items-center gap-1">
+                          <Box className="h-3 w-3 text-primary" />
+                          <span className="text-[10px] text-muted-foreground">{odp.parentOdp.name}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">PON Port</span>
+                    <p className="mt-0.5">
+                      <span className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">
+                        PON {odp.ponPort}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">Ports</span>
+                    <p className="mt-0.5">
+                      <span className="px-1.5 py-0.5 text-[10px] bg-primary/20 text-primary rounded">
+                        {odp.portCount} ports
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[10px]">Location</span>
+                    <a
+                      href={`https://www.google.com/maps?q=${odp.latitude},${odp.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline text-[10px] mt-0.5"
+                    >
+                      <MapPin className="h-3 w-3" />
+                      View
+                    </a>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-1 border-t border-border pt-2">
+                  <button
+                    onClick={() => handleEdit(odp)}
+                    className="p-2 text-muted-foreground hover:bg-muted rounded"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(odp)}
+                    className="p-2 text-destructive hover:bg-destructive/10 rounded"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
         {/* Table */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
           <div className="px-3 py-2 border-b border-border">
             <span className="text-xs font-medium">ODP List</span>
           </div>
@@ -549,7 +647,7 @@ export default function ODPsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="followRoad" checked={formData.followRoad} onChange={(e) => setFormData({ ...formData, followRoad: e.target.checked })} className="w-3 h-3 rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]" />
-                <label htmlFor="followRoad" className="text-xs text-[#e0d0ff]">{t('network.followRoadPath')}</label>
+                <label htmlFor="followRoad" className="text-xs text-foreground">{t('network.followRoadPath')}</label>
               </div>
             </ModalBody>
             <ModalFooter>

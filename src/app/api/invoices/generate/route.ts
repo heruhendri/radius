@@ -1,11 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
-import { logActivity } from '@/lib/activity-log';
+import { logActivity } from '@/server/services/activity-log.service';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-
-const prisma = new PrismaClient();
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
 
 // Generate secure random token for payment link
 function generatePaymentToken(): string {
@@ -85,7 +83,34 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Invoice Generate] Found ${postpaidUsers.length} POSTPAID users (range: H+7 to H+30)`);
 
-    const users = [...prepaidUsers, ...postpaidUsers];
+    // ========================================
+    // CATCH-UP: Isolated/blocked/suspended users whose expiredAt is ALREADY PAST
+    // These users missed the normal H+7~H+30 window and need an invoice to pay & reactivate
+    // ========================================
+    const catchUpUsers = await prisma.pppoeUser.findMany({
+      where: {
+        status: { in: ['isolated', 'ISOLATED', 'blocked', 'BLOCKED', 'suspended', 'SUSPENDED'] },
+        subscriptionType: { in: ['PREPAID', 'POSTPAID'] },
+        expiredAt: {
+          lt: prepaidStartDate, // Already past the normal window
+        },
+        // Only include users who do NOT already have a PENDING/OVERDUE invoice
+        invoices: {
+          none: {
+            status: { in: ['PENDING', 'OVERDUE'] },
+          },
+        },
+      },
+      include: {
+        profile: true,
+        area: true,
+        router: true,
+      },
+    });
+
+    console.log(`[Invoice Generate] Found ${catchUpUsers.length} catch-up users (isolated/expired, no pending invoice)`);
+
+    const users = [...prepaidUsers, ...postpaidUsers, ...catchUpUsers];
 
     if (users.length === 0) {
       return NextResponse.json({
@@ -116,8 +141,16 @@ export async function POST(request: NextRequest) {
     const errors: string[] = [];
 
     // Get company base URL for payment links
+    // Priority: company.baseUrl → request Host header → env → localhost
     const company = await prisma.company.findFirst();
-    const baseUrl = company?.baseUrl || 'http://localhost:3000';
+    const forwardedProto = request.headers.get('x-forwarded-proto') || 'http';
+    const forwardedHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || '';
+    const inferredBase = forwardedHost ? `${forwardedProto}://${forwardedHost}` : '';
+    const baseUrl = (company?.baseUrl && !company.baseUrl.includes('localhost'))
+      ? company.baseUrl
+      : (inferredBase && !inferredBase.includes('localhost'))
+        ? inferredBase
+        : company?.baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
     for (const user of users) {
       try {

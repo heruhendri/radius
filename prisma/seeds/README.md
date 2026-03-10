@@ -1,4 +1,4 @@
-# Database Seed Scripts
+﻿# Database Seed Scripts
 
 Koleksi seed scripts untuk initialize database dengan data default.
 
@@ -21,7 +21,7 @@ npm run db:seed:company
 ```
 
 **Data Created**:
-- Company name: "AIBILL RADIUS - Local Dev"
+- Company name: "SALFANET RADIUS - Local Dev"
 - Isolation enabled: `true`
 - IP Pool: `192.168.200.0/24`
 - Rate Limit: `64k/64k`
@@ -115,7 +115,7 @@ npm run db:seed:templates
 
 Seeds check for existing data before creating:
 ```
-✅ Company already exists: AIBILL RADIUS - Local Dev
+✅ Company already exists: SALFANET RADIUS - Local Dev
 Updating isolation settings...
 ```
 

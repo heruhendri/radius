@@ -1,12 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { startOfDayWIBtoUTC, endOfDayWIBtoUTC, nowWIB } from '@/lib/timezone';
 
 // GET - Get all manual payment submissions
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const status = searchParams.get('status');
+    const monthParam = searchParams.get('month'); // YYYY-MM
     
     const where: any = {};
     
@@ -16,6 +25,15 @@ export async function GET(request: NextRequest) {
     
     if (status && status !== 'ALL') {
       where.status = status;
+    }
+
+    // Month filter on createdAt
+    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+      const [y, m] = monthParam.split('-').map(Number);
+      where.createdAt = {
+        gte: startOfDayWIBtoUTC(new Date(Date.UTC(y, m - 1, 1))),
+        lte: endOfDayWIBtoUTC(new Date(Date.UTC(y, m, 0))),
+      };
     }
     
     const manualPayments = await prisma.manualPayment.findMany({
@@ -67,6 +85,7 @@ export async function POST(request: NextRequest) {
       userId,
       amount,
       bankName,
+      accountNumber,
       accountName,
       paymentDate,
       receiptImage,
@@ -122,6 +141,7 @@ export async function POST(request: NextRequest) {
         invoiceId,
         amount: parseFloat(amount),
         bankName,
+        accountNumber: accountNumber || null,
         accountName,
         paymentDate: new Date(paymentDate),
         receiptImage,
@@ -151,6 +171,7 @@ export async function POST(request: NextRequest) {
         title: 'Pembayaran Manual Baru',
         message: `${manualPayment.user.name} (${manualPayment.user.username}) mengirim bukti pembayaran untuk invoice ${manualPayment.invoice.invoiceNumber}`,
         link: `/admin/manual-payments`,
+        createdAt: nowWIB(),
       },
     });
     

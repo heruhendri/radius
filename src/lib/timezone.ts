@@ -64,7 +64,7 @@ import {
   isBefore,
   isAfter,
 } from 'date-fns';
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { id as localeId } from 'date-fns/locale';
 
 // Constants - These are default values, actual timezone is loaded from database/company settings
@@ -89,15 +89,55 @@ export function getCurrentTimezone(): string {
 }
 
 /**
- * Convert UTC date from database to local timezone for display
- * @param utc - UTC date from database
- * @returns Date object in local timezone or null
+ * Get timezone offset in milliseconds from the configured timezone offset string
  */
-export function toWIB(utc: Date | string | null | undefined): Date | null {
-  if (!utc) return null;
+function getTimezoneOffsetMs(): number {
+  const offsetStr = getTimezoneOffset(currentTimezone);
+  const match = offsetStr.match(/^([+-])(\d{2}):(\d{2})$/);
+  if (!match) return 7 * 60 * 60 * 1000; // Default WIB +7
+  const sign = match[1] === '+' ? 1 : -1;
+  const hours = parseInt(match[2]);
+  const minutes = parseInt(match[3]);
+  return sign * (hours * 60 + minutes) * 60 * 1000;
+}
+
+/**
+ * Parse a date string as WIB values, returning a WIB-as-UTC Date.
+ * Used for user-entered dates that should be interpreted as WIB.
+ * @param dateStr - Date string (e.g., "2026-03-01" or "2026-03-01T10:00:00")
+ * @returns Date where UTC values represent WIB time
+ */
+export function parseDateAsWIB(dateStr: string): Date {
+  if (!dateStr.includes('T')) {
+    // Date only: "2026-03-01" → midnight WIB
+    return new Date(dateStr + 'T00:00:00.000Z');
+  }
+  if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
+    // DateTime without timezone: treat values as WIB
+    return new Date(dateStr.endsWith('.000') ? dateStr + 'Z' : dateStr + (dateStr.includes('.') ? 'Z' : '.000Z'));
+  }
+  // Already has timezone indicator
+  return new Date(dateStr);
+}
+
+/**
+ * Convert date for display purposes.
+ * 
+ * PRISMA + MYSQL TIMEZONE ARCHITECTURE:
+ * MySQL stores DATETIME in WIB (Asia/Jakarta, +07:00).
+ * Prisma reads the raw value and treats it as UTC.
+ * So all Prisma Date objects have WIB time values in their UTC field.
+ * 
+ * This function returns the date as-is since the UTC values
+ * already represent WIB time (no conversion needed).
+ * 
+ * @param date - Date from database (WIB values in UTC field)
+ * @returns Same date or null
+ */
+export function toWIB(date: Date | string | null | undefined): Date | null {
+  if (!date) return null;
   try {
-    const date = typeof utc === 'string' ? new Date(utc) : utc;
-    return toZonedTime(date, currentTimezone);
+    return typeof date === 'string' ? new Date(date) : date;
   } catch (error) {
     console.error('toWIB error:', error);
     return null;
@@ -105,30 +145,47 @@ export function toWIB(utc: Date | string | null | undefined): Date | null {
 }
 
 /**
- * Convert local timezone date to UTC for database storage
- * @param wib - Date in local timezone
- * @returns UTC Date object
+ * Convert a local WIB date to WIB-as-UTC format for Prisma/MySQL storage.
+ * Since Prisma stores the Date's UTC value to MySQL DATETIME,
+ * and MySQL expects WIB values, we need the Date's UTC = WIB.
+ * 
+ * @param wib - Date in local timezone (from user input, new Date() etc.)
+ * @returns Date where UTC values represent WIB time (for Prisma storage)
  */
 export function toUTC(wib: Date | string): Date {
-  const date = typeof wib === 'string' ? new Date(wib) : wib;
-  return fromZonedTime(date, currentTimezone);
+  if (typeof wib === 'string') {
+    return parseDateAsWIB(wib);
+  }
+  // For Date objects: shift from real UTC to WIB-as-UTC
+  // Local time on TZ=Jakarta IS WIB, extract local components as UTC
+  return new Date(Date.UTC(
+    wib.getFullYear(), wib.getMonth(), wib.getDate(),
+    wib.getHours(), wib.getMinutes(), wib.getSeconds(), wib.getMilliseconds()
+  ));
 }
 
 /**
- * Format UTC date as WIB string
- * @param utc - UTC date from database
+ * Format a database date as WIB string.
+ * 
+ * Since Prisma stores MySQL WIB values in the Date's UTC field,
+ * we format using UTC timezone to display the raw WIB values correctly.
+ * This works on both server (any TZ) and browser (any TZ) consistently.
+ * 
+ * @param date - Date from database (WIB values in UTC field)
  * @param formatStr - Format string (default: 'dd MMM yyyy HH:mm')
- * @returns Formatted date string in WIB
+ * @returns Formatted date string showing WIB time
  */
 export function formatWIB(
-  utc: Date | string | null | undefined,
+  date: Date | string | null | undefined,
   formatStr: string = 'dd MMM yyyy HH:mm'
 ): string {
-  const wib = toWIB(utc);
-  if (!wib) return '-';
+  if (!date) return '-';
   
   try {
-    return format(wib, formatStr, { locale: localeId });
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return '-';
+    // Format using UTC timezone — the UTC values ARE the WIB time
+    return formatInTimeZone(d, 'UTC', formatStr, { locale: localeId });
   } catch (error) {
     console.error('formatWIB error:', error);
     return '-';
@@ -136,48 +193,44 @@ export function formatWIB(
 }
 
 /**
- * Format a date that is ALREADY in local timezone (e.g., from FreeRADIUS/MySQL with local timezone)
- * This does NOT apply timezone conversion, just formats the date as-is.
+ * Format a date that is already in local timezone.
+ * Since all database dates through Prisma have WIB values in UTC field,
+ * this now delegates to formatWIB which handles both cases correctly.
  * 
- * Use this for:
- * - radpostauth.authdate (FreeRADIUS uses system timezone, MySQL NOW() uses local time)
- * - radacct timestamps when MySQL is configured with local timezone
- * 
- * @param localDate - Date already in local timezone from database
+ * @param localDate - Date from database
  * @param formatStr - Format string (default: 'dd MMM yyyy HH:mm')
- * @returns Formatted date string
+ * @returns Formatted date string showing WIB time
  */
 export function formatLocalDate(
   localDate: Date | string | null | undefined,
   formatStr: string = 'dd MMM yyyy HH:mm'
 ): string {
-  if (!localDate) return '-';
-  
-  try {
-    // Parse as-is without timezone conversion
-    const date = typeof localDate === 'string' ? new Date(localDate) : localDate;
-    if (isNaN(date.getTime())) return '-';
-    
-    // Format directly - the date is already in correct timezone
-    return format(date, formatStr, { locale: localeId });
-  } catch (error) {
-    console.error('formatLocalDate error:', error);
-    return '-';
-  }
+  return formatWIB(localDate, formatStr);
 }
 
 /**
  * Relative time from now in WIB (e.g., "2 jam yang lalu")
  */
-export function relativeWIB(utc: Date | string | null | undefined): string {
-  const wib = toWIB(utc);
-  if (!wib) return '-';
+export function relativeWIB(date: Date | string | null | undefined): string {
+  if (!date) return '-';
   
   try {
-    return formatDistanceToNow(wib, { 
-      addSuffix: true, 
-      locale: localeId 
-    });
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return '-';
+    // Both d and nowWIB() are in WIB-as-UTC format, so distance is correct
+    const now = nowWIB();
+    const diffMs = now.getTime() - d.getTime();
+    const diffSec = Math.floor(Math.abs(diffMs) / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+    const suffix = diffMs >= 0 ? ' yang lalu' : ' lagi';
+    if (diffSec < 60) return `beberapa detik${suffix}`;
+    if (diffMin < 60) return `${diffMin} menit${suffix}`;
+    if (diffHour < 24) return `${diffHour} jam${suffix}`;
+    if (diffDay < 30) return `${diffDay} hari${suffix}`;
+    if (diffDay < 365) return `${Math.floor(diffDay / 30)} bulan${suffix}`;
+    return `${Math.floor(diffDay / 365)} tahun${suffix}`;
   } catch (error) {
     console.error('relativeWIB error:', error);
     return '-';
@@ -185,30 +238,36 @@ export function relativeWIB(utc: Date | string | null | undefined): string {
 }
 
 /**
- * Check if UTC date is expired (compared to current WIB time)
+ * Check if date is expired (compared to current WIB time)
+ * Both DB dates and nowWIB() are in WIB-as-UTC format, so comparison works.
  */
-export function isExpiredWIB(utc: Date | string | null | undefined): boolean {
-  const wib = toWIB(utc);
-  if (!wib) return false;
-  // Compare with current time IN WIB timezone, not browser timezone
-  const nowInWIB = nowWIB();
-  return isBefore(wib, nowInWIB);
+export function isExpiredWIB(date: Date | string | null | undefined): boolean {
+  if (!date) return false;
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return false;
+  return d.getTime() < nowWIB().getTime();
 }
 
 /**
  * Days until expiry (negative if expired)
+ * Both dates in WIB-as-UTC format for correct comparison.
  */
-export function daysUntilExpiry(utc: Date | string | null | undefined): number | null {
-  const wib = toWIB(utc);
-  if (!wib) return null;
-  return differenceInDays(wib, new Date());
+export function daysUntilExpiry(date: Date | string | null | undefined): number | null {
+  if (!date) return null;
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return null;
+  // Both in WIB-as-UTC space
+  const now = nowWIB();
+  return Math.floor((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 /**
- * Get current time in local timezone
+ * Get current time in WIB-as-UTC format.
+ * Returns a Date where UTC values represent current WIB time.
+ * This is consistent with how Prisma reads MySQL DATETIME values.
  */
 export function nowWIB(): Date {
-  return toZonedTime(new Date(), currentTimezone);
+  return new Date(Date.now() + getTimezoneOffsetMs());
 }
 
 /**
@@ -220,23 +279,22 @@ export function addDaysToUTC(utc: Date | string, days: number): Date {
 }
 
 /**
- * Get start of day in WIB, return as UTC
+ * Get start of day in WIB, in WIB-as-UTC format for Prisma queries.
+ * Accepts strings (parsed as WIB) or Date objects (WIB-as-UTC from DB/nowWIB).
  */
-export function startOfDayWIBtoUTC(date: Date | string = new Date()): Date {
-  const wib = toWIB(date);
-  if (!wib) return new Date();
-  const startWIB = startOfDay(wib);
-  return toUTC(startWIB);
+export function startOfDayWIBtoUTC(date: Date | string = nowWIB()): Date {
+  const d = typeof date === 'string' ? parseDateAsWIB(date) : date;
+  // Use UTC components (which represent WIB in our system)
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
 }
 
 /**
- * Get end of day in WIB, return as UTC
+ * Get end of day in WIB, in WIB-as-UTC format for Prisma queries.
+ * Accepts strings (parsed as WIB) or Date objects (WIB-as-UTC from DB/nowWIB).
  */
-export function endOfDayWIBtoUTC(date: Date | string = new Date()): Date {
-  const wib = toWIB(date);
-  if (!wib) return new Date();
-  const endWIB = endOfDay(wib);
-  return toUTC(endWIB);
+export function endOfDayWIBtoUTC(date: Date | string = nowWIB()): Date {
+  const d = typeof date === 'string' ? parseDateAsWIB(date) : date;
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
 }
 
 /**
@@ -248,10 +306,12 @@ export function toDatetimeLocalWIB(utc: Date | string | null | undefined): strin
 }
 
 /**
- * Parse datetime-local input (WIB) to UTC
+ * Parse datetime-local input (WIB) to WIB-as-UTC Date for Prisma storage.
+ * datetime-local values are always WIB from the user's perspective.
  */
 export function fromDatetimeLocalWIB(datetimeLocal: string): Date {
-  return toUTC(new Date(datetimeLocal));
+  // Parse as WIB values directly into UTC field
+  return parseDateAsWIB(datetimeLocal);
 }
 
 /**

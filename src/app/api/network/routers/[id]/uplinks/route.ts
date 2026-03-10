@@ -1,8 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/server/db/client';
 
 // GET - Get uplink connections for a router
 export async function GET(

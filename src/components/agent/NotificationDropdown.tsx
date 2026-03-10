@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Check, CheckCheck, Trash2, X } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, X, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatWIB } from '@/lib/timezone';
 import Link from 'next/link';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface Notification {
   id: string;
@@ -25,6 +26,9 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isFirstLoadRef = useRef(true);
+  const shownNotifIdsRef = useRef<Set<string>>(new Set());
+  const { addToast } = useToast();
 
   useEffect(() => {
     if (agentId) {
@@ -51,6 +55,17 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
     };
   }, [isOpen]);
 
+  const getToastType = (type: string): 'success' | 'warning' | 'info' | 'error' => {
+    switch (type) {
+      case 'deposit_success': return 'success';
+      case 'voucher_generated': return 'success';
+      case 'voucher_sold': return 'success';
+      case 'low_balance': return 'warning';
+      case 'voucher_deleted': return 'warning';
+      default: return 'info';
+    }
+  };
+
   const loadNotifications = async () => {
     if (!agentId) return;
     
@@ -58,6 +73,41 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
       const res = await fetch(`/api/agent/notifications?limit=10&agentId=${agentId}`);
       const data = await res.json();
       if (data.success) {
+        if (isFirstLoadRef.current) {
+          // On first load: show toasts for RECENT unread notifications (created in last 15 min)
+          // This ensures agent sees notifications that arrived before they opened the portal
+          const recentThreshold = new Date(Date.now() - 15 * 60 * 1000);
+          const recentUnread = (data.notifications as Notification[]).filter(
+            (n) => !n.isRead && new Date(n.createdAt) > recentThreshold
+          );
+          for (const notif of recentUnread.slice(0, 3)) {
+            addToast({
+              type: getToastType(notif.type),
+              title: notif.title,
+              description: notif.message,
+              duration: 7000,
+            });
+          }
+          // Record all IDs so they don't toast again on subsequent polls
+          data.notifications.forEach((n: Notification) => shownNotifIdsRef.current.add(n.id));
+          isFirstLoadRef.current = false;
+        } else {
+          // On subsequent polls: show toast for unread notifs that haven't been shown yet
+          const newUnread = (data.notifications as Notification[]).filter(
+            (n) => !n.isRead && !shownNotifIdsRef.current.has(n.id)
+          );
+          for (const notif of newUnread.slice(0, 3)) {
+            addToast({
+              type: getToastType(notif.type),
+              title: notif.title,
+              description: notif.message,
+              duration: 7000,
+            });
+            shownNotifIdsRef.current.add(notif.id);
+          }
+          // Mark all fetched IDs as seen so they don't toast again
+          data.notifications.forEach((n: Notification) => shownNotifIdsRef.current.add(n.id));
+        }
         setNotifications(data.notifications);
         setUnreadCount(data.unreadCount);
       }
@@ -111,9 +161,15 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
       case 'deposit_success':
         return <Check className={`${iconClass} text-[#00ff88] drop-shadow-[0_0_8px_rgba(0,255,136,0.6)]`} />;
       case 'low_balance':
-        return <Bell className={`${iconClass} text-[#ff6b8a] drop-shadow-[0_0_8px_rgba(255,107,138,0.6)]`} />;
+        return <AlertTriangle className={`${iconClass} text-[#ff6b8a] drop-shadow-[0_0_8px_rgba(255,107,138,0.6)]`} />;
       case 'voucher_sold':
         return <CheckCheck className={`${iconClass} text-[#00ff88] drop-shadow-[0_0_8px_rgba(0,255,136,0.6)]`} />;
+      case 'voucher_deleted':
+        return <Trash2 className={`${iconClass} text-[#ff6b8a] drop-shadow-[0_0_8px_rgba(255,107,138,0.6)]`} />;
+      case 'balance_added':
+        return <TrendingUp className={`${iconClass} text-[#00ff88] drop-shadow-[0_0_8px_rgba(0,255,136,0.6)]`} />;
+      case 'balance_deducted':
+        return <TrendingDown className={`${iconClass} text-[#ff6b8a] drop-shadow-[0_0_8px_rgba(255,107,138,0.6)]`} />;
       default:
         return <Bell className={`${iconClass} text-[#bc13fe] drop-shadow-[0_0_8px_rgba(188,19,254,0.6)]`} />;
     }
@@ -129,6 +185,12 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
         return 'bg-[#ff4466]/30 border-[#ff4466]/70';
       case 'voucher_sold':
         return 'bg-[#00ff88]/30 border-[#00ff88]/70';
+      case 'voucher_deleted':
+        return 'bg-[#ff4466]/30 border-[#ff4466]/70';
+      case 'balance_added':
+        return 'bg-[#00ff88]/30 border-[#00ff88]/70';
+      case 'balance_deducted':
+        return 'bg-[#ff4466]/30 border-[#ff4466]/70';
       default:
         return 'bg-[#bc13fe]/30 border-[#bc13fe]/70';
     }
@@ -149,9 +211,9 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 md:w-96 bg-[#0a0520] border-2 border-[#00f7ff]/50 rounded-2xl shadow-[0_0_50px_rgba(0,247,255,0.4)] z-[9999] overflow-hidden backdrop-blur-xl">
-          <div className="px-4 py-3 bg-gradient-to-r from-[#bc13fe]/20 to-[#00f7ff]/20 border-b border-[#00f7ff]/30 flex items-center justify-between">
-            <h3 className="text-base font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">Notifikasi</h3>
+        <div className="absolute right-0 top-full mt-2 w-80 md:w-96 bg-white dark:bg-[#0a0520] border-2 border-purple-200 dark:border-[#00f7ff]/50 rounded-2xl shadow-[0_0_50px_rgba(0,247,255,0.2)] z-[9999] overflow-hidden backdrop-blur-xl">
+          <div className="px-4 py-3 bg-gradient-to-r from-purple-50 to-cyan-50 dark:from-[#bc13fe]/20 dark:to-[#00f7ff]/20 border-b border-purple-200 dark:border-[#00f7ff]/30 flex items-center justify-between">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Notifikasi</h3>
             {notifications.length > 0 && (
               <button
                 onClick={markAllAsRead}
@@ -165,17 +227,17 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
           <div className="max-h-[400px] overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-8 text-center">
-                <Bell className="h-12 w-12 text-[#00f7ff]/40 mx-auto mb-3 drop-shadow-[0_0_20px_rgba(0,247,255,0.3)]" />
-                <p className="text-sm font-medium text-white">Belum ada notifikasi</p>
-                <p className="text-xs text-[#e0d0ff]/60 mt-1">Notifikasi akan muncul di sini</p>
+                <Bell className="h-12 w-12 text-purple-300 dark:text-[#00f7ff]/40 mx-auto mb-3" />
+                <p className="text-sm font-medium text-slate-900 dark:text-white">Belum ada notifikasi</p>
+                <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60 mt-1">Notifikasi akan muncul di sini</p>
               </div>
             ) : (
-              <div className="divide-y divide-[#bc13fe]/20">
+              <div className="divide-y divide-slate-200 dark:divide-[#bc13fe]/20">
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-[#bc13fe]/10 transition ${
-                      !notification.isRead ? 'bg-gradient-to-r from-[#bc13fe]/15 to-[#00f7ff]/15 border-l-4 border-[#00f7ff]' : 'bg-[#0a0520]'
+                    className={`p-4 hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10 transition ${
+                      !notification.isRead ? 'bg-gradient-to-r from-purple-50 to-cyan-50 dark:from-[#bc13fe]/15 dark:to-[#00f7ff]/15 border-l-4 border-purple-400 dark:border-[#00f7ff]' : 'bg-white dark:bg-[#0a0520]'
                     }`}
                   >
                     <div className="flex gap-3">
@@ -184,7 +246,7 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <h4 className="text-sm font-bold text-white truncate drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
                             {notification.title}
                           </h4>
                           <button
@@ -194,11 +256,11 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
                             <Trash2 className="h-3.5 w-3.5 text-[#ff6b8a]" />
                           </button>
                         </div>
-                        <p className="text-xs text-white/90 mb-2 line-clamp-2 leading-relaxed">
+                        <p className="text-xs text-slate-800 dark:text-[#e0d0ff]/90 mb-2 line-clamp-2 leading-relaxed">
                           {notification.message}
                         </p>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-[#00f7ff]/80 font-medium">
+                          <span className="text-xs text-slate-600 dark:text-[#00f7ff]/80 font-medium">
                             {formatWIB(new Date(notification.createdAt), 'dd MMM HH:mm')}
                           </span>
                           {!notification.isRead && (

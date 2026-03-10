@@ -1,5 +1,7 @@
-import { NextRequest } from 'next/server'
-import { sseManager } from '@/lib/sse-manager'
+﻿import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/server/auth/config'
+import { sseManager } from '@/server/services/sse-manager.service'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -9,6 +11,10 @@ export const runtime = 'nodejs'
  * Streams real-time voucher status changes, stats updates, etc.
  */
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({

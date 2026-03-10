@@ -8,7 +8,7 @@ import {
   User, Key, Globe, Activity, Thermometer, Clock, Radio, Eye, EyeOff,
   ChevronDown, ChevronRight, RotateCcw, Power
 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface DeviceDetail {
   _id: string;
@@ -45,6 +45,7 @@ export default function DeviceDetailPage({ params }: { params: Promise<{ deviceI
   const { deviceId } = use(params);
   const router = useRouter();
   const { t } = useTranslation();
+  const { addToast, confirm } = useToast();
   const [device, setDevice] = useState<DeviceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -76,11 +77,11 @@ export default function DeviceDetailPage({ params }: { params: Promise<{ deviceI
       if (response.ok && data.device) {
         setDevice(data.device);
       } else {
-        Swal.fire({ icon: 'error', title: t('genieacsDevice.dialogs.error'), text: data.error || t('genieacsDevice.deviceNotFound') });
+        addToast({ type: 'error', title: t('genieacsDevice.dialogs.error'), description: data.error || t('genieacsDevice.deviceNotFound') });
       }
     } catch (error) {
       console.error('Error:', error);
-      Swal.fire({ icon: 'error', title: t('genieacsDevice.dialogs.error'), text: t('common.failedLoadData') });
+      addToast({ type: 'error', title: t('genieacsDevice.dialogs.error'), description: t('common.failedLoadData') });
     } finally {
       setLoading(false);
     }
@@ -93,53 +94,46 @@ export default function DeviceDetailPage({ params }: { params: Promise<{ deviceI
   };
 
   const handleRefreshParameters = async () => {
-    const result = await Swal.fire({
+    if (!await confirm({
       title: t('genieacsDevice.dialogs.refreshTitle'),
-      text: t('genieacsDevice.dialogs.refreshConfirm').replace('{serialNumber}', device?.serialNumber || ''),
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: t('genieacsDevice.dialogs.yesRefresh'),
-      confirmButtonColor: '#0d9488',
-      cancelButtonText: t('genieacsDevice.dialogs.cancel')
-    });
-
-    if (result.isConfirmed) {
-      try {
-        Swal.fire({ title: t('common.refreshing'), allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        const response = await fetch(`/api/settings/genieacs/devices/${encodeURIComponent(deviceId)}/refresh`, { method: 'POST' });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          Swal.fire({ icon: 'success', title: t('genieacsDevice.dialogs.success'), text: t('genieacsDevice.dialogs.refreshSent'), timer: 2000, showConfirmButton: false });
-          setTimeout(() => handleRefresh(), 3000);
-        } else {
-          throw new Error(data.error || t('common.failed'));
-        }
-      } catch (error: unknown) {
-        const msg = error instanceof Error ? error.message : t('genieacsDevice.dialogs.refreshFailed');
-        Swal.fire({ icon: 'error', title: t('genieacsDevice.dialogs.error'), text: msg });
+      message: t('genieacsDevice.dialogs.refreshConfirm').replace('{serialNumber}', device?.serialNumber || ''),
+      confirmText: t('genieacsDevice.dialogs.yesRefresh'),
+      cancelText: t('genieacsDevice.dialogs.cancel'),
+      variant: 'info',
+    })) return;
+    setRefreshing(true);
+    try {
+      const response = await fetch(`/api/settings/genieacs/devices/${encodeURIComponent(deviceId)}/refresh`, { method: 'POST' });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        addToast({ type: 'success', title: t('genieacsDevice.dialogs.success'), description: t('genieacsDevice.dialogs.refreshSent'), duration: 2000 });
+        setTimeout(() => handleRefresh(), 3000);
+      } else {
+        throw new Error(data.error || t('common.failed'));
       }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : t('genieacsDevice.dialogs.refreshFailed');
+      addToast({ type: 'error', title: t('genieacsDevice.dialogs.error'), description: msg });
+    } finally {
+      setRefreshing(false);
     }
   };
 
   const handleReboot = async () => {
-    const result = await Swal.fire({
+    if (!await confirm({
       title: t('genieacsDevice.dialogs.rebootTitle'),
-      text: t('genieacsDevice.dialogs.rebootConfirm'),
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: t('genieacsDevice.dialogs.yesReboot'),
-      cancelButtonText: t('genieacsDevice.dialogs.cancel')
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`/api/settings/genieacs/devices/${encodeURIComponent(deviceId)}/reboot`, { method: 'POST' });
-        if (response.ok) {
-          Swal.fire({ icon: 'success', title: t('genieacsDevice.dialogs.success'), text: t('genieacsDevice.dialogs.rebootSent'), timer: 2000, showConfirmButton: false });
-        }
-      } catch {
-        Swal.fire({ icon: 'error', title: t('genieacsDevice.dialogs.error'), text: t('genieacsDevice.dialogs.rebootFailed') });
+      message: t('genieacsDevice.dialogs.rebootConfirm'),
+      confirmText: t('genieacsDevice.dialogs.yesReboot'),
+      cancelText: t('genieacsDevice.dialogs.cancel'),
+      variant: 'danger',
+    })) return;
+    try {
+      const response = await fetch(`/api/settings/genieacs/devices/${encodeURIComponent(deviceId)}/reboot`, { method: 'POST' });
+      if (response.ok) {
+        addToast({ type: 'success', title: t('genieacsDevice.dialogs.success'), description: t('genieacsDevice.dialogs.rebootSent'), duration: 2000 });
       }
+    } catch {
+      addToast({ type: 'error', title: t('genieacsDevice.dialogs.error'), description: t('genieacsDevice.dialogs.rebootFailed') });
     }
   };
 

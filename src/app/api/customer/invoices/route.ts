@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,12 +41,13 @@ export async function GET(request: NextRequest) {
     };
 
     if (status) {
-      if (status === 'unpaid') {
+      const s = status.toUpperCase();
+      if (s === 'PENDING' || s === 'UNPAID') {
         where.status = {
-          in: ['unpaid', 'overdue'],
+          in: ['PENDING', 'OVERDUE'],
         };
       } else {
-        where.status = status;
+        where.status = s;
       }
     }
 
@@ -68,13 +69,33 @@ export async function GET(request: NextRequest) {
         paymentToken: true,
         paymentLink: true,
         createdAt: true,
+        invoiceType: true,
+        user: {
+          select: {
+            profile: { select: { name: true, price: true } },
+          },
+        },
         payments: {
+          orderBy: { paidAt: 'desc' },
+          take: 1,
           select: {
             id: true,
             amount: true,
             method: true,
             status: true,
             paidAt: true,
+          },
+        },
+        manualPayments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            bankName: true,
+            createdAt: true,
+            approvedAt: true,
+            rejectionReason: true,
           },
         },
       },
@@ -85,18 +106,38 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        invoices: invoices.map(inv => ({
-          id: inv.id,
-          invoiceNumber: inv.invoiceNumber,
-          amount: Number(inv.amount),
-          status: inv.status,
-          dueDate: inv.dueDate.toISOString(),
-          paidAt: inv.paidAt?.toISOString() || null,
-          paymentToken: inv.paymentToken,
-          paymentLink: inv.paymentLink,
-          createdAt: inv.createdAt.toISOString(),
-          payments: inv.payments,
-        })),
+        invoices: invoices.map(inv => {
+          const gatewayPayment = inv.payments[0] ?? null;
+          const manualPayment = inv.manualPayments[0] ?? null;
+
+          // Determine payment source
+          let paymentSource: string | null = null;
+          if (gatewayPayment && inv.status === 'PAID') {
+            paymentSource = 'gateway';
+          } else if (manualPayment?.status === 'APPROVED') {
+            paymentSource = 'manual';
+          } else if (inv.status === 'PAID' && !gatewayPayment && !manualPayment) {
+            paymentSource = 'admin';
+          }
+
+          return {
+            id: inv.id,
+            invoiceNumber: inv.invoiceNumber,
+            amount: Number(inv.amount),
+            status: inv.status,
+            dueDate: inv.dueDate.toISOString(),
+            paidAt: inv.paidAt?.toISOString() || null,
+            paymentToken: inv.paymentToken,
+            paymentLink: inv.paymentLink,
+            createdAt: inv.createdAt.toISOString(),
+            invoiceType: inv.invoiceType || 'MONTHLY',
+            profileName: inv.user?.profile?.name || null,
+            paymentSource,
+            manualPaymentStatus: manualPayment?.status?.toLowerCase() || null,
+            manualPaymentBank: manualPayment?.bankName || null,
+            payments: inv.payments,
+          };
+        }),
         pagination: {
           page,
           limit,

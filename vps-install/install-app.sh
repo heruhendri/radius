@@ -1,6 +1,6 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ============================================================================
-# AIBILL RADIUS VPS Installer - Application Setup Module
+# SALFANET RADIUS VPS Installer - Application Setup Module
 # ============================================================================
 # Step 4: Setup application files, npm install, Prisma setup
 # ============================================================================
@@ -18,11 +18,11 @@ copy_application_files() {
     mkdir -p ${APP_DIR}
     
     print_info "Copying application code..."
-    local SOURCE_DIR="/root/salfanet-radius-main"
+    local SOURCE_DIR="/root/salfanet-radius"
     
     # Try alternative source directories
     if [ ! -d "$SOURCE_DIR" ]; then
-        SOURCE_DIR="/root/AIBILL-RADIUS-main"
+        SOURCE_DIR="/root/SALFANET-RADIUS-main"
     fi
     
     if [ ! -d "$SOURCE_DIR" ]; then
@@ -31,7 +31,7 @@ copy_application_files() {
     
     if [ ! -f "$SOURCE_DIR/package.json" ]; then
         print_error "Source directory not found with package.json"
-        print_error "Searched: /root/salfanet-radius-main, /root/AIBILL-RADIUS-main, $(pwd)"
+        print_error "Searched: /root/salfanet-radius, /root/SALFANET-RADIUS-main, $(pwd)"
         return 1
     fi
     
@@ -79,6 +79,14 @@ create_env_file() {
         export VPS_IP=$(detect_ip_address)
     fi
     
+    # Tentukan URL berdasarkan domain atau IP
+    local APP_BASE_URL
+    if [ -n "${VPS_DOMAIN:-}" ]; then
+        APP_BASE_URL="https://${VPS_DOMAIN}"
+    else
+        APP_BASE_URL="http://${VPS_IP}"
+    fi
+
     cat > ${APP_DIR}/.env <<EOF
 # Database Configuration
 DATABASE_URL="mysql://${DB_USER}:${DB_PASSWORD}@localhost:3306/${DB_NAME}?connection_limit=10&pool_timeout=20"
@@ -88,15 +96,18 @@ TZ="Asia/Jakarta"
 NEXT_PUBLIC_TIMEZONE="Asia/Jakarta"
 
 # App Configuration
-NEXT_PUBLIC_APP_NAME="AIBILL RADIUS ISP"
-NEXT_PUBLIC_APP_URL="http://${VPS_IP}:3000"
+NEXT_PUBLIC_APP_NAME="SALFANET RADIUS ISP"
+NEXT_PUBLIC_APP_URL="${APP_BASE_URL}"
 
 # NextAuth
 NEXTAUTH_SECRET="${NEXTAUTH_SECRET}"
-NEXTAUTH_URL="http://${VPS_IP}:3000"
+NEXTAUTH_URL="${APP_BASE_URL}"
 
 # Node Environment
 NODE_ENV="production"
+
+# Redis Cache (Opsional - aktifkan dengan: bash vps-install/install-redis.sh)
+# REDIS_URL=redis://127.0.0.1:6379
 
 # GenieACS Configuration (optional - configure in admin panel)
 # GENIEACS_URL="http://YOUR_GENIEACS_IP:7557"

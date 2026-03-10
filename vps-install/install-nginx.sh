@@ -1,6 +1,6 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ============================================================================
-# AIBILL RADIUS VPS Installer - Nginx Module
+# SALFANET RADIUS VPS Installer - Nginx Module
 # ============================================================================
 # Step 6: Install & configure Nginx reverse proxy
 # ============================================================================
@@ -13,64 +13,407 @@ source "$SCRIPT_DIR/common.sh"
 # NGINX CONFIGURATION
 # ============================================================================
 
-create_nginx_config() {
-    print_info "Creating Nginx site configuration..."
-    
-    # Get VPS IP if not set
-    if [ -z "$VPS_IP" ]; then
-        export VPS_IP=$(detect_ip_address)
+generate_selfsigned_cert() {
+    local CERT="/etc/ssl/certs/nginx-selfsigned.crt"
+    local KEY="/etc/ssl/private/nginx-selfsigned.key"
+
+    if [ -f "$CERT" ] && [ -f "$KEY" ]; then
+        print_info "Self-signed cert already exists — skipping generation"
+        return 0
     fi
-    
-    cat > /etc/nginx/sites-available/salfanet-radius <<EOF
-server {
-    listen 80;
-    listen [::]:80;
-    
-    server_name ${VPS_IP} _;
-    
-    # Increase client body size for file uploads
+
+    print_info "Generating self-signed SSL certificate..."
+    mkdir -p /etc/ssl/private
+
+    local CN="${VPS_DOMAIN:-${VPS_IP:-localhost}}"
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+        -keyout "$KEY" \
+        -out "$CERT" \
+        -subj "/CN=${CN}/O=SalfaNet/C=ID" 2>/dev/null
+
+    chmod 600 "$KEY"
+    print_success "Self-signed cert created: $CERT"
+}
+
+# Helper: common proxy location blocks (to avoid repetition inside heredocs)
+_proxy_locations() {
+    cat <<'LOCATIONS'
     client_max_body_size 100M;
-    
-    # Timeouts
+
     proxy_connect_timeout 600;
-    proxy_send_timeout 600;
-    proxy_read_timeout 600;
-    send_timeout 600;
-    
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        
-        # WebSocket support
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-        
-        # Headers
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-    
-    # Gzip compression
+    proxy_send_timeout    600;
+    proxy_read_timeout    600;
+    send_timeout          600;
+
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json application/javascript;
-    
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_buffers 16 8k;
+    gzip_types text/plain text/css text/xml text/javascript application/json application/javascript;
+
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    access_log /var/log/nginx/salfanet-radius-access.log;
+    error_log  /var/log/nginx/salfanet-radius-error.log;
+
+    location /downloads/ {
+        alias /var/www/salfanet-radius/public/downloads/;
+        autoindex off;
+        add_header Content-Disposition 'attachment';
+    }
+
+    location /_next/static/ {
+        alias /var/www/salfanet-radius/.next/static/;
+        expires 365d;
+        access_log off;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        proxy_pass         http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection 'upgrade';
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   CF-Connecting-IP $http_cf_connecting_ip;
+        proxy_cache_bypass $http_upgrade;
+    }
+LOCATIONS
+}
+
+# Helper: full HTTPS domain location blocks — production-grade config
+# Includes CSP, Referrer-Policy, separate /api/ no-cache, CDN bypass headers
+_proxy_locations_https_domain() {
+    cat <<'LOCATIONS'
+    client_max_body_size 100M;
+
+    proxy_connect_timeout 600;
+    proxy_send_timeout    600;
+    proxy_read_timeout    600;
+    send_timeout          600;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_buffers 16 8k;
+    gzip_types text/plain text/css text/xml text/javascript application/json application/javascript;
+
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
-    
-    # Access log
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # CSP - allow Cloudflare Insights beacon
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://static.cloudflareinsights.com; script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.fonnte.com https://api.wablas.com https://cloudflareinsights.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+
     access_log /var/log/nginx/salfanet-radius-access.log;
-    error_log /var/log/nginx/salfanet-radius-error.log;
+    error_log  /var/log/nginx/salfanet-radius-error.log;
+
+    location /downloads/ {
+        alias /var/www/salfanet-radius/public/downloads/;
+        autoindex off;
+        add_header Content-Disposition 'attachment';
+    }
+
+    # Static assets - long cache (hashed filenames change on rebuild)
+    location /_next/static/ {
+        alias /var/www/salfanet-radius/.next/static/;
+        expires 365d;
+        access_log off;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # API routes - NO cache, bypass Cloudflare CDN
+    location /api/ {
+        proxy_pass         http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   CF-Connecting-IP $http_cf_connecting_ip;
+
+        # Prevent Cloudflare and browser from caching API responses
+        add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0' always;
+        add_header CDN-Cache-Control 'no-store' always;
+        add_header Cloudflare-CDN-Cache-Control 'no-store' always;
+        add_header Pragma 'no-cache' always;
+
+        proxy_hide_header Content-Security-Policy;
+        proxy_hide_header X-Frame-Options;
+        proxy_hide_header X-XSS-Protection;
+        proxy_hide_header X-Content-Type-Options;
+    }
+
+    # All other routes (pages) - no CDN cache
+    location / {
+        proxy_pass         http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection 'upgrade';
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   CF-Connecting-IP $http_cf_connecting_ip;
+        proxy_cache_bypass $http_upgrade;
+
+        # Prevent Cloudflare from caching HTML pages
+        add_header Cache-Control 'no-cache, must-revalidate' always;
+        add_header CDN-Cache-Control 'no-store' always;
+        add_header Cloudflare-CDN-Cache-Control 'no-store' always;
+
+        proxy_hide_header Content-Security-Policy;
+        proxy_hide_header X-Frame-Options;
+        proxy_hide_header X-XSS-Protection;
+        proxy_hide_header X-Content-Type-Options;
+    }
+LOCATIONS
+}
+
+create_nginx_config() {
+    print_info "Creating Nginx site configuration..."
+
+    # Get VPS IP if not set
+    if [ -z "${VPS_IP:-}" ]; then
+        export VPS_IP=$(detect_ip_address)
+    fi
+
+    # Always generate a self-signed cert as HTTPS fallback
+    generate_selfsigned_cert
+
+    local CERT="/etc/ssl/certs/nginx-selfsigned.crt"
+    local KEY="/etc/ssl/private/nginx-selfsigned.key"
+
+    # ---------------------------------------------------------------------------
+    # 4-block config:
+    #   1. HTTP domain → redirect to HTTPS          (if domain set)
+    #   2. HTTP default_server (IP fallback)
+    #   3. HTTPS domain block (self-signed, to be upgraded by certbot later)  (if domain set)
+    #   4. HTTPS default_server (IP fallback)
+    # ---------------------------------------------------------------------------
+
+    if [ -n "${VPS_DOMAIN:-}" ]; then
+        print_info "Domain: ${VPS_DOMAIN} — generating 4-block HTTPS config..."
+
+        cat > /etc/nginx/sites-available/salfanet-radius <<EOF
+# Block 1: HTTP domain → HTTPS redirect
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${VPS_DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+
+# Block 2: HTTP default_server (direct IP access)
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _ ${VPS_IP};
+
+$(_proxy_locations)
+}
+
+# Block 3: HTTPS domain
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name ${VPS_DOMAIN};
+
+    ssl_certificate     ${CERT};
+    ssl_certificate_key ${KEY};
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+$(_proxy_locations_https_domain)
+}
+
+# Block 4: HTTPS default_server (direct IP access)
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _ ${VPS_IP};
+
+    ssl_certificate     ${CERT};
+    ssl_certificate_key ${KEY};
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+$(_proxy_locations)
 }
 EOF
 
+    else
+        # No domain: 2-block config (HTTP + HTTPS) with IP only
+        print_info "No domain set — generating IP-only HTTP+HTTPS config..."
+
+        cat > /etc/nginx/sites-available/salfanet-radius <<EOF
+# Block 1: HTTP (IP direct access)
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _ ${VPS_IP};
+
+$(_proxy_locations)
+}
+
+# Block 2: HTTPS (IP direct access, self-signed cert)
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _ ${VPS_IP};
+
+    ssl_certificate     ${CERT};
+    ssl_certificate_key ${KEY};
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+$(_proxy_locations)
+}
+EOF
+    fi
+
     print_success "Nginx configuration created"
+}
+
+# ---------------------------------------------------------------------------
+# (Optional) Upgrade domain HTTPS block to Let's Encrypt certificate.
+# The 4-block base config is already in place with a self-signed cert.
+# This function only patches the ssl_certificate lines for Block 3 if
+# certbot succeeds — the IP fallback blocks keep the self-signed cert.
+# NOTE: Skip certbot if the domain is behind Cloudflare (DNS proxy).
+# ---------------------------------------------------------------------------
+setup_ssl_domain() {
+    if [ -z "${VPS_DOMAIN:-}" ]; then
+        return 0
+    fi
+
+    print_info "Checking Let's Encrypt availability for ${VPS_DOMAIN}..."
+
+    # Install certbot if not present
+    if ! command -v certbot &>/dev/null; then
+        apt-get install -y certbot python3-certbot-nginx 2>/dev/null | tail -3
+    fi
+
+    local SSL_EMAIL="${VPS_SSL_EMAIL:-admin@${VPS_DOMAIN}}"
+    local LE_CERT="/etc/letsencrypt/live/${VPS_DOMAIN}/fullchain.pem"
+    local LE_KEY="/etc/letsencrypt/live/${VPS_DOMAIN}/privkey.pem"
+
+    # If cert already exists, just make sure nginx uses it
+    if certbot certificates 2>/dev/null | grep -q "${VPS_DOMAIN}"; then
+        print_info "Let's Encrypt cert for ${VPS_DOMAIN} already exists — upgrading nginx block..."
+    else
+        # Verify DNS points to this server (not Cloudflare proxy IP)
+        local DOMAIN_IP
+        DOMAIN_IP=$(dig +short "${VPS_DOMAIN}" 2>/dev/null | tail -1)
+        local MY_IP="${VPS_IP:-$(detect_ip_address)}"
+
+        if [ -z "$DOMAIN_IP" ] || [ "$DOMAIN_IP" != "$MY_IP" ]; then
+            print_warning "DNS ${VPS_DOMAIN} resolves to '${DOMAIN_IP:-unresolvable}', not ${MY_IP}"
+            print_warning "Kemungkinan domain di-proxy oleh Cloudflare atau DNS belum propagasi."
+            print_info "  → Self-signed cert sudah aktif (cukup untuk Cloudflare mode Full/Flexible)"
+            print_info "  → Untuk Let's Encrypt nanti (jika DNS langsung/bypass CF):"
+            print_info "      certbot --nginx -d ${VPS_DOMAIN} -m ${SSL_EMAIL} --agree-tos"
+            return 0
+        fi
+
+        print_info "Requesting Let's Encrypt cert for ${VPS_DOMAIN} (email: ${SSL_EMAIL})..."
+        certbot certonly --nginx \
+            -d "${VPS_DOMAIN}" \
+            --non-interactive \
+            --agree-tos \
+            -m "${SSL_EMAIL}" \
+            2>&1 | tee /tmp/certbot.log
+
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            print_warning "Certbot gagal. Log: /tmp/certbot.log"
+            print_info "  → Self-signed cert tetap aktif untuk koneksi HTTPS."
+            return 0
+        fi
+
+        print_success "Let's Encrypt cert berhasil untuk ${VPS_DOMAIN}"
+    fi
+
+    # Patch only the ssl lines in Block 3 (HTTPS domain, no default_server)
+    # We use sed to replace the self-signed cert paths with LE paths in the
+    # server block that has `server_name ${VPS_DOMAIN}` and `listen 443 ssl;`
+    # but NOT the default_server block.
+    if [ -f "$LE_CERT" ]; then
+        # Rewrite full config with LE cert for domain block, self-signed for IP block
+        local CERT="/etc/ssl/certs/nginx-selfsigned.crt"
+        local KEY_SS="/etc/ssl/private/nginx-selfsigned.key"
+
+        cat > /etc/nginx/sites-available/salfanet-radius <<EOF
+# Block 1: HTTP domain → HTTPS redirect
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${VPS_DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+
+# Block 2: HTTP default_server (direct IP access)
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _ ${VPS_IP};
+
+$(_proxy_locations)
+}
+
+# Block 3: HTTPS domain (Let's Encrypt cert)
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name ${VPS_DOMAIN};
+
+    ssl_certificate     ${LE_CERT};
+    ssl_certificate_key ${LE_KEY};
+    include             /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+$(_proxy_locations_https_domain)
+}
+
+# Block 4: HTTPS default_server (direct IP, self-signed cert)
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _ ${VPS_IP};
+
+    ssl_certificate     ${CERT};
+    ssl_certificate_key ${KEY_SS};
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+$(_proxy_locations)
+}
+EOF
+        nginx -t && systemctl restart nginx
+        print_success "Nginx diupgrade ke Let's Encrypt cert untuk ${VPS_DOMAIN}"
+    fi
 }
 
 enable_nginx_site() {
@@ -108,11 +451,15 @@ restart_nginx() {
 }
 
 configure_firewall_nginx() {
+    if [ "${SKIP_UFW:-false}" = "true" ]; then
+        print_info "UFW firewall dilewati (${DEPLOY_ENV_LABEL:-LXC/Container})"
+        print_info "Buka port 80 dan 443 di Proxmox Datacenter Firewall"
+        return 0
+    fi
+
     print_info "Configuring firewall for Nginx..."
-    
     ufw allow 80/tcp comment 'HTTP' 2>/dev/null || true
     ufw allow 443/tcp comment 'HTTPS' 2>/dev/null || true
-    
     print_success "Firewall configured"
 }
 
@@ -124,23 +471,34 @@ install_nginx() {
         print_info "Installing Nginx..."
         apt-get install -y nginx
     fi
+
+    # Pastikan dnsutils tersedia untuk verifikasi DNS domain
+    if ! command -v dig &>/dev/null; then
+        apt-get install -y dnsutils 2>/dev/null || true
+    fi
     
     create_nginx_config
     enable_nginx_site
     test_nginx_config
     restart_nginx
     configure_firewall_nginx
+
+    # Setup SSL jika domain disediakan (setelah nginx running)
+    setup_ssl_domain
     
     print_success "Nginx installation and configuration completed"
     
     echo ""
     print_info "Nginx Configuration:"
-    echo "  HTTP Port: 80"
-    echo "  Proxy to: http://localhost:3000"
-    echo "  Access URL: http://${VPS_IP}"
-    echo ""
-    print_info "SSL Setup (optional):"
-    echo "  certbot --nginx -d yourdomain.com"
+    echo "  HTTP Port:  80  (redirects to HTTPS for domain)"
+    echo "  HTTPS Port: 443 (self-signed cert, Cloudflare-compatible)"
+    echo "  Proxy to:   http://127.0.0.1:3000"
+    if [ -n "${VPS_DOMAIN:-}" ]; then
+    echo "  Access URL: https://${VPS_DOMAIN}"
+    echo "  Direct IP:  https://${VPS_IP:-$(detect_ip_address)}"
+    else
+    echo "  Access URL: https://${VPS_IP:-$(detect_ip_address)}"
+    fi
     
     return 0
 }

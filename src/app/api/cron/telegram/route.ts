@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/server/auth/config';
+import { unauthorized, forbidden, badRequest, serverError } from '@/lib/api-response';
 import {
   startBackupCron,
   startHealthCron,
@@ -9,21 +10,15 @@ import {
   getTelegramCronStatus,
   autoBackupToTelegram,
   sendHealthCheckToTelegram,
-} from '@/lib/cron/telegram-cron';
+} from '@/server/jobs/telegram-cron';
 
 // GET - Get Telegram cron status
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!session) return unauthorized();
 
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const status = getTelegramCronStatus();
+    if (session.user.role !== 'SUPER_ADMIN') return forbidden();
 
     return NextResponse.json({
       success: true,
@@ -31,10 +26,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[Telegram Cron Status] Error:', error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return serverError(error.message);
   }
 }
 
@@ -42,23 +34,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!session) return unauthorized();
 
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    if (session.user.role !== 'SUPER_ADMIN') return forbidden();
 
     const body = await request.json();
     const { action, job } = body;
 
-    if (!action || !job) {
-      return NextResponse.json(
-        { error: 'Action and job are required' },
-        { status: 400 }
-      );
-    }
+    if (!action || !job) return badRequest('Action and job are required');
 
     if (action === 'start') {
       if (job === 'backup') {
@@ -139,15 +122,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(
-      { error: 'Invalid action or job' },
-      { status: 400 }
-    );
+    return badRequest('Invalid action or job');
   } catch (error: any) {
     console.error('[Telegram Cron Control] Error:', error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return serverError(error.message);
   }
 }

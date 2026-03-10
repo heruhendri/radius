@@ -1,10 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { nanoid } from 'nanoid';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 
 // GET - Fetch all ODPs
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const odps = await prisma.networkODP.findMany({
       include: {
         olt: {

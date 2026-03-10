@@ -29,13 +29,19 @@ import {
   Bell,
   Package,
   UserCheck,
+  Sun,
+  Moon,
+  Gift,
+  Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
 import NotificationDropdown from '@/components/NotificationDropdown';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import { useTheme } from '@/hooks/useTheme';
+import { CyberToastProvider, useToast } from '@/components/cyberpunk/CyberToast';
+import { registerGlobalToast, registerGlobalConfirm } from '@/lib/sweetalert';
 
 interface MenuItem {
   titleKey: string;
@@ -46,172 +52,268 @@ interface MenuItem {
   requiredPermission?: string;
 }
 
-const menuItems: MenuItem[] = [
-  {
-    titleKey: 'nav.dashboard',
-    icon: <LayoutDashboard className="w-4 h-4" />,
-    href: '/admin',
-    requiredPermission: 'dashboard.view',
-  },
-  {
-    titleKey: 'nav.notifications',
-    icon: <Bell className="w-4 h-4" />,
-    href: '/admin/notifications',
-    badge: 'notifications',
-    requiredPermission: 'dashboard.view',
-  },
-  {
-    titleKey: 'nav.pppoe',
-    icon: <Users className="w-4 h-4" />,
-    requiredPermission: 'customers.view',
-    children: [
-      { titleKey: 'nav.users', href: '/admin/pppoe/users', requiredPermission: 'customers.view' },
-      { titleKey: 'nav.profiles', href: '/admin/pppoe/profiles', requiredPermission: 'customers.view' },
-      { titleKey: 'nav.areas', href: '/admin/pppoe/areas', requiredPermission: 'customers.view' },
-      { titleKey: 'nav.stopSubscription', href: '/admin/pppoe/stopped', requiredPermission: 'customers.view' },
-      { titleKey: 'nav.registrations', href: '/admin/pppoe/registrations', badge: 'pending', requiredPermission: 'registrations.view' },
-    ],
-  },
-  {
-    titleKey: 'nav.hotspot',
-    icon: <Wifi className="w-4 h-4" />,
-    requiredPermission: 'hotspot.view',
-    children: [
-      { titleKey: 'nav.voucher', href: '/admin/hotspot/voucher', requiredPermission: 'vouchers.view' },
-      { titleKey: 'nav.rekapVoucher', href: '/admin/hotspot/rekap-voucher', requiredPermission: 'vouchers.view' },
-      { titleKey: 'nav.profile', href: '/admin/hotspot/profile', requiredPermission: 'hotspot.view' },
-      { titleKey: 'nav.template', href: '/admin/hotspot/template', requiredPermission: 'hotspot.view' },
-      { titleKey: 'nav.agent', href: '/admin/hotspot/agent', requiredPermission: 'hotspot.view' },
-      { titleKey: 'nav.evoucher', href: '/admin/hotspot/evoucher', requiredPermission: 'vouchers.view' },
-    ],
-  },
-  {
-    titleKey: 'nav.invoices',
-    icon: <Receipt className="w-4 h-4" />,
-    href: '/admin/invoices',
-    requiredPermission: 'invoices.view',
-  },
-  {
-    titleKey: 'nav.payment',
-    icon: <CreditCard className="w-4 h-4" />,
-    requiredPermission: 'settings.payment',
-    children: [
-      { titleKey: 'nav.paymentGateway', href: '/admin/payment-gateway', requiredPermission: 'settings.payment' },
-      { titleKey: 'nav.manualPayments', href: '/admin/manual-payments', badge: 'manualPayments', requiredPermission: 'invoices.view' },
-    ],
-  },
-  {
-    titleKey: 'nav.transaksi',
-    icon: <Wallet className="w-4 h-4" />,
-    href: '/admin/keuangan',
-    requiredPermission: 'keuangan.view',
-  },
-  {
-    titleKey: 'nav.sessions',
-    icon: <Clock className="w-4 h-4" />,
-    requiredPermission: 'sessions.view',
-    children: [
-      { titleKey: 'nav.pppoeSessions', href: '/admin/sessions/pppoe', requiredPermission: 'sessions.view' },
-      { titleKey: 'nav.hotspotSessions', href: '/admin/sessions/hotspot', requiredPermission: 'sessions.view' },
-    ],
-  },
+interface MenuGroup {
+  titleKey: string;
+  items: MenuItem[];
+}
 
+const menuGroups: MenuGroup[] = [
   {
-    titleKey: 'nav.router',
-    icon: <Router className="w-4 h-4" />,
-    requiredPermission: 'routers.view',
-    children: [
-      { titleKey: 'nav.routerNas', href: '/admin/network/routers', requiredPermission: 'routers.view' },
-      { titleKey: 'nav.vpnServer', href: '/admin/network/vpn-server', requiredPermission: 'routers.view' },
-      { titleKey: 'nav.vpnClient', href: '/admin/network/vpn-client', requiredPermission: 'routers.view' },
+    titleKey: 'nav.catOverview',
+    items: [
+      {
+        titleKey: 'nav.dashboard',
+        icon: <LayoutDashboard className="w-4 h-4" />,
+        href: '/admin',
+        requiredPermission: 'dashboard.view',
+      },
+      {
+        titleKey: 'nav.communication',
+        icon: <Bell className="w-4 h-4" />,
+        requiredPermission: 'dashboard.view',
+        children: [
+          { titleKey: 'nav.notifications', href: '/admin/notifications', badge: 'notifications', requiredPermission: 'dashboard.view' },
+          { titleKey: 'nav.pushNotifications', href: '/admin/push-notifications', requiredPermission: 'dashboard.view' },
+        ],
+      },
     ],
   },
   {
-    titleKey: 'nav.network',
-    icon: <Network className="w-4 h-4" />,
-    requiredPermission: 'network.view',
-    children: [
-      { titleKey: 'nav.networkMap', href: '/admin/network/map', requiredPermission: 'network.view' },
-      { titleKey: 'nav.olt', href: '/admin/network/olts', requiredPermission: 'network.view' },
-      { titleKey: 'nav.odc', href: '/admin/network/odcs', requiredPermission: 'network.view' },
-      { titleKey: 'nav.odp', href: '/admin/network/odps', requiredPermission: 'network.view' },
-      { titleKey: 'nav.odpCustomer', href: '/admin/network/customers', requiredPermission: 'network.view' },
+    titleKey: 'nav.catCustomer',
+    items: [
+      {
+        titleKey: 'nav.pppoe',
+        icon: <Users className="w-4 h-4" />,
+        requiredPermission: 'customers.view',
+        children: [
+          { titleKey: 'nav.users', href: '/admin/pppoe/users', requiredPermission: 'customers.view' },
+          { titleKey: 'nav.profiles', href: '/admin/pppoe/profiles', requiredPermission: 'customers.view' },
+          { titleKey: 'nav.areas', href: '/admin/pppoe/areas', requiredPermission: 'customers.view' },
+          { titleKey: 'nav.stopSubscription', href: '/admin/pppoe/stopped', requiredPermission: 'customers.view' },
+          { titleKey: 'nav.registrations', href: '/admin/pppoe/registrations', badge: 'pending', requiredPermission: 'registrations.view' },
+        ],
+      },
+      {
+        titleKey: 'nav.hotspot',
+        icon: <Wifi className="w-4 h-4" />,
+        requiredPermission: 'hotspot.view',
+        children: [
+          { titleKey: 'nav.voucher', href: '/admin/hotspot/voucher', requiredPermission: 'vouchers.view' },
+          { titleKey: 'nav.rekapVoucher', href: '/admin/hotspot/rekap-voucher', requiredPermission: 'vouchers.view' },
+          { titleKey: 'nav.profile', href: '/admin/hotspot/profile', requiredPermission: 'hotspot.view' },
+          { titleKey: 'nav.template', href: '/admin/hotspot/template', requiredPermission: 'hotspot.view' },
+          { titleKey: 'nav.agent', href: '/admin/hotspot/agent', requiredPermission: 'hotspot.view' },
+          { titleKey: 'nav.evoucher', href: '/admin/hotspot/evoucher', requiredPermission: 'vouchers.view' },
+        ],
+      },
+      {
+        titleKey: 'nav.isolation',
+        icon: <Shield className="w-4 h-4" />,
+        requiredPermission: 'customers.view',
+        children: [
+          { titleKey: 'nav.isolatedUsers', href: '/admin/isolated-users', requiredPermission: 'customers.view' },
+          { titleKey: 'nav.isolationSettings', href: '/admin/settings/isolation', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.isolationTemplates', href: '/admin/settings/isolation/templates', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.mikrotikSetup', href: '/admin/settings/isolation/mikrotik', requiredPermission: 'settings.view' },
+        ],
+      },
+      {
+        titleKey: 'nav.referral',
+        icon: <Gift className="w-4 h-4" />,
+        requiredPermission: 'customers.view',
+        children: [
+          { titleKey: 'nav.referralList', href: '/admin/referrals', requiredPermission: 'customers.view' },
+          { titleKey: 'nav.referralSettings', href: '/admin/settings/referral', requiredPermission: 'settings.view' },
+        ],
+      },
+      {
+        titleKey: 'nav.invoices',
+        icon: <Receipt className="w-4 h-4" />,
+        href: '/admin/invoices',
+        requiredPermission: 'invoices.view',
+      },
+      {
+        titleKey: 'nav.payment',
+        icon: <CreditCard className="w-4 h-4" />,
+        requiredPermission: 'settings.payment',
+        children: [
+          { titleKey: 'nav.paymentGateway', href: '/admin/payment-gateway', requiredPermission: 'settings.payment' },
+          { titleKey: 'nav.manualPayments', href: '/admin/manual-payments', badge: 'manualPayments', requiredPermission: 'invoices.view' },
+        ],
+      },
+      {
+        titleKey: 'nav.transaksi',
+        icon: <Wallet className="w-4 h-4" />,
+        href: '/admin/keuangan',
+        requiredPermission: 'keuangan.view',
+      },
     ],
   },
   {
-    titleKey: 'nav.genieacs',
-    icon: <Router className="w-4 h-4" />,
-    requiredPermission: 'settings.genieacs',
-    children: [
-      { titleKey: 'nav.devices', href: '/admin/genieacs/devices', requiredPermission: 'settings.genieacs' },
-      { titleKey: 'nav.tasks', href: '/admin/genieacs/tasks', requiredPermission: 'settings.genieacs' },
-      { titleKey: 'nav.virtualParameters', href: '/admin/genieacs/virtual-parameters', requiredPermission: 'settings.genieacs' },
-      { titleKey: 'nav.parameterConfig', href: '/admin/genieacs/parameter-config', requiredPermission: 'settings.genieacs' },
+    titleKey: 'nav.catNetwork',
+    items: [
+      {
+        titleKey: 'nav.sessions',
+        icon: <Clock className="w-4 h-4" />,
+        requiredPermission: 'sessions.view',
+        children: [
+          { titleKey: 'nav.pppoeSessions', href: '/admin/sessions/pppoe', requiredPermission: 'sessions.view' },
+          { titleKey: 'nav.hotspotSessions', href: '/admin/sessions/hotspot', requiredPermission: 'sessions.view' },
+        ],
+      },
+      {
+        titleKey: 'nav.router',
+        icon: <Router className="w-4 h-4" />,
+        requiredPermission: 'routers.view',
+        children: [
+          { titleKey: 'nav.routerNas', href: '/admin/network/routers', requiredPermission: 'routers.view' },
+          { titleKey: 'nav.vpnServer', href: '/admin/network/vpn-server', requiredPermission: 'routers.view' },
+          { titleKey: 'nav.vpnClient', href: '/admin/network/vpn-client', requiredPermission: 'routers.view' },
+        ],
+      },
+      {
+        titleKey: 'nav.network',
+        icon: <Network className="w-4 h-4" />,
+        requiredPermission: 'network.view',
+        children: [
+          { titleKey: 'nav.networkMap', href: '/admin/network/map', requiredPermission: 'network.view' },
+          { titleKey: 'nav.olt', href: '/admin/network/olts', requiredPermission: 'network.view' },
+          { titleKey: 'nav.odc', href: '/admin/network/odcs', requiredPermission: 'network.view' },
+          { titleKey: 'nav.odp', href: '/admin/network/odps', requiredPermission: 'network.view' },
+          { titleKey: 'nav.odpCustomer', href: '/admin/network/customers', requiredPermission: 'network.view' },
+        ],
+      },
+      {
+        titleKey: 'nav.genieacs',
+        icon: <Router className="w-4 h-4" />,
+        requiredPermission: 'settings.genieacs',
+        children: [
+          { titleKey: 'nav.devices', href: '/admin/genieacs/devices', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.tasks', href: '/admin/genieacs/tasks', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.virtualParameters', href: '/admin/genieacs/virtual-parameters', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.parameterConfig', href: '/admin/genieacs/parameter-config', requiredPermission: 'settings.genieacs' },
+        ],
+      },
+      {
+        titleKey: 'nav.freeradius',
+        icon: <Server className="w-4 h-4" />,
+        requiredPermission: 'settings.view',
+        children: [
+          { titleKey: 'nav.radiusStatus', href: '/admin/freeradius/status', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.radiusConfig', href: '/admin/freeradius/config', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.radTest', href: '/admin/freeradius/radtest', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.radCheck', href: '/admin/freeradius/radcheck', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.radiusLogs', href: '/admin/freeradius/logs', requiredPermission: 'settings.view' },
+        ],
+      },
     ],
   },
   {
-    titleKey: 'nav.freeradius',
-    icon: <Server className="w-4 h-4" />,
-    requiredPermission: 'settings.view',
-    children: [
-      { titleKey: 'nav.radiusStatus', href: '/admin/freeradius/status', requiredPermission: 'settings.view' },
-      { titleKey: 'nav.radiusConfig', href: '/admin/freeradius/config', requiredPermission: 'settings.view' },
-      { titleKey: 'nav.radTest', href: '/admin/freeradius/radtest', requiredPermission: 'settings.view' },
-      { titleKey: 'nav.radCheck', href: '/admin/freeradius/radcheck', requiredPermission: 'settings.view' },
-      { titleKey: 'nav.radiusLogs', href: '/admin/freeradius/logs', requiredPermission: 'settings.view' },
-    ],
-  },
-  {
-    titleKey: 'nav.inventory',
-    icon: <Package className="w-4 h-4" />,
-    requiredPermission: 'settings.view',
-    children: [
-      { titleKey: 'nav.inventoryItems', href: '/admin/inventory/items', requiredPermission: 'settings.view' },
-      { titleKey: 'nav.inventoryMovements', href: '/admin/inventory/movements', requiredPermission: 'settings.view' },
-      { titleKey: 'nav.inventoryCategories', href: '/admin/inventory/categories', requiredPermission: 'settings.view' },
-      { titleKey: 'nav.inventorySuppliers', href: '/admin/inventory/suppliers', requiredPermission: 'settings.view' },
-    ],
-  },
-  {
-    titleKey: 'nav.tickets',
-    icon: <MessageSquare className="w-4 h-4" />,
-    requiredPermission: 'dashboard.view',
-    children: [
-      { titleKey: 'nav.allTickets', href: '/admin/tickets', requiredPermission: 'dashboard.view' },
-      { titleKey: 'nav.ticketCategories', href: '/admin/tickets/categories', requiredPermission: 'settings.view' },
-    ],
-  },
-  {
-    titleKey: 'nav.management',
-    icon: <Shield className="w-4 h-4" />,
-    href: '/admin/management',
-    requiredPermission: 'users.view',
-  },
-  {
-    titleKey: 'nav.isolation',
-    icon: <Shield className="w-4 h-4" />,
-    requiredPermission: 'settings.view',
-    children: [
-      { titleKey: 'nav.isolatedUsers', href: '/admin/isolated-users', requiredPermission: 'customers.view' },
-      { titleKey: 'nav.isolationSettings', href: '/admin/settings/isolation', requiredPermission: 'settings.view' },
-      { titleKey: 'nav.isolationTemplates', href: '/admin/settings/isolation/templates', requiredPermission: 'settings.view' },
-      { titleKey: 'nav.mikrotikSetup', href: '/admin/settings/isolation/mikrotik', requiredPermission: 'settings.view' },
-    ],
-  },
-  {
-    titleKey: 'nav.settingsMenu',
-    icon: <Settings className="w-4 h-4" />,
-    requiredPermission: 'settings.view',
-    children: [
-      { titleKey: 'nav.company', href: '/admin/settings/company', requiredPermission: 'settings.company' },
-      { titleKey: 'nav.email', href: '/admin/settings/email', requiredPermission: 'settings.view' },
-      { titleKey: 'nav.whatsapp', href: '/admin/settings/whatsapp', requiredPermission: 'whatsapp.view' },
-      { titleKey: 'nav.database', href: '/admin/settings/database', requiredPermission: 'settings.view' },
-      { titleKey: 'nav.cronJobs', href: '/admin/settings/cron', requiredPermission: 'settings.cron' },
-      { titleKey: 'nav.genieacs', href: '/admin/settings/genieacs', requiredPermission: 'settings.genieacs' },
+    titleKey: 'nav.catManagement',
+    items: [
+      {
+        titleKey: 'nav.inventory',
+        icon: <Package className="w-4 h-4" />,
+        requiredPermission: 'settings.view',
+        children: [
+          { titleKey: 'nav.inventoryItems', href: '/admin/inventory/items', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.inventoryMovements', href: '/admin/inventory/movements', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.inventoryCategories', href: '/admin/inventory/categories', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.inventorySuppliers', href: '/admin/inventory/suppliers', requiredPermission: 'settings.view' },
+        ],
+      },
+      {
+        titleKey: 'nav.tickets',
+        icon: <MessageSquare className="w-4 h-4" />,
+        requiredPermission: 'dashboard.view',
+        children: [
+          { titleKey: 'nav.allTickets', href: '/admin/tickets', requiredPermission: 'dashboard.view' },
+          { titleKey: 'nav.ticketCategories', href: '/admin/tickets/categories', requiredPermission: 'settings.view' },
+        ],
+      },
+      {
+        titleKey: 'nav.management',
+        icon: <Shield className="w-4 h-4" />,
+        href: '/admin/management',
+        requiredPermission: 'users.view',
+      },
+      {
+        titleKey: 'nav.settingsMenu',
+        icon: <Settings className="w-4 h-4" />,
+        requiredPermission: 'settings.view',
+        children: [
+          { titleKey: 'nav.company', href: '/admin/settings/company', requiredPermission: 'settings.company' },
+          { titleKey: 'nav.email', href: '/admin/settings/email', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.whatsapp', href: '/admin/settings/whatsapp', requiredPermission: 'whatsapp.view' },
+          { titleKey: 'nav.database', href: '/admin/settings/database', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.cronJobs', href: '/admin/settings/cron', requiredPermission: 'settings.cron' },
+          { titleKey: 'nav.genieacs', href: '/admin/settings/genieacs', requiredPermission: 'settings.genieacs' },
+        ],
+      },
     ],
   },
 ];
+
+function CategoryItem({ titleKey, items, pendingCount, manualPaymentsCount, unreadNotifications, userPermissions, t, onNavigate }: {
+  titleKey: string;
+  items: MenuItem[];
+  pendingCount: number;
+  manualPaymentsCount: number;
+  unreadNotifications: number;
+  userPermissions: string[];
+  t: (key: string, params?: Record<string, string | number>) => string;
+  onNavigate?: () => void;
+}) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  const visibleItems = items
+    .filter(item => !item.requiredPermission || userPermissions.includes(item.requiredPermission))
+    .map(item => ({
+      ...item,
+      children: item.children?.filter(child => !child.requiredPermission || userPermissions.includes(child.requiredPermission)),
+    }))
+    .filter(item => !item.children || item.children.length > 0);
+
+  if (visibleItems.length === 0) return null;
+
+  return (
+    <div className="mb-0.5">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center gap-2 px-2 pt-2.5 pb-1 group"
+      >
+        <span className="text-[9px] text-cyan-300/80 tracking-[0.25em] uppercase font-bold group-hover:text-cyan-300 transition-colors flex-shrink-0">
+          {t(titleKey)}
+        </span>
+        <div className="flex-1 h-px bg-gradient-to-r from-cyan-400/35 via-cyan-400/20 to-transparent" />
+        <ChevronDown
+          className={cn(
+            'w-3 h-3 text-cyan-400/60 group-hover:text-cyan-300 transition-all duration-200 flex-shrink-0',
+            isOpen ? 'rotate-180' : ''
+          )}
+        />
+      </button>
+      <div
+        className={cn(
+          'overflow-hidden transition-all duration-300 ease-in-out space-y-0.5',
+          isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
+        )}
+      >
+        {visibleItems.map(item => (
+          <NavItem
+            key={item.titleKey}
+            item={item}
+            pendingCount={pendingCount}
+            manualPaymentsCount={manualPaymentsCount}
+            unreadNotifications={unreadNotifications}
+            t={t}
+            onNavigate={onNavigate}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications, collapsed, t, onNavigate }: { item: MenuItem; pendingCount: number; manualPaymentsCount: number; unreadNotifications: number; collapsed?: boolean; t: (key: string, params?: Record<string, string | number>) => string; onNavigate?: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -332,12 +434,39 @@ function AdminLayoutContent({
   const [pendingRegistrations, setPendingRegistrations] = useState(0);
   const [pendingManualPayments, setPendingManualPayments] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const { addToast, confirm } = useToast();
+  // Persist lastChecked to sessionStorage so navigating between admin pages
+  // doesn't re-show already-toasted notifications
+  const adminNotifLastCheckedRef = useRef<string>(
+    (typeof window !== 'undefined' && sessionStorage.getItem('adminNotifLastChecked'))
+      ? sessionStorage.getItem('adminNotifLastChecked')!
+      : new Date().toISOString()
+  );
+  // Track which notification IDs have already been shown as toasts (per browser session)
+  // This prevents the same notification from ever re-appearing as a toast
+  const toastedNotifIdsRef = useRef<Set<string>>(
+    new Set(
+      typeof window !== 'undefined' && sessionStorage.getItem('adminToastedNotifIds')
+        ? JSON.parse(sessionStorage.getItem('adminToastedNotifIds')!)
+        : []
+    )
+  );
+  // Stable ref so pollNotifications useEffect doesn't need addToast as dependency
+  const addToastRef = useRef(addToast);
+  useEffect(() => { addToastRef.current = addToast; }, [addToast]);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Bridge global showSuccess/showError/showConfirm helpers to CyberToast
+  useEffect(() => {
+    registerGlobalToast(addToast);
+    registerGlobalConfirm(confirm);
+  }, [addToast, confirm]);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [showIdleWarning, setShowIdleWarning] = useState(false);
   const [idleCountdown, setIdleCountdown] = useState(60);
   const { company, setCompany } = useAppStore();
-  const { t } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
+  const { isDark, toggleTheme } = useTheme();
 
   const isLoginPage = pathname === '/admin/login';
 
@@ -421,8 +550,6 @@ function AdminLayoutContent({
 
   useEffect(() => {
     setMounted(true);
-    // Force dark mode only
-    document.documentElement.classList.add('dark');
   }, []);
 
   // Load user permissions when session is available
@@ -497,22 +624,52 @@ function AdminLayoutContent({
     return () => clearInterval(interval);
   }, [status]);
 
-  // Load unread notifications
+  // Load unread notifications + show toasts for new ones
   useEffect(() => {
     if (status !== 'authenticated') return;
 
-    const loadUnreadNotifications = () => {
-      fetch('/api/notifications?limit=1')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) setUnreadNotifications(data.unreadCount || 0);
-        })
-        .catch(console.error);
+    const pollNotifications = async () => {
+      try {
+        // Get unread count (badge)
+        const countRes = await fetch('/api/notifications?limit=1');
+        const countData = await countRes.json();
+        if (countData.success) setUnreadNotifications(countData.unreadCount || 0);
+
+        // Get new notifications since last check (for toasts)
+        const since = encodeURIComponent(adminNotifLastCheckedRef.current);
+        const newRes = await fetch(`/api/notifications?since=${since}&limit=20`);
+        const newData = await newRes.json();
+        if (newData.success && Array.isArray(newData.notifications) && newData.notifications.length > 0) {
+          adminNotifLastCheckedRef.current = new Date().toISOString();
+          sessionStorage.setItem('adminNotifLastChecked', adminNotifLastCheckedRef.current);
+          for (const notif of newData.notifications) {
+            // Skip if this notification was already toasted in this session
+            if (toastedNotifIdsRef.current.has(notif.id)) continue;
+            toastedNotifIdsRef.current.add(notif.id);
+            // Persist toasted IDs (keep last 200 to avoid unbounded growth)
+            const idsArray = Array.from(toastedNotifIdsRef.current).slice(-200);
+            sessionStorage.setItem('adminToastedNotifIds', JSON.stringify(idsArray));
+
+            const toastType =
+              notif.type === 'new_ticket' ? 'info' :
+              notif.type === 'manual_payment_submitted' ? 'info' :
+              notif.type === 'payment_received' ? 'success' :
+              notif.type === 'new_registration' ? 'info' :
+              notif.type === 'user_expired' ? 'warning' :
+              notif.type === 'system_alert' ? 'error' : 'info';
+            addToastRef.current({ type: toastType, title: notif.title, description: notif.message, duration: 8000 });
+          }
+        }
+      } catch {
+        // silently ignore
+      }
     };
 
-    loadUnreadNotifications();
-    const interval = setInterval(loadUnreadNotifications, 30000);
+    pollNotifications();
+    const interval = setInterval(pollNotifications, 30000);
     return () => clearInterval(interval);
+  // addToast intentionally excluded — we use addToastRef to prevent re-runs
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
 
@@ -528,8 +685,8 @@ function AdminLayoutContent({
       <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
         {/* Background effects */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[100px] animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-[100px] animate-pulse delay-1000" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-[70px] animate-pulse delay-1000" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
         </div>
 
         <div className="flex flex-col items-center gap-4 relative z-10">
@@ -552,8 +709,8 @@ function AdminLayoutContent({
       <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
         {/* Background effects */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[100px] animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-[100px] animate-pulse delay-1000" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-[70px] animate-pulse delay-1000" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
         </div>
 
         <div className="flex flex-col items-center gap-4 relative z-10">
@@ -572,9 +729,9 @@ function AdminLayoutContent({
       {/* Cyberpunk Background Effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {/* Primary glow orbs */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/5 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-500/5 rounded-full blur-[100px] animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-purple-500/3 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/5 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-500/5 rounded-full blur-[70px] animate-pulse delay-1000" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-purple-500/3 rounded-full blur-[80px]" />
 
         {/* Scan lines overlay */}
         <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(0,255,255,0.01)_2px,rgba(0,255,255,0.01)_4px)]" />
@@ -639,37 +796,20 @@ function AdminLayoutContent({
           </div>
 
           {/* Navigation - optimized scrolling for mobile */}
-          <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 py-1.5 space-y-0.5 custom-scrollbar touch-pan-y">
-            {menuItems
-              .filter((item) => {
-                if (!item.requiredPermission) return true;
-                return userPermissions.includes(item.requiredPermission);
-              })
-              .map((item) => {
-                const filteredItem = {
-                  ...item,
-                  children: item.children?.filter((child) => {
-                    if (!child.requiredPermission) return true;
-                    return userPermissions.includes(child.requiredPermission);
-                  }),
-                };
-
-                if (filteredItem.children && filteredItem.children.length === 0) {
-                  return null;
-                }
-
-                return (
-                  <NavItem
-                    key={item.titleKey}
-                    item={filteredItem}
-                    pendingCount={pendingRegistrations}
-                    manualPaymentsCount={pendingManualPayments}
-                    unreadNotifications={unreadNotifications}
-                    t={t}
-                    onNavigate={() => setSidebarOpen(false)}
-                  />
-                );
-              })}
+          <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 py-1.5 custom-scrollbar touch-pan-y">
+            {menuGroups.map(group => (
+              <CategoryItem
+                key={group.titleKey}
+                titleKey={group.titleKey}
+                items={group.items}
+                pendingCount={pendingRegistrations}
+                manualPaymentsCount={pendingManualPayments}
+                unreadNotifications={unreadNotifications}
+                userPermissions={userPermissions}
+                t={t}
+                onNavigate={() => setSidebarOpen(false)}
+              />
+            ))}
           </nav>
 
           {/* User - fixed at bottom */}
@@ -757,8 +897,23 @@ function AdminLayoutContent({
 
             {/* Actions - compact on mobile */}
             <div className="flex items-center gap-1 sm:gap-2">
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-lg hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors border border-transparent hover:border-primary/30"
+                title={t('common.toggleTheme')}
+              >
+                {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4" />}
+              </button>
               <NotificationDropdown />
-              <LanguageSwitcher variant="compact" />
+              {/* Language toggle - same style as agent portal */}
+              <button
+                onClick={() => setLocale(locale === 'id' ? 'en' : 'id')}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold rounded-lg hover:bg-primary/20 text-muted-foreground hover:text-primary border border-transparent hover:border-primary/30 transition-all duration-200 uppercase tracking-widest"
+                title={locale === 'id' ? 'Switch to English' : 'Ganti ke Indonesia'}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>{locale}</span>
+              </button>
             </div>
           </div>
         </header>
@@ -837,13 +992,14 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
+    <CyberToastProvider>
     <SessionProvider refetchInterval={5 * 60} refetchOnWindowFocus={true}>
       <Suspense fallback={
         <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
           {/* Background effects */}
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[100px] animate-pulse" />
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-[100px] animate-pulse delay-1000" />
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-[70px] animate-pulse delay-1000" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
           </div>
 
           <div className="relative">
@@ -854,5 +1010,6 @@ export default function AdminLayout({
         <AdminLayoutContent>{children}</AdminLayoutContent>
       </Suspense>
     </SessionProvider>
+    </CyberToastProvider>
   );
 }

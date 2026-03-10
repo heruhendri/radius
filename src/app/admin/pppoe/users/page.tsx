@@ -7,6 +7,7 @@ import {
   Plus, Pencil, Trash2, Users, CheckCircle2, MapPin, Map, MoreVertical,
   Shield, ShieldOff, Ban, Download, Upload, Search, Filter, X, Eye, EyeOff, RefreshCcw, DollarSign, Loader2, Zap,
   UserPlus, RefreshCw, Clock, Bell, Send, Mail, ArrowUpDown, Wallet,
+  Calendar, CreditCard, Camera, Info, AlertTriangle, Wrench, CheckCircle, XCircle,
 } from 'lucide-react';
 import MapPicker from '@/components/MapPicker';
 import UserDetailModal from '@/components/UserDetailModal';
@@ -33,6 +34,12 @@ interface PppoeUser {
   syncedToRadius: boolean; createdAt: string; updatedAt: string;
   subscriptionType?: 'PREPAID' | 'POSTPAID';
   billingDay?: number | null;
+  macAddress?: string | null;
+  comment?: string | null;
+  idCardNumber?: string | null;
+  idCardPhoto?: string | null;
+  installationPhotos?: string[] | null;
+  followRoad?: boolean;
   profile: { id: string; name: string; groupName: string };
   router?: { id: string; name: string; nasname: string; ipAddress: string } | null;
   routerId?: string | null;
@@ -108,7 +115,13 @@ export default function PppoeUsersPage() {
     email: '', address: '', latitude: '', longitude: '', ipAddress: '', expiredAt: '',
     subscriptionType: 'POSTPAID' as 'POSTPAID' | 'PREPAID',
     billingDay: '1',
+    macAddress: '', comment: '',
+    idCardNumber: '', idCardPhoto: '',
+    installationPhotos: [] as string[],
+    followRoad: false,
   });
+  const [uploadingIdCard, setUploadingIdCard] = useState(false);
+  const [uploadingInstallation, setUploadingInstallation] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -143,7 +156,7 @@ export default function PppoeUsersPage() {
       const method = editingUser ? 'PUT' : 'POST';
       const payload = {
         ...formData, ...(editingUser && { id: editingUser.id }),
-        ...(formData.expiredAt && { expiredAt: endOfDayWIBtoUTC(new Date(formData.expiredAt + 'T23:59:59')).toISOString() }),
+        ...(formData.expiredAt && { expiredAt: endOfDayWIBtoUTC(formData.expiredAt).toISOString() }),
       };
       const res = await fetch('/api/pppoe/users', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const result = await res.json();
@@ -173,6 +186,12 @@ export default function PppoeUsersPage() {
       ipAddress: user.ipAddress || '', expiredAt: user.expiredAt ? formatWIB(user.expiredAt, 'yyyy-MM-dd') : '',
       subscriptionType: (user as any).subscriptionType || 'POSTPAID',
       billingDay: ((user as any).billingDay || 1).toString(),
+      macAddress: (user as any).macAddress || '',
+      comment: (user as any).comment || '',
+      idCardNumber: (user as any).idCardNumber || '',
+      idCardPhoto: (user as any).idCardPhoto || '',
+      installationPhotos: (user as any).installationPhotos || [],
+      followRoad: (user as any).followRoad || false,
     });
     setIsDialogOpen(true);
   };
@@ -288,7 +307,39 @@ export default function PppoeUsersPage() {
 
   const toggleSelectUser = (userId: string) => { const n = new Set(selectedUsers); n.has(userId) ? n.delete(userId) : n.add(userId); setSelectedUsers(n); };
   const toggleSelectAll = () => { selectedUsers.size === filteredUsers.length && filteredUsers.length > 0 ? setSelectedUsers(new Set()) : setSelectedUsers(new Set(filteredUsers.map(u => u.id))); };
-  const resetForm = () => { setFormData({ username: '', password: '', profileId: '', routerId: '', areaId: '', name: '', phone: '', email: '', address: '', latitude: '', longitude: '', ipAddress: '', expiredAt: '', subscriptionType: 'POSTPAID', billingDay: '1' }); };
+  const resetForm = () => { setFormData({ username: '', password: '', profileId: '', routerId: '', areaId: '', name: '', phone: '', email: '', address: '', latitude: '', longitude: '', ipAddress: '', expiredAt: '', subscriptionType: 'POSTPAID', billingDay: '1', macAddress: '', comment: '', idCardNumber: '', idCardPhoto: '', installationPhotos: [], followRoad: false }); };
+
+  const handleUploadIdCard = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingIdCard(true);
+    try {
+      const fd = new FormData(); fd.append('file', file); fd.append('type', 'idCard');
+      const res = await fetch('/api/upload/pppoe-customer', { method: 'POST', body: fd });
+      const result = await res.json();
+      if (result.success) { setFormData(prev => ({ ...prev, idCardPhoto: result.url })); }
+      else { await showError(result.error || 'Upload KTP gagal'); }
+    } catch { await showError('Upload KTP gagal'); }
+    finally { setUploadingIdCard(false); }
+  };
+
+  const handleUploadInstallation = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingInstallation(true);
+    try {
+      const fd = new FormData(); fd.append('file', file); fd.append('type', 'installation');
+      const res = await fetch('/api/upload/pppoe-customer', { method: 'POST', body: fd });
+      const result = await res.json();
+      if (result.success) { setFormData(prev => ({ ...prev, installationPhotos: [...prev.installationPhotos, result.url] })); }
+      else { await showError(result.error || 'Upload foto instalasi gagal'); }
+    } catch { await showError('Upload foto instalasi gagal'); }
+    finally { setUploadingInstallation(false); }
+  };
+
+  const handleRemoveInstallationPhoto = (index: number) => {
+    setFormData(prev => ({ ...prev, installationPhotos: prev.installationPhotos.filter((_, i) => i !== index) }));
+  };
 
   const handleBulkDelete = async () => {
     if (selectedUsers.size === 0) return;
@@ -632,10 +683,10 @@ export default function PppoeUsersPage() {
       <p className="text-xs text-muted-foreground">{t('pppoe.noPermission')}</p></div>);
   }
 
-  if (loading) { return <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden"><div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div></div><Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" /></div>; }
+  if (loading) { return <div className="flex items-center justify-center min-h-[60vh]"><div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div></div><Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" /></div>; }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       {/* Neon Cyberpunk Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
@@ -646,11 +697,11 @@ export default function PppoeUsersPage() {
 
       <div className="relative z-10 space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('pppoe.title')}</h1>
-              <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('pppoe.subtitle')}</p>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('pppoe.title')}</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('pppoe.subtitle')}</p>
             </div>
             {/* Tombol Kirim Notifikasi di Header */}
             {selectedUsers.size > 0 && (
@@ -704,29 +755,29 @@ export default function PppoeUsersPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="flex items-center justify-between">
-              <div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('pppoe.registrationsThisMonth')}</p><p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{registrationsThisMonth}</p></div>
-              <UserPlus className="h-8 w-8 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.6)]" />
+              <div className="min-w-0"><p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide">{t('pppoe.registrationsThisMonth')}</p><p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{registrationsThisMonth}</p></div>
+              <UserPlus className="h-5 w-5 sm:h-8 sm:w-8 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.6)] flex-shrink-0" />
             </div>
           </div>
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="flex items-center justify-between">
-              <div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('pppoe.renewalsThisMonth')}</p><p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{renewalsThisMonth}</p></div>
-              <RefreshCw className="h-8 w-8 text-green-400 drop-shadow-[0_0_15px_rgba(34,197,94,0.6)]" />
+              <div className="min-w-0"><p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide">{t('pppoe.renewalsThisMonth')}</p><p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{renewalsThisMonth}</p></div>
+              <RefreshCw className="h-5 w-5 sm:h-8 sm:w-8 text-green-400 drop-shadow-[0_0_15px_rgba(34,197,94,0.6)] flex-shrink-0" />
             </div>
           </div>
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="flex items-center justify-between">
-              <div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('pppoe.isolatedExpired')}</p><p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{isolatedExpired}</p></div>
-              <Clock className="h-8 w-8 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.6)]" />
+              <div className="min-w-0"><p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide">{t('pppoe.isolatedExpired')}</p><p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{isolatedExpired}</p></div>
+              <Clock className="h-5 w-5 sm:h-8 sm:w-8 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.6)] flex-shrink-0" />
             </div>
           </div>
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="flex items-center justify-between">
-              <div><p className="text-xs text-[#00f7ff] uppercase tracking-wide">{t('pppoe.blockedUsers')}</p><p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">{blockedUsers}</p></div>
-              <Ban className="h-8 w-8 text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]" />
+              <div className="min-w-0"><p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide">{t('pppoe.blockedUsers')}</p><p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{blockedUsers}</p></div>
+              <Ban className="h-5 w-5 sm:h-8 sm:w-8 text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)] flex-shrink-0" />
             </div>
           </div>
         </div>
@@ -762,20 +813,88 @@ export default function PppoeUsersPage() {
 
         {/* Users Table */}
         <div className="bg-card rounded-lg border border-border overflow-hidden">
-          <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+          <div className="px-3 py-2 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <span className="text-xs font-medium">{t('pppoe.usersList')}</span>
             {selectedUsers.size > 0 && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-wrap">
                 <span className="text-[10px] text-muted-foreground">{selectedUsers.size} {t('pppoe.selected')}</span>
                 <button onClick={() => handleBulkStatusChange('active')} className="px-1.5 py-0.5 text-[10px] bg-success text-white rounded flex items-center gap-0.5"><Shield className="h-2.5 w-2.5" />{t('pppoe.active')}</button>
                 <button onClick={() => handleBulkStatusChange('isolated')} className="px-1.5 py-0.5 text-[10px] bg-warning text-white rounded flex items-center gap-0.5"><ShieldOff className="h-2.5 w-2.5" />{t('pppoe.isolir')}</button>
                 <button onClick={() => handleBulkStatusChange('blocked')} className="px-1.5 py-0.5 text-[10px] bg-destructive text-destructive-foreground rounded flex items-center gap-0.5"><Ban className="h-2.5 w-2.5" />{t('pppoe.block')}</button>
                 <button onClick={handleExportSelected} className="px-1.5 py-0.5 text-[10px] bg-teal-600 text-white rounded flex items-center gap-0.5"><Download className="h-2.5 w-2.5" />{t('common.export')}</button>
-                <button onClick={handleBulkDelete} className="px-1.5 py-0.5 text-[10px] bg-gray-600 text-white rounded flex items-center gap-0.5"><Trash2 className="h-2.5 w-2.5" />{t('common.delete')}</button>
+                <button onClick={handleBulkDelete} className="px-1.5 py-0.5 text-[10px] bg-muted text-foreground rounded flex items-center gap-0.5"><Trash2 className="h-2.5 w-2.5" />{t('common.delete')}</button>
               </div>
             )}
           </div>
-          <div className="overflow-x-auto">
+
+          {/* Mobile Card View */}
+          <div className="block md:hidden divide-y divide-border">
+            {filteredUsers.length === 0 ? (
+              <div className="px-3 py-8 text-center text-muted-foreground text-xs">
+                {users.length === 0 ? t('pppoe.noUsers') : t('pppoe.noMatch')}
+              </div>
+            ) : (
+              filteredUsers.map((user) => (
+                <div key={user.id} className="p-3 space-y-2 active:bg-muted/50 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <input type="checkbox" checked={selectedUsers.has(user.id)} onChange={() => toggleSelectUser(user.id)} className="rounded border-gray-300 w-3.5 h-3.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{user.username}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{user.name}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium ${user.status === 'active' ? 'bg-success/20 text-success' : user.status === 'isolated' ? 'bg-warning/20 text-warning' : 'bg-destructive/20 text-destructive'}`}>{user.status}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">ID:</span>
+                      <span className="font-mono font-medium">{user.customerId || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('common.phone')}:</span>
+                      <span>{user.phone}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('pppoe.profile')}:</span>
+                      <span className="font-medium">{user.profile.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('common.area')}:</span>
+                      <span>{user.area?.name || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('pppoe.expired')}:</span>
+                      <span className={user.expiredAt && isExpired(user.expiredAt) ? 'text-destructive font-medium' : ''}>{user.expiredAt ? formatWIB(user.expiredAt, 'dd/MM/yyyy') : '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('pppoe.balanceLabel')}:</span>
+                      <span className="font-medium text-primary">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format((user as any).balance || 0)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 pt-1 border-t border-border/50 flex-wrap">
+                    <button onClick={() => handleEdit(user)} className="p-1.5 text-muted-foreground hover:bg-muted rounded"><Pencil className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => setDeleteUserId(user.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => window.location.href = `/admin/pppoe/users/${user.id}/balance`} className="p-1.5 text-primary hover:bg-primary/10 rounded" title={t('pppoe.manageBalance')}><Wallet className="h-3.5 w-3.5" /></button>
+                    {invoiceCounts[user.id] > 0 ? (
+                      <button onClick={() => handleMarkAllPaid(user.id, user.name)} disabled={markingPaid === user.id} className="px-1.5 py-0.5 text-[10px] font-medium bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50 ml-auto">
+                        {markingPaid === user.id ? <Loader2 className="h-3 w-3 animate-spin" /> : t('pppoe.markPaid')}
+                      </button>
+                    ) : (
+                      <button onClick={() => handleManualExtend(user)} disabled={extending === user.id} className="p-1.5 text-warning hover:bg-warning/10 rounded disabled:opacity-50 ml-auto" title={t('pppoe.extendManual')}>
+                        {extending === user.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="overflow-x-auto hidden md:block">
             <table className="w-full">
               <thead className="bg-gray-50 bg-muted/50">
                 <tr>
@@ -799,7 +918,7 @@ export default function PppoeUsersPage() {
                     <div className="flex items-center gap-1">{t('common.area')} <ArrowUpDown className="w-3 h-3" /></div>
                   </th>
                   <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden lg:table-cell cursor-pointer hover:bg-muted" onClick={() => handleSort('balance')}>
-                    <div className="flex items-center gap-1">{t('pppoe.balance')} <ArrowUpDown className="w-3 h-3" /></div>
+                    <div className="flex items-center gap-1">{t('pppoe.balanceLabel')} <ArrowUpDown className="w-3 h-3" /></div>
                   </th>
                   <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden xl:table-cell cursor-pointer hover:bg-muted" onClick={() => handleSort('createdAt')}>
                     <div className="flex items-center gap-1">{t('pppoe.registeredDate')} <ArrowUpDown className="w-3 h-3" /></div>
@@ -916,7 +1035,7 @@ export default function PppoeUsersPage() {
                 <div><ModalLabel required>{t('pppoe.username')}</ModalLabel><ModalInput type="text" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} required /></div>
                 <div><ModalLabel required>{t('pppoe.password')}</ModalLabel>
                   <div className="relative"><ModalInput type={showPassword ? 'text' : 'password'} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required={!editingUser} className="pr-8" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-[#e0d0ff]/50 hover:text-[#00f7ff]">{showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}</button>
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-[#00f7ff]">{showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}</button>
                   </div>
                 </div>
               </div>
@@ -931,8 +1050,8 @@ export default function PppoeUsersPage() {
               <div>
                 <div className="flex items-center justify-between mb-1"><ModalLabel>{t('pppoe.gpsLocation')}</ModalLabel>
                   <div className="flex gap-1">
-                    <button type="button" onClick={() => setShowMapPicker(true)} className="inline-flex items-center px-2 py-0.5 text-[10px] bg-[#00f7ff]/20 text-[#00f7ff] border border-[#00f7ff]/50 rounded hover:bg-[#00f7ff]/30"><Map className="h-2.5 w-2.5 mr-1" />{t('pppoe.openMap')}</button>
-                    <button type="button" onClick={async () => { if (navigator.geolocation) { navigator.geolocation.getCurrentPosition((p) => { setFormData({ ...formData, latitude: p.coords.latitude.toFixed(6), longitude: p.coords.longitude.toFixed(6) }); }, async () => { await showError(t('pppoe.gpsFailed')); }, { enableHighAccuracy: true, timeout: 10000 }); } }} className="inline-flex items-center px-2 py-0.5 text-[10px] bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/50 rounded hover:bg-[#00ff88]/30"><MapPin className="h-2.5 w-2.5 mr-1" />{t('pppoe.autoGps')}</button>
+                    <button type="button" onClick={() => setShowMapPicker(true)} className="inline-flex items-center px-2 py-0.5 text-[10px] bg-primary/10 text-primary border border-primary/50 rounded hover:bg-primary/20 dark:bg-[#00f7ff]/20 dark:text-[#00f7ff] dark:border-[#00f7ff]/50 dark:hover:bg-[#00f7ff]/30"><Map className="h-2.5 w-2.5 mr-1" />{t('pppoe.openMap')}</button>
+                    <button type="button" onClick={async () => { if (navigator.geolocation) { navigator.geolocation.getCurrentPosition((p) => { setFormData({ ...formData, latitude: p.coords.latitude.toFixed(6), longitude: p.coords.longitude.toFixed(6) }); }, async () => { await showError(t('pppoe.gpsFailed')); }, { enableHighAccuracy: true, timeout: 10000 }); } }} className="inline-flex items-center px-2 py-0.5 text-[10px] bg-green-100 text-green-600 border border-green-300 rounded hover:bg-green-200 dark:bg-[#00ff88]/20 dark:text-[#00ff88] dark:border-[#00ff88]/50 dark:hover:bg-[#00ff88]/30"><MapPin className="h-2.5 w-2.5 mr-1" />{t('pppoe.autoGps')}</button>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -943,29 +1062,84 @@ export default function PppoeUsersPage() {
               <div>
                 <ModalLabel required>{t('pppoe.subscriptionType')}</ModalLabel>
                 <div className="grid grid-cols-2 gap-2">
-                  <label className={`flex items-center p-2 border-2 rounded-lg cursor-pointer transition-all ${formData.subscriptionType === 'POSTPAID' ? 'border-[#00f7ff] bg-[#00f7ff]/10 shadow-[0_0_10px_rgba(0,247,255,0.3)]' : 'border-[#bc13fe]/30 hover:border-[#00f7ff]/50'}`}>
-                    <input type="radio" name="subscriptionType" value="POSTPAID" checked={formData.subscriptionType === 'POSTPAID'} onChange={(e) => setFormData({ ...formData, subscriptionType: e.target.value as 'POSTPAID' })} className="w-3 h-3 text-[#00f7ff] border-[#bc13fe]/50 focus:ring-[#00f7ff]" />
-                    <div className="ml-2 flex-1"><div className="text-[10px] font-medium text-[#e0d0ff]">📅 {t('pppoe.postpaid')}</div><div className="text-[9px] text-[#e0d0ff]/50">{t('pppoe.fixedDueDate')}</div></div>
+                  <label className={`flex items-center p-2 border-2 rounded-lg cursor-pointer transition-all ${formData.subscriptionType === 'POSTPAID' ? 'border-primary bg-primary/10 dark:border-[#00f7ff] dark:bg-[#00f7ff]/10 dark:shadow-[0_0_10px_rgba(0,247,255,0.3)]' : 'border-border hover:border-primary/50 dark:border-[#bc13fe]/30 dark:hover:border-[#00f7ff]/50'}`}>
+                    <input type="radio" name="subscriptionType" value="POSTPAID" checked={formData.subscriptionType === 'POSTPAID'} onChange={(e) => setFormData({ ...formData, subscriptionType: e.target.value as 'POSTPAID' })} className="w-3 h-3 accent-primary dark:text-[#00f7ff] border-border dark:border-[#bc13fe]/50 focus:ring-primary dark:focus:ring-[#00f7ff]" />
+                    <div className="ml-2 flex-1"><div className="text-[10px] font-medium text-foreground"><Calendar className="w-3 h-3 inline mr-0.5" />{t('pppoe.postpaid')}</div><div className="text-[9px] text-muted-foreground">{t('pppoe.fixedDueDate')}</div></div>
                   </label>
-                  <label className={`flex items-center p-2 border-2 rounded-lg cursor-pointer transition-all ${formData.subscriptionType === 'PREPAID' ? 'border-[#bc13fe] bg-[#bc13fe]/10 shadow-[0_0_10px_rgba(188,19,254,0.3)]' : 'border-[#bc13fe]/30 hover:border-[#bc13fe]/50'}`}>
-                    <input type="radio" name="subscriptionType" value="PREPAID" checked={formData.subscriptionType === 'PREPAID'} onChange={(e) => setFormData({ ...formData, subscriptionType: e.target.value as 'PREPAID' })} className="w-3 h-3 text-[#bc13fe] border-[#bc13fe]/50 focus:ring-[#bc13fe]" />
-                    <div className="ml-2 flex-1"><div className="text-[10px] font-medium text-[#e0d0ff]">⏰ {t('pppoe.prepaid')}</div><div className="text-[9px] text-[#e0d0ff]/50">{t('pppoe.followsPayment')}</div></div>
+                  <label className={`flex items-center p-2 border-2 rounded-lg cursor-pointer transition-all ${formData.subscriptionType === 'PREPAID' ? 'border-primary bg-primary/10 dark:border-[#bc13fe] dark:bg-[#bc13fe]/10 dark:shadow-[0_0_10px_rgba(188,19,254,0.3)]' : 'border-border hover:border-primary/50 dark:border-[#bc13fe]/30 dark:hover:border-[#bc13fe]/50'}`}>
+                    <input type="radio" name="subscriptionType" value="PREPAID" checked={formData.subscriptionType === 'PREPAID'} onChange={(e) => setFormData({ ...formData, subscriptionType: e.target.value as 'PREPAID' })} className="w-3 h-3 accent-primary dark:text-[#bc13fe] border-border dark:border-[#bc13fe]/50 focus:ring-primary dark:focus:ring-[#bc13fe]" />
+                    <div className="ml-2 flex-1"><div className="text-[10px] font-medium text-foreground">⏰ {t('pppoe.prepaid')}</div><div className="text-[9px] text-muted-foreground">{t('pppoe.followsPayment')}</div></div>
                   </label>
                 </div>
               </div>
               {formData.subscriptionType === 'POSTPAID' && (
-                <div><ModalLabel>📅 {t('pppoe.billingDate')}</ModalLabel><ModalSelect value={formData.billingDay} onChange={(e) => setFormData({ ...formData, billingDay: e.target.value })}>{Array.from({ length: 31 }, (_, i) => i + 1).map(day => (<option key={day} value={day} className="bg-[#0a0520]">{t('pppoe.dayOf')} {day}</option>))}</ModalSelect><p className="text-[10px] text-[#e0d0ff]/50 mt-1">Tanggal jatuh tempo bulanan. expiredAt auto-calculated.</p></div>
+                <div><ModalLabel><Calendar className="w-3 h-3 inline mr-0.5" />{t('pppoe.billingDate')}</ModalLabel><ModalSelect value={formData.billingDay} onChange={(e) => setFormData({ ...formData, billingDay: e.target.value })}>{Array.from({ length: 31 }, (_, i) => i + 1).map(day => (<option key={day} value={day} className="bg-[#0a0520]">{t('pppoe.dayOf')} {day}</option>))}</ModalSelect><p className="text-[10px] text-muted-foreground mt-1">{t('pppoe.monthlyDueDateDesc')}</p></div>
               )}
               {formData.subscriptionType === 'PREPAID' && (
                 <div>
                   <ModalLabel>{t('pppoe.expiredAt')} (opsional)</ModalLabel>
                   <ModalInput type="date" value={formData.expiredAt} onChange={(e) => setFormData({ ...formData, expiredAt: e.target.value })} />
-                  <p className="text-[10px] text-[#e0d0ff]/50 mt-1">Kosongkan untuk auto dari validity profile</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">{t('pppoe.leaveEmptyForAuto')}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3">
                 <div><ModalLabel>{t('pppoe.staticIp')}</ModalLabel><ModalInput type="text" value={formData.ipAddress} onChange={(e) => setFormData({ ...formData, ipAddress: e.target.value })} placeholder="10.10.10.2" /></div>
+                <div><ModalLabel>MAC Address</ModalLabel><ModalInput type="text" value={formData.macAddress} onChange={(e) => setFormData({ ...formData, macAddress: e.target.value })} placeholder="AA:BB:CC:DD:EE:FF" /></div>
+              </div>
+              {formData.subscriptionType === 'POSTPAID' && (
                 <div><ModalLabel>{t('pppoe.expiryDate')}</ModalLabel><ModalInput type="date" value={formData.expiredAt} onChange={(e) => setFormData({ ...formData, expiredAt: e.target.value })} /></div>
+              )}
+              <div><ModalLabel>Komentar / Catatan</ModalLabel><ModalTextarea value={formData.comment} onChange={(e) => setFormData({ ...formData, comment: e.target.value })} placeholder="Catatan tambahan tentang pelanggan ini..." rows={2} /></div>
+
+              {/* Dokumen Pelanggan */}
+              <div className="border border-border dark:border-[#bc13fe]/30 rounded-lg p-3 space-y-3">
+                <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <span><CreditCard className="w-3.5 h-3.5" /></span> Dokumen Identitas (KTP)
+                </div>
+                <div>
+                  <ModalLabel>No. NIK KTP</ModalLabel>
+                  <ModalInput type="text" value={formData.idCardNumber} onChange={(e) => setFormData({ ...formData, idCardNumber: e.target.value })} placeholder="3201234567890123" maxLength={16} />
+                </div>
+                <div>
+                  <ModalLabel>Foto KTP</ModalLabel>
+                  <div className="flex gap-2 items-center">
+                    <input type="file" accept="image/*" onChange={handleUploadIdCard} disabled={uploadingIdCard} className="hidden" id="idCardUploadAdd" />
+                    <label htmlFor="idCardUploadAdd" className={`flex-1 px-3 py-1.5 text-xs text-center border border-border dark:border-[#bc13fe]/40 rounded cursor-pointer hover:bg-muted dark:hover:bg-[#bc13fe]/10 text-muted-foreground ${uploadingIdCard ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      {uploadingIdCard ? '⏳ Mengupload...' : '📎 Upload Foto KTP'}
+                    </label>
+                  </div>
+                  {formData.idCardPhoto && (
+                    <div className="mt-2 relative">
+                      <img src={formData.idCardPhoto} alt="Preview KTP" className="w-full h-28 object-cover rounded border border-border dark:border-[#bc13fe]/30" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      <button type="button" onClick={() => setFormData({ ...formData, idCardPhoto: '' })} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"><X className="w-3 h-3" /></button>
+                    </div>
+                  )}
+                  <p className="text-[9px] text-muted-foreground mt-1">Format: JPG/PNG/WebP, maks. 5MB</p>
+                </div>
+              </div>
+
+              {/* Foto Instalasi */}
+              <div className="border border-border dark:border-[#00f7ff]/20 rounded-lg p-3 space-y-3">
+                <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <span><Camera className="w-3.5 h-3.5" /></span> Foto Instalasi
+                </div>
+                <div>
+                  <input type="file" accept="image/*" onChange={handleUploadInstallation} disabled={uploadingInstallation} className="hidden" id="installationUploadAdd" />
+                  <label htmlFor="installationUploadAdd" className={`w-full block px-3 py-1.5 text-xs text-center border border-border dark:border-[#00f7ff]/30 rounded cursor-pointer hover:bg-muted dark:hover:bg-[#00f7ff]/10 text-muted-foreground ${uploadingInstallation ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    {uploadingInstallation ? '⏳ Mengupload...' : '📸 Upload Foto Instalasi'}
+                  </label>
+                  <p className="text-[9px] text-muted-foreground mt-1">Bisa upload beberapa foto. Maks. 5MB per foto.</p>
+                </div>
+                {formData.installationPhotos.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {formData.installationPhotos.map((photo, index) => (
+                      <div key={index} className="relative">
+                        <img src={photo} alt={`Instalasi ${index + 1}`} className="w-full h-20 object-cover rounded border border-border dark:border-[#00f7ff]/20" />
+                        <button type="button" onClick={() => handleRemoveInstallationPhoto(index)} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] hover:bg-red-600"><X className="w-2.5 h-2.5" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </ModalBody>
             <ModalFooter>
@@ -982,13 +1156,13 @@ export default function PppoeUsersPage() {
         <SimpleModal isOpen={isImportDialogOpen} onClose={() => { setIsImportDialogOpen(false); setImportFile(null); setImportProfileId(''); setImportRouterId(''); setImportResult(null); }} size="md">
           <ModalHeader>
             <ModalTitle>{t('pppoe.importCsv')}</ModalTitle>
-            <ModalDescription>Upload CSV atau Excel file (.xlsx)</ModalDescription>
+            <ModalDescription>{t('pppoe.uploadCsvOrExcel')}</ModalDescription>
           </ModalHeader>
           <ModalBody className="space-y-4">
             <div>
               <ModalLabel required>{t('pppoe.selectFile')}</ModalLabel>
-              <input type="file" accept=".csv,.xlsx,.xls" onChange={(e) => setImportFile(e.target.files?.[0] || null)} className="w-full px-3 py-2 text-xs bg-[#0a0520] border border-[#bc13fe]/40 rounded-lg text-[#e0d0ff] file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-[#bc13fe]/30 file:text-[#e0d0ff] hover:file:bg-[#bc13fe]/50 focus:border-[#00f7ff] focus:ring-1 focus:ring-[#00f7ff]/30 transition-all" />
-              <p className="text-[9px] text-[#e0d0ff]/50 mt-1">Format: CSV atau Excel (.xlsx, .xls)</p>
+              <input type="file" accept=".csv,.xlsx,.xls" onChange={(e) => setImportFile(e.target.files?.[0] || null)} className="w-full px-3 py-2 text-xs bg-background dark:bg-[#0a0520] border border-border dark:border-[#bc13fe]/40 rounded-lg text-foreground file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary/20 dark:file:bg-[#bc13fe]/30 file:text-foreground hover:file:bg-primary/30 dark:hover:file:bg-[#bc13fe]/50 focus:border-primary dark:focus:border-[#00f7ff] focus:ring-1 focus:ring-primary/30 dark:focus:ring-[#00f7ff]/30 transition-all" />
+              <p className="text-[9px] text-muted-foreground mt-1">{t('pppoe.csvExcelFormat')}</p>
             </div>
             <div>
               <ModalLabel required>{t('pppoe.profile')}</ModalLabel>
@@ -998,24 +1172,24 @@ export default function PppoeUsersPage() {
               </ModalSelect>
             </div>
             <div>
-              <ModalLabel>NAS</ModalLabel>
+              <ModalLabel>{t('pppoe.nasLabel')}</ModalLabel>
               <ModalSelect value={importRouterId} onChange={(e) => setImportRouterId(e.target.value)}>
                 <option value="" className="bg-[#0a0520]">{t('pppoe.global')}</option>
                 {routers.map((r) => <option key={r.id} value={r.id} className="bg-[#0a0520]">{r.name}</option>)}
               </ModalSelect>
             </div>
             {importResult && (
-              <div className="p-3 border border-[#bc13fe]/30 rounded-lg bg-[#0a0520]/50 text-xs max-h-60 overflow-y-auto">
-                <div className="flex items-center gap-1 text-[#00ff88] mb-2"><CheckCircle2 className="h-3 w-3" />{importResult.success} {t('common.create')}</div>
+              <div className="p-3 border border-border dark:border-[#bc13fe]/30 rounded-lg bg-muted/30 dark:bg-[#0a0520]/50 text-xs max-h-60 overflow-y-auto">
+                <div className="flex items-center gap-1 text-green-600 dark:text-[#00ff88] mb-2"><CheckCircle2 className="h-3 w-3" />{importResult.success} {t('common.create')}</div>
                 {importResult.failed > 0 && (
-                  <div className="text-[#ff4466]">
+                  <div className="text-red-500 dark:text-[#ff4466]">
                     <div className="font-medium mb-1">{importResult.failed} {t('notifications.failed')}</div>
                     {importResult.errors && importResult.errors.length > 0 && (
                       <div className="space-y-1 mt-2 text-[10px]">
                         {importResult.errors.map((error: any, idx: number) => (
-                          <div key={idx} className="p-1.5 bg-[#ff4466]/10 rounded border border-[#ff4466]/30">
-                            <div className="font-medium text-[#e0d0ff]">Baris {error.line}: {error.username || 'N/A'}</div>
-                            <div className="text-[#ff4466]">{error.error}</div>
+                          <div key={idx} className="p-1.5 bg-red-50 dark:bg-[#ff4466]/10 rounded border border-red-300 dark:border-[#ff4466]/30">
+                            <div className="font-medium text-foreground">Baris {error.line}: {error.username || 'N/A'}</div>
+                            <div className="text-red-500 dark:text-[#ff4466]">{error.error}</div>
                           </div>
                         ))}
                       </div>
@@ -1040,8 +1214,8 @@ export default function PppoeUsersPage() {
             <div className="w-14 h-14 bg-[#ff4466]/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-[#ff4466]/50">
               <Trash2 className="w-7 h-7 text-[#ff6b8a]" />
             </div>
-            <h2 className="text-base font-bold text-white mb-2">{t('pppoe.deleteUser')}</h2>
-            <p className="text-xs text-[#e0d0ff]/70">{t('pppoe.deleteConfirm')}</p>
+            <h2 className="text-base font-bold text-foreground mb-2">{t('pppoe.deleteUser')}</h2>
+            <p className="text-xs text-muted-foreground">{t('pppoe.deleteConfirm')}</p>
           </ModalBody>
           <ModalFooter className="justify-center">
             <ModalButton variant="secondary" onClick={() => setDeleteUserId(null)}>{t('common.cancel')}</ModalButton>
@@ -1052,13 +1226,13 @@ export default function PppoeUsersPage() {
         {/* Sync from MikroTik Dialog */}
         <SimpleModal isOpen={isSyncDialogOpen} onClose={() => { setIsSyncDialogOpen(false); setSyncPreview(null); setSyncResult(null); }} size="xl">
           <ModalHeader>
-            <ModalTitle className="flex items-center gap-2"><RefreshCcw className="h-4 w-4 text-[#00f7ff]" />Sync PPPoE dari MikroTik</ModalTitle>
-            <ModalDescription>Import PPPoE secrets dari MikroTik ke database RADIUS</ModalDescription>
+            <ModalTitle className="flex items-center gap-2"><RefreshCcw className="h-4 w-4 text-[#00f7ff]" />{t('pppoe.syncPppoeTitle')}</ModalTitle>
+            <ModalDescription>{t('pppoe.syncPppoeDesc')}</ModalDescription>
           </ModalHeader>
           <ModalBody className="space-y-4 max-h-[60vh] overflow-y-auto">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <ModalLabel required>Pilih Router</ModalLabel>
+                <ModalLabel required>{t('pppoe.selectRouter')}</ModalLabel>
                 <ModalSelect value={syncRouterId} onChange={(e) => { setSyncRouterId(e.target.value); setSyncPreview(null); setSyncResult(null); }}>
                   <option value="" className="bg-[#0a0520]">-- Pilih Router --</option>
                   {routers.map((r) => <option key={r.id} value={r.id} className="bg-[#0a0520]">{r.name} ({r.ipAddress})</option>)}
@@ -1072,60 +1246,60 @@ export default function PppoeUsersPage() {
                 </ModalSelect>
               </div>
             </div>
-            <button onClick={handleSyncPreview} disabled={!syncRouterId || syncLoading} className="w-full px-3 py-2 text-xs bg-gradient-to-r from-[#00f7ff] to-[#bc13fe] hover:from-[#00f7ff]/80 hover:to-[#bc13fe]/80 text-white rounded-lg shadow-[0_0_15px_rgba(0,247,255,0.4)] disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2 transition-all">
+            <button onClick={handleSyncPreview} disabled={!syncRouterId || syncLoading} className="w-full px-3 py-2 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-md disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2 transition-all dark:bg-gradient-to-r dark:from-[#00f7ff] dark:to-[#bc13fe] dark:hover:from-[#00f7ff]/80 dark:hover:to-[#bc13fe]/80 dark:text-white dark:shadow-[0_0_15px_rgba(0,247,255,0.4)]">
               {syncLoading ? (<><RefreshCcw className="h-3 w-3 animate-spin" />{t('pppoe.fetchingFromMikrotik')}</>) : (<><Search className="h-3 w-3" />{t('pppoe.previewSecrets')}</>)}
             </button>
             {syncPreview && (
-              <div className="border border-[#bc13fe]/40 rounded-lg overflow-hidden bg-[#0a0520]/50">
-                <div className="px-3 py-2 bg-[#bc13fe]/10 border-b border-[#bc13fe]/30 flex items-center justify-between">
+              <div className="border border-border dark:border-[#bc13fe]/40 rounded-lg overflow-hidden bg-muted/30 dark:bg-[#0a0520]/50">
+                <div className="px-3 py-2 bg-muted/50 dark:bg-[#bc13fe]/10 border-b border-border dark:border-[#bc13fe]/30 flex items-center justify-between">
                   <div className="text-xs">
-                    <span className="font-medium text-[#e0d0ff]">{syncPreview.router?.name}</span>
-                    <span className="text-[#e0d0ff]/60 ml-2">Total: {syncPreview.data?.total} | Baru: <span className="text-[#00ff88] font-medium">{syncPreview.data?.new}</span> | Sudah ada: <span className="text-[#ff8c00]">{syncPreview.data?.existing}</span></span>
+                    <span className="font-medium text-foreground">{syncPreview.router?.name}</span>
+                    <span className="text-muted-foreground ml-2">Total: {syncPreview.data?.total} | Baru: <span className="text-green-600 dark:text-[#00ff88] font-medium">{syncPreview.data?.new}</span> | Sudah ada: <span className="text-orange-500 dark:text-[#ff8c00]">{syncPreview.data?.existing}</span></span>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => toggleSyncSelectAll(true)} className="text-[10px] text-[#00f7ff] hover:underline">{t('pppoe.selectAllNew')}</button>
-                    <button onClick={() => toggleSyncSelectAll(false)} className="text-[10px] text-[#e0d0ff]/50 hover:underline">{t('pppoe.deselectAll')}</button>
+                    <button onClick={() => toggleSyncSelectAll(true)} className="text-[10px] text-primary dark:text-[#00f7ff] hover:underline">{t('pppoe.selectAllNew')}</button>
+                    <button onClick={() => toggleSyncSelectAll(false)} className="text-[10px] text-muted-foreground hover:underline">{t('pppoe.deselectAll')}</button>
                   </div>
                 </div>
                 <div className="max-h-60 overflow-y-auto">
                   <table className="w-full text-xs">
-                    <thead className="bg-[#0a0520] sticky top-0">
-                      <tr><th className="px-2 py-1.5 w-8"></th><th className="px-2 py-1.5 text-left text-[#e0d0ff]">Username</th><th className="px-2 py-1.5 text-left text-[#e0d0ff]">Profile (MikroTik)</th><th className="px-2 py-1.5 text-left text-[#e0d0ff]">IP</th><th className="px-2 py-1.5 text-left text-[#e0d0ff]">Status</th></tr>
+                    <thead className="bg-muted dark:bg-[#0a0520] sticky top-0">
+                      <tr><th className="px-2 py-1.5 w-8"></th><th className="px-2 py-1.5 text-left text-foreground">{t('pppoe.username')}</th><th className="px-2 py-1.5 text-left text-foreground">{t('pppoe.profileMikrotik')}</th><th className="px-2 py-1.5 text-left text-foreground">{t('pppoe.ipAddress')}</th><th className="px-2 py-1.5 text-left text-foreground">{t('pppoe.statusLabel')}</th></tr>
                     </thead>
-                    <tbody className="divide-y divide-[#bc13fe]/20">
+                    <tbody className="divide-y divide-border dark:divide-[#bc13fe]/20">
                       {syncPreview.data?.secrets?.map((secret: any) => (
-                        <tr key={secret.username} className={`${secret.isNew ? 'bg-[#00ff88]/5' : 'bg-[#bc13fe]/5'} ${secret.disabled ? 'opacity-50' : ''}`}>
-                          <td className="px-2 py-1.5 text-center"><input type="checkbox" checked={syncSelectedUsers.has(secret.username)} onChange={() => toggleSyncSelectUser(secret.username)} disabled={!secret.isNew || secret.disabled} className="w-3 h-3 rounded accent-[#00f7ff]" /></td>
-                          <td className="px-2 py-1.5 font-mono text-[#e0d0ff]">{secret.username}</td>
-                          <td className="px-2 py-1.5 text-[#e0d0ff]/60">{secret.profile}</td>
-                          <td className="px-2 py-1.5 text-[#e0d0ff]/60">{secret.remoteAddress || '-'}</td>
+                        <tr key={secret.username} className={`${secret.isNew ? 'bg-green-50 dark:bg-[#00ff88]/5' : 'bg-muted/50 dark:bg-[#bc13fe]/5'} ${secret.disabled ? 'opacity-50' : ''}`}>
+                          <td className="px-2 py-1.5 text-center"><input type="checkbox" checked={syncSelectedUsers.has(secret.username)} onChange={() => toggleSyncSelectUser(secret.username)} disabled={!secret.isNew || secret.disabled} className="w-3 h-3 rounded accent-primary dark:accent-[#00f7ff]" /></td>
+                          <td className="px-2 py-1.5 font-mono text-foreground">{secret.username}</td>
+                          <td className="px-2 py-1.5 text-muted-foreground">{secret.profile}</td>
+                          <td className="px-2 py-1.5 text-muted-foreground">{secret.remoteAddress || '-'}</td>
                           <td className="px-2 py-1.5">
-                            {secret.disabled ? (<span className="px-1.5 py-0.5 bg-[#e0d0ff]/10 text-[#e0d0ff]/50 rounded text-[9px]">Disabled</span>) : secret.isNew ? (<span className="px-1.5 py-0.5 bg-[#00ff88]/20 text-[#00ff88] rounded text-[9px]">{t('pppoe.new')}</span>) : (<span className="px-1.5 py-0.5 bg-[#ff8c00]/20 text-[#ff8c00] rounded text-[9px]">{t('pppoe.existing')}</span>)}
+                            {secret.disabled ? (<span className="px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-[9px]">{t('pppoe.disabledLabel')}</span>) : secret.isNew ? (<span className="px-1.5 py-0.5 bg-green-100 text-green-600 dark:bg-[#00ff88]/20 dark:text-[#00ff88] rounded text-[9px]">{t('pppoe.new')}</span>) : (<span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 dark:bg-[#ff8c00]/20 dark:text-[#ff8c00] rounded text-[9px]">{t('pppoe.existing')}</span>)}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                {syncSelectedUsers.size > 0 && (<div className="px-3 py-2 bg-[#00f7ff]/10 border-t border-[#00f7ff]/30 text-xs text-[#00f7ff]">✓ {syncSelectedUsers.size} {t('pppoe.usersSelectedToImport')}</div>)}
+                {syncSelectedUsers.size > 0 && (<div className="px-3 py-2 bg-primary/10 dark:bg-[#00f7ff]/10 border-t border-primary/30 dark:border-[#00f7ff]/30 text-xs text-primary dark:text-[#00f7ff]">✓ {syncSelectedUsers.size} {t('pppoe.usersSelectedToImport')}</div>)}
               </div>
             )}
             {syncResult && (
-              <div className={`p-3 rounded-lg border ${syncResult.stats?.failed > 0 ? 'bg-[#ff8c00]/10 border-[#ff8c00]/30' : 'bg-[#00ff88]/10 border-[#00ff88]/30'}`}>
+              <div className={`p-3 rounded-lg border ${syncResult.stats?.failed > 0 ? 'bg-orange-50 dark:bg-[#ff8c00]/10 border-orange-300 dark:border-[#ff8c00]/30' : 'bg-green-50 dark:bg-[#00ff88]/10 border-green-300 dark:border-[#00ff88]/30'}`}>
                 <div className="text-xs space-y-1">
-                  <div className="font-medium text-[#e0d0ff]">{syncResult.message}</div>
+                  <div className="font-medium text-foreground">{syncResult.message}</div>
                   <div className="flex gap-4 text-[10px]">
-                    <span className="text-[#00ff88]">✓ Imported: {syncResult.stats?.imported}</span>
-                    <span className="text-[#ff8c00]">⊘ Skipped: {syncResult.stats?.skipped}</span>
-                    <span className="text-[#ff4466]">✗ Failed: {syncResult.stats?.failed}</span>
+                    <span className="text-green-600 dark:text-[#00ff88]">✓ Imported: {syncResult.stats?.imported}</span>
+                    <span className="text-orange-500 dark:text-[#ff8c00]">⊘ Skipped: {syncResult.stats?.skipped}</span>
+                    <span className="text-red-500 dark:text-[#ff4466]">✗ Failed: {syncResult.stats?.failed}</span>
                   </div>
-                  {syncResult.errors?.length > 0 && (<div className="mt-2 text-[10px] text-[#ff4466]">Errors: {syncResult.errors.map((e: any) => `${e.username}: ${e.error}`).join(', ')}</div>)}
+                  {syncResult.errors?.length > 0 && (<div className="mt-2 text-[10px] text-red-500 dark:text-[#ff4466]">Errors: {syncResult.errors.map((e: any) => `${e.username}: ${e.error}`).join(', ')}</div>)}
                 </div>
               </div>
             )}
-            <div className="p-3 bg-[#00f7ff]/10 border border-[#00f7ff]/30 rounded-lg text-[10px] text-[#00f7ff]">
+            <div className="p-3 bg-primary/10 dark:bg-[#00f7ff]/10 border border-primary/30 dark:border-[#00f7ff]/30 rounded-lg text-[10px] text-primary dark:text-[#00f7ff]">
               <p className="font-medium mb-1">ℹ️ {t('pppoe.infoTitle')}</p>
-              <ul className="list-disc list-inside space-y-0.5 text-[#00f7ff]/80">
+              <ul className="list-disc list-inside space-y-0.5 text-primary/80 dark:text-[#00f7ff]/80">
                 <li>{t('pppoe.syncInfo1')}</li>
                 <li>{t('pppoe.syncInfo2')}</li>
                 <li>{t('pppoe.syncInfo3')}</li>
@@ -1150,18 +1324,18 @@ export default function PppoeUsersPage() {
           </ModalHeader>
           {selectedUserForExtend && (
             <ModalBody className="space-y-4">
-              <div className="bg-[#0a0520]/50 rounded-lg p-3 space-y-2 text-xs border border-[#bc13fe]/30">
-                <div className="flex justify-between"><span className="text-[#e0d0ff]/60">{t('pppoe.currentPackage')}:</span><span className="font-medium text-[#e0d0ff]">{selectedUserForExtend.profile.name}</span></div>
-                <div className="flex justify-between"><span className="text-[#e0d0ff]/60">{t('pppoe.activeUntil')}:</span><span className={selectedUserForExtend.expiredAt && isExpired(selectedUserForExtend.expiredAt) ? 'text-[#ff4466] font-medium' : 'text-[#e0d0ff]'}>{selectedUserForExtend.expiredAt ? formatWIB(selectedUserForExtend.expiredAt, 'dd/MM/yyyy HH:mm') : '-'}</span></div>
+              <div className="bg-muted/30 dark:bg-[#0a0520]/50 rounded-lg p-3 space-y-2 text-xs border border-border dark:border-[#bc13fe]/30">
+                <div className="flex justify-between"><span className="text-muted-foreground">{t('pppoe.currentPackage')}:</span><span className="font-medium text-foreground">{selectedUserForExtend.profile.name}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t('pppoe.activeUntil')}:</span><span className={selectedUserForExtend.expiredAt && isExpired(selectedUserForExtend.expiredAt) ? 'text-red-500 dark:text-[#ff4466] font-medium' : 'text-foreground'}>{selectedUserForExtend.expiredAt ? formatWIB(selectedUserForExtend.expiredAt, 'dd/MM/yyyy HH:mm') : '-'}</span></div>
               </div>
               <div>
                 <ModalLabel required>{t('pppoe.selectPackage')}</ModalLabel>
                 <ModalSelect value={selectedProfileForExtend} onChange={(e) => setSelectedProfileForExtend(e.target.value)}>
                   {profiles.map((p) => (<option key={p.id} value={p.id} className="bg-[#0a0520]">{p.name} - Rp {p.price.toLocaleString('id-ID')}{p.id === selectedUserForExtend.profile.id ? ` ${t('pppoe.currentPackageLabel')}` : ''}</option>))}
                 </ModalSelect>
-                <p className="text-[10px] text-[#e0d0ff]/50 mt-1">{selectedProfileForExtend !== selectedUserForExtend.profile.id ? `⚠️ ${t('pppoe.packageWillChange')}` : t('pppoe.extendSamePackage')}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{selectedProfileForExtend !== selectedUserForExtend.profile.id ? `⚠️ ${t('pppoe.packageWillChange')}` : t('pppoe.extendSamePackage')}</p>
               </div>
-              <div className="bg-[#00f7ff]/10 border border-[#00f7ff]/30 rounded-lg p-3 text-xs"><p className="text-[#00f7ff]">ℹ️ {t('pppoe.extendPaymentInfo')}</p></div>
+              <div className="bg-primary/10 dark:bg-[#00f7ff]/10 border border-primary/30 dark:border-[#00f7ff]/30 rounded-lg p-3 text-xs"><p className="text-primary dark:text-[#00f7ff]">ℹ️ {t('pppoe.extendPaymentInfo')}</p></div>
             </ModalBody>
           )}
           <ModalFooter>
@@ -1182,7 +1356,7 @@ export default function PppoeUsersPage() {
             {notificationType === 'outage' && (
               <>
                 <div>
-                  <ModalLabel required>Status</ModalLabel>
+                  <ModalLabel required>{t('pppoe.statusLabel')}</ModalLabel>
                   <ModalSelect value={broadcastData.status} onChange={(e) => setBroadcastData({ ...broadcastData, status: e.target.value })}>
                     <option value="in_progress" className="bg-[#0a0520]">🔧 {t('pppoe.outageInProgress')}</option>
                     <option value="resolved" className="bg-[#0a0520]">✅ {t('pppoe.outageResolved')}</option>
@@ -1220,15 +1394,15 @@ export default function PppoeUsersPage() {
               <div className="space-y-2 mt-2">
                 <label className={`flex items-center gap-2 p-2 border-2 rounded-lg cursor-pointer transition-all ${broadcastData.notificationMethod === 'whatsapp' ? 'border-[#25D366] bg-[#25D366]/10 shadow-[0_0_10px_rgba(37,211,102,0.3)]' : 'border-[#bc13fe]/30 hover:border-[#25D366]/50'}`}>
                   <input type="radio" value="whatsapp" checked={broadcastData.notificationMethod === 'whatsapp'} onChange={(e) => setBroadcastData({ ...broadcastData, notificationMethod: e.target.value })} className="w-3.5 h-3.5 accent-[#25D366]" />
-                  <span className="text-xs text-[#e0d0ff]">{t('pppoe.whatsappOnly')}</span>
+                  <span className="text-xs text-foreground">{t('pppoe.whatsappOnly')}</span>
                 </label>
                 <label className={`flex items-center gap-2 p-2 border-2 rounded-lg cursor-pointer transition-all ${broadcastData.notificationMethod === 'email' ? 'border-[#00f7ff] bg-[#00f7ff]/10 shadow-[0_0_10px_rgba(0,247,255,0.3)]' : 'border-[#bc13fe]/30 hover:border-[#00f7ff]/50'}`}>
                   <input type="radio" value="email" checked={broadcastData.notificationMethod === 'email'} onChange={(e) => setBroadcastData({ ...broadcastData, notificationMethod: e.target.value })} className="w-3.5 h-3.5 accent-[#00f7ff]" />
-                  <span className="text-xs text-[#e0d0ff]">{t('pppoe.emailOnly')}</span>
+                  <span className="text-xs text-foreground">{t('pppoe.emailOnly')}</span>
                 </label>
                 <label className={`flex items-center gap-2 p-2 border-2 rounded-lg cursor-pointer transition-all ${broadcastData.notificationMethod === 'both' ? 'border-[#bc13fe] bg-[#bc13fe]/10 shadow-[0_0_10px_rgba(188,19,254,0.3)]' : 'border-[#bc13fe]/30 hover:border-[#bc13fe]/50'}`}>
                   <input type="radio" value="both" checked={broadcastData.notificationMethod === 'both'} onChange={(e) => setBroadcastData({ ...broadcastData, notificationMethod: e.target.value })} className="w-3.5 h-3.5 accent-[#bc13fe]" />
-                  <span className="text-xs text-[#e0d0ff]">{t('pppoe.whatsappAndEmail')}</span>
+                  <span className="text-xs text-foreground">{t('pppoe.whatsappAndEmail')}</span>
                 </label>
               </div>
             </div>

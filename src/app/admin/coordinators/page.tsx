@@ -172,7 +172,7 @@ export default function CoordinatorsManagementPage() {
 
   if (loading && coordinators.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -183,7 +183,7 @@ export default function CoordinatorsManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -193,11 +193,11 @@ export default function CoordinatorsManagementPage() {
       <div className="relative z-10 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <UserCheck className="h-5 w-5 text-[#00f7ff]" />
               {t('coordinator.management')}
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               {t('coordinator.managementDesc')}
             </p>
           </div>
@@ -205,13 +205,13 @@ export default function CoordinatorsManagementPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+          <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#00f7ff] uppercase tracking-wide">
                   {t('coordinator.totalCoordinators')}
                 </p>
-                <p className="text-2xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] mt-1">
+                <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">
                   {stats.total}
                 </p>
               </div>
@@ -293,8 +293,91 @@ export default function CoordinatorsManagementPage() {
           </div>
         </div>
 
-        {/* Coordinators Table */}
-        <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3">
+          {coordinators.length === 0 ? (
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-6 text-center text-muted-foreground text-sm">
+              {t('coordinator.noCoordinators')}
+            </div>
+          ) : (
+            coordinators.map((coordinator) => (
+              <div
+                key={coordinator.id}
+                className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3"
+              >
+                {/* Header: Name + Status */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <UserCheck className="h-4 w-4 text-[#00f7ff] shrink-0" />
+                    <span className="text-sm font-semibold text-foreground truncate">
+                      {coordinator.name}
+                    </span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 text-[10px] font-medium rounded-full shrink-0 ${
+                      coordinator.isActive
+                        ? 'bg-success/20 text-success'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {coordinator.isActive ? t('common.active') : t('common.inactive')}
+                  </span>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs mb-3">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{t('coordinator.contact')}</span>
+                    <div className="flex items-center gap-1 text-foreground mt-0.5">
+                      <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="truncate">{coordinator.phoneNumber}</span>
+                    </div>
+                    {coordinator.email && (
+                      <div className="flex items-center gap-1 text-muted-foreground text-[10px] mt-0.5">
+                        <Mail className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{coordinator.email}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{t('coordinator.lastLogin')}</span>
+                    <div className="text-foreground mt-0.5">
+                      {coordinator.lastLoginAt ? (
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                          {new Date(coordinator.lastLoginAt).toLocaleDateString('id-ID')}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-2 border-t border-[#bc13fe]/10">
+                  <button
+                    onClick={() => handleEdit(coordinator)}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    {t('common.edit')}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(coordinator)}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {t('common.delete')}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Coordinators Table (Desktop) */}
+        <div className="hidden md:block bg-card rounded-lg shadow-sm border border-border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted">
@@ -404,25 +487,25 @@ export default function CoordinatorsManagementPage() {
               <div>
                 <ModalLabel required>{t('coordinator.phoneNumber')}</ModalLabel>
                 <ModalInput type="tel" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="08123456789" required />
-                <p className="text-[10px] text-[#e0d0ff]/60 mt-1">{t('coordinator.phoneHelp')}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{t('coordinator.phoneHelp')}</p>
               </div>
               <div>
                 <ModalLabel>{t('common.email')}</ModalLabel>
                 <ModalInput type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
               </div>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-sm text-[#e0d0ff] cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                   <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff] w-4 h-4" />
                   <span>{t('common.active')}</span>
                 </label>
               </div>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-sm text-[#e0d0ff] cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                   <input type="checkbox" checked={formData.requireOtp} onChange={(e) => setFormData({ ...formData, requireOtp: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff] w-4 h-4" />
                   <span>{t('coordinator.requireOtp')}</span>
                 </label>
               </div>
-              <p className="text-[10px] text-[#e0d0ff]/50">{t('coordinator.requireOtpHelp')}</p>
+              <p className="text-[10px] text-muted-foreground">{t('coordinator.requireOtpHelp')}</p>
             </ModalBody>
             <ModalFooter>
               <ModalButton type="button" variant="secondary" onClick={() => { setIsDialogOpen(false); setEditingCoordinator(null); resetForm(); }}>{t('common.cancel')}</ModalButton>

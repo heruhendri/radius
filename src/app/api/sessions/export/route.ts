@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 import { generateExcelBuffer, formatDateExport, formatBytes, formatDuration, generatePDFBuffer } from '@/lib/utils/export';
-import { checkAuth } from '@/lib/apiAuth';
+import { checkAuth } from '@/server/middleware/api-auth';
 
 export async function GET(req: NextRequest) {
   const auth = await checkAuth();

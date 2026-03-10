@@ -1,9 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
+import { clearIsolationSettingsCache } from '@/server/services/isolation.service';
 
 // GET - Get isolation settings
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.log('[Isolation API] GET request received');
     
     const company = await prisma.company.findFirst({
@@ -47,6 +54,10 @@ export async function GET(request: NextRequest) {
 // PUT - Update isolation settings
 export async function PUT(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await request.json();
     
     const {
@@ -102,6 +113,18 @@ export async function PUT(request: NextRequest) {
         gracePeriodDays: gracePeriodDays ?? company.gracePeriodDays,
       }
     });
+
+    // Sync new rate limit to RADIUS radgroupreply for 'isolir' group
+    if (isolationRateLimit) {
+      await prisma.$executeRaw`
+        UPDATE radgroupreply
+        SET value = ${isolationRateLimit}
+        WHERE groupname = 'isolir' AND attribute = 'Mikrotik-Rate-Limit'
+      `
+    }
+
+    // Clear isolation settings cache so cron picks up new values immediately
+    clearIsolationSettingsCache()
 
     return NextResponse.json({
       success: true,

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { MapPin, Radio, Box, Server, Users, Filter, RefreshCw, Layers, Eye, EyeOff, Edit, Phone, Mail, MapPinned, Wifi, WifiOff, AlertTriangle, CheckCircle, XCircle, Navigation, Crosshair, Map, Loader2 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import UserDetailModal from '@/components/UserDetailModal';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -147,6 +147,7 @@ interface PingResult {
 export default function NetworkMapPage() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { addToast } = useToast();
   const mapRef = useRef<any>(null);
   const [olts, setOlts] = useState<OLT[]>([]);
   const [odcs, setOdcs] = useState<ODC[]>([]);
@@ -404,7 +405,7 @@ export default function NetworkMapPage() {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      Swal.fire(t('common.error'), t('network.map.failedLoadNetwork'), 'error');
+      addToast({ type: 'error', title: t('common.error'), description: t('network.map.failedLoadNetwork') });
     } finally {
       setLoading(false);
     }
@@ -459,27 +460,21 @@ export default function NetworkMapPage() {
         throw new Error(error.error || t('common.failedToUpdate'));
       }
 
-      Swal.fire({
-        icon: 'success',
-        title: t('common.success'),
-        text: t('network.map.customerUpdated'),
-        timer: 2000,
-        showConfirmButton: false,
-      });
+      addToast({ type: 'success', title: t('common.success'), description: t('network.map.customerUpdated'), duration: 2000 });
 
       setEditModalOpen(false);
       setEditingCustomer(null);
       fetchData(); // Refresh data
     } catch (error) {
       console.error('Error saving customer:', error);
-      Swal.fire(t('common.error'), error instanceof Error ? error.message : t('common.failedToSave'), 'error');
+      addToast({ type: 'error', title: t('common.error'), description: error instanceof Error ? error.message : t('common.failedToSave') });
     }
   };
 
   // Detect user location
   const detectUserLocation = () => {
     if (!navigator.geolocation) {
-      Swal.fire(t('common.error'), t('network.map.geolocationNotSupported'), 'error');
+      addToast({ type: 'error', title: t('common.error'), description: t('network.map.geolocationNotSupported') });
       return;
     }
 
@@ -495,16 +490,7 @@ export default function NetworkMapPage() {
           mapRef.current.flyTo([latitude, longitude], 16, { duration: 1.5 });
         }
 
-        Swal.fire({
-          icon: 'success',
-          title: 'Lokasi Ditemukan',
-          html: `<div class="text-sm">
-            <p><strong>Latitude:</strong> ${latitude.toFixed(6)}</p>
-            <p><strong>Longitude:</strong> ${longitude.toFixed(6)}</p>
-          </div>`,
-          timer: 3000,
-          showConfirmButton: false,
-        });
+        addToast({ type: 'success', title: 'Lokasi Ditemukan', description: `Latitude: ${latitude.toFixed(6)}, Longitude: ${longitude.toFixed(6)}`, duration: 3000 });
       },
       (error) => {
         setLocatingUser(false);
@@ -522,12 +508,7 @@ export default function NetworkMapPage() {
             message = 'Deteksi lokasi membutuhkan waktu lebih lama. Pastikan:\n\n• GPS perangkat aktif\n• Berada di area terbuka\n• Izin lokasi sudah diberikan\n\nCoba lagi dalam beberapa saat.';
             break;
         }
-        Swal.fire({
-          icon: error.code === error.TIMEOUT ? 'warning' : 'error',
-          title: title,
-          text: message,
-          confirmButtonText: 'OK'
-        });
+        addToast({ type: error.code === error.TIMEOUT ? 'warning' : 'error', title: title, description: message });
       },
       { enableHighAccuracy: true, timeout: 30000, maximumAge: 60000 }
     );
@@ -822,28 +803,28 @@ export default function NetworkMapPage() {
 
   if (!mapReady) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
         <div className="text-center relative z-10">
           <Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] mx-auto mb-4" />
-          <p className="text-[#e0d0ff]/80">{t('common.loadingMap')}</p>
+          <p className="text-muted-foreground">{t('common.loadingMap')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
               <MapPin className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.8)]" />
               Network Map
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               {t('common.networkVisualization')}
             </p>
           </div>
@@ -880,56 +861,56 @@ export default function NetworkMapPage() {
               <Server className="w-4 h-4" />
               <span className="text-xs font-medium">OLT</span>
             </div>
-            <p className="text-2xl font-bold text-destructive dark:text-red-300 mt-1">{stats.totalOlts}</p>
+            <p className="text-lg sm:text-2xl font-bold text-destructive dark:text-red-300 mt-1">{stats.totalOlts}</p>
           </div>
           <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
             <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
               <Box className="w-4 h-4" />
               <span className="text-xs font-medium">ODC</span>
             </div>
-            <p className="text-2xl font-bold text-orange-700 dark:text-orange-300 mt-1">{stats.totalOdcs}</p>
+            <p className="text-lg sm:text-2xl font-bold text-orange-700 dark:text-orange-300 mt-1">{stats.totalOdcs}</p>
           </div>
           <div className="bg-success/10 rounded-lg p-3 border border-success/30">
             <div className="flex items-center gap-2 text-success dark:text-success">
               <Radio className="w-4 h-4" />
               <span className="text-xs font-medium">ODP</span>
             </div>
-            <p className="text-2xl font-bold text-success dark:text-green-300 mt-1">{stats.totalOdps}</p>
+            <p className="text-lg sm:text-2xl font-bold text-success dark:text-green-300 mt-1">{stats.totalOdps}</p>
           </div>
           <div className="bg-primary/10 rounded-lg p-3 border border-primary/30">
             <div className="flex items-center gap-2 text-primary dark:text-primary">
               <Users className="w-4 h-4" />
               <span className="text-xs font-medium">Total GPS</span>
             </div>
-            <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1">{stats.totalCustomers}</p>
+            <p className="text-lg sm:text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1">{stats.totalCustomers}</p>
           </div>
           <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
               <Wifi className="w-4 h-4" />
               <span className="text-xs font-medium">Online</span>
             </div>
-            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">{stats.onlineCustomers}</p>
+            <p className="text-lg sm:text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">{stats.onlineCustomers}</p>
           </div>
           <div className="bg-sky-50 dark:bg-sky-900/20 rounded-lg p-3 border border-sky-200 dark:border-sky-800">
             <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400">
               <CheckCircle className="w-4 h-4" />
               <span className="text-xs font-medium">Aktif</span>
             </div>
-            <p className="text-2xl font-bold text-sky-700 dark:text-sky-300 mt-1">{stats.activeCustomers}</p>
+            <p className="text-lg sm:text-2xl font-bold text-sky-700 dark:text-sky-300 mt-1">{stats.activeCustomers}</p>
           </div>
           <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-200 dark:border-amber-800">
             <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
               <AlertTriangle className="w-4 h-4" />
               <span className="text-xs font-medium">Isolir</span>
             </div>
-            <p className="text-2xl font-bold text-amber-700 dark:text-amber-300 mt-1">{stats.isolirCustomers}</p>
+            <p className="text-lg sm:text-2xl font-bold text-amber-700 dark:text-amber-300 mt-1">{stats.isolirCustomers}</p>
           </div>
           <div className="bg-rose-50 dark:bg-rose-900/20 rounded-lg p-3 border border-rose-200 dark:border-rose-800">
             <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
               <XCircle className="w-4 h-4" />
               <span className="text-xs font-medium">Nunggak</span>
             </div>
-            <p className="text-2xl font-bold text-rose-700 dark:text-rose-300 mt-1">{stats.expiredCustomers}</p>
+            <p className="text-lg sm:text-2xl font-bold text-rose-700 dark:text-rose-300 mt-1">{stats.expiredCustomers}</p>
           </div>
         </div>
 

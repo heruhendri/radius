@@ -1,9 +1,15 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { removeVoucherFromRadius } from '@/lib/hotspot-radius-sync'
+﻿import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/server/auth/config'
+import { prisma } from '@/server/db/client'
+import { removeVoucherFromRadius } from '@/server/services/radius/hotspot-sync.service'
 
 export async function POST() {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     // Get expired voucher codes before deletion
     const expiredVouchers = await prisma.hotspotVoucher.findMany({
       where: { status: 'EXPIRED' },

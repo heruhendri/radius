@@ -19,7 +19,7 @@ warnings=0
 passed=0
 
 # 1. Check .env file
-echo "[1/10] Checking .env security..."
+echo "[1/12] Checking .env security..."
 if [ ! -f ".env" ]; then
     echo -e "  ${RED}❌ CRITICAL: .env file not found!${NC}"
     ((issues++))
@@ -46,7 +46,7 @@ fi
 
 # 2. Check .env in .gitignore
 echo ""
-echo "[2/10] Checking .gitignore..."
+echo "[2/12] Checking .gitignore..."
 if grep -q "^\.env$" .gitignore; then
     echo -e "  ${GREEN}✅ .env is in .gitignore${NC}"
     ((passed++))
@@ -57,7 +57,7 @@ fi
 
 # 3. Check for hardcoded secrets
 echo ""
-echo "[3/10] Scanning for hardcoded secrets..."
+echo "[3/12] Scanning for hardcoded secrets..."
 found=0
 for file in $(find src -type f -name "*.ts" -o -name "*.tsx" 2>/dev/null); do
     if grep -iE "(password|secret|token|api_key)\s*=\s*['\"][^'\"]{10,}" "$file" > /dev/null 2>&1; then
@@ -78,7 +78,7 @@ fi
 
 # 4. Check file permissions (Linux/Mac only)
 echo ""
-echo "[4/10] Checking file permissions..."
+echo "[4/12] Checking file permissions..."
 if [ -f ".env" ]; then
     if [ "$(uname)" != "MINGW64_NT" ] && [ "$(uname)" != "MSYS_NT" ]; then
         perms=$(stat -c "%a" .env 2>/dev/null || stat -f "%Lp" .env 2>/dev/null)
@@ -97,7 +97,7 @@ fi
 
 # 5. Check for exposed ports
 echo ""
-echo "[5/10] Checking exposed services..."
+echo "[5/12] Checking exposed services..."
 if grep -q "0\.0\.0\.0" src/**/*.ts 2>/dev/null; then
     echo -e "  ${YELLOW}⚠️  WARNING: Services binding to 0.0.0.0 (exposed to network)${NC}"
     ((warnings++))
@@ -108,7 +108,7 @@ fi
 
 # 6. Check Next.js security headers
 echo ""
-echo "[6/10] Checking Next.js security headers..."
+echo "[6/12] Checking Next.js security headers..."
 if grep -q "X-Frame-Options\|X-Content-Type-Options" next.config.ts; then
     echo -e "  ${GREEN}✅ Security headers configured${NC}"
     ((passed++))
@@ -119,7 +119,7 @@ fi
 
 # 7. Check for debug code
 echo ""
-echo "[7/10] Scanning for debug code..."
+echo "[7/12] Scanning for debug code..."
 debug_count=$(grep -r "console\.log\|debugger\|console\.debug" src/ 2>/dev/null | wc -l)
 if [ $debug_count -gt 50 ]; then
     echo -e "  ${YELLOW}⚠️  WARNING: Found $debug_count console.log statements${NC}"
@@ -134,7 +134,7 @@ fi
 
 # 8. Check authentication on API routes
 echo ""
-echo "[8/10] Checking API authentication..."
+echo "[8/12] Checking API authentication..."
 unauth_apis=$(find src/app/api -name "route.ts" -type f -exec grep -L "getServerSession\|checkAuth" {} \; 2>/dev/null | wc -l)
 if [ $unauth_apis -gt 10 ]; then
     echo -e "  ${YELLOW}⚠️  WARNING: $unauth_apis API routes may lack authentication${NC}"
@@ -147,7 +147,7 @@ fi
 
 # 9. Check for SQL injection vulnerabilities
 echo ""
-echo "[9/10] Scanning for SQL injection risks..."
+echo "[9/12] Scanning for SQL injection risks..."
 if grep -r "prisma\.\$executeRawUnsafe\|mysql\.query.*\${" src/ 2>/dev/null | grep -v "\/\/" > /dev/null; then
     echo -e "  ${RED}❌ CRITICAL: Potential SQL injection vulnerabilities found!${NC}"
     echo "    Use parameterized queries only"
@@ -159,7 +159,7 @@ fi
 
 # 10. Check CORS configuration
 echo ""
-echo "[10/10] Checking CORS configuration..."
+echo "[10/12] Checking CORS configuration..."
 if grep -r "Access-Control-Allow-Origin.*\*" src/ 2>/dev/null > /dev/null; then
     echo -e "  ${YELLOW}⚠️  WARNING: CORS allows all origins (*)${NC}"
     echo "    Restrict to specific domains in production"
@@ -169,7 +169,44 @@ else
     ((passed++))
 fi
 
-# Summary
+# 11. Check for Firebase private key at root (CRITICAL)
+echo ""
+echo "[11/12] Checking Firebase private key exposure..."
+fb_exposed=0
+for f in salfanet-radius-firebase-adminsdk*.json *-adminsdk-*.json; do
+    if [ -f "$f" ]; then
+        echo -e "  ${RED}❌ CRITICAL: Firebase service account key exposed at root: $f${NC}"
+        echo "    Run: mv $f src/lib/firebase-service-account.json && git rm --cached $f"
+        ((issues++))
+        fb_exposed=1
+    fi
+done
+if [ -f "google-services.json" ]; then
+    echo -e "  ${YELLOW}⚠️  WARNING: google-services.json exposed at root (belongs in mobile-app only)${NC}"
+    ((warnings++))
+    fb_exposed=1
+fi
+if [ $fb_exposed -eq 0 ]; then
+    echo -e "  ${GREEN}✅ No Firebase private keys exposed at root${NC}"
+    ((passed++))
+fi
+
+# 12. Check for unauthenticated test/debug routes
+echo ""
+echo "[12/12] Checking for test/debug API routes..."
+test_routes=0
+for route in src/app/api/test src/app/api/test-disconnect src/app/api/debug; do
+    if [ -d "$route" ]; then
+        echo -e "  ${RED}❌ CRITICAL: Unauthenticated test route exists: $route${NC}"
+        echo "    Run: rm -rf $route"
+        ((issues++))
+        test_routes=1
+    fi
+done
+if [ $test_routes -eq 0 ]; then
+    echo -e "  ${GREEN}✅ No test/debug API routes found${NC}"
+    ((passed++))
+fi
 echo ""
 echo "========================================"
 echo "Security Audit Summary"

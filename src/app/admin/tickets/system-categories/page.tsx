@@ -39,7 +39,7 @@ export default function SystemTicketCategoriesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0a1a] p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -50,7 +50,7 @@ export default function SystemTicketCategoriesPage() {
             <h1 className="text-xl font-bold text-cyan-400">
               {t('ticket.categoriesPage.title')}
             </h1>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {t('ticket.categoriesPage.subtitle')}
             </p>
           </div>
@@ -64,7 +64,7 @@ export default function SystemTicketCategoriesPage() {
               <h3 className="text-sm font-medium text-cyan-400">
                 {t('ticket.categoriesPage.systemInfo')}
               </h3>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {t('ticket.categoriesPage.systemDescription').replace('{count}', String(TICKET_CATEGORIES.length))}
               </p>
             </div>
@@ -84,7 +84,7 @@ export default function SystemTicketCategoriesPage() {
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: category.color }}
                   />
-                  <h3 className="font-medium text-white text-sm">
+                  <h3 className="font-medium text-foreground text-sm">
                     {t(`ticket.categoriesPage.items.${category.nameKey}.name`) || category.name}
                   </h3>
                 </div>
@@ -93,7 +93,7 @@ export default function SystemTicketCategoriesPage() {
                 </span>
               </div>
               
-              <p className="text-xs text-gray-400 mb-3 line-clamp-2">
+              <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
                 {t(`ticket.categoriesPage.items.${category.nameKey}.description`) || category.description}
               </p>
               
@@ -111,19 +111,19 @@ export default function SystemTicketCategoriesPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-800">
           <div className="bg-[#1a1525] rounded-lg p-4">
             <p className="text-xs text-gray-500 mb-1">{t('ticket.categoriesPage.totalCategories')}</p>
-            <p className="text-2xl font-bold text-white">{stats.total}</p>
+            <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.total}</p>
           </div>
           <div className="bg-[#1a1525] rounded-lg p-4">
             <p className="text-xs text-gray-500 mb-1">{t('ticket.categoriesPage.networkConnection')}</p>
-            <p className="text-2xl font-bold text-red-400">{stats.network}</p>
+            <p className="text-lg sm:text-2xl font-bold text-red-400">{stats.network}</p>
           </div>
           <div className="bg-[#1a1525] rounded-lg p-4">
             <p className="text-xs text-gray-500 mb-1">{t('ticket.categoriesPage.installationTechnical')}</p>
-            <p className="text-2xl font-bold text-green-400">{stats.technical}</p>
+            <p className="text-lg sm:text-2xl font-bold text-green-400">{stats.technical}</p>
           </div>
           <div className="bg-[#1a1525] rounded-lg p-4">
             <p className="text-xs text-gray-500 mb-1">{t('ticket.categoriesPage.billingSupport')}</p>
-            <p className="text-2xl font-bold text-blue-400">{stats.billing}</p>
+            <p className="text-lg sm:text-2xl font-bold text-blue-400">{stats.billing}</p>
           </div>
         </div>
       </div>

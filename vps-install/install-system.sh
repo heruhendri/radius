@@ -1,6 +1,6 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ============================================================================
-# AIBILL RADIUS VPS Installer - System Setup Module
+# SALFANET RADIUS VPS Installer - System Setup Module
 # ============================================================================
 # Step 1: System update, dependencies, PPP/TUN setup, timezone configuration
 # ============================================================================
@@ -47,7 +47,8 @@ install_system_packages() {
         xl2tpd \
         strongswan \
         strongswan-pki \
-        libcharon-extra-plugins || {
+        libcharon-extra-plugins \
+        libstrongswan-standard-plugins || {
         print_error "Failed to install dependencies"
         return 1
     }
@@ -131,7 +132,13 @@ l2tp_netlink
 tun
 EOF
 
-    print_success "Kernel modules configured for auto-load"
+    # Ensure xl2tpd runtime directory persists across reboots
+    cat > /etc/tmpfiles.d/xl2tpd.conf << 'EOF'
+# xl2tpd control pipe directory - create on boot
+d /var/run/xl2tpd 0755 root root -
+EOF
+    mkdir -p /var/run/xl2tpd
+    print_success "Kernel modules + xl2tpd runtime dir configured for auto-load"
 }
 
 enable_ip_forwarding() {
@@ -228,8 +235,27 @@ verify_ppp_tun_setup() {
 }
 
 setup_ppp_tun() {
-    print_step "Setting up PPP and TUN devices for Proxmox VPS"
-    
+    print_step "Setting up PPP and TUN devices"
+
+    if [ "${IS_CONTAINER:-false}" = "true" ] || [ "${DEPLOY_ENV:-}" = "lxc" ]; then
+        print_info "Proxmox LXC terdeteksi — PPP/TUN perlu diaktifkan di host Proxmox"
+        print_info ""
+        print_info "Jalankan perintah berikut di HOST PROXMOX (bukan di LXC ini):"
+        local CT_ID="${PROXMOX_CT_ID:-$(hostname -I | awk '{print $1}' | sed 's/\..*//')}"
+        print_info ""
+        print_info "  # Ganti 100 dengan CT ID Anda:"
+        print_info "  pct set 100 --features nesting=1"
+        print_info "  pct set 100 --features nesting=1,tun=1"
+        print_info ""
+        print_info "  # Atau edit config LXC secara manual:"
+        print_info "  nano /etc/pve/lxc/100.conf"
+        print_info "  # Tambahkan baris:"
+        print_info "  lxc.cgroup2.devices.allow: c 108:0 rwm"
+        print_info "  lxc.cgroup2.devices.allow: c 10:200 rwm"
+        print_info "  lxc.mount.entry: /dev/net dev/net none bind,create=dir"
+        print_info ""
+    fi
+
     setup_ppp_device
     setup_tun_device
     load_kernel_modules

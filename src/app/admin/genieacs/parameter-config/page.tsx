@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Edit, Plus, Trash2, Save, X, GripVertical, Eye, EyeOff, RotateCcw, Settings2, Loader2 } from 'lucide-react';
+import { Edit, Plus, Trash2, Save, X, GripVertical, Eye, EyeOff, RotateCcw, Settings2, Loader2, AlertTriangle } from 'lucide-react';
+import { SimpleModal, ModalHeader, ModalTitle, ModalDescription, ModalBody, ModalFooter, ModalButton, ModalInput, ModalLabel, ModalSelect, ModalTextarea } from '@/components/cyberpunk/SimpleModal';
 import { useTranslation } from '@/hooks/useTranslation';
 import { showSuccess, showError, showConfirm, showWarning } from '@/lib/sweetalert';
 
@@ -293,16 +294,16 @@ export default function ParameterConfigPage() {
   }, {} as Record<string, ParameterConfig[]>);
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 max-w-6xl mx-auto space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <Settings2 className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
               {t('genieacs.paramConfigTitle')}
             </h1>
-            <p className="text-sm text-[#e0d0ff]/80 mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               {t('genieacs.paramConfigSubtitle')}
             </p>
           </div>
@@ -322,7 +323,7 @@ export default function ParameterConfigPage() {
                 console.log('Reset Defaults button clicked');
                 resetToDefaults();
               }}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-600 dark:bg-inputtext-white text-sm font-medium hover:bg-gray-700 dark:hover:bg-gray-600 shadow"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-600 dark:bg-input text-white text-sm font-medium hover:bg-gray-700 dark:hover:bg-gray-600 shadow"
             >
               <RotateCcw className="w-4 h-4" />
               {t('genieacs.resetDefaults')}
@@ -344,7 +345,7 @@ export default function ParameterConfigPage() {
                 {t('genieacs.caseSensitiveDesc')}
               </p>
               <p className="text-[11px] text-blue-700 dark:text-blue-300">
-                Example: <code className="bg-primary/20 dark:bg-blue-900/40 px-2 py-0.5 rounded">VirtualParameters.RXPower</code> ≠ <code className="bg-primary/20 dark:bg-blue-900/40 px-2 py-0.5 rounded">VirtualParameters.rxPower</code>
+                Example: <code className="bg-primary/20 dark:bg-blue-900/40 px-2 py-0.5 rounded">VirtualParameters.RXPower</code> {`\u2260`} <code className="bg-primary/20 dark:bg-blue-900/40 px-2 py-0.5 rounded">VirtualParameters.rxPower</code>
               </p>
               <div className="mt-2">
                 <a 
@@ -352,7 +353,7 @@ export default function ParameterConfigPage() {
                   className="text-xs text-primary dark:text-primary hover:text-blue-900 dark:hover:text-blue-100 font-medium cursor-pointer"
                   target="_blank"
                 >
-                  → {t('genieacs.manageVirtualParams')}
+                  {`\u2192`} {t('genieacs.manageVirtualParams')}
                 </a>
               </div>
             </div>
@@ -493,7 +494,7 @@ export default function ParameterConfigPage() {
                     <div className="p-3 space-y-2">
                       <div>
                         <h3 className="font-semibold text-foreground text-sm mb-1">{config.label}</h3>
-                        <p className="text-xs text-muted-foreground dark:text-muted-foreground font-mono bg-muted dark:bg-inputpx-2 py-1 rounded">
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground font-mono bg-muted dark:bg-input px-2 py-1 rounded">
                           {config.parameterName}
                         </p>
                       </div>
@@ -510,7 +511,7 @@ export default function ParameterConfigPage() {
                           <div className="bg-primary/10 border border-primary/30 rounded p-2 max-h-16 overflow-y-auto">
                             {config.parameterPaths.map((path, idx) => (
                               <div key={idx} className="text-[10px] font-mono text-blue-800 dark:text-blue-200 truncate" title={path}>
-                                • {path}
+                                {`\u2022`} {path}
                               </div>
                             ))}
                           </div>
@@ -563,83 +564,62 @@ export default function ParameterConfigPage() {
 
         {/* Edit Modal */}
       {/* Debug log removed: console.log('[ParameterConfig] Modal render check - isModalOpen:', isModalOpen, 'editingConfig:', editingConfig) */}
-      {isModalOpen && editingConfig && (
-        <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" 
-          style={{ zIndex: 9999 }}
-        >
-          <div className="bg-card rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-border">
-            <div className="sticky top-0 bg-primary text-white px-6 py-4 flex items-center justify-between shadow-lg">
-              <div className="flex items-center gap-3">
-                {editingConfig.id === 0 ? <Plus className="w-5 h-5" /> : <Settings2 className="w-5 h-5" />}
-                <h2 className="text-lg font-bold">
-                  {editingConfig.id === 0 ? t('genieacs.createNewParam') : t('genieacs.editParamConfig')}
-                </h2>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                title={t('common.close')}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {editingConfig && (
+        <SimpleModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} size="2xl">
+          <ModalHeader>
+            <ModalTitle className="flex items-center gap-2">
+              {editingConfig.id === 0 ? <Plus className="w-4 h-4 text-[#00f7ff]" /> : <Settings2 className="w-4 h-4 text-[#00f7ff]" />}
+              {editingConfig.id === 0 ? t('genieacs.createNewParam') : t('genieacs.editParamConfig')}
+            </ModalTitle>
+            <ModalDescription>{editingConfig.id === 0 ? 'Tambah parameter monitoring baru' : 'Edit konfigurasi parameter'}</ModalDescription>
+          </ModalHeader>
 
-            <div className="p-6 space-y-4 bg-card">
+            <ModalBody className="space-y-4">
               {/* Section (for new configs) */}
               {editingConfig.id === 0 && (
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    {t('genieacs.section')} <span className="text-destructive dark:text-destructive">*</span>
-                  </label>
-                  <input
+                  <ModalLabel required>{t('genieacs.section')}</ModalLabel>
+                  <ModalInput
                     type="text"
                     value={editingConfig.section}
                     onChange={(e) => setEditingConfig({ ...editingConfig, section: e.target.value })}
                     placeholder="e.g., device_info, connection_status"
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary bg-card text-foreground text-sm"
                   />
-                  <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">Group name for organizing parameters (lowercase with underscores)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Group name for organizing parameters (lowercase with underscores)</p>
                 </div>
               )}
 
               {/* Parameter Name (for new configs) */}
               {editingConfig.id === 0 && (
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                    {t('genieacs.parameterName')} <span className="text-destructive dark:text-destructive">*</span>
-                  </label>
-                  <input
+                  <ModalLabel required>{t('genieacs.parameterName')}</ModalLabel>
+                  <ModalInput
                     type="text"
                     value={editingConfig.parameterName}
                     onChange={(e) => setEditingConfig({ ...editingConfig, parameterName: e.target.value })}
                     placeholder="e.g., rxPower, pppoeUsername"
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary bg-card text-foreground text-sm"
                   />
-                  <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">Internal parameter name (camelCase)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Internal parameter name (camelCase)</p>
                 </div>
               )}
 
               {/* Label */}
               <div>
-                <label className="block text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
-                  {t('genieacs.displayLabel')} <span className="text-destructive dark:text-destructive">*</span>
-                </label>
-                <input
+                <ModalLabel required>{t('genieacs.displayLabel')}</ModalLabel>
+                <ModalInput
                   type="text"
                   value={editingConfig.label}
                   onChange={(e) => setEditingConfig({ ...editingConfig, label: e.target.value })}
                   placeholder="e.g., RX Power, PPPoE Username"
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary bg-card text-foreground text-sm"
                 />
               </div>
 
               {/* Parameter Paths - Multiple Input */}
-              <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+              <div className="bg-[#00f7ff]/10 border border-[#00f7ff]/30 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                  <label className="text-sm font-semibold text-[#00f7ff] flex items-center gap-2">
                     {t('genieacs.parameterPaths')}
-                    <span className="text-xs font-semibold text-destructive bg-destructive/20 dark:bg-red-900/30 px-2 py-0.5 rounded">⚠️ Case-sensitive!</span>
+                    <span className="text-xs font-semibold text-[#ff4466] bg-[#ff4466]/20 px-2 py-0.5 rounded"><AlertTriangle className="w-3 h-3 inline mr-0.5" />Case-sensitive!</span>
                   </label>
                   <button
                     type="button"
@@ -650,7 +630,7 @@ export default function ParameterConfigPage() {
                         parameterPaths: [...currentPaths, '']
                       });
                     }}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 bg-primary/20 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 rounded transition-colors"
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-[#00f7ff] bg-[#00f7ff]/20 hover:bg-[#00f7ff]/30 rounded transition-colors"
                   >
                     <Plus className="w-3 h-3" />
                     {t('genieacs.addPath')}
@@ -672,7 +652,7 @@ export default function ParameterConfigPage() {
                             parameterPaths: newPaths.filter(p => p !== '' || newPaths.length === 1)
                           });
                         }}
-                        className="flex-1 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary bg-card text-foreground font-mono text-sm"
+                        className="flex-1 px-3 py-2 border-2 border-[#bc13fe]/30 rounded-lg focus:ring-1 focus:ring-[#00f7ff]/50 focus:border-[#00f7ff] bg-[#0a0520] text-white font-mono text-sm outline-none transition-all"
                       />
                       {(editingConfig.parameterPaths || []).length > 1 && (
                         <button
@@ -684,7 +664,7 @@ export default function ParameterConfigPage() {
                               parameterPaths: newPaths.length > 0 ? newPaths : ['']
                             });
                           }}
-                          className="px-2 py-2 text-destructive dark:text-destructive hover:bg-destructive/10 rounded transition-colors"
+                          className="px-2 py-2 text-[#ff4466] hover:bg-[#ff4466]/10 rounded transition-colors"
                           title="Remove path"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -694,8 +674,8 @@ export default function ParameterConfigPage() {
                   ))}
                 </div>
 
-                <p className="text-xs text-blue-800 dark:text-blue-200 mt-3">
-                  Type exact parameter path (e.g., <code className="bg-primary/20 dark:bg-blue-900/40 px-1.5 py-0.5 rounded text-blue-900 dark:text-blue-100">VirtualParameters.RXPower</code>)
+                <p className="text-xs text-[#00f7ff]/80 mt-3">
+                  Type exact parameter path (e.g., <code className="bg-[#00f7ff]/20 px-1.5 py-0.5 rounded text-[#00f7ff]">VirtualParameters.RXPower</code>)
                 </p>
               </div>
 
@@ -731,20 +711,20 @@ export default function ParameterConfigPage() {
                         e.target.value = '';
                       }
                     }}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary bg-card text-foreground text-sm"
+                    className="w-full px-3 py-2 border-2 border-[#bc13fe]/30 rounded-lg focus:ring-1 focus:ring-[#00f7ff]/50 focus:border-[#00f7ff] bg-[#0a0520] text-white text-sm outline-none transition-all appearance-none cursor-pointer"
                   >
-                    <option value="">{t('genieacs.selectToAdd')}</option>
+                    <option value="" className="bg-[#0a0520]">{t('genieacs.selectToAdd')}</option>
                     {virtualParameters.map((vp) => (
                       <option key={vp.id} value={vp.parameter}>
                         {vp.name} ({vp.parameter})
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
-                    <span className="text-success dark:text-success">● {virtualParameters.length}</span> {t('genieacs.activeVirtualParams')} | 
+                  <p className="text-xs text-muted-foreground mt-2">
+                    <span className="text-[#00ff88]">● {virtualParameters.length}</span> {t('genieacs.activeVirtualParams')} | 
                     <a 
                       href="/admin/genieacs/virtual-parameters" 
-                      className="ml-1 text-primary dark:text-primary hover:underline"
+                      className="ml-1 text-[#00f7ff] hover:underline"
                       target="_blank"
                     >
                       {t('genieacs.manageVirtualParams')} →
@@ -755,13 +735,10 @@ export default function ParameterConfigPage() {
 
               {/* Format */}
               <div>
-                <label className="block text-sm font-semibold mb-2 text-foreground">
-                  {t('genieacs.format')}
-                </label>
-                <select
+                <ModalLabel>{t('genieacs.format')}</ModalLabel>
+                <ModalSelect
                   value={editingConfig.format || ''}
                   onChange={(e) => setEditingConfig({ ...editingConfig, format: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary bg-card text-foreground text-sm"
                 >
                   <option value="">{t('common.none')}</option>
                   <option value="text">{t('genieacs.formatText')}</option>
@@ -772,46 +749,38 @@ export default function ParameterConfigPage() {
                   <option value="datetime">{t('genieacs.formatDatetime')}</option>
                   <option value="uptime">{t('genieacs.formatUptime')}</option>
                   <option value="status">{t('genieacs.formatStatus')}</option>
-                  <option value="boolean">{t('genieacs.formatBoolean')}</option>
-                </select>
+                  <option value="boolean" className="bg-[#0a0520]">{t('genieacs.formatBoolean')}</option>
+                </ModalSelect>
               </div>
 
               {/* Column Width (DEVICE_LIST only) */}
               {activeTab === 'DEVICE_LIST' && (
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-foreground">
-                    {t('genieacs.columnWidth')}
-                  </label>
-                  <input
+                  <ModalLabel>{t('genieacs.columnWidth')}</ModalLabel>
+                  <ModalInput
                     type="text"
                     value={editingConfig.columnWidth || ''}
                     onChange={(e) => setEditingConfig({ ...editingConfig, columnWidth: e.target.value })}
                     placeholder="e.g., 200px, 20%, auto"
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary bg-card text-foreground text-sm"
                   />
                 </div>
               )}
 
               {/* Icon */}
               <div>
-                <label className="block text-sm font-semibold mb-2 text-foreground">
-                  {t('genieacs.iconName')}
-                </label>
-                <input
+                <ModalLabel>{t('genieacs.iconName')}</ModalLabel>
+                <ModalInput
                   type="text"
                   value={editingConfig.icon || ''}
                   onChange={(e) => setEditingConfig({ ...editingConfig, icon: e.target.value })}
                   placeholder="e.g., Server, Network, Signal"
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary bg-card text-foreground text-sm"
                 />
               </div>
 
               {/* Color Coding */}
               <div>
-                <label className="block text-sm font-semibold mb-2 text-foreground">
-                  {t('genieacs.colorCoding')}
-                </label>
-                <textarea
+                <ModalLabel>{t('genieacs.colorCoding')}</ModalLabel>
+                <ModalTextarea
                   value={JSON.stringify(editingConfig.colorCoding, null, 2)}
                   onChange={(e) => {
                     try {
@@ -823,35 +792,21 @@ export default function ParameterConfigPage() {
                   }}
                   rows={4}
                   placeholder='{"green": {"operator": ">", "value": -25}}'
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary bg-card text-foreground font-mono text-sm"
+                  className="font-mono resize-y"
                 />
               </div>
-            </div>
+            </ModalBody>
 
-            <div className="sticky bottom-0 bg-muted px-6 py-4 flex justify-end gap-3 border-t border-border">
-              <button
-                onClick={() => {
-                  console.log('Modal Cancel button clicked');
-                  setIsModalOpen(false);
-                }}
-                className="px-4 py-2 border border-border rounded-lg hover:bg-muted text-foreground dark:text-gray-200 text-sm font-medium"
-              >
+            <ModalFooter>
+              <ModalButton variant="secondary" onClick={() => setIsModalOpen(false)}>
                 {t('common.cancel')}
-              </button>
-              <button
-                onClick={() => {
-                  console.log('Modal Save button clicked');
-                  saveConfig();
-                }}
-                disabled={saving}
-                className={`px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 flex items-center gap-2 text-sm font-medium ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
+              </ModalButton>
+              <ModalButton variant="primary" onClick={() => saveConfig()} disabled={saving} className="flex items-center gap-2">
                 <Save className={`w-4 h-4 ${saving ? 'animate-spin' : ''}`} />
                 {saving ? t('genieacs.saving') : t('genieacs.saveChanges')}
-              </button>
-            </div>
-          </div>
-        </div>
+              </ModalButton>
+            </ModalFooter>
+        </SimpleModal>
         )}
       </div>
     </div>

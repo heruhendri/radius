@@ -1,40 +1,48 @@
-import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+﻿import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { generatePDFBuffer, formatCurrencyExport, formatDateExport } from "@/lib/utils/export";
-
-const prisma = new PrismaClient();
+import { formatCurrencyExport, formatDateExport } from "@/lib/utils/export";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/server/auth/config";
+import { startOfDayWIBtoUTC, endOfDayWIBtoUTC } from "@/lib/timezone";
+import { prisma } from '@/server/db/client';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const format = searchParams.get("format") || "excel"; // excel or pdf
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const type = searchParams.get("type"); // INCOME, EXPENSE, or all
+    const categoryId = searchParams.get("categoryId");
+    const search = searchParams.get("search");
 
-    if (!startDate || !endDate) {
-      return NextResponse.json(
-        { error: "Start date and end date are required" },
-        { status: 400 },
-      );
+    // Prepare date filters (optional)
+    const where: any = {};
+
+    if (startDate && endDate) {
+      const startFilter = startOfDayWIBtoUTC(startDate);
+      const endFilter = endOfDayWIBtoUTC(endDate);
+      where.date = { gte: startFilter, lte: endFilter };
     }
-
-    // Prepare date filters
-    const startFilter = new Date(startDate);
-    const endFilter = new Date(endDate);
-    endFilter.setHours(23, 59, 59, 999);
-
-    // Build where clause
-    const where: any = {
-      date: {
-        gte: startFilter,
-        lte: endFilter,
-      },
-    };
 
     if (type && type !== "all") {
       where.type = type;
+    }
+
+    if (categoryId && categoryId !== "all") {
+      where.categoryId = categoryId;
+    }
+
+    if (search) {
+      where.OR = [
+        { description: { contains: search } },
+        { notes: { contains: search } },
+      ];
     }
 
     // Get transactions
@@ -236,7 +244,7 @@ async function exportToExcel(transactions: any[], stats: any) {
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="Laporan-Keuangan-${stats.startDate}-${stats.endDate}.xlsx"`,
+      "Content-Disposition": `attachment; filename="Laporan-Keuangan-${stats.startDate || 'semua'}-${stats.endDate || 'semua'}.xlsx"`,
     },
   });
 }

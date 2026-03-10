@@ -35,7 +35,7 @@ export default function WhatsAppSettingsPage() {
   const [activeTab, setActiveTab] = useState<'providers' | 'templates' | 'notifications' | 'send' | 'history'>('providers');
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
@@ -47,11 +47,11 @@ export default function WhatsAppSettingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
             <MessageSquare className="w-6 h-6 text-[#00f7ff]" />
             {t('whatsapp.settings')}
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {t('whatsapp.settingsDesc')}
           </p>
         </div>
@@ -59,60 +59,60 @@ export default function WhatsAppSettingsPage() {
 
       {/* Tabs */}
       <div className="border-b border-border">
-        <div className="flex gap-4 overflow-x-auto">
+        <div className="flex flex-wrap gap-1 sm:gap-2">
           <button
             onClick={() => setActiveTab('providers')}
-            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`pb-2 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'providers'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Smartphone className="w-4 h-4 inline mr-1.5" />
+            <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
             {t('whatsapp.providers')}
           </button>
           <button
             onClick={() => setActiveTab('templates')}
-            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`pb-2 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'templates'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <FileText className="w-4 h-4 inline mr-1.5" />
+            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
             {t('whatsapp.templates')}
           </button>
           <button
             onClick={() => setActiveTab('notifications')}
-            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`pb-2 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'notifications'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <SettingsIcon className="w-4 h-4 inline mr-1.5" />
+            <SettingsIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
             {t('whatsapp.reminderSettings')}
           </button>
           <button
             onClick={() => setActiveTab('send')}
-            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`pb-2 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'send'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Send className="w-4 h-4 inline mr-1.5" />
+            <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
             {t('whatsapp.sendMessage')}
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`pb-2 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'history'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <History className="w-4 h-4 inline mr-1.5" />
+            <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
             {t('common.history')}
           </button>
         </div>

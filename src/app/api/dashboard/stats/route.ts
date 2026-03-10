@@ -1,13 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { format } from "date-fns";
+﻿import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/server/db/client";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { getRecentActivities } from "@/lib/activity-log";
+import { authOptions } from "@/server/auth/config";
+import { getRecentActivities } from "@/server/services/activity-log.service";
+import { cacheGetOrSet, redisDel, RedisKeys } from "@/server/cache/redis";
+import { nowWIB, startOfDayWIBtoUTC } from "@/lib/timezone";
 
 // Disable caching for this route - always fetch fresh data
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+const STATS_CACHE_TTL = 30; // 30 detik — cukup fresh untuk dashboard
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,347 +20,246 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Allow all authenticated admin users (they use AdminRole: SUPER_ADMIN, FINANCE, etc.)
-    // No additional role check needed - if they can login to admin, they can see dashboard
     const userRole = (session.user as any).role;
-    console.log('Dashboard stats accessed by role:', userRole);
-    
-    // Current time for database queries
-    const now = new Date();
-    
-    // Database stores dates in UTC, but we want to query by WIB (UTC+7) month boundaries
-    // When JavaScript creates new Date(2025, 11, 1) on a WIB server, it already creates
-    // "Dec 1 00:00 WIB" which is internally "Nov 30 17:00 UTC" - this is correct!
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0-11
-    
-    // Start of this month (creates "Month 1, 00:00 local time" which auto-converts to UTC)
-    const startOfMonth = new Date(currentYear, currentMonth, 1);
-    
-    // Start of next month (for upper bound)
-    const startOfNextMonth = new Date(currentYear, currentMonth + 1, 1);
-    
-    // Start of last month
-    const startOfLastMonth = new Date(currentYear, currentMonth - 1, 1);
-    
-    // End of last month (which is start of current month)
-    const endOfLastMonth = new Date(startOfMonth.getTime() - 1); // 1ms before current month
-    
-    console.log('[Dashboard] Date ranges:', {
-      now: now.toISOString(),
-      currentMonth: currentMonth + 1,
-      startOfMonth: startOfMonth.toISOString(),
-      startOfNextMonth: startOfNextMonth.toISOString(),
-      startOfLastMonth: startOfLastMonth.toISOString(),
-      endOfLastMonth: endOfLastMonth.toISOString(),
-    });
 
-    // Total users - PPPoE Users + All Hotspot Vouchers (terpisah)
-    let pppoeUserCount = 0;
-    let hotspotUserCount = 0; // ALL vouchers
-    let hotspotActiveUserCount = 0; // Only used vouchers
-    
+    // Parse optional ?month=YYYY-MM param (defaults to current WIB month)
+    const { searchParams } = new URL(request.url);
+    const monthParam = searchParams.get('month'); // e.g. "2026-02"
+    const nowLocal = nowWIB();
+    let selectedYear: number;
+    let selectedMonth: number; // 0-indexed
+    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+      [selectedYear, selectedMonth] = monthParam.split('-').map(Number);
+      selectedMonth -= 1; // convert 1-indexed to 0-indexed
+    } else {
+      selectedYear = nowLocal.getUTCFullYear();
+      selectedMonth = nowLocal.getUTCMonth();
+    }
+    const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+
+    // Force refresh jika query param ?refresh=1
+    if (searchParams.get('refresh') === '1') {
+      await redisDel(`${RedisKeys.dashboardStats()}:${monthKey}`);
+    }
+
+    // Wrap semua DB queries dalam cache Redis 30 detik
+    const result = await cacheGetOrSet(
+      `${RedisKeys.dashboardStats()}:${monthKey}`,
+      STATS_CACHE_TTL,
+      async () => {
+    const now = nowWIB();
+    const startOfMonth = new Date(Date.UTC(selectedYear, selectedMonth, 1));
+    const startOfNextMonth = new Date(Date.UTC(selectedYear, selectedMonth + 1, 1));
+    // last day of selected month (handles 28/29/30/31 days correctly)
+    const endOfMonth = new Date(Date.UTC(selectedYear, selectedMonth + 1, 0, 23, 59, 59, 999));
+    const MONTH_NAMES_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    const periodLabel = `${MONTH_NAMES_ID[selectedMonth]} ${selectedYear}`;
+    const isCurrentMonth = (selectedYear === now.getUTCFullYear() && selectedMonth === now.getUTCMonth());
+
+    // ==================== 1. Total PPPoE Users ====================
+    let totalPppoeUsers = 0;
     try {
-      pppoeUserCount = await prisma.pppoeUser.count();
+      totalPppoeUsers = await prisma.pppoeUser.count();
     } catch (e) {
       console.error('[Dashboard] Error counting pppoeUser:', e);
     }
-    
-    try {
-      const now = new Date();
-      
-      // Count ALL non-expired vouchers (exclude EXPIRED status)
-      hotspotUserCount = await prisma.hotspotVoucher.count({
-        where: {
-          status: { not: 'EXPIRED' }, // Exclude expired vouchers
-          OR: [
-            { expiresAt: null }, // No expiry
-            { expiresAt: { gte: now } } // Not yet expired
-          ]
-        }
-      });
-      
-      // Count vouchers that have been activated (first login happened) and not expired
-      hotspotActiveUserCount = await prisma.hotspotVoucher.count({
-        where: {
-          status: { not: 'EXPIRED' }, // Exclude expired vouchers
-          firstLoginAt: { not: null },
-          OR: [
-            { expiresAt: null }, // No expiry
-            { expiresAt: { gte: now } } // Not yet expired
-          ]
-        },
-      });
-    } catch (e) {
-      console.error('[Dashboard] Error counting hotspotVoucher:', e);
-    }
-    
-    const totalUsers = pppoeUserCount + hotspotUserCount;
-    
-    // Last month users for growth calculation
-    let lastMonthPppoeUsers = 0;
-    let lastMonthHotspotUsers = 0;
-    
-    try {
-      lastMonthPppoeUsers = await prisma.pppoeUser.count({
-        where: {
-          createdAt: {
-            gte: startOfLastMonth,
-            lte: endOfLastMonth,
-          },
-        },
-      });
-    } catch (e) {
-      console.error('[Dashboard] Error counting lastMonthPppoeUsers:', e);
-    }
-    
-    try {
-      lastMonthHotspotUsers = await prisma.hotspotVoucher.count({
-        where: {
-          status: { not: 'EXPIRED' }, // Exclude expired vouchers
-          firstLoginAt: { not: null },
-          createdAt: {
-            gte: startOfLastMonth,
-            lte: endOfLastMonth,
-          },
-        },
-      });
-    } catch (e) {
-      console.error('[Dashboard] Error counting lastMonthHotspotUsers:', e);
-    }
-    const lastMonthUsers = lastMonthPppoeUsers + lastMonthHotspotUsers;
-    
-    const usersGrowth =
-      lastMonthUsers > 0
-        ? ((totalUsers - lastMonthUsers) / lastMonthUsers) * 100
-        : 0;
-    
-    console.log('[Dashboard] User counts:', {
-      pppoeUserCount,
-      hotspotUserCount,
-      totalUsers,
-      lastMonthUsers,
-    });
 
-    // Active sessions - PISAHKAN PPPoE dan Hotspot
-    // OPTIMIZED: Use batch query instead of N+1 queries
+    // ==================== 2 & 3. Active Sessions (PPPoE & Hotspot separate) ====================
     let activeSessionsPPPoE = 0;
     let activeSessionsHotspot = 0;
-    let activeSessions = 0;
-    
+
     try {
-      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      
-      // Get active sessions from radacct with same logic as sessions API
+      // ── Sumber kebenaran: radacct (konsisten dengan halaman Sesi) ──
+      // Active = acctstoptime IS NULL (sama persis dengan halaman Sesi)
+      // TIDAK menggunakan Redis fallback — Redis online:users bisa stale jika
+      // Accounting-Stop tidak terkirim, menghasilkan false positive di dashboard.
       const activeRadacctSessions = await prisma.radacct.findMany({
         where: {
           acctstoptime: null,
-          OR: [
-            // PPPoE sessions: must have recent interim update (< 10 min)
-            { acctupdatetime: { gte: tenMinutesAgo } },
-            // Hotspot vouchers: might not have interim updates, so use longer window
-            { 
-              AND: [
-                { acctupdatetime: null },
-                { acctstarttime: { gte: oneDayAgo } },
-              ],
-            },
-          ],
         },
         select: { username: true },
       });
-      
-      // Get unique usernames
+
       const uniqueUsernames = [...new Set(
         activeRadacctSessions.map(s => s.username).filter(Boolean)
       )] as string[];
-      
-      activeSessions = uniqueUsernames.length;
-      
-      // Batch fetch PPPoE users to determine session types
+
       if (uniqueUsernames.length > 0) {
+        // Kategorisasi: cek apakah username adalah PPPoE atau Hotspot via DB
         const pppoeUsers = await prisma.pppoeUser.findMany({
           where: { username: { in: uniqueUsernames } },
           select: { username: true },
         });
-        
         const pppoeUsernameSet = new Set(pppoeUsers.map(u => u.username));
-        
         for (const username of uniqueUsernames) {
-          if (pppoeUsernameSet.has(username)) {
-            activeSessionsPPPoE++;
-          } else {
-            activeSessionsHotspot++;
-          }
+          if (pppoeUsernameSet.has(username)) activeSessionsPPPoE++;
+          else activeSessionsHotspot++;
         }
       }
-      
-      console.log('[Dashboard] Active sessions:', {
-        total: activeSessions,
-        pppoe: activeSessionsPPPoE,
-        hotspot: activeSessionsHotspot,
-      });
-      
     } catch (e) {
       console.error('[Dashboard] Error counting active sessions:', e);
     }
 
-    // Pending invoices
-    const pendingInvoices = await prisma.invoice.count({
-      where: {
-        status: "PENDING",
-      },
-    });
-
-    // Overdue invoices count for last month comparison
-    const lastMonthPendingInvoices = await prisma.invoice.count({
-      where: {
-        status: "PENDING",
-        createdAt: {
-          gte: startOfLastMonth,
-          lte: endOfLastMonth,
-        },
-      },
-    });
-    const invoicesChange =
-      lastMonthPendingInvoices > 0
-        ? ((pendingInvoices - lastMonthPendingInvoices) /
-            lastMonthPendingInvoices) *
-          100
-        : 0;
-
-    // Revenue this month (Keuangan - Transactions INCOME)
-    let revenueThisMonth = 0;
-    let revenueLastMonth = 0;
-    let transactionCount = 0;
-    
+    // ==================== 4. Unused Hotspot Vouchers ====================
+    let unusedVouchers = 0;
     try {
-      // Query using current month date range
-      const incomeThisMonth = await prisma.transaction.aggregate({
+      unusedVouchers = await prisma.hotspotVoucher.count({
         where: {
-          type: 'INCOME',
-          date: {
-            gte: startOfMonth,
-            lt: startOfNextMonth,
-          },
-        },
-        _sum: {
-          amount: true,
-        },
-      });
-      revenueThisMonth = Number(incomeThisMonth._sum.amount) || 0;
-      
-      // Count transactions for debugging
-      transactionCount = await prisma.transaction.count({
-        where: {
-          type: 'INCOME',
-          date: {
-            gte: startOfMonth,
-            lt: startOfNextMonth,
-          },
+          status: 'WAITING',
+          firstLoginAt: null,
         },
       });
     } catch (e) {
-      console.error('[Dashboard] Error getting income this month:', e);
+      console.error('[Dashboard] Error counting unused vouchers:', e);
     }
-    
+
+    // ==================== 5. Isolated Customers ====================
+    let isolatedCount = 0;
     try {
-      // Revenue last month - use Prisma aggregate
-      const incomeLastMonth = await prisma.transaction.aggregate({
+      isolatedCount = await prisma.pppoeUser.count({
+        where: { status: 'isolated' },
+      });
+    } catch (e) {
+      console.error('[Dashboard] Error counting isolated users:', e);
+    }
+
+    // ==================== 6. Suspended Customers (Stop Langganan) ====================
+    let suspendedCount = 0;
+    try {
+      suspendedCount = await prisma.pppoeUser.count({
+        where: { status: 'suspended' },
+      });
+    } catch (e) {
+      console.error('[Dashboard] Error counting suspended users:', e);
+    }
+
+    // ==================== 7. Voucher Revenue (this month) ====================
+    let voucherRevenue = 0;
+    try {
+      // Try from Keuangan transactions with hotspot/voucher category
+      const voucherCategory = await prisma.transactionCategory.findFirst({
         where: {
+          OR: [
+            { name: { contains: 'hotspot' } },
+            { name: { contains: 'voucher' } },
+          ],
           type: 'INCOME',
-          date: {
-            gte: startOfLastMonth,
-            lt: startOfMonth,
+        },
+      });
+
+      if (voucherCategory) {
+        const voucherIncome = await prisma.transaction.aggregate({
+          where: {
+            type: 'INCOME',
+            categoryId: voucherCategory.id,
+            date: { gte: startOfMonth, lt: startOfNextMonth },
           },
-        },
-        _sum: {
-          amount: true,
-        },
-      });
-      revenueLastMonth = Number(incomeLastMonth._sum.amount) || 0;
-    } catch (e) {
-      console.error('[Dashboard] Error getting income last month:', e);
-    }
-    
-    console.log('[Dashboard] Revenue debug:', {
-      startOfMonth: startOfMonth.toISOString(),
-      startOfNextMonth: startOfNextMonth.toISOString(),
-      now: now.toISOString(),
-      transactionCount,
-      revenueThisMonth,
-      revenueLastMonth,
-    });
-    
-    const revenueGrowth =
-      revenueLastMonth > 0
-        ? ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100
-        : 0;
-
-    // Format revenue to IDR
-    const formatRevenue = (amount: number) => {
-      return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amount);
-    };
-
-    // Network stats - use actual active sessions from radacct
-    // Previously this used pppoeUser.count(status=active) and hotspotVoucher.count(status=ACTIVE)
-    // But that's not actual "sessions" - it's just user/voucher status in database
-    // Now we use the actual session counts from radacct for consistency
-    const pppoeSessionCount = activeSessionsPPPoE; // Use already calculated value
-    const hotspotSessionCount = activeSessionsHotspot; // Use already calculated value
-
-    // Bandwidth usage from radacct (all time)
-    let totalBytes = 0;
-    try {
-      const bandwidthData = await prisma.radacct.aggregate({
-        _sum: {
-          acctinputoctets: true,
-          acctoutputoctets: true,
-        },
-      });
-
-      const totalBytesIn = bandwidthData._sum.acctinputoctets ? Number(bandwidthData._sum.acctinputoctets) : 0;
-      const totalBytesOut = bandwidthData._sum.acctoutputoctets ? Number(bandwidthData._sum.acctoutputoctets) : 0;
-      totalBytes = totalBytesIn + totalBytesOut;
-    } catch (e) {
-      console.error('[Dashboard] Error calculating bandwidth:', e);
-    }
-
-    // Format bytes to readable format
-    const formatBandwidth = (bytes: number) => {
-      const tb = bytes / 1024 ** 4;
-      const gb = bytes / 1024 ** 3;
-
-      if (tb >= 1) {
-        return `${tb.toFixed(2)} TB`;
-      } else if (gb >= 1) {
-        return `${gb.toFixed(2)} GB`;
-      } else {
-        return `${(bytes / 1024 ** 2).toFixed(2)} MB`;
+          _sum: { amount: true },
+        });
+        voucherRevenue = Number(voucherIncome._sum.amount) || 0;
       }
-    };
 
-    // Recent activities - get from activity log
+      // If no category found, estimate from sold vouchers (by firstLoginAt)
+      if (voucherRevenue === 0) {
+        const soldVouchers = await prisma.hotspotVoucher.findMany({
+          where: {
+            status: { in: ['ACTIVE', 'EXPIRED'] },
+            firstLoginAt: { gte: startOfMonth, lt: startOfNextMonth },
+          },
+          include: { profile: { select: { sellingPrice: true } } },
+        });
+        voucherRevenue = soldVouchers.reduce((sum, v) => sum + (v.profile?.sellingPrice || 0), 0);
+      }
+    } catch (e) {
+      console.error('[Dashboard] Error calculating voucher revenue:', e);
+    }
+
+    // ==================== 8. Invoice Revenue (Tagihan) this month ====================
+    let invoiceRevenue = 0;
+    try {
+      const paidInvoices = await prisma.invoice.aggregate({
+        where: {
+          status: 'PAID',
+          paidAt: { gte: startOfMonth, lt: startOfNextMonth },
+        },
+        _sum: { amount: true },
+      });
+      invoiceRevenue = Number(paidInvoices._sum.amount) || 0;
+    } catch (e) {
+      console.error('[Dashboard] Error calculating invoice revenue:', e);
+    }
+
+    // ==================== 9. Agent Voucher Sales (this month) ====================
+    const agentSalesData: { agentId: string; agentName: string; sold: number; revenue: number }[] = [];
+    let agentSalesTotal = { count: 0, revenue: 0 };
+    try {
+      const soldVouchersByAgent = await prisma.hotspotVoucher.findMany({
+        where: {
+          agentId: { not: null },
+          firstLoginAt: { gte: startOfMonth, lt: startOfNextMonth },
+        },
+        select: {
+          agentId: true,
+          agent: { select: { name: true } },
+          profile: { select: { sellingPrice: true } },
+        },
+      });
+
+      const agentMap = new Map<string, { name: string; sold: number; revenue: number }>();
+      for (const v of soldVouchersByAgent) {
+        if (!v.agentId) continue;
+        const entry = agentMap.get(v.agentId) ?? { name: v.agent?.name ?? v.agentId, sold: 0, revenue: 0 };
+        entry.sold += 1;
+        entry.revenue += v.profile?.sellingPrice ?? 0;
+        agentMap.set(v.agentId, entry);
+      }
+
+      for (const [agentId, data] of agentMap.entries()) {
+        agentSalesData.push({ agentId, agentName: data.name, sold: data.sold, revenue: data.revenue });
+        agentSalesTotal.count += data.sold;
+        agentSalesTotal.revenue += data.revenue;
+      }
+      agentSalesData.sort((a, b) => b.sold - a.sold);
+      agentSalesData.splice(5); // top 5 only
+    } catch (e) {
+      console.error('[Dashboard] Error loading agent sales:', e);
+    }
+
+    // ==================== 10. RADIUS Auth Log ====================
+    let radiusAuthLog: { username: string; reply: string; authdate: Date | string }[] = [];
+    let radiusAuthStats = { acceptToday: 0, rejectToday: 0 };
+    try {
+      const startOfToday = startOfDayWIBtoUTC(now);
+
+      [radiusAuthLog, radiusAuthStats.acceptToday, radiusAuthStats.rejectToday] = await Promise.all([
+        prisma.radpostauth.findMany({
+          orderBy: { authdate: 'desc' },
+          take: 15,
+          select: { username: true, reply: true, authdate: true },
+        }),
+        prisma.radpostauth.count({
+          where: { reply: 'Access-Accept', authdate: { gte: startOfToday } },
+        }),
+        prisma.radpostauth.count({
+          where: { reply: 'Access-Reject', authdate: { gte: startOfToday } },
+        }),
+      ]);
+    } catch (e) {
+      console.error('[Dashboard] Error loading RADIUS auth log:', e);
+    }
+
+    // ==================== Recent Activities ====================
     const activities = await getRecentActivities(10);
 
-    // System status checks
+    // ==================== System Status ====================
     let radiusStatus = false;
-    let databaseStatus = true; // If we got here, database is connected
-    let apiStatus = true; // If we got here, API is running
+    const databaseStatus = true;
+    const apiStatus = true;
 
-    // Check RADIUS by checking if radacct table has recent records
     try {
       const recentRadacct = await prisma.radacct.findFirst({
         where: {
-          acctstarttime: {
-            gte: new Date(Date.now() - 3600000), // Last 1 hour
-          },
+          acctstarttime: { gte: new Date(now.getTime() - 3600000) },
         },
       });
       radiusStatus = !!recentRadacct;
@@ -365,41 +267,27 @@ export async function GET(request: NextRequest) {
       radiusStatus = false;
     }
 
-    return NextResponse.json({
-      success: true,
+    // ==================== Format currency ====================
+    const formatCurrency = (amount: number) =>
+      new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount);
+
+    return {
       stats: {
-        totalUsers: {
-          value: totalUsers,
-          change: `${usersGrowth > 0 ? "+" : ""}${usersGrowth.toFixed(1)}%`,
-        },
-        pppoeUsers: {
-          value: pppoeUserCount,
-          change: null,
-        },
-        hotspotVouchers: {
-          value: hotspotUserCount, // ALL vouchers
-          active: hotspotActiveUserCount, // Only used vouchers
-          change: null,
-        },
-        activeSessions: {
-          value: activeSessions,
-          pppoe: activeSessionsPPPoE,
-          hotspot: activeSessionsHotspot,
-          change: null,
-        },
-        pendingInvoices: {
-          value: pendingInvoices,
-          change: `${invoicesChange > 0 ? "+" : ""}${invoicesChange.toFixed(1)}%`,
-        },
-        revenue: {
-          value: formatRevenue(revenueThisMonth),
-          change: `${revenueGrowth > 0 ? "+" : ""}${revenueGrowth.toFixed(1)}%`,
-        },
-      },
-      network: {
-        pppoeUsers: pppoeSessionCount,
-        hotspotSessions: hotspotSessionCount,
-        bandwidth: formatBandwidth(totalBytes),
+        totalPppoeUsers,
+        activeSessionsPPPoE,
+        activeSessionsHotspot,
+        unusedVouchers,
+        isolatedCount,
+        suspendedCount,
+        voucherRevenue,
+        voucherRevenueFormatted: formatCurrency(voucherRevenue),
+        invoiceRevenue,
+        invoiceRevenueFormatted: formatCurrency(invoiceRevenue),
       },
       activities,
       systemStatus: {
@@ -407,7 +295,17 @@ export async function GET(request: NextRequest) {
         database: databaseStatus,
         api: apiStatus,
       },
-    });
+      agentSales: agentSalesData,
+      agentSalesTotal,
+      radiusAuthLog,
+      radiusAuthStats,
+      periodLabel,
+      monthKey,
+      isCurrentMonth,
+    };
+    }) // end cacheGetOrSet
+
+    return NextResponse.json({ success: true, ...result });
   } catch (error: any) {
     console.error("Dashboard stats error:", error);
     return NextResponse.json(

@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, phone, email, address, profileId, notes } = body;
+    const { name, phone, email, address, profileId, notes, referralCode, latitude, longitude, idCardNumber, idCardPhoto } = body;
 
     // Validate required fields
     if (!name || !phone || !address || !profileId) {
@@ -38,6 +38,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate referral code if provided
+    let validReferralCode: string | null = null;
+    if (referralCode) {
+      const referrer = await prisma.pppoeUser.findUnique({
+        where: { referralCode: referralCode.toUpperCase() },
+        select: { id: true },
+      });
+      if (referrer) {
+        validReferralCode = referralCode.toUpperCase();
+      }
+    }
+
     // Create registration request
     const registration = await prisma.registrationRequest.create({
       data: {
@@ -48,6 +60,11 @@ export async function POST(request: NextRequest) {
         address,
         profileId,
         notes: notes || null,
+        referralCode: validReferralCode,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
+        idCardNumber: idCardNumber || null,
+        idCardPhoto: idCardPhoto || null,
         status: 'PENDING',
       },
       include: {

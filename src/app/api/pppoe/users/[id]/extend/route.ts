@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { generateInvoiceNumber, generateInvoiceId, generateTransactionId, generateCategoryId } from '@/lib/invoice-generator';
+import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
+import { generateInvoiceNumber, generateInvoiceId, generateTransactionId, generateCategoryId } from '@/server/services/billing/invoice.service';
 import crypto from 'crypto';
+import { redisDel, RedisKeys } from '@/server/cache/redis';
 
 export async function POST(
   request: NextRequest,
@@ -56,12 +57,73 @@ export async function POST(
       },
     });
 
+    // Invalidate Redis auth cache so RADIUS picks up restored status immediately
+    await redisDel(RedisKeys.radiusAuth(user.username));
+
+    // Restore RADIUS tables so user reconnects with the correct profile.
+    // This is critical when user was previously isolated (radusergroup = 'isolir').
+    // Without this, the user would get restricted isolir access even after extension.
+    try {
+      // Remove any old rejection / suspension markers
+      await prisma.radcheck.deleteMany({
+        where: { username: user.username, attribute: 'Auth-Type' },
+      });
+      await prisma.radcheck.deleteMany({
+        where: { username: user.username, attribute: 'NAS-IP-Address' },
+      });
+      await prisma.radreply.deleteMany({
+        where: { username: user.username, attribute: 'Reply-Message' },
+      });
+
+      // Ensure password exists in radcheck
+      await prisma.$executeRaw`
+        INSERT INTO radcheck (username, attribute, op, value)
+        VALUES (${user.username}, 'Cleartext-Password', ':=', ${user.password})
+        ON DUPLICATE KEY UPDATE value = ${user.password}
+      `;
+
+      // Restore subscription group (newProfile is the extended/changed profile)
+      await prisma.$executeRaw`
+        DELETE FROM radusergroup WHERE username = ${user.username}
+      `;
+      await prisma.$executeRaw`
+        INSERT INTO radusergroup (username, groupname, priority)
+        VALUES (${user.username}, ${newProfile.groupName}, 1)
+      `;
+
+      // Restore static IP (remove old, re-add if exists)
+      await prisma.radreply.deleteMany({
+        where: { username: user.username, attribute: 'Framed-IP-Address' },
+      });
+      if (user.ipAddress) {
+        await prisma.$executeRaw`
+          INSERT INTO radreply (username, attribute, op, value)
+          VALUES (${user.username}, 'Framed-IP-Address', ':=', ${user.ipAddress})
+          ON DUPLICATE KEY UPDATE value = ${user.ipAddress}
+        `;
+      }
+
+      // Send CoA disconnect so user immediately reconnects with the restored profile
+      const { disconnectPPPoEUser } = await import('@/server/services/radius/coa-handler.service');
+      const coaResult = await disconnectPPPoEUser(user.username);
+      console.log(`[Extend] RADIUS restored + CoA disconnect for ${user.username}:`, coaResult);
+    } catch (radiusError: any) {
+      console.error('[Extend] RADIUS restore error (non-fatal):', radiusError?.message);
+    }
+
     // Create invoice record (already PAID)
     const invoiceNumber = await generateInvoiceNumber();
     
     // Generate payment token and link for record keeping
     const company = await prisma.company.findFirst();
-    const baseUrl = company?.baseUrl || 'http://localhost:3000';
+    const forwardedProto = request.headers.get('x-forwarded-proto') || 'http';
+    const forwardedHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || '';
+    const inferredBase = forwardedHost ? `${forwardedProto}://${forwardedHost}` : '';
+    const baseUrl = (company?.baseUrl && !company.baseUrl.includes('localhost'))
+      ? company.baseUrl
+      : (inferredBase && !inferredBase.includes('localhost'))
+        ? inferredBase
+        : company?.baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const paymentToken = crypto.randomBytes(32).toString('hex');
     const paymentLink = `${baseUrl}/pay/${paymentToken}`;
     
@@ -124,7 +186,7 @@ export async function POST(
     // Send WhatsApp notification if phone available
     if (user.phone) {
       try {
-        const { WhatsAppService } = await import('@/lib/whatsapp');
+        const { WhatsAppService } = await import('@/server/services/notifications/whatsapp.service');
         
         // Get template from database (customizable via UI)
         const template = await prisma.whatsapp_templates.findFirst({
@@ -163,7 +225,7 @@ export async function POST(
     // Send Email notification if email available
     if (user.email) {
       try {
-        const { EmailService } = await import('@/lib/email');
+        const { EmailService } = await import('@/server/services/notifications/email.service');
         
         // Get template from database (customizable via UI)
         const template = await prisma.emailTemplate.findFirst({

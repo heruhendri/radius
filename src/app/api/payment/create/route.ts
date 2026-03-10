@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { createMidtransPayment } from '@/lib/payment/midtrans';
-import { createXenditInvoice } from '@/lib/payment/xendit';
-import { createDuitkuClient } from '@/lib/payment/duitku';
-import { createTripayClient } from '@/lib/payment/tripay';
+﻿import { NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
+import { createMidtransPayment } from '@/server/services/payment/midtrans.service';
+import { createXenditInvoice } from '@/server/services/payment/xendit.service';
+import { createDuitkuClient } from '@/server/services/payment/duitku.service';
+import { createTripayClient } from '@/server/services/payment/tripay.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,9 +36,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const { invoiceId, orderNumber, amount, gateway, type } = body;
+    const { invoiceId, orderNumber, amount, gateway, type, paymentMethod } = body;
 
-    console.log('[Payment Create] Request:', { invoiceId, orderNumber, amount, gateway, type });
+    console.log('[Payment Create] Request:', { invoiceId, orderNumber, amount, gateway, type, paymentMethod });
 
     // For voucher orders
     if (type === 'voucher') {
@@ -128,6 +128,18 @@ export async function POST(request: Request) {
     // Generate unique order ID
     const orderId = `INV-${invoice.invoiceNumber}-${Date.now()}`;
 
+    // Compute base URL for callbacks/return URLs
+    // Priority: company.baseUrl → request Host header → env → localhost
+    const companyForBase = await prisma.company.findFirst({ select: { baseUrl: true } });
+    const _proto = request.headers.get('x-forwarded-proto') || 'http';
+    const _host = request.headers.get('x-forwarded-host') || request.headers.get('host') || '';
+    const _inferred = _host ? `${_proto}://${_host}` : '';
+    const appBaseUrl = (companyForBase?.baseUrl && !companyForBase.baseUrl.includes('localhost'))
+      ? companyForBase.baseUrl
+      : (_inferred && !_inferred.includes('localhost'))
+        ? _inferred
+        : companyForBase?.baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
     let paymentUrl = '';
     let snapToken = '';
     let transactionId = '';
@@ -197,8 +209,8 @@ export async function POST(request: Request) {
         const duitku = createDuitkuClient(
           gatewayConfig.duitkuMerchantCode || '',
           gatewayConfig.duitkuApiKey || '',
-          `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/webhook`,
-          `${process.env.NEXT_PUBLIC_APP_URL}/pay/${invoice.paymentToken}`,
+          `${appBaseUrl}/api/payment/webhook`,
+          `${appBaseUrl}/pay/${invoice.paymentToken}`,
           gatewayConfig.duitkuEnvironment === 'sandbox'
         );
 
@@ -210,7 +222,7 @@ export async function POST(request: Request) {
           customerPhone,
           description: `Payment for Invoice ${invoice.invoiceNumber}`,
           expiryMinutes: 1440, // 24 hours
-          paymentMethod: 'SP' // QRIS via ShopeePay - for direct QR display
+          paymentMethod: paymentMethod || 'SP', // Use selected method or default to ShopeePay QRIS
         });
 
         transactionId = result.reference;
@@ -218,12 +230,14 @@ export async function POST(request: Request) {
         qrString = result.qrString || ''; // Store QR string for frontend
         
         console.log('[Duitku] Payment created:', result.reference);
-        console.log('[Duitku] QR String:', result.qrString ? 'Available' : 'Not available');
       } catch (error) {
         console.error('[Duitku] Payment creation error:', error);
+        const errMsg = error instanceof Error ? error.message : 'Unknown error';
+        // Return 400 for Duitku business errors (min amount, channel unavailable)
+        const isBusinessError = errMsg.includes('Minimum Payment') || errMsg.includes('not available');
         return NextResponse.json(
-          { error: 'Failed to create Duitku payment', details: error instanceof Error ? error.message : 'Unknown error' },
-          { status: 500 }
+          { error: isBusinessError ? errMsg : 'Gagal membuat pembayaran Duitku', details: errMsg },
+          { status: isBusinessError ? 400 : 500 }
         );
       }
     } else if (gateway === 'tripay') {
@@ -249,7 +263,7 @@ export async function POST(request: Request) {
               quantity: 1,
             },
           ],
-          returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/pay/${invoice.paymentToken}`,
+          returnUrl: `${appBaseUrl}/pay/${invoice.paymentToken}`,
           expiredTime: 86400, // 24 hours
         });
 
@@ -441,7 +455,7 @@ async function createVoucherPayment(order: any, gateway: string) {
       const duitku = createDuitkuClient(
         gatewayConfig.duitkuMerchantCode || '',
         gatewayConfig.duitkuApiKey || '',
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/webhook`,
+        `${baseUrl}/api/payment/webhook`,
         `${baseUrl}/evoucher/pay/${order.paymentToken}`,
         gatewayConfig.duitkuEnvironment === 'sandbox'
       );
@@ -454,13 +468,12 @@ async function createVoucherPayment(order: any, gateway: string) {
         customerPhone,
         description: `Payment for Voucher Order ${order.orderNumber}`,
         expiryMinutes: 1440, // 24 hours
-        paymentMethod: 'SP' // QRIS via ShopeePay - for direct QR display
+        paymentMethod: 'SP', // Default QRIS
       });
 
       paymentUrl = result.paymentUrl;
       qrString = result.qrString || '';
       console.log('[Duitku Voucher] Payment created:', result.reference);
-      console.log('[Duitku Voucher] QR String:', result.qrString ? 'Available' : 'Not available');
     } catch (error) {
       console.error('[Duitku] Payment creation error:', error);
       return NextResponse.json(

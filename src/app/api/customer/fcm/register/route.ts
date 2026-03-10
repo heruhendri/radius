@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/db/client';
 
 /**
  * Register FCM Token for Push Notifications
@@ -66,10 +66,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Remove old token with same deviceId (if exists)
+    // Remove old token with same deviceId (if provided)
     if (deviceId) {
       fcmTokens = fcmTokens.filter((t: any) => t.deviceId !== deviceId);
     }
+
+    // Always deduplicate by token value to prevent duplicates causing multiple notifications
+    fcmTokens = fcmTokens.filter((t: any) => {
+      const existingToken = typeof t === 'string' ? t : t.token;
+      return existingToken !== fcmToken;
+    });
 
     // Add new token
     fcmTokens.push({
@@ -79,9 +85,10 @@ export async function POST(request: NextRequest) {
       registeredAt: new Date().toISOString(),
     });
 
-    // Keep only last 5 tokens
-    if (fcmTokens.length > 5) {
-      fcmTokens = fcmTokens.slice(-5);
+    // Keep only last 2 tokens (1 device = 1 token, max 2 for safety)
+    // Having more tokens causes duplicate notifications on the same device
+    if (fcmTokens.length > 2) {
+      fcmTokens = fcmTokens.slice(-2);
     }
 
     // Update user with new FCM tokens

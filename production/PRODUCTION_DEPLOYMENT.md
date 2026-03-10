@@ -1,5 +1,77 @@
 # Production Deployment Checklist
 
+## Cara Deploy Cepat (Recommended)
+
+### Windows → VPS (Full Automated)
+
+**1. Export project dari Windows:**
+```powershell
+# Dari ROOT project (salfanet-radius-main)
+.\production\export-production.ps1          # Build + copy + zip
+.\production\export-production.ps1 -NoBuild # Skip build (pakai .next yang sudah ada)
+.\production\export-production.ps1 -NoZip   # Copy saja tanpa zip
+
+# Atau masuk ke folder production dulu, lalu jalankan:
+# cd production
+# .\export-production.ps1
+```
+Output: `../salfanet-radius-production/` + `salfanet-radius-v{VERSION}-{TIMESTAMP}.zip`
+
+**2. Upload ZIP ke VPS:**
+```bash
+scp salfanet-radius-*.zip root@VPS_IP:/root/
+```
+
+**3. Install di VPS (otomatis semua step):**
+```bash
+cd /root
+unzip salfanet-radius-*.zip
+cd salfanet-radius
+bash vps-install/vps-installer.sh
+```
+Installer akan menjalankan 7 step otomatis + tawaran Step 8 (APK builder).
+
+---
+
+### Install Steps (vps-installer.sh)
+
+| Step | Modul | Keterangan |
+|------|-------|------------|
+| 1 | `install-system.sh` | System packages, UFW firewall, timezone |
+| 2 | `install-nodejs.sh` | Node.js 20 LTS via nvm |
+| 3 | `install-mysql.sh` | MySQL 8, database, user, migrations |
+| 4 | `install-app.sh` | Copy app, .env, npm install |
+| 5 | `install-freeradius.sh` | FreeRADIUS + MySQL module |
+| 6 | `install-nginx.sh` | Nginx reverse proxy |
+| 7 | `install-pm2.sh` | PM2, ecosystem.config.js, next build |
+| 8 | `install-apk.sh` | *(Opsional)* Android APK customer |
+
+---
+
+### Step 8: Build Customer Android APK
+
+APK customer self-service bisa dibangun saat install atau kapan saja setelahnya:
+
+```bash
+# Build APK (pertama kali - install Java + Android SDK dulu)
+bash /var/www/salfanet-radius/vps-install/install-apk.sh
+
+# Rebuild setelah update source (SDK sudah ada)
+bash /var/www/salfanet-radius/vps-install/install-apk.sh --rebuild
+
+# Cek status APK
+bash /var/www/salfanet-radius/vps-install/install-apk.sh --status
+```
+
+Setelah build selesai, APK tersedia di:
+```
+http://VPS_IP/downloads/salfanet-radius.apk
+```
+
+> **Requirement:** ~2GB disk space bebas, ~20-40 menit proses build
+
+---
+
 ## Pre-Deployment Checklist
 
 ### ✅ Environment Configuration
@@ -95,7 +167,7 @@
 - [ ] Clone repository to server
   ```bash
   git clone <repo-url>
-  cd salfanet-radius-main
+  cd salfanet-radius
   ```
 - [ ] Install dependencies
   ```bash
@@ -136,11 +208,41 @@
 
 ## Quick Deploy Commands
 
-### First Time Deployment
+### Deploy via Automated Installer (Recommended)
+```powershell
+# Di Windows — dari ROOT project (salfanet-radius-main)
+.\production\export-production.ps1
+
+# Upload ke VPS
+scp ..\salfanet-radius-*.zip root@VPS_IP:/root/
+
+# Di VPS — install otomatis
+cd /root
+unzip salfanet-radius-*.zip
+bash salfanet-radius/vps-install/vps-installer.sh
+```
+
+### Build APK Customer (opsional, setelah install)
+```bash
+bash /var/www/salfanet-radius/vps-install/install-apk.sh
+# APK tersedia di: http://VPS_IP/downloads/salfanet-radius.apk
+```
+
+### Update / Redeploy
+```bash
+# Di Windows — export ulang
+.\export-production.ps1 -NoBuild   # jika .next sudah ada
+
+# Upload + deploy
+scp ..\salfanet-radius-*.zip root@VPS_IP:/root/
+ssh root@VPS_IP "cd /root && unzip -o salfanet-radius-*.zip && bash /var/www/salfanet-radius/deploy.sh"
+```
+
+### Manual Deploy (Advanced)
 ```bash
 # 1. Setup environment
 cp .env.example .env
-nano .env  # Edit configuration
+nano .env  # Edit konfigurasi
 
 # 2. Install & Build
 npm ci --production
@@ -279,4 +381,4 @@ For issues or questions:
 
 ---
 
-**Last Updated:** January 2026
+**Last Updated:** February 2026

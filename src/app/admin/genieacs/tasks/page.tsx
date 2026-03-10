@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { ListTodo, RefreshCw, Loader2, Trash2, CheckCircle, XCircle, Clock, Search, AlertCircle, X, Activity } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 
 interface GenieACSTask {
   _id: string;
@@ -20,6 +20,7 @@ interface GenieACSTask {
 
 export default function GenieACSTasksPage() {
   const { t } = useTranslation();
+  const { addToast, confirm } = useToast();
   const [tasks, setTasks] = useState<GenieACSTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,29 +68,25 @@ export default function GenieACSTasksPage() {
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    const result = await Swal.fire({
+    if (await confirm({
       title: t('common.deleteTask'),
-      text: t('genieacs.taskWillBeDeleted'),
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: t('common.yesDelete'),
-      confirmButtonColor: '#dc2626',
-      cancelButtonText: t('common.cancel')
-    });
-
-    if (result.isConfirmed) {
+      message: t('genieacs.taskWillBeDeleted'),
+      confirmText: t('common.yesDelete'),
+      cancelText: t('common.cancel'),
+      variant: 'danger',
+    })) {
       try {
         const response = await fetch(`/api/genieacs/tasks/${encodeURIComponent(taskId)}`, { 
           method: 'DELETE' 
         });
         if (response.ok) {
           setTasks(tasks.filter(t => t._id !== taskId));
-          Swal.fire({ icon: 'success', title: t('common.success'), text: t('common.taskDeleted'), timer: 2000, showConfirmButton: false });
+          addToast({ type: 'success', title: t('common.success'), description: t('common.taskDeleted'), duration: 2000 });
         } else {
           throw new Error(t('genieacs.failedDeleteTask'));
         }
       } catch (error) {
-        Swal.fire({ icon: 'error', title: t('common.error'), text: t('genieacs.failedDeleteTask') });
+        addToast({ type: 'error', title: t('common.error'), description: t('genieacs.failedDeleteTask') });
       }
     }
   };
@@ -100,13 +97,13 @@ export default function GenieACSTasksPage() {
         method: 'POST' 
       });
       if (response.ok) {
-        Swal.fire({ icon: 'success', title: t('common.success'), text: t('genieacs.taskWillBeRetried'), timer: 2000, showConfirmButton: false });
+        addToast({ type: 'success', title: t('common.success'), description: t('genieacs.taskWillBeRetried'), duration: 2000 });
         handleRefresh();
       } else {
         throw new Error(t('genieacs.failedRetryTask'));
       }
     } catch (error) {
-      Swal.fire({ icon: 'error', title: t('common.error'), text: t('genieacs.failedRetryTask') });
+      addToast({ type: 'error', title: t('common.error'), description: t('genieacs.failedRetryTask') });
     }
   };
 
@@ -188,7 +185,7 @@ export default function GenieACSTasksPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#1a0f35] relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
         <Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
       </div>
@@ -196,16 +193,16 @@ export default function GenieACSTasksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 max-w-6xl mx-auto space-y-3">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
           <ListTodo className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
           {t('genieacs.tasksTitle')}
         </h1>
-        <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('genieacs.tasksSubtitle')}</p>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('genieacs.tasksSubtitle')}</p>
       </div>
 
       {/* Stats */}
@@ -299,7 +296,7 @@ export default function GenieACSTasksPage() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-foreground bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg disabled:opacity-50 transition-colors"
             >
               <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
               {t('common.refresh')}
@@ -312,8 +309,75 @@ export default function GenieACSTasksPage() {
           )}
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-3 p-3">
+          {filteredTasks.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <ListTodo className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">{t('genieacs.noTasks')}</p>
+            </div>
+          ) : (
+            filteredTasks.map((task) => (
+              <div key={task._id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{getTaskNameLabel(task.name)}</p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5" title={task.device}>{task.device}</p>
+                  </div>
+                  <div className="ml-2 flex-shrink-0">{getStatusBadge(task)}</div>
+                </div>
+                {task.fault && (
+                  <p className="text-[10px] text-destructive mb-2 truncate" title={task.fault.message}>
+                    {task.fault.message}
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">{t('genieacs.taskId')}</p>
+                    <p className="font-mono text-[10px] text-foreground truncate">{task._id}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">{t('genieacs.timestamp')}</p>
+                    <p className="text-foreground text-[10px]">
+                      {new Date(task.timestamp).toLocaleString('id-ID', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">{t('genieacs.retries')}</p>
+                    <p className="text-foreground text-sm">{task.retries || 0}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                  {task.fault && (
+                    <button
+                      onClick={() => handleRetryTask(task._id)}
+                      className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                      title={t('genieacs.retryTask')}
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDeleteTask(task._id)}
+                    className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                    title={t('genieacs.deleteTask')}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border bg-muted">

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslation } from '@/hooks/useTranslation';
-import { showError, showSuccess } from '@/lib/sweetalert';
+import { useToast } from '@/components/cyberpunk/CyberToast';
 import { ArrowLeft, Send, User, Clock } from 'lucide-react';
 
 type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_CUSTOMER' | 'RESOLVED' | 'CLOSED';
@@ -36,6 +36,9 @@ interface TicketDetail {
 
 export default function TicketDetailPage() {
   const { t } = useTranslation();
+  const { addToast } = useToast();
+  const toast = (type: 'success' | 'error' | 'info', msg: string) =>
+    addToast({ type, title: type === 'success' ? 'Berhasil' : 'Gagal', description: msg, duration: type === 'error' ? 8000 : 5000 });
   const params = useParams();
   const router = useRouter();
   const ticketId = params.id as string;
@@ -62,7 +65,10 @@ export default function TicketDetailPage() {
 
   const fetchTicket = async () => {
     try {
-      const res = await fetch(`/api/tickets?id=${ticketId}`);
+      const token = localStorage.getItem('customer_token');
+      const res = await fetch(`/api/tickets?id=${ticketId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.length > 0) {
@@ -122,13 +128,13 @@ export default function TicketDetailPage() {
       if (res.ok) {
         setReplyText('');
         fetchMessages();
-        await showSuccess(t('ticket.replySent') || 'Reply sent successfully');
+        toast('success', t('ticket.replySent') || 'Balasan terkirim');
       } else {
-        await showError(t('ticket.replyFailed'));
+        toast('error', t('ticket.replyFailed'));
       }
     } catch (error) {
       console.error('Failed to send reply:', error);
-      await showError(t('ticket.replyFailed'));
+      toast('error', t('ticket.replyFailed'));
     } finally {
       setSending(false);
     }

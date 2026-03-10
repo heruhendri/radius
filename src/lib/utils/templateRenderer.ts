@@ -32,7 +32,7 @@ export function renderVoucherTemplate(
   context?: RenderContext
 ): string {
   const currencyCode = context?.currencyCode || 'IDR'
-  const companyName = context?.companyName || 'AIBILL'
+  const companyName = context?.companyName || 'SALFANET'
 
   // Split template into header, body, footer
   const headerMatch = templateHtml.match(/\{include file="rad-template-header\.tpl"\}([\s\S]*?)\{foreach/)
@@ -49,35 +49,32 @@ export function renderVoucherTemplate(
 
     // Replace voucher variables
     html = html.replace(/\{\$vs\['code'\]\}/g, vs.code)
-    // Don't use fallback for secret - show actual secret value or empty string
     html = html.replace(/\{\$vs\['secret'\]\}/g, vs.secret !== undefined ? vs.secret : '')
     html = html.replace(/\{\$vs\['total'\]\}/g, vs.total.toString())
-    
+
     // Replace profile info
     html = html.replace(/\{\$vs\['profile_name'\]\}/g, vs.profile?.name || '')
-    
+
     // Replace validity - format as "X Unit"
     const validityValue = vs.profile?.validityValue || 0
     const validityUnit = vs.profile?.validityUnit || ''
     const validityFormatted = formatValidity(validityValue, validityUnit)
     html = html.replace(/\{\$vs\['validity'\]\}/g, validityFormatted)
-    
+
     // Replace quota and duration
     const quotaFormatted = formatQuota(vs.profile?.usageQuota)
     const durationFormatted = formatDuration(vs.profile?.usageDuration)
     html = html.replace(/\{\$vs\['quota'\]\}/g, quotaFormatted)
     html = html.replace(/\{\$vs\['duration'\]\}/g, durationFormatted)
-    
+
     // Replace router/NAS info
     html = html.replace(/\{\$vs\['router_name'\]\}/g, vs.router?.name || companyName)
     html = html.replace(/\{\$vs\['router_shortname'\]\}/g, vs.router?.shortname || '')
-    
+
     // Replace conditional for code/secret (same username=password vs different)
     html = html.replace(
       /\{if \$vs\['code'\] eq \$vs\['secret'\]\}([\s\S]*?)\{else\}([\s\S]*?)\{\/if\}/g,
       (_, ifBlock, elseBlock) => {
-        // If secret is undefined/null or same as code, show ifBlock (single code)
-        // If secret is different from code, show elseBlock (username/password)
         const isSame = !vs.secret || vs.code === vs.secret
         return isSame ? ifBlock : elseBlock
       }
@@ -107,7 +104,7 @@ export function renderVoucherTemplate(
  */
 function formatValidity(value: number, unit: string): string {
   if (!value || !unit) return ''
-  
+
   const unitMap: Record<string, string> = {
     'MINUTES': 'Menit',
     'HOURS': 'Jam',
@@ -115,7 +112,7 @@ function formatValidity(value: number, unit: string): string {
     'WEEKS': 'Minggu',
     'MONTHS': 'Bulan'
   }
-  
+
   return `${value} ${unitMap[unit] || unit}`
 }
 
@@ -159,7 +156,6 @@ function formatNumber(
 
 /**
  * Get printable HTML with proper styling for print
- * Tidak mengubah tampilan voucher - tetap sama seperti preview
  */
 export function getPrintableHtml(renderedHtml: string): string {
   return `
@@ -174,19 +170,19 @@ export function getPrintableHtml(renderedHtml: string): string {
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     @page {
       size: A4 portrait;
       margin: 5mm;
     }
-    
+
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 5px;
       background: #fff;
     }
-    
+
     .voucher-container {
       display: flex;
       flex-wrap: wrap;
@@ -194,7 +190,7 @@ export function getPrintableHtml(renderedHtml: string): string {
       align-content: flex-start;
       width: 100%;
     }
-    
+
     @media print {
       html, body {
         width: 210mm;
@@ -202,13 +198,13 @@ export function getPrintableHtml(renderedHtml: string): string {
         margin: 0;
         padding: 0;
       }
-      
+
       body {
         padding: 3mm;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
-      
+
       .voucher-container {
         width: 100%;
         min-height: 291mm;
