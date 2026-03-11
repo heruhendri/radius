@@ -2,7 +2,7 @@
 
 Modern, full-stack billing system for ISP/RTRW.NET with FreeRADIUS integration supporting both **PPPoE** and **Hotspot** authentication.
 
-> **Latest Update**: December 29, 2025 - L2TP VPN Client Control Fixes v2.9.4 🎉
+> **Latest Update**: March 11, 2026 - FreeRADIUS deployed, VPS production ready v2.10.27 🎉
 
 ---
 
@@ -10,10 +10,11 @@ Modern, full-stack billing system for ISP/RTRW.NET with FreeRADIUS integration s
 
 **For AI/LLM helping with this project:**
 
-👉 **READ FIRST:** [AI_PROJECT_MEMORY.md](docs/AI_PROJECT_MEMORY.md)
+👉 **READ FIRST:** [docs/AI_PROJECT_MEMORY.md](docs/AI_PROJECT_MEMORY.md)
 
 This file contains:
 - Complete project architecture and tech stack
+- Production VPS details and credentials layout
 - Database schema and relationships
 - Known issues and proven solutions
 - Configuration file locations
@@ -158,104 +159,82 @@ salfanet-radius/
 ├── src/
 │   ├── app/
 │   │   ├── admin/          # Admin panel pages
-│   │   ├── agent/          # Agent portal
-│   │   ├── api/            # API routes
-│   │   ├── customer/       # Customer portal
+│   │   ├── agent/          # Agent/reseller portal
+│   │   ├── api/            # Thin API route handlers
+│   │   ├── customer/       # Customer self-service portal
+│   │   ├── coordinator/    # Coordinator portal
+│   │   ├── technician/     # Technician portal
+│   │   │   └── (portal)/   # Route group for all technician pages
 │   │   └── page.tsx        # Landing/redirect
-│   ├── components/         # React components
-│   ├── hooks/              # Custom hooks
-│   └── lib/                # Utilities & services
+│   ├── server/             # Server-only: db, services, jobs, cache, auth
+│   ├── features/           # Vertical slices (queries, schemas, types)
+│   ├── components/         # Shared React components
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Utilities & re-export proxies
+│   ├── locales/            # i18n translations (id, en)
+│   └── types/              # Shared TypeScript types
 ├── prisma/
-│   ├── schema.prisma       # Database schema
-│   ├── seed.ts             # Main seed file
-│   └── seeds/              # Individual seed scripts
-├── freeradius-config/      # FreeRADIUS configuration backup
-│   ├── sites-enabled-default
-│   ├── mods-enabled-sql
-│   ├── mods-enabled-rest
-│   └── clients.conf
-├── olt/                    # OLT Management App (standalone)
-│   ├── app.js              # Express server (port 8306)
-│   ├── settings.json       # OLT & MikroTik config
-│   ├── mikrotik-client.js  # RouterOS API client
-│   ├── database.json       # Customer cache
-│   └── public/             # Web UI
-├── backup/                 # Database backups
-└── docs/                   # Documentation
+│   ├── schema.prisma       # Database schema (~45 models)
+│   └── seeds/              # Seed scripts (run via seed-all.ts)
+├── freeradius-config/      # FreeRADIUS config backup (deployed by installer)
+│   ├── mods-available/     # sql, rest, mschap modules
+│   ├── mods-enabled/       # Enabled module files
+│   ├── sites-available/    # default, coa virtual servers
+│   ├── sites-enabled/      # Enabled site files
+│   ├── policy.d/           # Custom policies (PPPoE realm support)
+│   └── clients.conf        # NAS/router clients config
+├── vps-install/            # VPS installer scripts
+│   ├── install-freeradius.sh
+│   ├── install-nodejs.sh
+│   ├── install-mysql.sh
+│   └── common.sh           # Shared functions & DB credentials
+├── production/             # Production config templates
+│   ├── ecosystem.config.js # PM2 config (deployed to app dir)
+│   └── nginx-salfanet-radius.conf
+├── mobile-app/             # React Native / Expo mobile app
+├── scripts/                # Utility scripts
+└── docs/                   # Documentation & AI memory
+    └── AI_PROJECT_MEMORY.md  # 👈 AI context file
 ```
 
-## 📡 OLT Management Application
-
-Aplikasi standalone di folder `/olt` untuk manajemen **OLT ZTE** via Telnet dan integrasi **MikroTik PPPoE**.
-
-### Quick Start
-```bash
-cd olt/
-npm install
-npm start    # Runs on port 8306
-```
-
-### Key Features
-- **ONU Management** - List, register, configure ONU
-- **Power Monitoring** - Check ONU signal attenuation
-- **PPPoE Integration** - Sync with MikroTik RouterOS
-- **Customer Cache** - Cached customer data with TTL
-- **Template System** - ONU registration & speed profiles
-
-### API Endpoints
-```
-GET  /api/onu/unconfigured     - Unregistered ONUs
-GET  /api/onu/registered       - Registered ONUs
-POST /api/onu/register         - Register new ONU
-GET  /api/mikrotik/pppoe-profiles
-POST /api/mikrotik/pppoe-secret
-```
-
-### Configuration (`settings.json`)
-```json
-{
-  "olt": { "ip": "136.1.1.100", "port": 23 },
-  "mikrotik": { "ip": "103.153.62.254", "port": 8728 },
-  "app": { "port": 8306 }
-}
-```
-
-See `CHAT_MEMORY.md` for detailed documentation.
-
-## 🛠️ Installation
+## ️ Installation
 
 ### Quick Start (New VPS)
 
-**Option 1: VPS dengan Root Access**
 ```bash
 # 1. Upload project to VPS
-scp -r salfanet-radius-main root@YOUR_VPS_IP:/root/
+scp -r salfanet-radius-main root@YOUR_VPS_IP:/var/www/salfanet-radius
 
-# 2. SSH to VPS and run installer
+# 2. SSH to VPS
 ssh root@YOUR_VPS_IP
-cd /root/salfanet-radius-main
-chmod +x vps-install.sh
-./vps-install.sh
+cd /var/www/salfanet-radius
+
+# 3. Upload installer scripts
+scp -r vps-install/ root@YOUR_VPS_IP:/tmp/vps-install/
+
+# 4. Run full installer
+bash /tmp/vps-install/vps-installer.sh
 ```
 
-**Option 2: VPS Lokal / Tanpa Root Access (Proxmox, LXC, etc)**
+Or run each step individually:
 ```bash
-# 1. Upload project to VPS
-scp -P PORT -r salfanet-radius-main user@YOUR_VPS_IP:~/
-
-# 2. SSH to VPS and run local installer
-ssh -p PORT user@YOUR_VPS_IP
-cd ~/salfanet-radius-main
-chmod +x vps-install-local.sh
-./vps-install-local.sh
+bash /tmp/vps-install/install-system.sh      # System packages
+bash /tmp/vps-install/install-nodejs.sh      # Node.js 20
+bash /tmp/vps-install/install-mysql.sh       # MySQL 8.0
+bash /tmp/vps-install/install-redis.sh       # Redis
+bash /tmp/vps-install/install-nginx.sh       # Nginx
+bash /tmp/vps-install/install-pm2.sh         # PM2 + build + start
+bash /tmp/vps-install/install-freeradius.sh  # FreeRADIUS 3.0 (run from /var/www/salfanet-radius)
 ```
 
 The installer will:
-- Install Node.js 20, MySQL 8.0, FreeRADIUS 3.0, Nginx, PM2
-- Configure database and create tables
-- Setup FreeRADIUS with MySQL backend
-- Configure session timeout (30 min idle, 1 day max)
-- Build and start the application
+- Install Node.js 20, MySQL 8.0, FreeRADIUS 3.0.26, Nginx, PM2, Redis
+- Configure database and create tables via `prisma db push`
+- Deploy FreeRADIUS config from `freeradius-config/` backup
+- Setup SQL + REST modules with MySQL backend
+- Configure Nginx with HTTP→HTTPS redirect
+- Build Next.js and start via PM2 (cluster mode)
+- Seed database with default admin, templates, and categories
 
 ### Manual Installation
 
@@ -310,30 +289,39 @@ client_table = "nas"
 
 ### Backup FreeRADIUS Config
 
-Backup files included in `freeradius-config/` directory:
-- `sites-enabled-default` - Main site configuration
-- `mods-enabled-sql` - SQL module config
-- `mods-enabled-rest` - REST module config
-- `clients.conf` - Client/NAS configuration
-- `freeradius-config-backup.tar.gz` - Complete backup archive
+Backup files included in `freeradius-config/` directory (auto-deployed by installer):
+- `mods-available/sql` — SQL/MySQL module config
+- `mods-available/rest` — REST API integration module
+- `mods-available/mschap` — MS-CHAP module
+- `sites-available/default` — Main auth virtual server
+- `sites-available/coa` — CoA/Disconnect-Request server
+- `sites-enabled/default` — Active default site (standalone file, not symlink)
+- `policy.d/filter` — PPPoE realm support policy
+- `clients.conf` — NAS/router clients (+ `$INCLUDE clients.d/`)
 
-To restore on new VPS:
+To restore on new VPS (automated):
 ```bash
-# Extract backup
-cd /tmp
-tar -xzf /path/to/freeradius-config-backup.tar.gz
+# Run from app directory — installer detects freeradius-config/ automatically
+cd /var/www/salfanet-radius
+bash /tmp/vps-install/install-freeradius.sh
+```
 
-# Copy files
-cp freeradius-backup/sites-enabled/* /etc/freeradius/3.0/sites-enabled/
-cp freeradius-backup/mods-enabled/* /etc/freeradius/3.0/mods-enabled/
-cp freeradius-backup/clients.conf /etc/freeradius/3.0/
+Manual restore:
+```bash
+FR=/etc/freeradius/3.0
+BACKUP=/var/www/salfanet-radius/freeradius-config
 
-# Update SQL credentials in mods-enabled/sql
-# Update REST URL in mods-enabled/rest
+cp $BACKUP/mods-available/sql $FR/mods-available/sql
+cp $BACKUP/mods-available/rest $FR/mods-available/rest
+cp $BACKUP/sites-enabled/default $FR/sites-enabled/default
+cp $BACKUP/clients.conf $FR/clients.conf
 
-# Test and restart
-freeradius -XC
-systemctl restart freeradius
+# Update DB credentials
+sed -i "s/login = .*/login = \"salfanet_user\"/" $FR/mods-available/sql
+sed -i "s/password = .*/password = \"YOUR_DB_PASS\"/" $FR/mods-available/sql
+
+chown -R freerad:freerad $FR
+freeradius -CX && systemctl restart freeradius
 ```
 
 ## 🌐 RADIUS Authentication Flow
