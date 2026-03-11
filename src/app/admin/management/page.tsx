@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
+import { usePermissions } from '@/hooks/usePermissions';
 import {
   SimpleModal,
   ModalHeader,
@@ -19,6 +21,7 @@ interface User {
   id: string;
   username: string;
   email: string;
+  phone: string | null;
   role: string;
   createdAt: string;
   updatedAt: string;
@@ -45,6 +48,9 @@ const ROLES = [
 export default function ManagementPage() {
   const { t } = useTranslation();
   const { addToast, confirm } = useToast();
+  const { data: session } = useSession();
+  const { hasPermission } = usePermissions();
+  const currentUserIsSuperAdmin = (session?.user as any)?.role === 'SUPER_ADMIN';
   const [users, setUsers] = useState<User[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [roleTemplates, setRoleTemplates] = useState<Record<string, string[]>>({});
@@ -54,6 +60,7 @@ export default function ManagementPage() {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
+    phone: '',
     password: '',
     role: 'CUSTOMER_SERVICE',
     permissions: [] as string[],
@@ -159,6 +166,7 @@ export default function ManagementPage() {
         setFormData({
           username: user.username,
           email: user.email,
+          phone: user.phone || '',
           password: '',
           role: user.role,
           permissions: userPermissionIds,
@@ -168,6 +176,7 @@ export default function ManagementPage() {
         setFormData({
           username: user.username,
           email: user.email,
+          phone: user.phone || '',
           password: '',
           role: user.role,
           permissions: user.permissions || [],
@@ -179,6 +188,7 @@ export default function ManagementPage() {
       setFormData({
         username: user.username,
         email: user.email,
+        phone: user.phone || '',
         password: '',
         role: user.role,
         permissions: user.permissions || [],
@@ -218,6 +228,7 @@ export default function ManagementPage() {
     setFormData({
       username: '',
       email: '',
+      phone: '',
       password: '',
       role: 'CUSTOMER_SERVICE',
       permissions: [],
@@ -306,15 +317,17 @@ export default function ManagementPage() {
             <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('management.title')}</h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('management.subtitle')}</p>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="h-8 px-3 bg-primary hover:bg-primary/90 text-primary-foreground text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 self-start sm:self-auto"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            {t('management.addUser')}
-          </button>
+          {hasPermission('users.create') && (
+            <button
+              onClick={openCreateModal}
+              className="h-8 px-3 bg-primary hover:bg-primary/90 text-primary-foreground text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              {t('management.addUser')}
+            </button>
+          )}
         </div>
 
         {/* Stats */}
@@ -404,26 +417,33 @@ export default function ManagementPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => handleEdit(user)}
-                        className="p-1.5 text-primary hover:bg-primary/10 rounded transition-colors"
-                        title="Edit"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(user)}
-                        className="p-1.5 text-destructive hover:bg-destructive/10 rounded transition-colors"
-                        title={t('management.deleteTooltip')}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      {hasPermission('users.edit') && (user.role !== 'SUPER_ADMIN' || currentUserIsSuperAdmin) && (
+                        <button
+                          onClick={() => handleEdit(user)}
+                          className="p-1.5 text-primary hover:bg-primary/10 rounded transition-colors"
+                          title="Edit"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      )}
+                      {hasPermission('users.delete') && user.role !== 'SUPER_ADMIN' && (
+                        <button
+                          onClick={() => handleDelete(user)}
+                          className="p-1.5 text-destructive hover:bg-destructive/10 rounded transition-colors"
+                          title={t('management.deleteTooltip')}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </div>
+                  {user.phone && (
+                    <p className="text-[10px] text-muted-foreground font-mono">{user.phone}</p>
+                  )}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-medium rounded ${getRoleBadgeColor(user.role)}`}>
                       {user.role.replace('_', ' ')}
@@ -453,6 +473,7 @@ export default function ManagementPage() {
                 <tr className="border-b border-border bg-muted">
                   <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('management.username')}</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('management.email')}</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Nomor HP</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('management.role')}</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">{t('management.permissions')}</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">{t('management.createdAt')}</th>
@@ -462,7 +483,7 @@ export default function ManagementPage() {
               <tbody className="divide-y divide-border">
                 {users.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-8 text-center text-xs text-muted-foreground">
+                    <td colSpan={7} className="px-3 py-8 text-center text-xs text-muted-foreground">
                       {t('management.noUsersFound')}
                     </td>
                   </tr>
@@ -481,6 +502,9 @@ export default function ManagementPage() {
                       </td>
                       <td className="px-3 py-1.5">
                         <span className="text-xs text-muted-foreground">{user.email}</span>
+                      </td>
+                      <td className="px-3 py-1.5 hidden md:table-cell">
+                        <span className="text-xs text-muted-foreground font-mono">{user.phone || '-'}</span>
                       </td>
                       <td className="px-3 py-1.5">
                         <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-medium rounded ${getRoleBadgeColor(user.role)}`}>
@@ -521,24 +545,28 @@ export default function ManagementPage() {
                       </td>
                       <td className="px-3 py-1.5">
                         <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleEdit(user)}
-                            className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
-                            title="Edit"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(user)}
-                            className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors"
-                            title={t('management.deleteTooltip')}
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          {hasPermission('users.edit') && (user.role !== 'SUPER_ADMIN' || currentUserIsSuperAdmin) && (
+                            <button
+                              onClick={() => handleEdit(user)}
+                              className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
+                              title="Edit"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
+                          {hasPermission('users.delete') && user.role !== 'SUPER_ADMIN' && (
+                            <button
+                              onClick={() => handleDelete(user)}
+                              className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors"
+                              title={t('management.deleteTooltip')}
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -565,13 +593,17 @@ export default function ManagementPage() {
                 <ModalInput type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
               </div>
               <div>
+                <ModalLabel>Nomor HP / WhatsApp <span className="text-muted-foreground text-[10px]">(untuk login OTP)</span></ModalLabel>
+                <ModalInput type="tel" placeholder="08xxxxxxxxxx" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+              </div>
+              <div>
                 <ModalLabel required={!editingUser}>{t('management.password')} {editingUser && <span className="text-muted-foreground">({t('management.passwordHint')})</span>}</ModalLabel>
                 <ModalInput type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} {...(!editingUser && { required: true })} />
               </div>
               <div>
                 <ModalLabel required>{t('management.role')}</ModalLabel>
                 <ModalSelect value={formData.role} onChange={(e) => handleRoleChange(e.target.value)}>
-                  {ROLES.map((role) => (<option key={role.value} value={role.value} className="bg-[#0a0520]">{role.label}</option>))}
+                  {ROLES.filter((role) => role.value !== 'SUPER_ADMIN' || currentUserIsSuperAdmin).map((role) => (<option key={role.value} value={role.value} className="bg-[#0a0520]">{role.label}</option>))}
                 </ModalSelect>
                 <p className="text-[10px] text-muted-foreground mt-1">{t('management.roleAutoLoad')}</p>
               </div>

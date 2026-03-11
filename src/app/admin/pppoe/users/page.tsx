@@ -115,7 +115,7 @@ export default function PppoeUsersPage() {
     email: '', address: '', latitude: '', longitude: '', ipAddress: '', expiredAt: '',
     subscriptionType: 'POSTPAID' as 'POSTPAID' | 'PREPAID',
     billingDay: '1',
-    macAddress: '', comment: '',
+    macAddress: '', comment: '', referralCode: '',
     idCardNumber: '', idCardPhoto: '',
     installationPhotos: [] as string[],
     followRoad: false,
@@ -188,6 +188,7 @@ export default function PppoeUsersPage() {
       billingDay: ((user as any).billingDay || 1).toString(),
       macAddress: (user as any).macAddress || '',
       comment: (user as any).comment || '',
+      referralCode: (user as any).referralCode || '',
       idCardNumber: (user as any).idCardNumber || '',
       idCardPhoto: (user as any).idCardPhoto || '',
       installationPhotos: (user as any).installationPhotos || [],
@@ -307,7 +308,7 @@ export default function PppoeUsersPage() {
 
   const toggleSelectUser = (userId: string) => { const n = new Set(selectedUsers); n.has(userId) ? n.delete(userId) : n.add(userId); setSelectedUsers(n); };
   const toggleSelectAll = () => { selectedUsers.size === filteredUsers.length && filteredUsers.length > 0 ? setSelectedUsers(new Set()) : setSelectedUsers(new Set(filteredUsers.map(u => u.id))); };
-  const resetForm = () => { setFormData({ username: '', password: '', profileId: '', routerId: '', areaId: '', name: '', phone: '', email: '', address: '', latitude: '', longitude: '', ipAddress: '', expiredAt: '', subscriptionType: 'POSTPAID', billingDay: '1', macAddress: '', comment: '', idCardNumber: '', idCardPhoto: '', installationPhotos: [], followRoad: false }); };
+  const resetForm = () => { setFormData({ username: '', password: '', profileId: '', routerId: '', areaId: '', name: '', phone: '', email: '', address: '', latitude: '', longitude: '', ipAddress: '', expiredAt: '', subscriptionType: 'POSTPAID', billingDay: '1', macAddress: '', comment: '', referralCode: '', idCardNumber: '', idCardPhoto: '', installationPhotos: [], followRoad: false }); };
 
   const handleUploadIdCard = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1090,6 +1091,7 @@ export default function PppoeUsersPage() {
                 <div><ModalLabel>{t('pppoe.expiryDate')}</ModalLabel><ModalInput type="date" value={formData.expiredAt} onChange={(e) => setFormData({ ...formData, expiredAt: e.target.value })} /></div>
               )}
               <div><ModalLabel>Komentar / Catatan</ModalLabel><ModalTextarea value={formData.comment} onChange={(e) => setFormData({ ...formData, comment: e.target.value })} placeholder="Catatan tambahan tentang pelanggan ini..." rows={2} /></div>
+              <div><ModalLabel>Kode Referral <span className="text-muted-foreground text-[10px]">(opsional)</span></ModalLabel><ModalInput type="text" value={formData.referralCode} onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })} placeholder="Masukkan kode referral" /></div>
 
               {/* Dokumen Pelanggan */}
               <div className="border border-border dark:border-[#bc13fe]/30 rounded-lg p-3 space-y-3">

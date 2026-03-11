@@ -20,7 +20,19 @@ export async function GET(req: NextRequest) {
     );
 
     const { payload } = await jwtVerify(token, secret);
-    const technicianId = payload.id as string;
+    let technicianId: string;
+    if (payload.type === 'admin_user') {
+      const adminUser = await prisma.adminUser.findUnique({
+        where: { id: payload.id as string },
+        select: { id: true, isActive: true, role: true },
+      });
+      if (!adminUser?.isActive || adminUser.role !== 'TECHNICIAN') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      technicianId = adminUser.id;
+    } else {
+      technicianId = payload.id as string;
+    }
 
     // Get query parameters
     const searchParams = req.nextUrl.searchParams;
@@ -97,7 +109,19 @@ export async function POST(req: NextRequest) {
     );
 
     const { payload } = await jwtVerify(token, secret);
-    const technicianId = payload.id as string;
+    let technicianId: string;
+    if (payload.type === 'admin_user') {
+      const adminUser = await prisma.adminUser.findUnique({
+        where: { id: payload.id as string },
+        select: { id: true, isActive: true, role: true },
+      });
+      if (!adminUser?.isActive || adminUser.role !== 'TECHNICIAN') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      technicianId = adminUser.id;
+    } else {
+      technicianId = payload.id as string;
+    }
 
     const { workOrderId, action } = await req.json();
 
