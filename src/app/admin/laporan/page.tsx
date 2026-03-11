@@ -179,9 +179,9 @@ export default function LaporanPage() {
     }
   };
 
-  // ── Column keys to display in preview table (max 7) ─────────────────────
+  // ── Column keys to display in preview table ──────────────────────────────
   const previewColumns = rows.length
-    ? Object.keys(rows[0]).filter(k => k !== 'Jumlah' && k !== 'Harga').slice(0, 8)
+    ? Object.keys(rows[0]).filter(k => k !== 'Jumlah' && k !== 'Harga')
     : [];
 
   const statusOptions = reportType === 'customer' ? CUSTOMER_STATUSES : INVOICE_STATUSES;
@@ -380,9 +380,11 @@ export default function LaporanPage() {
                 {rows.slice(0, 100).map((row, i) => (
                   <tr key={i} className={`border-b border-slate-700/30 hover:bg-slate-700/30 transition-colors ${i % 2 === 0 ? 'bg-transparent' : 'bg-slate-900/20'}`}>
                     {previewColumns.map((col) => (
-                      <td key={col} className={`px-4 py-2.5 text-slate-300 whitespace-nowrap ${
-                        col === 'Status' ? getStatusClass(String(row[col])) : ''
-                      }`}>
+                      <td key={col} className={`px-4 py-2.5 text-slate-300 ${
+                        col === 'Catatan' ? 'max-w-[200px] truncate' : 'whitespace-nowrap'
+                      } ${col === 'Status' ? getStatusClass(String(row[col])) : ''}`}
+                        title={col === 'Catatan' ? String(row[col] ?? '') : undefined}
+                      >
                         {col === 'Status'
                           ? <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getStatusBadge(String(row[col]))}`}>{row[col]}</span>
                           : String(row[col] ?? '-')

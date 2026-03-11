@@ -219,6 +219,9 @@ model invoice {
   customerUsername String?
   sentReminders    String?         @db.Text // JSON array of sent reminder days, e.g., "[-7, -5, -3]"
   
+  // Notes / catatan internal admin
+  notes            String?         @db.Text
+  
   // NEW: Invoice type and tax fields
   invoiceType      InvoiceType     @default(MONTHLY)
   baseAmount       Int?            // Amount before tax
@@ -365,6 +368,7 @@ model payment {
   method  String
   gatewayId String?
   status  String
+  notes   String?         @db.Text
   paidAt  DateTime        @default(now())
   createdAt DateTime      @default(now())
   gateway paymentGateway? @relation(fields: [gatewayId], references: [id])

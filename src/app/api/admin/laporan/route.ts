@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
           paidAt: true,
           createdAt: true,
           invoiceType: true,
+          notes: true,
         },
         take: 5000,
       });
@@ -77,6 +78,7 @@ export async function GET(request: NextRequest) {
         'Jatuh Tempo': formatDate(inv.dueDate),
         'Dibayar': formatDate(inv.paidAt),
         'Dibuat': formatDate(inv.createdAt),
+        'Catatan': inv.notes || '-',
       }));
 
       const summary = {
@@ -121,6 +123,7 @@ export async function GET(request: NextRequest) {
         'Metode': pay.method,
         'Status': pay.status,
         'Tanggal Bayar': formatDate(pay.paidAt),
+        'Catatan': pay.notes || '-',
       }));
 
       const summary = {
@@ -165,6 +168,7 @@ export async function GET(request: NextRequest) {
         'Auto Renewal': c.autoRenewal ? 'Ya' : 'Tidak',
         'Terdaftar': formatDate(c.createdAt),
         'Expired': formatDate(c.expiredAt),
+        'Catatan': c.comment || '-',
       }));
 
       const summary = {
