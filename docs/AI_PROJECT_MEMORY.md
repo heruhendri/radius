@@ -13,7 +13,7 @@
 - **Status**: Production-ready, deployed di VPS
 - **Last Updated**: March 2026
 - **GitHub**: https://github.com/s4lfanet/salfanet-radius (public)
-- **Live URL**: https://radius.hotspotapp.net
+- **Live URL**: https://radius.yourdomain.com
 
 ---
 
@@ -21,10 +21,10 @@
 
 | Item | Value |
 |------|-------|
-| IP | `103.151.140.110` |
+| IP | `YOUR_VPS_IP` |
 | OS | Ubuntu 22.04.1 LTS |
 | App Path | `/var/www/salfanet-radius` |
-| Domain | `https://radius.hotspotapp.net` (Cloudflare proxy) |
+| Domain | `https://radius.yourdomain.com` (Cloudflare proxy) |
 | Node.js | 20.20.1 |
 | MySQL | 8.0.45 |
 | PM2 | 6.0.14 |
@@ -36,11 +36,11 @@
 
 **Database:**
 - DB Name: `salfanet_radius`
-- User: `salfanet_user` / Password: `salfanetradius123`
-- Root password: `root123`
+- User: `salfanet_user` / Password: `YOUR_DB_PASSWORD`
+- Root password: `YOUR_ROOT_PASSWORD`
 
 **Default Login:**
-- URL: `https://radius.hotspotapp.net/login`
+- URL: `https://radius.yourdomain.com/login`
 - Username: `superadmin`
 - Password: `admin123`
 
