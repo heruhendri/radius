@@ -361,7 +361,11 @@
     "radiusConfig": "Konfigurasi",
     "radTest": "RadTest",
     "radCheck": "RadCheck",
-    "radiusLogs": "Log Langsung"
+    "radiusLogs": "Log Langsung",
+    "catReports": "Laporan",
+    "laporan": "Laporan & Analitik",
+    "laporanData": "Data & Export",
+    "laporanAnalitik": "Analitik Advanced"
   },
   "dashboard": {
     "title": "Dasbor",

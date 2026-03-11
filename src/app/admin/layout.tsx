@@ -33,6 +33,9 @@ import {
   Moon,
   Gift,
   Globe,
+  BarChart3,
+  FileText,
+  Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -204,6 +207,20 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.radTest', href: '/admin/freeradius/radtest', requiredPermission: 'settings.view' },
           { titleKey: 'nav.radCheck', href: '/admin/freeradius/radcheck', requiredPermission: 'settings.view' },
           { titleKey: 'nav.radiusLogs', href: '/admin/freeradius/logs', requiredPermission: 'settings.view' },
+        ],
+      },
+    ],
+  },
+  {
+    titleKey: 'nav.catReports',
+    items: [
+      {
+        titleKey: 'nav.laporan',
+        icon: <BarChart3 className="w-4 h-4" />,
+        requiredPermission: 'reports.view',
+        children: [
+          { titleKey: 'nav.laporanData', href: '/admin/laporan', requiredPermission: 'reports.view' },
+          { titleKey: 'nav.laporanAnalitik', href: '/admin/laporan/analitik', requiredPermission: 'reports.view' },
         ],
       },
     ],
