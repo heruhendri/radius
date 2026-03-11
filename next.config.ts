@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   // Optimize for low-resource VPS (2GB RAM)
+  output: 'standalone', // Minimal deployment bundle — only includes required files
   experimental: {
     // Reduce memory usage during build
     workerThreads: false,

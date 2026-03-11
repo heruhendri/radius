@@ -3,14 +3,13 @@ module.exports = {
     // Main Next.js Application
     {
       name: 'salfanet-radius',
-      script: 'node_modules/next/dist/bin/next',
-      args: 'start',
+      script: '.next/standalone/server.js', // standalone output — lebih hemat memory
       cwd: process.env.APP_DIR || '/var/www/salfanet-radius',
       instances: 1,
       exec_mode: 'cluster',
       watch: false,
-      // Memory optimizations
-      max_memory_restart: '400M', // Reduced from 1G, restart if exceeds
+      // Memory optimizations for 2GB VPS
+      max_memory_restart: '400M',
       node_args: [
         '--max-old-space-size=350',  // Limit V8 heap to 350MB
         '--max-semi-space-size=8',   // Reduce new generation size
@@ -20,6 +19,7 @@ module.exports = {
         NODE_ENV: 'production',
         NODE_OPTIONS: '--max-old-space-size=350',
         PORT: 3000,
+        HOSTNAME: '0.0.0.0',         // Required for standalone server
         TZ: 'Asia/Jakarta'
       },
       error_file: './logs/error.log',
