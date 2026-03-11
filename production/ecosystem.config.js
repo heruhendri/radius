@@ -5,19 +5,20 @@ module.exports = {
       name: 'salfanet-radius',
       script: '.next/standalone/server.js', // standalone output — lebih hemat memory
       cwd: process.env.APP_DIR || '/var/www/salfanet-radius',
-      instances: 1,
-      exec_mode: 'cluster',
+      instances: 2,            // Gunakan kedua CPU core (2 thread)
+      exec_mode: 'cluster',    // Load balance antar 2 worker
       watch: false,
-      // Memory optimizations for 2GB VPS
-      max_memory_restart: '400M',
+      // Memory: 2 instance × 256MB = 512MB heap limit, actual ~300MB total
+      max_memory_restart: '280M',
       node_args: [
-        '--max-old-space-size=350',  // Limit V8 heap to 350MB
+        '--max-old-space-size=256',  // Per-instance heap limit
         '--max-semi-space-size=8',   // Reduce new generation size
         '--optimize-for-size',       // Optimize for memory over speed
+        '--expose-gc',               // Allow explicit GC calls
       ],
       env: {
         NODE_ENV: 'production',
-        NODE_OPTIONS: '--max-old-space-size=350',
+        // NODE_OPTIONS tidak diisi — sudah diatur via node_args di atas
         PORT: 3000,
         HOSTNAME: '0.0.0.0',         // Required for standalone server
         TZ: 'Asia/Jakarta'
@@ -40,16 +41,17 @@ module.exports = {
       instances: 1,
       exec_mode: 'fork',
       watch: false,
-      // Memory optimizations
-      max_memory_restart: '150M', // Reduced from 256M
+      // Cron tidak perlu banyak memori — cukup 120MB heap
+      max_memory_restart: '150M',
       node_args: [
         '--max-old-space-size=120',  // Limit heap to 120MB
         '--max-semi-space-size=4',
         '--optimize-for-size',
+        '--expose-gc',
       ],
       env: {
         NODE_ENV: 'production',
-        NODE_OPTIONS: '--max-old-space-size=120',
+        // NODE_OPTIONS tidak diisi — sudah diatur via node_args di atas
         API_URL: 'http://localhost:3000',
         TZ: 'Asia/Jakarta'
       },

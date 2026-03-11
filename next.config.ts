@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
   },
   // Optimize for low-resource VPS (2GB RAM)
   output: 'standalone', // Minimal deployment bundle — only includes required files
+  // Image optimization cache: default 60s → 1 hour (reduce CPU re-encoding)
+  images: {
+    minimumCacheTTL: 3600,
+    formats: ['image/webp'],
+  },
   experimental: {
     // Reduce memory usage during build
     workerThreads: false,
