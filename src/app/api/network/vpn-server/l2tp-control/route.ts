@@ -37,6 +37,18 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Validate host and username to prevent shell command injection
+    if (!/^[a-zA-Z0-9._-]+$/.test(host)) {
+      return NextResponse.json({ success: false, message: 'Invalid host' }, { status: 400 });
+    }
+    if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
+      return NextResponse.json({ success: false, message: 'Invalid username' }, { status: 400 });
+    }
+    const portNum = parseInt(String(port));
+    if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+      return NextResponse.json({ success: false, message: 'Invalid port' }, { status: 400 });
+    }
+
     let command = '';
     let description = '';
 
@@ -261,8 +273,9 @@ ip route show | grep ppp || echo "No PPP routes"`;
     // Escape command properly - use single quotes for the entire command
     const escapedCommand = command.replace(/'/g, "'\"'\"'");
     
-    // Build SSH command with base64-encoded password
-    const sshCommand = `echo '${passwordBase64}' | base64 -d | sshpass ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${port} ${username}@${host} '${escapedCommand}'`;
+    // Use SSHPASS env variable (-e flag) so sshpass works correctly in
+    // non-interactive/no-tty environments (e.g. PM2 daemon processes)
+    const sshCommand = `SSHPASS="$(echo '${passwordBase64}' | base64 -d)" sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -p ${portNum} ${username}@${host} '${escapedCommand}'`;
     
     console.log('[L2TP Control] Executing action:', action);
     console.log('[L2TP Control] Target:', `${username}@${host}:${port}`);
