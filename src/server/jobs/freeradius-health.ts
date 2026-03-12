@@ -362,17 +362,18 @@ export async function freeradiusHealthCheck(autoRestart = true): Promise<{
         try {
             const configChanged = await syncNasClients();
             if (configChanged) {
-                // Reload clients without full restart (SIGHUP) — preserves active sessions
-                await execAsync('systemctl reload freeradius 2>&1').catch(() =>
-                    execAsync('kill -HUP $(cat /var/run/freeradius/freeradius.pid 2>/dev/null || pgrep freeradius) 2>/dev/null')
-                );
+                // IMPORTANT: FreeRADIUS 3.x SIGHUP/reload does NOT reload clients.conf/clients.d.
+                // Only a full restart picks up new NAS client entries.
+                // Active PPPoE/Hotspot sessions survive a brief restart (1-2 sec) since
+                // MikroTik maintains sessions independently of RADIUS.
+                await execAsync('systemctl restart freeradius 2>&1');
                 nasSynced = true;
-                console.log('[FreeRADIUS-Health] NAS config was out of sync — reloaded');
+                console.log('[FreeRADIUS-Health] NAS config was out of sync — restarted to load new clients');
                 await logActivity({
                     username: 'system',
                     userRole: 'system',
                     action: 'nas_sync',
-                    description: 'FreeRADIUS NAS config was out of sync with DB — updated and reloaded',
+                    description: 'FreeRADIUS NAS config was out of sync with DB — updated and restarted',
                     module: 'system',
                     status: 'success',
                 });
