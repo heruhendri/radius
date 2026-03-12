@@ -291,3 +291,34 @@ Technician portal uses `useTranslations('technician')` namespace.
 - ✅ Removed: `chk-pg.js`, `kill-ports.ps1`, `start-dev.ps1` (debug/dev-only files)
 - ✅ VPS fully deployed: Node.js 20, MySQL 8.0.45, Redis, Nginx, PM2, FreeRADIUS 3.0.26
 - ✅ DB seeded: superadmin, templates, 19 ticket categories, email templates, isolation templates
+- ✅ **Network/Fiber Management Translation Audit & Fixes:**
+  - Expanded `network.tracing` from 3 keys to full 41-key set covering `PathTracerTool`, `TraceResultDisplay`, `ImpactAnalysisPanel` components
+  - Expanded `network.jointClosure` from 1 key to full 34-key set for CRUD labels
+  - Added complete Indonesian translations for both sections in `id.json`
+  - All other network section keys also added: `network.diagram.*`, `network.unifiedMap.*`, `common.created`, `common.updated`
+- ✅ **New Pages Created (fiber management routes):**
+  - `/admin/network/fiber-joint-closures` — Full CRUD management for `network_joint_closures` model (uses `/api/network/joint-closures` API)
+  - `/admin/network/fiber-odcs` — Redirect to `/admin/network/odcs`
+  - `/admin/network/fiber-odps` — Redirect to `/admin/network/odps`
+
+---
+
+## 🗺️ Network/Fiber Management Routes
+
+| Route | Description |
+|-------|-------------|
+| `/admin/network/fiber-cables` | Fiber cable management (GPON/ADSS etc.) |
+| `/admin/network/fiber-cores` | Fiber core management |
+| `/admin/network/splice-points` | Splice point management |
+| `/admin/network/fiber-joint-closures` | Joint Closure (JC) CRUD — new, uses `network_joint_closures` model |
+| `/admin/network/fiber-odcs` | Redirect → `/admin/network/odcs` |
+| `/admin/network/fiber-odps` | Redirect → `/admin/network/odps` |
+| `/admin/network/odcs` | ODC management (Optical Distribution Cabinet) |
+| `/admin/network/odps` | ODP management (Optical Distribution Point) |
+| `/admin/network/olts` | OLT management |
+| `/admin/network/diagrams` | Network splitter diagrams (links to fiber-joint-closures/odcs/odps) |
+| `/admin/network/trace` | Network path tracing (logical + physical) |
+| `/admin/network/unified-map` | Unified network map |
+| `/admin/network/infrastruktur` | Infrastructure overview |
+| `/admin/network/map` | Network map |
+
