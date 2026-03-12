@@ -2,7 +2,7 @@
 
 Modern, full-stack billing system for ISP/RTRW.NET with FreeRADIUS integration supporting both **PPPoE** and **Hotspot** authentication.
 
-> **Latest Update**: March 11, 2026 - FreeRADIUS deployed, VPS production ready v2.10.27 🎉
+> **Latest Update**: March 12, 2026 - Bank Accounts dipindah ke menu Payment sebagai halaman terpisah v2.10.28 🎉
 
 ---
 
@@ -689,6 +689,12 @@ mysql -u salfanet_user -psalfanetradius123 salfanet_radius < backup/salfanet_rad
 ```
 
 ## 📝 Changelog
+
+### March 12, 2026 (v2.10.28) - Payment UX Improvement
+- ✅ **Bank Accounts Page** - Halaman rekening bank dipindah ke menu Payment sebagai halaman terpisah (`/admin/payment/bank-accounts`)
+- ✅ **Settings Cleanup** - Pengaturan rekening bank dihapus dari halaman Company Settings
+- ✅ **Navigation Update** - Ditambahkan entry "Bank Accounts" di grup Payment pada sidebar
+- ✅ **Translation** - Tambah key `nav.bankAccounts` (`Bank Accounts` / `Rekening Bank`)
 
 ### December 7, 2025 (v2.4) 🆕 - Activity Log & Performance
 - ✅ **Activity Log System COMPLETE** - All priority endpoints implemented
