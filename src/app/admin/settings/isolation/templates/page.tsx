@@ -45,9 +45,14 @@ export default function TemplatesPage() {
   const [previewMode, setPreviewMode] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('desktop');
   const [saving, setSaving] = useState(false);
+  const [companyBaseUrl, setCompanyBaseUrl] = useState('https://yourdomain.com');
 
   useEffect(() => {
     fetchTemplates();
+    fetch('/api/settings/isolation')
+      .then(r => r.json())
+      .then(d => { if (d.success && d.data?.baseUrl) setCompanyBaseUrl(d.data.baseUrl.replace(/\/$/, '')); })
+      .catch(() => {});
   }, []);
 
   const fetchTemplates = async () => {
@@ -155,12 +160,12 @@ export default function TemplatesPage() {
       expiredDate: '15 Desember 2024',
       gracePeriodEnd: '20 Desember 2024',
       totalUnpaid: 'Rp 500.000',
-      paymentLink: 'https://portal.surganet.id/pay/xxx',
+      paymentLink: `${companyBaseUrl}/pay/xxx`,
       companyPhone: '0812-3456-7890',
       companyWhatsapp: '081234567890',
-      companyEmail: 'cs@surganet.id',
-      companyWebsite: 'https://surganet.id',
-      qrCodeImage: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://portal.surganet.id/pay/xxx',
+      companyEmail: `cs@${companyBaseUrl.replace(/https?:\/\//, '').split('/')[0]}`,
+      companyWebsite: companyBaseUrl,
+      qrCodeImage: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(companyBaseUrl + '/pay/xxx')}`,
     };
 
     let preview = editingTemplate.message;

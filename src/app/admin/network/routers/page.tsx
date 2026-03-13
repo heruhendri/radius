@@ -80,7 +80,7 @@ export default function RouterPage() {
   } | null>(null)
   const [testing, setTesting] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [settingUpIsolir, setSettingUpIsolir] = useState<string | null>(null)
+  // settingUpIsolir removed - isolation uses NAT redirect, not router-based setup
   const [settingUpRadius, setSettingUpRadius] = useState<string | null>(null)
   const [showScriptModal, setShowScriptModal] = useState(false)
   const [scriptModalData, setScriptModalData] = useState<{ script: string; config: any } | null>(null)
@@ -282,25 +282,7 @@ export default function RouterPage() {
     }
   }
 
-  const handleSetupIsolir = async (routerId: string) => {
-    setSettingUpIsolir(routerId)
 
-    try {
-      const response = await fetch(`/api/network/routers/${routerId}/setup-isolir`, { method: 'POST' })
-      const result = await response.json()
-
-      if (response.ok) {
-        showSuccess(t('network.isolirSetupCompleteMsg').replace('{message}', result.message) + '\n\n' + t('network.isolirConfig').replace('{profile}', result.config.profile).replace('{rateLimit}', result.config.rateLimit).replace('{poolRange}', result.config.poolRange))
-      } else {
-        showError(result.error + (result.details ? '\n' + result.details : ''))
-      }
-    } catch (error) {
-      console.error('Setup isolir error:', error)
-      showError(t('network.failedSetupIsolir'))
-    } finally {
-      setSettingUpIsolir(null)
-    }
-  }
 
   const handleSetupRadius = async (routerId: string) => {
     setSettingUpRadius(routerId)
@@ -524,14 +506,6 @@ export default function RouterPage() {
 
                         {/* Quick Actions */}
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleSetupIsolir(routerData.id)}
-                            disabled={settingUpIsolir === routerData.id}
-                            className="p-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl hover:bg-amber-500/20 transition-all disabled:opacity-50"
-                            title="Setup Isolir Profile"
-                          >
-                            <Shield className="w-5 h-5" />
-                          </button>
                           <button
                             onClick={() => handleSetupRadius(routerData.id)}
                             disabled={settingUpRadius === routerData.id}
