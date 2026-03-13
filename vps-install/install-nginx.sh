@@ -181,6 +181,82 @@ _proxy_locations_https_domain() {
 LOCATIONS
 }
 
+tune_nginx_global() {
+    print_info "Tuning Nginx global config (nginx.conf)..."
+
+    # Detect CPU count for worker_processes
+    local CPU_COUNT
+    CPU_COUNT=$(nproc 2>/dev/null || echo 2)
+
+    # Backup original nginx.conf once
+    [ ! -f /etc/nginx/nginx.conf.bak ] && cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+
+    cat > /etc/nginx/nginx.conf <<EOF
+user www-data;
+worker_processes ${CPU_COUNT};
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 1024;
+    use epoll;
+    multi_accept on;
+}
+
+http {
+    # upstream keepalive to Node.js — reuse TCP connections
+    upstream nextjs {
+        server 127.0.0.1:3000;
+        keepalive 16;
+    }
+
+    sendfile            on;
+    tcp_nopush          on;
+    tcp_nodelay         on;
+    types_hash_max_size 2048;
+    server_tokens       off;
+
+    keepalive_timeout   65;
+    keepalive_requests  200;
+
+    client_body_buffer_size     16k;
+    client_header_buffer_size   1k;
+    client_max_body_size        100M;
+    large_client_header_buffers 4 8k;
+    proxy_buffer_size           8k;
+    proxy_buffers               16 8k;
+    proxy_busy_buffers_size     32k;
+
+    open_file_cache          max=2000 inactive=20s;
+    open_file_cache_valid    30s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors   on;
+
+    include      /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    access_log /var/log/nginx/access.log;
+    error_log  /var/log/nginx/error.log;
+
+    gzip              on;
+    gzip_vary         on;
+    gzip_proxied      any;
+    gzip_comp_level   6;
+    gzip_buffers      16 8k;
+    gzip_http_version 1.1;
+    gzip_min_length   1024;
+    gzip_types        text/plain text/css text/xml text/javascript
+                      application/json application/javascript
+                      application/xml+rss image/svg+xml;
+
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}
+EOF
+
+    print_success "Nginx global tuning applied: ${CPU_COUNT} workers, upstream keepalive 16, epoll"
+}
+
 create_nginx_config() {
     print_info "Creating Nginx site configuration..."
 
@@ -476,7 +552,8 @@ install_nginx() {
     if ! command -v dig &>/dev/null; then
         apt-get install -y dnsutils 2>/dev/null || true
     fi
-    
+
+    tune_nginx_global
     create_nginx_config
     enable_nginx_site
     test_nginx_config

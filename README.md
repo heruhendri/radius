@@ -1,156 +1,55 @@
 # SALFANET RADIUS - Billing System for ISP/RTRW.NET
 
-Modern, full-stack billing system for ISP/RTRW.NET with FreeRADIUS integration supporting both **PPPoE** and **Hotspot** authentication.
+Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with FreeRADIUS integration supporting PPPoE and Hotspot authentication.
 
-> **Latest Update**: March 12, 2026 - Bank Accounts dipindah ke menu Payment sebagai halaman terpisah v2.10.28 🎉
+> **Latest:** v2.10.28 — Bank Accounts dipindah ke menu Payment sebagai halaman terpisah
 
 ---
 
 ## 🤖 AI Development Assistant
 
-**For AI/LLM helping with this project:**
-
-👉 **READ FIRST:** [docs/AI_PROJECT_MEMORY.md](docs/AI_PROJECT_MEMORY.md)
-
-This file contains:
-- Complete project architecture and tech stack
-- Production VPS details and credentials layout
-- Database schema and relationships
-- Known issues and proven solutions
-- Configuration file locations
-- Common commands and workflows
-- Recent changes and fixes
-
-**Benefits:** No need to repeatedly ask about project structure, prevents solving already-fixed issues, instant context understanding.
+**READ FIRST:** [docs/AI_PROJECT_MEMORY.md](docs/AI_PROJECT_MEMORY.md) — contains full architecture, VPS details, DB schema, known issues, and proven solutions.
 
 ---
 
-## 🎯 Key Features
+## 🎯 Features
 
-### Core Features
-- ✅ **FreeRADIUS 3.0.26 Integration** - Full RADIUS support with PAP/CHAP/MS-CHAP
-- ✅ **VPN L2TP/IPSec** - Secure tunnel for remote MikroTik routers
-- ✅ **Automated Cronjobs** - Hotspot sync, PPPoE isolir, auto-disconnect
-- ✅ **CoA Service** - Real-time session disconnect when voucher expires
-- ✅ **Custom Reply-Message** - "Kode Voucher Kadaluarsa" in MikroTik log
-- ✅ **Full RADIUS Mode** - Sessions data dari radacct tanpa MikroTik API
-- ✅ **RADIUS CoA Support** - Real-time speed changes & disconnect without reconnection
-- ✅ **Multi-Router/NAS Support** - Manage multiple MikroTik routers
-- ✅ **PPPoE Management** - Customer accounts with profile-based bandwidth
-- ✅ **Isolation System** - Auto-isolate expired customers with limited bandwidth
-- ✅ **Isolation Templates** - Customizable WhatsApp, Email & HTML landing page templates
-- ✅ **Area Management** - Kelompokkan pelanggan berdasarkan area/wilayah
-- ✅ **Stop Langganan** - Halaman terpisah untuk pelanggan berhenti berlangganan
-- ✅ **Sync PPPoE MikroTik** - Import PPPoE secrets dari MikroTik ke database
-- ✅ **Hotspot Voucher System** - Advanced voucher with pagination (up to 25,000 vouchers/batch)
-- ✅ **Agent/Reseller System** - Balance-based voucher generation
-- ✅ **Payment Gateway** - Midtrans, Xendit, Duitku integration
-- ✅ **Manual Payment System** - Upload bukti transfer dengan approval workflow
-- ✅ **WhatsApp Integration** - Automated notifications & reminders
-- ✅ **Email Notifications** - Gmail SMTP with auto reminders
-- ✅ **Broadcast Notification** - Mass notification untuk gangguan/invoice/payment
-- ✅ **Role-Based Permissions** - 53 permissions, 6 role templates
-- ✅ **Financial Reporting** - Income/expense tracking with categories
-- ✅ **Activity Log System** - Comprehensive activity tracking with auto-cleanup
-- ✅ **Cron Job System** - 10 automated background jobs with execution history
-- ✅ **WIB Timezone** - Proper Western Indonesia Time handling (UTC+7)
-- ✅ **Timezone-Aware** - Database UTC, FreeRADIUS WIB, API converts automatically
-- ✅ **Complete Database Seeding** - All templates & initial data included
+| Category | Key Capabilities |
+|----------|-----------------|
+| **RADIUS / Auth** | FreeRADIUS 3.0.26, PAP/CHAP/MS-CHAP, VPN L2TP/IPSec, PPPoE & Hotspot, CoA real-time speed/disconnect |
+| **PPPoE Management** | Customer accounts, profile-based bandwidth, isolation, IP assignment, MikroTik auto-sync |
+| **Hotspot Voucher** | 8 code types, batch up to 25,000, agent distribution, auto-sync with RADIUS, print templates |
+| **Billing** | Postpaid/prepaid invoices, auto-generation, payment reminders, balance/deposit, auto-renewal |
+| **Payment** | Manual upload (bukti transfer), Midtrans/Xendit/Duitku gateway, approval workflow, 0–5 bank accounts |
+| **Notifications** | WhatsApp (Fonnte/WAHA/GOWA/MPWA/Wablas), Email SMTP, broadcast (outage/invoice/payment) |
+| **Agent/Reseller** | Balance-based voucher generation, commission tracking, sales stats |
+| **Financial** | Income/expense tracking with categories, keuangan reconciliation |
+| **Network (FTTH)** | OLT/ODC/ODP management, customer port assignment, network map, distance calculation |
+| **GenieACS TR-069** | CPE/ONT management, WiFi config (SSID/password), device status & uptime |
+| **Isolation** | Auto-isolate expired customers, customizable WhatsApp/Email/HTML landing page templates |
+| **Cron Jobs** | 16 automated background jobs with history, distributed locking, manual trigger |
+| **Roles & Permissions** | 53 permissions, 6 role templates (SuperAdmin/Finance/CS/Technician/Marketing/Viewer) |
+| **Activity Log** | Audit trail with auto-cleanup (30 days) |
+| **Security** | Session timeout 30 min, idle warning, RBAC, HTTPS/SSL |
+| **Multi-language** | Indonesian & English (i18n) |
+| **Mobile App** | Flutter customer portal (WiFi control, invoice, payment) |
 
-### FreeRADIUS & Hotspot Features 🔐
-- ✅ **FreeRADIUS 3.0.26** - Complete RADIUS server setup
-- ✅ **PAP/CHAP/MS-CHAP** - Multi-protocol authentication for MikroTik
-- ✅ **VPN L2TP/IPSec** - Secure tunnel for remote routers
-- ✅ **Hotspot Sync Cronjob** - Auto-activate voucher on first login
-- ✅ **Auto-Disconnect** - Session terminated when voucher expires
-- ✅ **Reply-Message** - Custom "Kode Voucher Kadaluarsa" message
-- ✅ **Session Accounting** - Full session data in radacct table
-- ✅ **Dynamic NAS** - NAS clients loaded from database
-
-### Payment & Billing Features (v2.7.0) 💳
-- ✅ **Manual Payment Upload** - Customer upload bukti transfer (JPG/PNG/WebP)
-- ✅ **Payment Approval Workflow** - Admin approve/reject dengan notifikasi
-- ✅ **Auto Extend Expiry** - Otomatis perpanjang masa aktif saat approval
-- ✅ **Multiple Bank Accounts** - Configure 0-5 bank accounts untuk transfer
-- ✅ **Customer ID** - 8-digit unique identifier untuk setiap customer
-- ✅ **Subscription Type** - POSTPAID (pascabayar) / PREPAID (prabayar)
-- ✅ **Payment Tracking** - Last payment date tracking
-- ✅ **Public Payment Page** - Customer access via unique token
-- ✅ **Receipt Verification** - View uploaded receipt image sebelum approve
-
-### Balance & Auto-Renewal Features (v2.8.0) 💰
-- ✅ **Balance/Deposit System** - Customer saldo deposit untuk auto-renewal
-- ✅ **Auto-Renewal (Prepaid)** - Perpanjangan otomatis dari saldo 3 hari sebelum expired
-- ✅ **Balance API** - POST/GET deposit transactions & history
-- ✅ **Transaction Tracking** - Complete audit trail dengan kategori
-- ✅ **Auto-Payment** - Invoice otomatis dibayar dari saldo
-- ✅ **RADIUS Restoration** - Auto-restore dari isolir saat renewal sukses
-- ✅ **Notifications** - WhatsApp & Email pada renewal berhasil
-- ✅ **Smart Isolation** - Compatible dengan prepaid/postpaid & auto-renewal
-- ✅ **Balance Column** - Sortable balance display di users table
-- ✅ **Cron Job** - Daily at 8 AM (0 8 * * *) untuk auto-renewal
-
-### Broadcast & Notification Features (v2.7.0) 📢
-- ✅ **Outage Notification** - Broadcast gangguan jaringan ke multiple users
-- ✅ **Invoice Reminder Broadcast** - Send invoice reminder secara massal
-- ✅ **Payment Confirmation Broadcast** - Konfirmasi pembayaran ke multiple users
-- ✅ **Maintenance Resolved Template** - **v2.7.2** Notifikasi perbaikan selesai
-- ✅ **Multi-Channel** - WhatsApp dan Email dalam satu broadcast
-- ✅ **Batch WhatsApp Processing** - Anti-spam dengan batch & delay
-- ✅ **Message Randomization** - Randomize order untuk avoid pattern detection
-- ✅ **Template Variables** - Dynamic variable replacement
-- ✅ **Success/Fail Tracking** - Detailed success & failure count
-
-### FTTH Network Features
-- 📡 **OLT Management** - Kelola Optical Line Terminal dengan router uplink
-- 📦 **ODC Management** - Kelola Optical Distribution Cabinet
-- 📍 **ODP Management** - Kelola Optical Distribution Point
-- 👥 **Customer Assignment** - Assign pelanggan ke port ODP
-- 🗺️ **Network Map** - Visualisasi interaktif jaringan FTTH
-- 📏 **Distance Calculation** - Hitung jarak pelanggan ke ODP terdekat
-
-### GenieACS TR-069 Features (v2.7.6) 📡
-- ✅ **Device Management** - Kelola CPE/ONT via GenieACS TR-069
-- ✅ **WiFi Configuration** - Edit SSID & Password WiFi dari admin/customer portal
-- ✅ **Dynamic Password Field** - Password field hidden untuk open network (None security)
-- ✅ **Security Display** - Badge security status (None=yellow, Secured=green)
-- ✅ **Customer WiFi Control** - Customer dapat ubah WiFi sendiri dengan ownership verification
-- ✅ **Separate Task Approach** - SSID dan password task terpisah untuk hindari parameter conflict
-- ✅ **Dual Password Path** - Support Huawei HG8145V5 dual password path compatibility
-- ✅ **Device Verification** - PPPoE username ownership check untuk keamanan
-
-### Router/NAS Features (NEW!)
-- 🛰️ **GPS Coordinates** - Set lokasi router dengan Map Picker
-- 🔗 **OLT Uplink Config** - Konfigurasi uplink dari router ke OLT
-- 📊 **Interface Detection** - Auto-detect interface MikroTik
-- 🌐 **Auto IP Detection** - Detect public IP otomatis
-
-### Security Features (NEW!)
-- ⏱️ **Session Timeout** - Auto logout setelah 30 menit tidak aktif
-- ⚠️ **Idle Warning** - Popup warning 1 menit sebelum logout
-- 🔄 **Stay Logged In** - Opsi perpanjang sesi dari popup warning
-- 🔐 **Session Max Age** - Maksimal session 1 hari
-
-### Technical Features
-- 🎨 **Premium UI** - Mobile-first responsive design with dark mode
-- 📱 **Fully Responsive** - **NEW v2.7.2!** Template pages optimized untuk mobile/tablet/desktop
-- ⚡ **Modern Stack** - Next.js 16, TypeScript, Tailwind CSS, Prisma
-- 🔐 **Secure** - Built-in authentication with role-based permissions
-- 📱 **SPA Experience** - Fast, smooth navigation without page reloads
-- 🌍 **Multi-language** - Indonesian & English support
+---
 
 ## 🚀 Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| Framework | Next.js 16 (App Router, Turbopack) |
+| Framework | Next.js 16 (App Router, standalone output) |
 | Language | TypeScript |
 | Styling | Tailwind CSS |
-| Database | MySQL 8.0 with Prisma ORM |
-| RADIUS | FreeRADIUS 3.0 with MySQL backend |
-| Icons | Lucide React |
-| Date | date-fns with timezone support |
+| Database | MySQL 8.0 + Prisma ORM |
+| RADIUS | FreeRADIUS 3.0.26 |
+| Process Manager | PM2 (cluster × 2) |
+| Cache | Redis (optional) |
 | Maps | Leaflet / OpenStreetMap |
+
+---
 
 ## 📁 Project Structure
 
@@ -158,546 +57,252 @@ This file contains:
 salfanet-radius/
 ├── src/
 │   ├── app/
-│   │   ├── admin/          # Admin panel pages
+│   │   ├── admin/          # Admin panel
 │   │   ├── agent/          # Agent/reseller portal
-│   │   ├── api/            # Thin API route handlers
+│   │   ├── api/            # API route handlers
 │   │   ├── customer/       # Customer self-service portal
 │   │   ├── coordinator/    # Coordinator portal
-│   │   ├── technician/     # Technician portal
-│   │   │   └── (portal)/   # Route group for all technician pages
-│   │   └── page.tsx        # Landing/redirect
-│   ├── server/             # Server-only: db, services, jobs, cache, auth
+│   │   └── technician/     # Technician portal
+│   ├── server/             # DB, services, jobs, cache, auth
 │   ├── features/           # Vertical slices (queries, schemas, types)
 │   ├── components/         # Shared React components
-│   ├── hooks/              # Custom React hooks
-│   ├── lib/                # Utilities & re-export proxies
 │   ├── locales/            # i18n translations (id, en)
 │   └── types/              # Shared TypeScript types
 ├── prisma/
 │   ├── schema.prisma       # Database schema (~45 models)
-│   └── seeds/              # Seed scripts (run via seed-all.ts)
-├── freeradius-config/      # FreeRADIUS config backup (deployed by installer)
-│   ├── mods-available/     # sql, rest, mschap modules
-│   ├── mods-enabled/       # Enabled module files
-│   ├── sites-available/    # default, coa virtual servers
-│   ├── sites-enabled/      # Enabled site files
-│   ├── policy.d/           # Custom policies (PPPoE realm support)
-│   └── clients.conf        # NAS/router clients config
-├── vps-install/            # VPS installer scripts
-│   ├── install-freeradius.sh
-│   ├── install-nodejs.sh
-│   ├── install-mysql.sh
-│   └── common.sh           # Shared functions & DB credentials
-├── production/             # Production config templates
-│   ├── ecosystem.config.js # PM2 config (deployed to app dir)
-│   └── nginx-salfanet-radius.conf
-├── mobile-app/             # React Native / Expo mobile app
-├── scripts/                # Utility scripts
+│   └── seeds/              # Seed scripts
+├── freeradius-config/      # FreeRADIUS config (deployed by installer)
+├── vps-install/            # One-command VPS installer scripts
+├── production/             # PM2 & Nginx config templates
+├── mobile-app/             # Flutter customer app
+├── scripts/                # Utility & tuning scripts
 └── docs/                   # Documentation & AI memory
-    └── AI_PROJECT_MEMORY.md  # 👈 AI context file
 ```
 
-## ️ Installation
+---
 
-### Quick Start (New VPS)
+## ⚙️ Installation
+
+### Quick Start (Recommended)
 
 ```bash
-# 1. Upload project to VPS
-scp -r salfanet-radius-main root@YOUR_VPS_IP:/var/www/salfanet-radius
-
-# 2. SSH to VPS
+# SSH to your VPS
 ssh root@YOUR_VPS_IP
-cd /var/www/salfanet-radius
 
-# 3. Upload installer scripts
-scp -r vps-install/ root@YOUR_VPS_IP:/tmp/vps-install/
+# Clone repository (replace with your repo URL)
+git clone https://github.com/YOUR_USERNAME/salfanet-radius.git /root/salfanet-radius
+cd /root/salfanet-radius
 
-# 4. Run full installer
-bash /tmp/vps-install/vps-installer.sh
+# Run installer (interactive — detects environment automatically)
+bash vps-install/vps-installer.sh
 ```
 
-Or run each step individually:
+The installer handles everything:
+- Node.js 20, MySQL 8.0 (auto-tuned to your RAM), FreeRADIUS 3.0.26, Nginx (performance-tuned), PM2, Redis
+- Database creation, Prisma schema push, seed data
+- FreeRADIUS config from `freeradius-config/` backup
+- Nginx upstream keepalive + gzip + SSL (Let's Encrypt or self-signed)
+- PM2 cluster start with ecosystem.config.js
+
+Supported environments: **Public VPS**, **Proxmox LXC**, **Proxmox VM**, **Bare Metal**
+
+### Manual Step-by-Step
+
 ```bash
-bash /tmp/vps-install/install-system.sh      # System packages
-bash /tmp/vps-install/install-nodejs.sh      # Node.js 20
-bash /tmp/vps-install/install-mysql.sh       # MySQL 8.0
-bash /tmp/vps-install/install-redis.sh       # Redis
-bash /tmp/vps-install/install-nginx.sh       # Nginx
-bash /tmp/vps-install/install-pm2.sh         # PM2 + build + start
-bash /tmp/vps-install/install-freeradius.sh  # FreeRADIUS 3.0 (run from /var/www/salfanet-radius)
+bash vps-install/install-system.sh      # System packages
+bash vps-install/install-nodejs.sh      # Node.js 20
+bash vps-install/install-mysql.sh       # MySQL 8.0 + performance tuning
+bash vps-install/install-redis.sh       # Redis
+bash vps-install/install-nginx.sh       # Nginx + global tuning
+bash vps-install/install-pm2.sh         # PM2 + build + start
+bash vps-install/install-freeradius.sh  # FreeRADIUS 3.0
 ```
 
-The installer will:
-- Install Node.js 20, MySQL 8.0, FreeRADIUS 3.0.26, Nginx, PM2, Redis
-- Configure database and create tables via `prisma db push`
-- Deploy FreeRADIUS config from `freeradius-config/` backup
-- Setup SQL + REST modules with MySQL backend
-- Configure Nginx with HTTP→HTTPS redirect
-- Build Next.js and start via PM2 (cluster mode)
-- Seed database with default admin, templates, and categories
+### Updating Existing Installation
 
-### Manual Installation
+```bash
+# On your local machine:
+git pull origin master                  # Get latest changes
 
-See [docs/INSTALLATION-GUIDE.md](docs/INSTALLATION-GUIDE.md) for detailed manual setup.
-
-### GenieACS TR-069 Integration
-
-See [docs/GENIEACS-GUIDE.md](docs/GENIEACS-GUIDE.md) for complete setup and usage guide.
+# Deploy to VPS (copy changed files then rebuild):
+scp -r src/ root@VPS_IP:/var/www/salfanet-radius/
+ssh root@VPS_IP "cd /var/www/salfanet-radius && npm run build && pm2 restart ecosystem.config.js --update-env"
+```
 
 ### Default Credentials
 
-After installation:
-- **Admin Login**: http://YOUR_VPS_IP/admin/login
-- **Username**: `superadmin`
-- **Password**: `admin123`
+| | |
+|--|--|
+| Admin URL | `http://YOUR_VPS_IP/admin/login` |
+| Username | `superadmin` |
+| Password | `admin123` |
 
-⚠️ **Change password immediately after first login!**
+⚠️ **Change the password immediately after first login!**
 
-## 🔌 FreeRADIUS Configuration
+---
 
-### Key Configuration Files
+## 🔌 FreeRADIUS
 
-Located in `/etc/freeradius/3.0/`:
+Key config files at `/etc/freeradius/3.0/`:
 
 | File | Purpose |
 |------|---------|
 | `mods-enabled/sql` | MySQL connection for user auth |
 | `mods-enabled/rest` | REST API for voucher management |
-| `sites-enabled/default` | Main authentication logic |
-| `clients.conf` | NAS/router clients |
+| `sites-enabled/default` | Main auth logic (PPPoE realm support) |
+| `clients.conf` | NAS/router clients (+ `$INCLUDE clients.d/`) |
+| `sites-enabled/coa` | CoA/Disconnect-Request virtual server |
 
-### Important Settings
+Config backup in `freeradius-config/` is auto-deployed by the installer.
 
-**1. Disable filter_username** (line ~293 in default):
-```
-#filter_username   # DISABLED - allows username@realm format for PPPoE
-```
+### Auth Flow
 
-**2. Conditional REST for Vouchers** (in post-auth section):
-```
-# Only call REST API for vouchers (username without @)
-if (!("%{User-Name}" =~ /@/)) {
-    rest.post-auth
-}
-```
+**PPPoE:** `MikroTik → FreeRADIUS → MySQL (radcheck/radusergroup/radgroupreply)` → Access-Accept with Mikrotik-Rate-Limit
 
-**3. SQL Client Loading** (in mods-enabled/sql):
-```
-read_clients = yes
-client_table = "nas"
-```
+**Hotspot Voucher:** Same RADIUS path + `REST /api/radius/post-auth` → sets firstLoginAt, expiresAt, syncs keuangan
 
-### Backup FreeRADIUS Config
-
-Backup files included in `freeradius-config/` directory (auto-deployed by installer):
-- `mods-available/sql` — SQL/MySQL module config
-- `mods-available/rest` — REST API integration module
-- `mods-available/mschap` — MS-CHAP module
-- `sites-available/default` — Main auth virtual server
-- `sites-available/coa` — CoA/Disconnect-Request server
-- `sites-enabled/default` — Active default site (standalone file, not symlink)
-- `policy.d/filter` — PPPoE realm support policy
-- `clients.conf` — NAS/router clients (+ `$INCLUDE clients.d/`)
-
-To restore on new VPS (automated):
-```bash
-# Run from app directory — installer detects freeradius-config/ automatically
-cd /var/www/salfanet-radius
-bash /tmp/vps-install/install-freeradius.sh
-```
-
-Manual restore:
-```bash
-FR=/etc/freeradius/3.0
-BACKUP=/var/www/salfanet-radius/freeradius-config
-
-cp $BACKUP/mods-available/sql $FR/mods-available/sql
-cp $BACKUP/mods-available/rest $FR/mods-available/rest
-cp $BACKUP/sites-enabled/default $FR/sites-enabled/default
-cp $BACKUP/clients.conf $FR/clients.conf
-
-# Update DB credentials
-sed -i "s/login = .*/login = \"salfanet_user\"/" $FR/mods-available/sql
-sed -i "s/password = .*/password = \"YOUR_DB_PASS\"/" $FR/mods-available/sql
-
-chown -R freerad:freerad $FR
-freeradius -CX && systemctl restart freeradius
-```
-
-## 🌐 RADIUS Authentication Flow
-
-### PPPoE Users
-```
-MikroTik → FreeRADIUS → MySQL (radcheck/radusergroup/radgroupreply)
-                     ↓
-              Access-Accept with:
-              - Mikrotik-Group (profile name)
-              - Mikrotik-Rate-Limit (bandwidth)
-```
-
-### Hotspot Vouchers
-```
-MikroTik → FreeRADIUS → MySQL (radcheck/radusergroup/radgroupreply)
-                     ↓
-                REST API (/api/radius/post-auth)
-                     ↓
-              - Set firstLoginAt & expiresAt
-              - Sync to Keuangan (income)
-              - Track agent commission
-```
-
-### Database Tables (RADIUS)
+### RADIUS Tables
 
 | Table | Purpose |
 |-------|---------|
-| `radcheck` | User credentials (Cleartext-Password, NAS-IP-Address) |
-| `radreply` | User-specific reply attributes |
+| `radcheck` | User credentials |
+| `radreply` | User-specific reply attrs |
 | `radusergroup` | User → Group mapping |
-| `radgroupcheck` | Group check attributes |
-| `radgroupreply` | Group reply (Mikrotik-Rate-Limit, Session-Timeout) |
-| `radacct` | Accounting/session data |
-| `radpostauth` | Authentication logs |
-| `nas` | NAS/Router clients |
+| `radgroupreply` | Group reply (bandwidth, session timeout) |
+| `radacct` | Session accounting |
+| `nas` | NAS/Router clients (dynamic) |
 
-## 📋 Features Overview
+---
 
-### Admin Panel Modules
-
-1. **Dashboard** - Overview with stats and real-time data
-2. **PPPoE Management** - Users and profiles with RADIUS sync
-3. **Hotspot Management**
-   - Multi-router/NAS support
-   - Agent-based distribution
-   - 8 code type combinations
-   - Batch generation up to 25,000 vouchers
-   - Complete pagination (50-1000 per page)
-   - Accurate stats for all vouchers
-   - Modern 2-column modal UI
-   - Print templates
-   - WhatsApp delivery
-4. **Agent Management** - Balance, commission, sales tracking
-5. **Invoices** - Billing with auto-reminder
-6. **Payment Gateway** - Midtrans, Xendit, Duitku
-7. **Keuangan** - Financial reporting
-8. **Sessions** - Active connections monitoring
-9. **WhatsApp** - Automated notifications
-10. **Network** - Router/NAS, OLT, ODC, ODP
-11. **GenieACS** - TR-069 CPE management ([Complete Guide](docs/GENIEACS-GUIDE.md))
-    - Device list with real-time status
-    - WiFi configuration (SSID, password, security)
-    - Task monitoring with auto-refresh
-    - Connection request trigger
-    - Device details (uptime, RX power, clients)
-12. **Settings** - Company, cron, backup
-
-### Hotspot Voucher Code Types
-
-| Type | Example | Characters |
-|------|---------|------------|
-| alpha-upper | ABCDEFGH | A-Z (no I,O) |
-| alpha-lower | abcdefgh | a-z (no i,o) |
-| alpha-mixed | AbCdEfGh | Mixed case |
-| alpha-camel | aBcDeFgH | CamelCase |
-| numeric | 12345678 | 1-9 only |
-| alphanumeric-lower | abc12345 | a-z + 1-9 |
-| alphanumeric-upper | ABC12345 | A-Z + 1-9 |
-| alphanumeric-mixed | aBc12345 | Mixed + 1-9 |
-
-### Admin Roles
-
-| Role | Description |
-|------|-------------|
-| SUPER_ADMIN | Full access to all features |
-| FINANCE | Invoices, payments, reports |
-| CUSTOMER_SERVICE | User management, support |
-| TECHNICIAN | Network, router, sessions |
-| MARKETING | Reports, customer data |
-| VIEWER | Read-only access |
-
-## ⏰ Timezone & Date Handling
-
-### Architecture (v2.3.1)
-
-The application uses a multi-layer timezone strategy:
-
-| Layer | Timezone | Notes |
-|-------|----------|-------|
-| **Database (Prisma)** | UTC | Default Prisma behavior |
-| **FreeRADIUS** | WIB (UTC+7) | Server local time |
-| **PM2 Environment** | WIB (`TZ=Asia/Jakarta`) | Critical for `new Date()` |
-| **API Layer** | WIB | Converts UTC ↔ WIB automatically |
-| **Frontend Display** | WIB | All times shown without browser offset |
-
-### PM2 Environment Setup
-
-**IMPORTANT**: Ensure `ecosystem.config.js` includes TZ environment:
-
-```javascript
-module.exports = {
-  apps: [{
-    name: 'salfanet-radius',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 3000,
-      TZ: 'Asia/Jakarta'  // ⚠️ CRITICAL!
-    }
-  }]
-}
-```
-
-**Verify timezone:**
-```bash
-pm2 env 0 | grep TZ
-# Output: TZ=Asia/Jakarta
-```
-
-### Date Handling Examples
-
-```typescript
-// Voucher API converts automatically:
-// - createdAt/updatedAt: UTC → WIB (formatInTimeZone)
-// - firstLoginAt/expiresAt: Already WIB (remove 'Z' suffix)
-
-// All displayed times are in WIB:
-// Generated: 2025-12-07 12:20:54 (WIB)
-// First Login: 2025-12-07 12:24:14 (WIB)
-// Valid Until: 2025-12-07 13:24:14 (WIB)
-```
-
-### Multi-Timezone Support
-
-Application supports any timezone. For regions outside WIB (Jakarta):
-
-**Indonesia Timezones:**
-- **WIB** (UTC+7): Sumatera, Jawa, Kalimantan Barat/Tengah → `Asia/Jakarta`
-- **WITA** (UTC+8): Sulawesi, Bali, Kalimantan Selatan/Timur → `Asia/Makassar`
-- **WIT** (UTC+9): Maluku, Papua → `Asia/Jayapura`
-
-**Configuration required:**
-1. System timezone: `sudo timedatectl set-timezone Asia/Makassar`
-2. `ecosystem.config.js`: `TZ: 'Asia/Makassar'`
-3. `.env`: `TZ="Asia/Makassar"`
-4. `src/lib/timezone.ts`: `LOCAL_TIMEZONE = 'Asia/Makassar'`
-5. Restart: `pm2 restart --update-env && systemctl restart freeradius`
-
-**International deployment** also supported (Singapore, Malaysia, Thailand, etc.)
-
-See [docs/CRON-SYSTEM.md](docs/CRON-SYSTEM.md#multi-timezone-support) for complete guide.
-
-## 🤖 Cron Job System
-
-### Automated Background Jobs
-
-10 scheduled jobs running automatically:
+## ⏰ Cron Jobs (16 automated)
 
 | Job | Schedule | Function |
 |-----|----------|----------|
-| **Voucher Sync** | Every 5 min | Sync voucher status with RADIUS |
-| **Disconnect Sessions** | Every 5 min | Disconnect expired voucher sessions (CoA) |
-| **Agent Sales** | Daily 1 AM | Update agent sales statistics |
-| **Auto Isolir** | Every hour | Suspend overdue customers |
-| **Invoice Generation** | Daily 2 AM | Generate monthly invoices |
-| **Payment Reminder** | Daily 8 AM | Send payment reminders |
-| **WhatsApp Queue** | Every 10 min | Process WhatsApp message queue |
-| **Expired Voucher** | Daily 3 AM | Delete old expired vouchers |
-| **Activity Log** | Daily 2 AM | Clean logs older than 30 days |
-| **Session Cleanup** | Daily 4 AM | Clean old session data |
+| Voucher Sync | Every 5 min | Sync voucher status with RADIUS |
+| Disconnect Sessions | Every 5 min | CoA disconnect expired vouchers |
+| Auto Isolir (PPPoE) | Every hour | Suspend overdue customers |
+| FreeRADIUS Health | Every 5 min | Auto-restart if down |
+| PPPoE Session Sync | Every 10 min | Sync radacct sessions |
+| Agent Sales | Daily 1 AM | Update sales statistics |
+| Invoice Generate | Daily 2 AM | Generate monthly invoices |
+| Activity Log Cleanup | Daily 2 AM | Delete logs >30 days |
+| Invoice Reminder | Daily 8 AM | Send payment reminders |
+| Invoice Status | Daily 9 AM | Mark overdue invoices |
+| Notification Check | Every 10 min | Process notification queue |
+| Auto Renewal | Daily 8 AM | Prepaid auto-renew from balance |
+| Webhook Log Cleanup | Daily 3 AM | Delete webhook logs >30 days |
+| Session Monitor | Every 5 min | Security session monitoring |
+| Cron History Cleanup | Daily 4 AM | Keep last 50 per job type |
+| Suspend Check | Every hour | Activate/restore suspend requests |
 
-### Manual Trigger
+All jobs can be triggered manually from **Settings → Cron** in the admin panel.
 
-All cron jobs can be triggered manually from:
-- **Settings → Cron** in admin panel
-- Click "Trigger Now" button on any job
-- View execution history with results
+---
 
-### Execution History
+## 🛠️ Common Commands
 
-Each job records:
-- Start time
-- End time
-- Duration
-- Status (success/error)
-- Result message
-
-Example results:
-- "Synced 150 vouchers"
-- "Disconnected 5 expired sessions"
-- "Cleaned 245 old activities (older than 30 days)"
-
-## 🔧 Useful Commands
-
-### Application Management
 ```bash
-pm2 status                    # Check status
-pm2 logs salfanet-radius        # View logs
-pm2 restart salfanet-radius     # Restart app
-pm2 restart salfanet-radius --update-env  # Restart with updated env
-pm2 stop salfanet-radius        # Stop app
-pm2 env 0 | grep TZ           # Verify timezone setting
-```
+# PM2
+pm2 status ; pm2 logs salfanet-radius
+pm2 restart ecosystem.config.js --update-env
 
-### FreeRADIUS Management
-```bash
-systemctl status freeradius   # Check status
-systemctl restart freeradius  # Restart
-freeradius -X                 # Debug mode (stop service first)
-freeradius -XC                # Test configuration
-```
+# FreeRADIUS
+systemctl restart freeradius
+freeradius -XC    # Test config
+radtest 'user@realm' password 127.0.0.1 0 testing123
 
-### RADIUS Testing
-```bash
-# Test PPPoE user
-radtest 'user@realm' 'password' 127.0.0.1 0 testing123
-
-# Test Hotspot voucher
-radtest 'vouchercode' 'password' 127.0.0.1 0 testing123
-```
-
-### Database Management
-```bash
-# Connect to database
+# Database
 mysql -u salfanet_user -psalfanetradius123 salfanet_radius
-
-# Backup database
 mysqldump -u salfanet_user -psalfanetradius123 salfanet_radius > backup.sql
-
-# Restore database
-mysql -u salfanet_user -psalfanetradius123 salfanet_radius < backup.sql
 ```
+
+---
 
 ## 🔐 Security
 
-### Best Practices
-1. Change default admin password immediately
-2. Change MySQL passwords
-3. Setup SSL certificate (Let's Encrypt)
-4. Configure firewall (ufw)
-5. Regular database backups
-6. Monitor application logs
-
-### Firewall Rules
 ```bash
-ufw allow 22/tcp    # SSH
-ufw allow 80/tcp    # HTTP
-ufw allow 443/tcp   # HTTPS
-ufw allow 1812/udp  # RADIUS Auth
-ufw allow 1813/udp  # RADIUS Accounting
-ufw allow 3799/udp  # RADIUS CoA
+# Firewall
+ufw allow 22/tcp && ufw allow 80/tcp && ufw allow 443/tcp
+ufw allow 1812/udp && ufw allow 1813/udp && ufw allow 3799/udp
 ```
 
-## 📡 RADIUS CoA (Change of Authorization)
+1. Change default admin password on first login
+2. Change MySQL passwords in `.env`
+3. Configure SSL (Let's Encrypt or Cloudflare)
+4. Enable UFW
 
-CoA allows real-time changes to active PPPoE sessions without disconnecting users.
+---
 
-### Features
-- **Speed Change** - Update bandwidth instantly via CoA
-- **Session Disconnect** - Terminate sessions remotely
-- **Profile Sync** - Auto-apply profile changes to all active sessions
-- **Direct to NAS** - CoA sent directly to MikroTik, not via FreeRADIUS
+## 📡 CoA (Change of Authorization)
 
-### MikroTik Requirements
-```
-/radius incoming set accept=yes port=3799
-```
+Sends real-time speed/disconnect commands to MikroTik without dropping PPPoE connections.
 
-### API Endpoints
+**MikroTik requirement:** `/radius incoming set accept=yes port=3799`
 
-**Check CoA Status:**
-```bash
-GET /api/radius/coa
-```
+**API:** `POST /api/radius/coa` — actions: `disconnect`, `update`, `sync-profile`, `test`
 
-**Disconnect User:**
-```bash
-POST /api/radius/coa
-{
-  "action": "disconnect",
-  "username": "user@realm"
-}
-```
+Auto-triggered when: PPPoE profile speed is edited (syncs all active sessions).
 
-**Update Speed:**
-```bash
-POST /api/radius/coa
-{
-  "action": "update",
-  "username": "user@realm",
-  "attributes": {
-    "downloadSpeed": 20,
-    "uploadSpeed": 10
-  }
-}
-```
+---
 
-**Sync Profile to All Sessions:**
-```bash
-POST /api/radius/coa
-{
-  "action": "sync-profile",
-  "profileId": "profile-uuid"
-}
-```
+## 📲 WhatsApp Providers
 
-**Test CoA Connection:**
-```bash
-POST /api/radius/coa
-{
-  "action": "test",
-  "host": "103.191.165.156"
-}
-```
+| Provider | Base URL | Auth |
+|----------|----------|------|
+| Fonnte | `https://api.fonnte.com/send` | Token |
+| WAHA | `http://IP:PORT` | API Key |
+| GOWA | `http://IP:PORT` | `user:pass` |
+| MPWA | `http://IP:PORT` | API Key |
+| Wablas | `https://pati.wablas.com` | Token |
 
-### Auto-Sync on Profile Edit
-When you edit a PPPoE profile's speed, the system automatically:
-1. Updates radgroupreply in database
-2. Finds all active sessions using that profile
-3. Sends CoA to each MikroTik NAS
-4. Speed changes instantly without disconnect
+---
 
-### Troubleshooting CoA
-```bash
-# Test radclient
-radtest testuser password 127.0.0.1 0 testing123
+## ⏱️ Timezone
 
-# Check if radclient installed
-which radclient
+| Layer | Timezone | Note |
+|-------|----------|------|
+| Database (Prisma) | UTC | Prisma default |
+| FreeRADIUS | WIB (UTC+7) | Server local time |
+| PM2 env | WIB | `TZ: 'Asia/Jakarta'` in ecosystem.config.js |
+| API / Frontend | WIB | Auto-converts UTC ↔ WIB |
 
-# Install if missing
-apt install freeradius-utils
+For WITA (UTC+8) or WIT (UTC+9): change `TZ` in `.env`, `ecosystem.config.js`, and `src/lib/timezone.ts`.
 
-# Debug CoA
-echo "User-Name=testuser" | radclient -x 103.191.165.156:3799 coa secret123
-```
+---
 
-### WhatsApp Providers Configuration
+## 📋 Admin Modules
 
-| Provider | Base URL | API Key Format |
-|----------|----------|----------------|
-| **Fonnte** | `https://api.fonnte.com/send` | Token from Fonnte dashboard |
-| **WAHA** | `http://IP:PORT` (e.g., `http://10.0.0.1:3000`) | WAHA API Key |
-| **GOWA** | `http://IP:PORT` (e.g., `http://10.0.0.1:2451`) | `username:password` |
-| **MPWA** | `http://IP:PORT` | MPWA API Key |
-| **Wablas** | `https://pati.wablas.com` | Wablas Token |
+Dashboard · PPPoE · Hotspot · Agent · Invoice · Payment · Keuangan · Sessions · WhatsApp · Network (OLT/ODC/ODP) · GenieACS · Settings
 
-## 📊 Database Backup
+**Roles:** SUPER_ADMIN · FINANCE · CUSTOMER_SERVICE · TECHNICIAN · MARKETING · VIEWER
 
-Latest backup: `backup/salfanet_radius_backup_20251204.sql`
-
-To restore:
-```bash
-mysql -u salfanet_user -psalfanetradius123 salfanet_radius < backup/salfanet_radius_backup_20251204.sql
-```
+---
 
 ## 📝 Changelog
 
-### March 12, 2026 (v2.10.28) - Payment UX Improvement
-- ✅ **Bank Accounts Page** - Halaman rekening bank dipindah ke menu Payment sebagai halaman terpisah (`/admin/payment/bank-accounts`)
-- ✅ **Settings Cleanup** - Pengaturan rekening bank dihapus dari halaman Company Settings
-- ✅ **Navigation Update** - Ditambahkan entry "Bank Accounts" di grup Payment pada sidebar
-- ✅ **Translation** - Tambah key `nav.bankAccounts` (`Bank Accounts` / `Rekening Bank`)
+### v2.10.28 — March 12, 2026
+- Bank Accounts moved to Payment menu as separate page
 
-### December 7, 2025 (v2.4) 🆕 - Activity Log & Performance
-- ✅ **Activity Log System COMPLETE** - All priority endpoints implemented
+### v2.10.x — March 2026 (Performance)
+- Fixed N+1 query in PPPoE user listing (1 query instead of N+1)
+- Invoice stats now parallel (`Promise.all`) — ~7× faster
+- cron_history auto-cleanup (daily 4 AM, keep last 50 per job type)
+- MySQL auto-tuned to server RAM during install
+- Nginx global tuning: upstream keepalive, epoll, open_file_cache
+- PM2: removed `--optimize-for-size`, increased heap
+
+### v2.10.0 — February 2026
+- L2TP watchdog auto-reconnect
+- Isolation template preview uses company baseUrl
+- Removed "Setup Isolir di Router" button (system uses NAT redirect)
+
+### v2.9.x — January 2026
+- Mobile app (Flutter) customer portal
+- Suspend/restore system
+- GenieACS ONT reboot support
+
+See [docs/](docs/) for full historical changelog.
+
   - Auth: Login/Logout tracking
   - PPPoE: User CRUD operations
   - Session: Disconnect logging

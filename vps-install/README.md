@@ -5,10 +5,25 @@ Satu installer untuk semua environment: **Public VPS**, **Proxmox LXC**, **Proxm
 ## Cara Pakai
 
 ### Install (Interactive — Recommended)
+
+**Metode 1: Git Clone (disarankan)**
 ```bash
+git clone https://github.com/s4lfanet/salfanet-radius.git /root/salfanet-radius
 cd /root/salfanet-radius
 bash vps-install/vps-installer.sh
 ```
+
+**Metode 2: Upload manual via SCP**
+```bash
+# Upload dari PC (jalankan di PowerShell/terminal lokal)
+scp -r ./salfanet-radius root@IP_VPS:/root/salfanet-radius
+
+# Lalu SSH ke VPS dan jalankan installer
+ssh root@IP_VPS
+cd /root/salfanet-radius
+bash vps-install/vps-installer.sh
+```
+
 Installer akan otomatis mendeteksi environment, menampilkan pilihan, dan memandu semua konfigurasi.
 
 ### Paksa Environment Tertentu (Non-interactive)

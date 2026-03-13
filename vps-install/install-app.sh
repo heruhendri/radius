@@ -16,32 +16,42 @@ source "$SCRIPT_DIR/common.sh"
 copy_application_files() {
     print_info "Creating application directory..."
     mkdir -p ${APP_DIR}
-    
-    print_info "Copying application code..."
-    local SOURCE_DIR="/root/salfanet-radius"
-    
-    # Try alternative source directories
-    if [ ! -d "$SOURCE_DIR" ]; then
-        SOURCE_DIR="/root/SALFANET-RADIUS-main"
-    fi
-    
-    if [ ! -d "$SOURCE_DIR" ]; then
-        SOURCE_DIR="$(pwd)"
-    fi
-    
-    if [ ! -f "$SOURCE_DIR/package.json" ]; then
-        print_error "Source directory not found with package.json"
-        print_error "Searched: /root/salfanet-radius, /root/SALFANET-RADIUS-main, $(pwd)"
+
+    # --- Check if already installed via git clone (installer run from cloned repo) ---
+    local SCRIPT_SOURCE_DIR
+    SCRIPT_SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+    # Priority order of source locations:
+    #   1. Installer was run from inside a cloned repo (detect by package.json ≥ 1 level up)
+    #   2. /root/salfanet-radius  (git clone default location)
+    #   3. /root/SALFANET-RADIUS-main  (GitHub ZIP extraction)
+    #   4. Current working directory
+    local SOURCE_DIR=""
+
+    for candidate in "$SCRIPT_SOURCE_DIR" "/root/salfanet-radius" "/root/SALFANET-RADIUS-main" "$(pwd)"; do
+        if [ -f "$candidate/package.json" ]; then
+            SOURCE_DIR="$candidate"
+            break
+        fi
+    done
+
+    if [ -z "$SOURCE_DIR" ]; then
+        print_error "Source directory not found. Please clone the repo first:"
+        print_error "  git clone https://github.com/YOUR_USERNAME/salfanet-radius.git /root/salfanet-radius"
         return 1
     fi
-    
+
+    # If APP_DIR is the same as SOURCE_DIR (ran installer from within app dir), skip copy
+    if [ "$(realpath "$SOURCE_DIR")" = "$(realpath "$APP_DIR")" ]; then
+        print_success "Source directory is the app directory — no copy needed"
+        return 0
+    fi
+
     print_info "From: $SOURCE_DIR"
     print_info "To: ${APP_DIR}"
-    
-    # Copy all files
-    cp -r $SOURCE_DIR/* ${APP_DIR}/
-    cp -r $SOURCE_DIR/.* ${APP_DIR}/ 2>/dev/null || true
-    
+
+    cp -r "$SOURCE_DIR"/. "${APP_DIR}/"
+
     print_success "Application code copied successfully"
 }
 
