@@ -301,7 +301,11 @@ function CategoryItem({ titleKey, items, pendingCount, manualPaymentsCount, unre
   t: (key: string, params?: Record<string, string | number>) => string;
   onNavigate?: () => void;
 }) {
-  const [isOpen, setIsOpen] = useState(true);
+  const pathname = usePathname();
+  const hasActiveItem = items.some(item =>
+    item.href === pathname || item.children?.some(c => c.href === pathname)
+  );
+  const [isOpen, setIsOpen] = useState(hasActiveItem);
 
   const visibleItems = items
     .filter(item => !item.requiredPermission || userPermissions.includes(item.requiredPermission))
