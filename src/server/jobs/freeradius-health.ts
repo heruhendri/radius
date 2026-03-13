@@ -413,11 +413,9 @@ export async function freeradiusHealthCheck(autoRestart = true): Promise<{
         // We need the VPS to have a route back through the VPN tunnel so responses
         // reach the isolated user and the proxy can see the real source IP.
         try {
-            const nasList = await prisma.nas.findMany({
-                where: { type: { not: 'vpn_gateway' } },
-                select: { nasname: true },
-                take: 1,
-            });
+            const nasList = await prisma.$queryRaw<{ nasname: string }[]>`
+                SELECT nasname FROM nas WHERE type != 'vpn_gateway' LIMIT 1
+            `;
             if (nasList.length > 0) {
                 const nasIp = nasList[0].nasname;
                 // Add route if not already present (exits cleanly if route exists)
