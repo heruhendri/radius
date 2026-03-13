@@ -22,11 +22,17 @@ export async function GET(request: NextRequest) {
     if (ip && !username) {
       console.log('[CHECK-ISOLATION] Looking up user by IP:', ip);
       
-      // Find active session with this IP
+      // Find active session with this IP.
+      // Fallback: also check recently stopped sessions (within last 10 min) to handle
+      // the race window where user just reconnected but radacct start hasn't been written yet.
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
       const session = await prisma.radacct.findFirst({
         where: {
           framedipaddress: ip,
-          acctstoptime: null, // Still active
+          OR: [
+            { acctstoptime: null },                          // active session
+            { acctstarttime: { gte: tenMinutesAgo } },       // very recent session (reconnecting)
+          ],
         },
         select: {
           username: true,

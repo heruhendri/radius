@@ -383,6 +383,51 @@ export async function freeradiusHealthCheck(autoRestart = true): Promise<{
             console.error('[FreeRADIUS-Health] NAS sync failed:', syncErr.message);
         }
 
+        // ==================== Isolir radgroupreply Init ====================
+        // Ensure radgroupreply rows for the 'isolir' group exist.
+        // Uses INSERT IGNORE so this is a no-op when rows already exist.
+        try {
+            const company = await prisma.company.findFirst({
+                select: { isolationRateLimit: true }
+            });
+            const rateLimit = company?.isolationRateLimit ?? '64k/64k';
+            await prisma.$executeRaw`
+                INSERT IGNORE INTO radgroupreply (groupname, attribute, op, value)
+                VALUES ('isolir', 'Mikrotik-Rate-Limit', ':=', ${rateLimit})
+            `;
+            await prisma.$executeRaw`
+                INSERT IGNORE INTO radgroupreply (groupname, attribute, op, value)
+                VALUES ('isolir', 'Mikrotik-Group', ':=', 'isolir')
+            `;
+            await prisma.$executeRaw`
+                INSERT IGNORE INTO radgroupreply (groupname, attribute, op, value)
+                VALUES ('isolir', 'Framed-Pool', ':=', 'pool-isolir')
+            `;
+        } catch (isolirErr: any) {
+            console.error('[FreeRADIUS-Health] isolir radgroupreply init failed:', isolirErr.message);
+        }
+
+        // ==================== Pool-Isolir VPS Route ====================
+        // Make sure pool-isolir (192.168.200.0/24) is routable from VPS.
+        // The NAS router handles PPPoE for isolated users and assigns 192.168.200.x.
+        // We need the VPS to have a route back through the VPN tunnel so responses
+        // reach the isolated user and the proxy can see the real source IP.
+        try {
+            const nasList = await prisma.nas.findMany({
+                where: { type: { not: 'vpn_gateway' } },
+                select: { nasname: true },
+                take: 1,
+            });
+            if (nasList.length > 0) {
+                const nasIp = nasList[0].nasname;
+                // Add route if not already present (exits cleanly if route exists)
+                await execAsync(`ip route show 192.168.200.0/24 | grep -q '192.168.200' || ip route add 192.168.200.0/24 via ${nasIp} 2>/dev/null || true`);
+            }
+        } catch (routeErr: any) {
+            // Non-fatal — might lack capability or route already exists
+            console.warn('[FreeRADIUS-Health] pool-isolir route check skipped:', routeErr.message);
+        }
+
         // Log successful health check to cronHistory
         await prisma.cronHistory.create({
             data: {

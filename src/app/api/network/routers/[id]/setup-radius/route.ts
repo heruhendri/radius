@@ -131,6 +131,36 @@ ${gatewayRadiusEntry}
 /ip hotspot profile set [find] use-radius=yes
 
 # ============================================
+# ISOLATION SETUP (Wajib untuk fitur isolir)
+# ============================================
+# Buat IP Pool untuk user yang diisolir (jika belum ada)
+:if ([:len [/ip pool find name="pool-isolir"]] = 0) do={
+    /ip pool add name=pool-isolir ranges=192.168.200.100-192.168.200.200 comment="SALFANET RADIUS - Isolation Pool"
+}
+
+# Buat PPP Profile isolir (jika belum ada)
+# local-address = gateway untuk sisi router PPP link (bukan nama pool!)
+# remote-address = pool untuk IP client
+:if ([:len [/ppp profile find name="isolir"]] = 0) do={
+    /ppp profile add name=isolir local-address=192.168.200.1 remote-address=pool-isolir rate-limit=64k/64k comment="SALFANET RADIUS - Isolation Profile"
+}
+
+# CATATAN: Untuk mengubah rate-limit atau IP pool isolir,
+# pergi ke: Admin → Settings → Isolation → MikroTik Setup
+
+# ============================================
+# PENTING: Route di VPS untuk pool-isolir
+# ============================================
+# Agar user isolated bisa membuka halaman billing, VPS harus bisa
+# meng-route traffic balik ke 192.168.200.0/24 via tunnel VPN ini.
+# Jalankan perintah berikut di VPS (SEKALI SAJA, atau tambahkan ke /etc/rc.local):
+#
+#   sudo ip route add 192.168.200.0/24 via ${nasSrcAddress || router.nasname}
+#
+# Tanpa route ini, user isolated tidak akan ter-redirect ke halaman pembayaran.
+# ============================================
+
+# ============================================
 # FIREWALL RULES — RADIUS & CoA
 # ============================================
 # Hapus rules lama
@@ -148,6 +178,8 @@ ${gatewayFirewallRule}
 # /ppp aaa print
 # /radius incoming print
 # /ip firewall filter print where comment~"SALFANET"
+# /ip pool print where name="pool-isolir"
+# /ppp profile print where name="isolir"
 # ============================================
 `.trim();
 

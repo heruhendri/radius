@@ -5,6 +5,7 @@ import { sendPaymentSuccess, sendVoucherPurchaseSuccess } from '@/server/service
 import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
 import { logActivity } from '@/server/services/activity-log.service';
 import { disconnectPPPoEUser } from '@/server/services/radius/coa-handler.service';
+import { redisDel, RedisKeys } from '@/server/cache/redis';
 import crypto from 'crypto';
 import { nanoid } from 'nanoid';
 
@@ -1319,7 +1320,10 @@ async function handleInvoicePayment(
           }
         });
 
-        console.log(`✅ User ${user.username} updated (${user.subscriptionType}):`);
+        // Invalidate Redis authorize cache so reconnect after CoA sees fresh status
+        await redisDel(RedisKeys.radiusAuth(user.username));
+
+        console.log(`✅ User ${user.username} updated (${user.subscriptionType}):`)
         console.log(`   - Expiry: ${user.expiredAt?.toISOString() || 'null'} → ${finalExpiredAt?.toISOString() || 'null'} ${isPackageChange ? '(package change, preserved)' : ''}`);
         console.log(`   - Status: ${user.status} → ${newStatus}`);
         if (newProfileId !== user.profileId) {

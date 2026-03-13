@@ -105,14 +105,21 @@ export default function MikroTikSetupPage() {
 
   // Extract IP range from CIDR
   const getIpRange = (cidr: string) => {
-    const [network, mask] = cidr.split('/');
+    const [network] = cidr.split('/');
     const parts = network.split('.');
-    const lastOctet = parts[3];
-    parts[3] = '2';
+    parts[3] = '100';
     const start = parts.join('.');
-    parts[3] = '254';
+    parts[3] = '200';
     const end = parts.join('.');
     return `${start}-${end}`;
+  };
+
+  // Gateway IP = first usable IP of the subnet (e.g. 192.168.200.1)
+  const getGatewayIp = (cidr: string) => {
+    const [network] = cidr.split('/');
+    const parts = network.split('.');
+    parts[3] = '1';
+    return parts.join('.');
   };
 
   const getNetworkAddress = (cidr: string) => {
@@ -124,9 +131,11 @@ export default function MikroTikSetupPage() {
 add name=pool-isolir ranges=${getIpRange(settings.isolationIpPool)} comment="IP Pool untuk user yang diisolir"`;
 
   // Script 2: PPP Profile
+  // local-address = gateway IP (router side of PPP link), MUST be an IP not a pool name
+  // remote-address = pool name for client IP assignment
   const pppProfileScript = `/ppp profile
 add name=isolir \\
-    local-address=pool-isolir \\
+    local-address=${getGatewayIp(settings.isolationIpPool)} \\
     remote-address=pool-isolir \\
     rate-limit=${settings.isolationRateLimit} \\
     comment="Profile untuk user yang diisolir"`;

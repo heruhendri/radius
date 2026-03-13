@@ -1,5 +1,6 @@
 ﻿import { prisma } from '@/server/db/client';
 import { disconnectPPPoEUser } from '@/server/services/radius/coa-handler.service';
+import { redisDel, RedisKeys } from '@/server/cache/redis';
 
 /**
  * Enhanced Auto-Isolation for expired PPPoE users
@@ -107,6 +108,9 @@ export async function autoIsolateExpiredUsers() {
           WHERE username = ${user.username} 
             AND attribute = 'Framed-IP-Address'
         `;
+
+        // 5a. Invalidate Redis authorize cache so authorize hook reads fresh status
+        await redisDel(RedisKeys.radiusAuth(user.username));
 
         // 5. Disconnect user session (force re-authentication)
         try {
@@ -330,6 +334,9 @@ export async function isolateUser(username: string, reason?: string) {
       WHERE username = ${user.username} 
         AND attribute = 'Framed-IP-Address'
     `;
+
+    // Invalidate Redis authorize cache
+    await redisDel(RedisKeys.radiusAuth(user.username));
 
     // Disconnect
     try {

@@ -114,14 +114,27 @@ export async function PUT(request: NextRequest) {
       }
     });
 
-    // Sync new rate limit to RADIUS radgroupreply for 'isolir' group
-    if (isolationRateLimit) {
-      await prisma.$executeRaw`
-        INSERT INTO radgroupreply (groupname, attribute, op, value)
-        VALUES ('isolir', 'Mikrotik-Rate-Limit', ':=', ${isolationRateLimit})
-        ON DUPLICATE KEY UPDATE value = ${isolationRateLimit}
-      `
-    }
+    // Sync rate limit to RADIUS radgroupreply for 'isolir' group (upsert so rows are created if missing)
+    const rateLimit = isolationRateLimit ?? company.isolationRateLimit ?? '64k/64k';
+    await prisma.$executeRaw`
+      INSERT INTO radgroupreply (groupname, attribute, op, value)
+      VALUES ('isolir', 'Mikrotik-Rate-Limit', ':=', ${rateLimit})
+      ON DUPLICATE KEY UPDATE value = ${rateLimit}
+    `;
+    // Ensure Mikrotik-Group attribute exists (maps user to 'isolir' PPPoE profile)
+    await prisma.$executeRaw`
+      INSERT INTO radgroupreply (groupname, attribute, op, value)
+      VALUES ('isolir', 'Mikrotik-Group', ':=', 'isolir')
+      ON DUPLICATE KEY UPDATE value = 'isolir'
+    `;
+    // Ensure IP pool attribute exists
+    const ipPool = isolationIpPool ?? company.isolationIpPool ?? '192.168.200.0/24';
+    const poolName = 'pool-isolir';
+    await prisma.$executeRaw`
+      INSERT INTO radgroupreply (groupname, attribute, op, value)
+      VALUES ('isolir', 'Framed-Pool', ':=', ${poolName})
+      ON DUPLICATE KEY UPDATE value = ${poolName}
+    `;
 
     // Clear isolation settings cache so cron picks up new values immediately
     clearIsolationSettingsCache()

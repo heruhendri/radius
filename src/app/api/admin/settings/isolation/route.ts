@@ -134,14 +134,23 @@ export async function PUT(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Update RADIUS group configuration with new rate limit
-    if (isolationRateLimit) {
-      await prisma.$executeRaw`
-        UPDATE radgroupreply 
-        SET value = ${isolationRateLimit}
-        WHERE groupname = 'isolir' AND attribute = 'Mikrotik-Rate-Limit'
-      `;
-    }
+    // Upsert RADIUS group configuration for 'isolir' (creates rows if they don't exist yet)
+    const rateLimit = isolationRateLimit ?? '64k/64k';
+    await prisma.$executeRaw`
+      INSERT INTO radgroupreply (groupname, attribute, op, value)
+      VALUES ('isolir', 'Mikrotik-Rate-Limit', ':=', ${rateLimit})
+      ON DUPLICATE KEY UPDATE value = ${rateLimit}
+    `;
+    await prisma.$executeRaw`
+      INSERT INTO radgroupreply (groupname, attribute, op, value)
+      VALUES ('isolir', 'Mikrotik-Group', ':=', 'isolir')
+      ON DUPLICATE KEY UPDATE value = 'isolir'
+    `;
+    await prisma.$executeRaw`
+      INSERT INTO radgroupreply (groupname, attribute, op, value)
+      VALUES ('isolir', 'Framed-Pool', ':=', 'pool-isolir')
+      ON DUPLICATE KEY UPDATE value = 'pool-isolir'
+    `;
 
     // Clear cache so new settings take effect immediately
     clearIsolationSettingsCache();

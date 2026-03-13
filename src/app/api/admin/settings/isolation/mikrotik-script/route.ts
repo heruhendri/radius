@@ -53,10 +53,11 @@ add name=pool-isolir ranges=${ipRange.startIp}-${ipRange.endIp}
 # 2. PPP Profile for Isolation
 # ============================================
 /ppp profile
-add bridge=bridge1 dns-server=8.8.8.8,8.8.4.4 local-address=${ipRange.gateway} \\
-    name=isolir pool=pool-isolir rate-limit=${uploadLimit}/${downloadLimit} \\
-    session-timeout=1d use-compression=no use-encryption=no use-mpls=no \\
-    use-upnp=no
+add name=isolir local-address=${ipRange.gateway} remote-address=pool-isolir \\
+    rate-limit=${uploadLimit}/${downloadLimit} \\
+    session-timeout=1d use-compression=no use-encryption=no \\
+    comment="SALFANET RADIUS - Isolation Profile"
+# NOTE: Tambahkan dns-server dan bridge sesuai konfigurasi router Anda jika diperlukan
 
 # ============================================
 # 3. Firewall Rules for Isolation
