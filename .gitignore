@@ -1,3 +1,6 @@
+# Mobile app (Flutter) - tidak perlu di-push ke GitHub
+mobile-app/
+
 # Dependencies
 node_modules/
 .pnp

@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const sinceParam = searchParams.get('since');
-  const since = sinceParam ? new Date(sinceParam) : new Date(Date.now() - 60 * 1000); // default last 60s
+  const since = sinceParam ? new Date(sinceParam) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // default last 30 days
 
   const events: Array<{
     id: string;
