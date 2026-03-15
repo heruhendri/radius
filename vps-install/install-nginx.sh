@@ -539,6 +539,52 @@ configure_firewall_nginx() {
     print_success "Firewall configured"
 }
 
+verify_external_web_access() {
+    print_info "Running web access diagnostics..."
+
+    local PUBLIC_IP="${VPS_IP:-$(detect_ip_address)}"
+
+    # 1) Internal app check (Next.js)
+    if curl -fsS -I --max-time 5 http://127.0.0.1:3000 >/dev/null 2>&1; then
+        print_success "Internal app check OK: http://127.0.0.1:3000"
+    else
+        print_warning "Internal app check failed: http://127.0.0.1:3000"
+        print_info "  Cek PM2: pm2 status && pm2 logs salfanet-radius --lines 60"
+    fi
+
+    # 2) Internal Nginx check (HTTP)
+    if curl -fsS -I --max-time 5 http://127.0.0.1 >/dev/null 2>&1; then
+        print_success "Internal Nginx check OK: http://127.0.0.1"
+    else
+        print_warning "Internal Nginx check failed: http://127.0.0.1"
+        print_info "  Cek Nginx: nginx -t && systemctl status nginx --no-pager"
+    fi
+
+    # 3) Public check by detected IP (best-effort)
+    if [[ "$PUBLIC_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        if curl -fsS -I --max-time 7 "http://${PUBLIC_IP}" >/dev/null 2>&1; then
+            print_success "Public HTTP reachable: http://${PUBLIC_IP}"
+        else
+            print_warning "Public HTTP not reachable: http://${PUBLIC_IP}"
+            print_info "  Jika VM/Proxmox NAT: pastikan DNAT 80->VM:80 dan 443->VM:443"
+            print_info "  Jika pakai Cloud Firewall/Security Group: allow TCP 80 dan 443"
+            print_info "  Cek host NAT rule: iptables -t nat -L -n -v | grep -E 'dpt:(80|443)'"
+        fi
+
+        # HTTPS optional check (might fail on self-signed cert without -k)
+        if curl -kfsS -I --max-time 7 "https://${PUBLIC_IP}" >/dev/null 2>&1; then
+            print_success "Public HTTPS reachable: https://${PUBLIC_IP}"
+        else
+            print_warning "Public HTTPS check failed: https://${PUBLIC_IP}"
+            print_info "  Jika pakai cert self-signed ini normal untuk browser (warning cert)"
+            print_info "  Jika handshake gagal total, cek mapping 443 di NAT/load balancer"
+        fi
+    else
+        print_warning "Detected public IP tidak valid/tersedia: ${PUBLIC_IP}"
+        print_info "  Kemungkinan server berada di jaringan lokal/NAT tanpa public IP langsung"
+    fi
+}
+
 install_nginx() {
     print_step "Step 6: Configuring Nginx Reverse Proxy"
     
@@ -562,6 +608,7 @@ install_nginx() {
 
     # Setup SSL jika domain disediakan (setelah nginx running)
     setup_ssl_domain
+    verify_external_web_access
     
     print_success "Nginx installation and configuration completed"
     
