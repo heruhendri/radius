@@ -4,7 +4,7 @@
   "short_name": "Teknisi",
   "description": "Portal Teknisi Salfanet - manajemen tiket lapangan dan pelanggan",
   "start_url": "/technician",
-  "scope": "/technician/",
+  "scope": "/technician",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0a0520",
