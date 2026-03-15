@@ -62,6 +62,11 @@ configure_redis() {
         print_info "Config asli dibackup ke: $CONF_BAK"
     fi
 
+    # Siapkan direktori runtime/log/data agar service tidak gagal karena permission
+    mkdir -p /var/log/redis /var/lib/redis /run/redis
+    chown redis:redis /var/log/redis /var/lib/redis /run/redis || true
+    chmod 750 /var/log/redis /var/lib/redis /run/redis || true
+
     # Hitung maxmemory berdasarkan RAM tersedia
     local TOTAL_MEM_MB
     TOTAL_MEM_MB=$(free -m | awk 'NR==2{print $2}')
@@ -74,11 +79,51 @@ configure_redis() {
     fi
     print_info "RAM: ${TOTAL_MEM_MB}MB â†’ maxmemory Redis: ${REDIS_MAX_MB}mb"
 
-    # Bind hanya ke localhost (keamanan â€” jangan expose ke luar)
-    sed -i 's/^bind .*/bind 127.0.0.1 -::1/' "$CONF"
+    # Bind hanya ke localhost (keamanan, jangan expose Redis ke internet)
+    if grep -q '^bind ' "$CONF"; then
+        sed -i 's/^bind .*/bind 127.0.0.1 ::1/' "$CONF"
+    else
+        echo 'bind 127.0.0.1 ::1' >> "$CONF"
+    fi
 
-    # Non-aktifkan protected mode (sudah aman karena bind localhost)
-    sed -i 's/^protected-mode yes/protected-mode no/' "$CONF"
+    # Pastikan mode startup kompatibel dengan systemd
+    if grep -q '^supervised ' "$CONF"; then
+        sed -i 's/^supervised .*/supervised systemd/' "$CONF"
+    elif grep -q '^# supervised ' "$CONF"; then
+        sed -i 's/^# supervised .*/supervised systemd/' "$CONF"
+    else
+        echo 'supervised systemd' >> "$CONF"
+    fi
+
+    if grep -q '^daemonize ' "$CONF"; then
+        sed -i 's/^daemonize .*/daemonize no/' "$CONF"
+    elif grep -q '^# daemonize ' "$CONF"; then
+        sed -i 's/^# daemonize .*/daemonize no/' "$CONF"
+    else
+        echo 'daemonize no' >> "$CONF"
+    fi
+
+    # Tetap gunakan protected-mode untuk keamanan
+    if grep -q '^protected-mode ' "$CONF"; then
+        sed -i 's/^protected-mode .*/protected-mode yes/' "$CONF"
+    elif grep -q '^# protected-mode ' "$CONF"; then
+        sed -i 's/^# protected-mode .*/protected-mode yes/' "$CONF"
+    else
+        echo 'protected-mode yes' >> "$CONF"
+    fi
+
+    # Lokasi data + pid yang konsisten dengan unit package Ubuntu/Debian
+    if grep -q '^dir ' "$CONF"; then
+        sed -i 's|^dir .*|dir /var/lib/redis|' "$CONF"
+    else
+        echo 'dir /var/lib/redis' >> "$CONF"
+    fi
+
+    if grep -q '^pidfile ' "$CONF"; then
+        sed -i 's|^pidfile .*|pidfile /run/redis/redis-server.pid|' "$CONF"
+    else
+        echo 'pidfile /run/redis/redis-server.pid' >> "$CONF"
+    fi
 
     # Aktifkan maxmemory
     if grep -q "^maxmemory " "$CONF"; then
@@ -106,7 +151,11 @@ configure_redis() {
     sed -i 's/^appendonly no/appendonly yes/' "$CONF"
 
     # Logfile
-    if ! grep -q "^logfile " "$CONF"; then
+    if grep -q '^logfile ' "$CONF"; then
+        sed -i 's|^logfile .*|logfile /var/log/redis/redis-server.log|' "$CONF"
+    elif grep -q '^# logfile ' "$CONF"; then
+        sed -i 's|^# logfile .*|logfile /var/log/redis/redis-server.log|' "$CONF"
+    else
         echo "logfile /var/log/redis/redis-server.log" >> "$CONF"
     fi
 
@@ -120,8 +169,16 @@ configure_redis() {
 enable_redis_service() {
     print_info "Enabling and starting Redis service..."
 
+    systemctl reset-failed redis-server 2>/dev/null || true
     systemctl enable redis-server
-    systemctl restart redis-server
+
+    if ! systemctl restart redis-server; then
+        print_error "Gagal restart redis-server. Menampilkan diagnosa..."
+        systemctl status redis-server --no-pager || true
+        journalctl -xeu redis-server.service --no-pager -n 80 || true
+        tail -n 80 /var/log/redis/redis-server.log 2>/dev/null || true
+        return 1
+    fi
 
     # Tunggu Redis siap
     local RETRY=0
@@ -137,6 +194,8 @@ enable_redis_service() {
 
     print_error "Redis tidak merespons setelah ${MAX_RETRY} detik"
     systemctl status redis-server --no-pager || true
+    journalctl -xeu redis-server.service --no-pager -n 80 || true
+    tail -n 80 /var/log/redis/redis-server.log 2>/dev/null || true
     return 1
 }
 
