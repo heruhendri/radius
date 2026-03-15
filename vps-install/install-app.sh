@@ -99,7 +99,7 @@ create_env_file() {
 
     cat > ${APP_DIR}/.env <<EOF
 # Database Configuration
-DATABASE_URL="mysql://${DB_USER}:${DB_PASSWORD}@localhost:3306/${DB_NAME}?connection_limit=10&pool_timeout=20"
+DATABASE_URL="mysql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:3306/${DB_NAME}?connection_limit=10&pool_timeout=20"
 
 # Timezone - CRITICAL for WIB handling
 TZ="Asia/Jakarta"
@@ -202,7 +202,7 @@ ensure_mysql_ready_for_app_setup() {
 
     local i
     for ((i=1; i<=30; i++)); do
-        if mysql -u "${DB_USER}" -p"${DB_PASSWORD}" -e "SELECT 1;" >/dev/null 2>&1; then
+        if mysql -h 127.0.0.1 -u "${DB_USER}" -p"${DB_PASSWORD}" -e "SELECT 1;" >/dev/null 2>&1; then
             print_success "MySQL is ready for Prisma/seed"
             return 0
         fi

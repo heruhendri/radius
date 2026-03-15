@@ -85,6 +85,23 @@ mysql_root_exec() {
     return 1
 }
 
+grant_db_user_local_hosts() {
+    mysql -u root -p"${DB_ROOT_PASSWORD}" <<EOF
+CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
+CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
+CREATE USER IF NOT EXISTS '${DB_USER}'@'::1' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
+
+ALTER USER IF EXISTS '${DB_USER}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
+ALTER USER IF EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
+ALTER USER IF EXISTS '${DB_USER}'@'::1' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
+
+GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
+GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'::1';
+FLUSH PRIVILEGES;
+EOF
+}
+
 safe_restart_mysql_with_fallback() {
     print_info "Restarting ${MYSQL_SERVICE} to apply config..."
 
@@ -186,38 +203,40 @@ create_database() {
             local BACKUP_FILE="/root/salfanet_radius_backup_$(date +%Y%m%d_%H%M%S).sql"
             mysqldump -u root -p"${DB_ROOT_PASSWORD}" ${DB_NAME} > ${BACKUP_FILE} 2>/dev/null || true
             print_success "Database backed up to: ${BACKUP_FILE}"
-            
-            # Keep existing database, ensure user exists
-            mysql -u root -p"${DB_ROOT_PASSWORD}" <<EOF 2>/dev/null || true
-CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
-ALTER USER IF EXISTS '${DB_USER}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
-GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
-FLUSH PRIVILEGES;
-EOF
+
+            # Keep existing database, ensure user has local TCP + socket grants
+            grant_db_user_local_hosts || {
+                print_error "Failed to grant DB user privileges for local hosts"
+                return 1
+            }
         else
             print_info "Dropping existing database and user..."
             mysql -u root -p"${DB_ROOT_PASSWORD}" <<EOF 2>/dev/null || true
 DROP DATABASE IF EXISTS ${DB_NAME};
 DROP USER IF EXISTS '${DB_USER}'@'localhost';
+DROP USER IF EXISTS '${DB_USER}'@'127.0.0.1';
+DROP USER IF EXISTS '${DB_USER}'@'::1';
 FLUSH PRIVILEGES;
 EOF
             # Create fresh database
             mysql -u root -p"${DB_ROOT_PASSWORD}" <<EOF
 CREATE DATABASE ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER '${DB_USER}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
-GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
-FLUSH PRIVILEGES;
 EOF
+            grant_db_user_local_hosts || {
+                print_error "Failed to grant DB user privileges for local hosts"
+                return 1
+            }
         fi
     else
         # Create fresh database and user
         print_info "Creating fresh database and user..."
         mysql -u root -p"${DB_ROOT_PASSWORD}" <<EOF
 CREATE DATABASE ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER '${DB_USER}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
-GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
-FLUSH PRIVILEGES;
 EOF
+        grant_db_user_local_hosts || {
+            print_error "Failed to grant DB user privileges for local hosts"
+            return 1
+        }
     fi
     
     print_success "Database and user configured"
@@ -310,12 +329,19 @@ test_mysql_connection() {
     print_info "Testing database connection..."
 
     ensure_mysql_running || return 1
-    
-    if mysql -u "${DB_USER}" -p"${DB_PASSWORD}" -e "USE ${DB_NAME}; SELECT 1;" > /dev/null 2>&1; then
+
+    # Test socket auth (localhost user)
+    if ! mysql -u "${DB_USER}" -p"${DB_PASSWORD}" -e "USE ${DB_NAME}; SELECT 1;" > /dev/null 2>&1; then
+        print_error "Database socket connection test failed"
+        return 1
+    fi
+
+    # Test TCP auth (same path used by Prisma)
+    if mysql -h 127.0.0.1 -u "${DB_USER}" -p"${DB_PASSWORD}" -e "USE ${DB_NAME}; SELECT 1;" > /dev/null 2>&1; then
         print_success "Database connection test successful"
         return 0
     else
-        print_error "Database connection test failed!"
+        print_error "Database TCP connection test failed (127.0.0.1)"
         return 1
     fi
 }
