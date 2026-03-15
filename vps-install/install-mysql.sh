@@ -280,7 +280,6 @@ innodb_write_io_threads       = 4
 # Query optimization
 tmp_table_size    = 64M
 max_heap_table_size = 64M
-query_cache_type  = 0
 join_buffer_size  = 2M
 sort_buffer_size  = 2M
 
@@ -323,13 +322,36 @@ test_mysql_connection() {
 
 install_mysql() {
     print_step "Step 3: Installing MySQL 8.0"
-    
-    remove_old_mysql
-    install_mysql_server
-    secure_mysql
-    create_database
-    configure_mysql_timezone
-    test_mysql_connection
+
+    remove_old_mysql || {
+        print_error "Failed while removing old MySQL packages"
+        return 1
+    }
+
+    install_mysql_server || {
+        print_error "MySQL server installation/start failed"
+        return 1
+    }
+
+    secure_mysql || {
+        print_error "MySQL security configuration failed"
+        return 1
+    }
+
+    create_database || {
+        print_error "Database/user creation failed"
+        return 1
+    }
+
+    configure_mysql_timezone || {
+        print_error "MySQL tuning/timezone configuration failed"
+        return 1
+    }
+
+    test_mysql_connection || {
+        print_error "Final MySQL connection test failed"
+        return 1
+    }
     
     print_success "MySQL installation and configuration completed"
     
