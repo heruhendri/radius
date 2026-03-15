@@ -77,7 +77,7 @@ const menuGroups: MenuGroup[] = [
         requiredPermission: 'dashboard.view',
         children: [
           { titleKey: 'nav.notifications', href: '/admin/notifications', badge: 'notifications', requiredPermission: 'dashboard.view' },
-          { titleKey: 'nav.pushNotifications', href: '/admin/push-notifications', requiredPermission: 'dashboard.view' },
+          { titleKey: 'nav.pushNotifications', href: '/admin/notifications/push', requiredPermission: 'dashboard.view' },
         ],
       },
     ],

@@ -292,6 +292,11 @@ export default function ManagementPage() {
     return roleConfig ? t(`management.${roleConfig.translationKey}`) : role.replace('_', ' ');
   };
 
+  const getPermissionLabel = (key: string) => {
+    const found = permissions.find((p) => p.key === key);
+    return found ? found.name : key;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -524,8 +529,9 @@ export default function ManagementPage() {
                                 <span
                                   key={perm}
                                   className="inline-flex px-1 py-0.5 text-[9px] font-medium bg-muted text-muted-foreground rounded"
+                                  title={perm}
                                 >
-                                  {perm}
+                                  {getPermissionLabel(perm)}
                                 </span>
                               ))}
                               {user.permissions.length > 3 && (

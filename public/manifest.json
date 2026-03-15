@@ -1,0 +1,46 @@
+{
+  "name": "Salfanet Customer Portal",
+  "short_name": "Salfanet",
+  "description": "Portal pelanggan Salfanet untuk cek tagihan, notifikasi, dan layanan internet.",
+  "start_url": "/customer",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#03131d",
+  "theme_color": "#06b6d4",
+  "lang": "id-ID",
+  "categories": [
+    "business",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/pwa/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/pwa/screenshot-wide.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "Dashboard pelanggan Salfanet"
+    },
+    {
+      "src": "/pwa/screenshot-narrow.svg",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "Portal pelanggan versi mobile"
+    }
+  ]
+}

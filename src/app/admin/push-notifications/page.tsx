@@ -128,7 +128,7 @@ export default function PushNotificationsPage() {
   const loadStats = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/push-notifications?action=stats');
+      const res = await fetch('/api/push/send?action=stats');
       const data = await res.json();
       if (data.success) {
         setStats(data.stats);
@@ -143,7 +143,7 @@ export default function PushNotificationsPage() {
   const loadHistory = async () => {
     setHistoryLoading(true);
     try {
-      const res = await fetch('/api/admin/push-notifications?limit=30');
+      const res = await fetch('/api/push/send?limit=30');
       const data = await res.json();
       if (data.success) {
         setBroadcasts(data.broadcasts);
@@ -186,7 +186,7 @@ export default function PushNotificationsPage() {
     try {
       const targetIds = targetType === 'area' && selectedArea ? [selectedArea] : [];
 
-      const res = await fetch('/api/admin/push-notifications', {
+      const res = await fetch('/api/push/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

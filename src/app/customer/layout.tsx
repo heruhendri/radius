@@ -9,6 +9,7 @@ import { registerGlobalToast, registerGlobalConfirm } from '@/lib/sweetalert';
 import { formatWIB } from '@/lib/timezone';
 import { useTheme } from '@/hooks/useTheme';
 import { useTranslation } from '@/hooks/useTranslation';
+import { PushNotificationToggle } from '@/components/push-notification-toggle';
 
 // Force all customer pages to be dynamic
 export const dynamic = 'force-dynamic';
@@ -282,6 +283,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* Logout */}
         <div className="p-4 border-t border-cyan-500/20">
+          <PushNotificationToggle />
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-xl transition-all duration-300"

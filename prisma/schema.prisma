@@ -504,6 +504,7 @@ model pppoeUser {
   referrals        pppoeUser[]    @relation("Referrals") // Users referred by this customer
   referralRewardsGiven    referralReward[] @relation("ReferrerRewards")
   referralRewardsReceived referralReward[] @relation("ReferredRewards")
+  pushSubscriptions pushSubscription[]
 
   @@index([profileId], map: "pppoe_users_profileId_fkey")
   @@index([routerId], map: "pppoe_users_routerId_fkey")
@@ -786,6 +787,25 @@ model customerSession {
   @@index([token])
   @@index([userId])
   @@map("customer_sessions")
+}
+
+model pushSubscription {
+  id             String    @id @default(cuid())
+  userId         String
+  user           pppoeUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint       String    @unique @db.VarChar(500)
+  p256dh         String    @db.Text
+  auth           String    @db.Text
+  expirationTime DateTime?
+  userAgent      String?   @db.Text
+  isActive       Boolean   @default(true)
+  lastUsedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId, isActive])
+  @@index([createdAt])
+  @@map("push_subscriptions")
 }
 
 model transactionCategory {
