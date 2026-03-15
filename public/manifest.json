@@ -1,8 +1,9 @@
 {
+  "id": "/",
   "name": "Salfanet Radius",
   "short_name": "Salfanet",
   "description": "Billing & RADIUS management system untuk ISP/RTRW.NET",
-  "start_url": "/",
+  "start_url": "/customer",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

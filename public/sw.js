@@ -1,11 +1,10 @@
-const CACHE_NAME = 'salfanet-pwa-v2';
+const CACHE_NAME = 'salfanet-pwa-v3';
 const OFFLINE_URL = '/offline';
 const STATIC_ASSETS = [
   OFFLINE_URL,
   '/manifest.json',
-  '/pwa/icon-192.svg',
-  '/pwa/icon-512.svg',
-  '/pwa/badge.svg',
+  '/pwa/icon-192.png',
+  '/pwa/icon-512.png',
 ];
 
 function offlineFallbackResponse(returnUrl) {
@@ -38,11 +37,16 @@ function offlineFallbackResponse(returnUrl) {
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    // Cache each asset individually — one failure won't abort entire install
+    await Promise.all(
+      STATIC_ASSETS.map((url) =>
+        cache.add(url).catch((err) => console.warn('[SW] precache skip:', url, err))
+      )
+    );
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
