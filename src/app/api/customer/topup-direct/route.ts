@@ -79,10 +79,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create payment FIRST before creating invoice
+    // Create invoice first so every gateway callback/redirect has stable token + orderId
     let paymentUrl: string | null = null;
-    let tempOrderId = `TOPUP-TEMP-${Date.now()}`;
     const customerEmail = pppoeUser.email || `${pppoeUser.username}@customer.com`;
+
+    const invoiceCount = await prisma.invoice.count();
+    const invoiceNumber = `TOPUP-${Date.now()}-${(invoiceCount + 1).toString().padStart(5, '0')}`;
+    const paymentToken = `pay-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 1);
+
+    const invoice = await prisma.invoice.create({
+      data: {
+        id: `inv-topup-${Date.now()}`,
+        userId: pppoeUser.id,
+        invoiceNumber,
+        amount,
+        dueDate,
+        status: 'PENDING',
+        paymentToken,
+        paymentLink: null,
+        customerName: pppoeUser.name,
+        customerPhone: pppoeUser.phone,
+        customerEmail,
+        customerUsername: pppoeUser.username,
+        invoiceType: 'TOPUP',
+        baseAmount: amount
+      }
+    });
+
+    // Keep orderId aligned with invoiceNumber so webhook can resolve deterministically
+    const orderId = invoice.invoiceNumber;
+
+    // Compute base URL for callbacks/return URLs
+    const companyForBase = await prisma.company.findFirst({ select: { baseUrl: true } });
+    const _proto = request.headers.get('x-forwarded-proto') || 'http';
+    const _host = request.headers.get('x-forwarded-host') || request.headers.get('host') || '';
+    const _inferred = _host ? `${_proto}://${_host}` : '';
+    const appBaseUrl = (companyForBase?.baseUrl && !companyForBase.baseUrl.includes('localhost'))
+      ? companyForBase.baseUrl
+      : (_inferred && !_inferred.includes('localhost'))
+        ? _inferred
+        : companyForBase?.baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
     console.log('[Top-Up Direct] Creating payment for gateway:', gateway);
     console.log('[Top-Up Direct] Amount:', amount);
@@ -92,12 +130,12 @@ export async function POST(request: NextRequest) {
       if (gateway === 'midtrans') {
         console.log('[Top-Up Direct] Calling Midtrans API...');
         const midtransResult = await createMidtransPayment({
-          orderId: tempOrderId,
+          orderId,
           amount: amount,
           customerName: pppoeUser.name,
           customerEmail: customerEmail,
           customerPhone: pppoeUser.phone,
-          invoiceToken: '',
+          invoiceToken: paymentToken,
           items: [{
             id: 'topup',
             name: `Top-Up Saldo`,
@@ -111,13 +149,13 @@ export async function POST(request: NextRequest) {
       } else if (gateway === 'xendit') {
         console.log('[Top-Up Direct] Calling Xendit API...');
         const xenditResult = await createXenditInvoice({
-          externalId: tempOrderId,
+          externalId: orderId,
           amount: amount,
           payerEmail: customerEmail,
           description: `Top-Up Saldo`,
           customerName: pppoeUser.name,
           customerPhone: pppoeUser.phone,
-          invoiceToken: ''
+          invoiceToken: paymentToken
         });
         paymentUrl = xenditResult.invoiceUrl;
         console.log('[Top-Up Direct] Xendit payment URL:', paymentUrl);
@@ -133,13 +171,13 @@ export async function POST(request: NextRequest) {
         const duitku = createDuitkuClient(
           gatewayConfig.duitkuMerchantCode || '',
           gatewayConfig.duitkuApiKey || '',
-          `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/webhook`,
-          `${process.env.NEXT_PUBLIC_APP_URL}/customer`,
+          `${appBaseUrl}/api/payment/webhook`,
+          `${appBaseUrl}/payment/pending?token=${paymentToken}`,
           gatewayConfig.duitkuEnvironment === 'sandbox'
         );
 
         const result = await duitku.createInvoice({
-          invoiceId: tempOrderId,
+          invoiceId: orderId,
           amount: amount,
           customerName: pppoeUser.name,
           customerEmail: customerEmail,
@@ -170,7 +208,7 @@ export async function POST(request: NextRequest) {
 
         console.log('[Top-Up Direct] Tripay transaction params:', {
           method: 'QRIS',
-          merchantRef: tempOrderId,
+          merchantRef: orderId,
           amount: amount,
           customerName: pppoeUser.name,
           customerEmail: customerEmail,
@@ -179,7 +217,7 @@ export async function POST(request: NextRequest) {
 
         const result = await tripay.createTransaction({
           method: 'QRIS',
-          merchantRef: tempOrderId,
+          merchantRef: orderId,
           amount: amount,
           customerName: pppoeUser.name,
           customerEmail: customerEmail,
@@ -191,7 +229,8 @@ export async function POST(request: NextRequest) {
               quantity: 1,
             },
           ],
-          returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/customer`,
+          callbackUrl: `${appBaseUrl}/api/payment/webhook`,
+          returnUrl: `${appBaseUrl}/payment/pending?token=${paymentToken}`,
           expiredTime: 86400, // 24 hours
         });
 
@@ -217,6 +256,9 @@ export async function POST(request: NextRequest) {
     } catch (paymentError: any) {
       console.error('[Top-Up Direct] Payment creation error:', paymentError);
       console.error('[Top-Up Direct] Error stack:', paymentError.stack);
+
+      // Rollback invoice if payment gateway request failed
+      await prisma.invoice.delete({ where: { id: invoice.id } }).catch(() => null);
       
       return NextResponse.json(
         { 
@@ -229,50 +271,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // NOW create invoice with payment URL
-    const invoiceCount = await prisma.invoice.count();
-    const invoiceNumber = `TOPUP-${Date.now()}-${(invoiceCount + 1).toString().padStart(5, '0')}`;
-    const paymentToken = `pay-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 1);
-
-    const invoice = await prisma.invoice.create({
-      data: {
-        id: `inv-topup-${Date.now()}`,
-        userId: pppoeUser.id,
-        invoiceNumber: invoiceNumber,
-        amount: amount,
-        dueDate: dueDate,
-        status: 'PENDING',
-        paymentToken: paymentToken,
-        paymentLink: paymentUrl, // Set payment link immediately
-        customerName: pppoeUser.name,
-        customerPhone: pppoeUser.phone,
-        customerEmail: customerEmail,
-        customerUsername: pppoeUser.username,
-        invoiceType: 'TOPUP',
-        baseAmount: amount
-      }
+    // Update invoice with generated payment link
+    const updatedInvoice = await prisma.invoice.update({
+      where: { id: invoice.id },
+      data: { paymentLink: paymentUrl }
     });
 
-    console.log('[Top-Up Direct] Invoice created:', invoice.invoiceNumber);
-    console.log('[Top-Up Direct] Invoice has payment link:', !!invoice.paymentLink);
+    console.log('[Top-Up Direct] Invoice created:', updatedInvoice.invoiceNumber);
+    console.log('[Top-Up Direct] Invoice has payment link:', !!updatedInvoice.paymentLink);
 
     console.log('[Top-Up Direct] Sending response with payment URL:', paymentUrl);
 
     return NextResponse.json({
       success: true,
       message: 'Invoice top-up berhasil dibuat',
-      invoiceNumber: invoice.invoiceNumber,
-      amount: invoice.amount,
+      invoiceNumber: updatedInvoice.invoiceNumber,
+      amount: updatedInvoice.amount,
       paymentUrl: paymentUrl,
       invoice: {
-        id: invoice.id,
-        invoiceNumber: invoice.invoiceNumber,
-        amount: invoice.amount,
-        status: invoice.status,
-        dueDate: invoice.dueDate,
-        paymentToken: invoice.paymentToken,
+        id: updatedInvoice.id,
+        invoiceNumber: updatedInvoice.invoiceNumber,
+        amount: updatedInvoice.amount,
+        status: updatedInvoice.status,
+        dueDate: updatedInvoice.dueDate,
+        paymentToken: updatedInvoice.paymentToken,
         paymentLink: paymentUrl
       }
     });

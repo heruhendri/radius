@@ -10,19 +10,24 @@ function PaymentFailedContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token');
+  const orderId = searchParams.get('order_id');
   const reason = searchParams.get('reason');
   const [loading, setLoading] = useState(true);
   const [invoiceNumber, setInvoiceNumber] = useState<string>('');
   const [companyPhone, setCompanyPhone] = useState('6281234567890');
 
   useEffect(() => {
-    if (token) fetchInvoiceInfo(); else setLoading(false);
+    if (token || orderId) fetchInvoiceInfo(); else setLoading(false);
     fetch('/api/company').then(res => res.json()).then(data => { if (data.phone) { let phone = data.phone.replace(/^0/, '62'); if (!phone.startsWith('62')) phone = '62' + phone; setCompanyPhone(phone); } }).catch(() => { });
-  }, [token]);
+  }, [token, orderId]);
 
   const fetchInvoiceInfo = async () => {
     try {
-      const res = await fetch(`/api/invoices/check?token=${token}`);
+      const endpoint = token
+        ? `/api/invoices/check?token=${encodeURIComponent(token)}`
+        : `/api/payment/check-order?orderId=${encodeURIComponent(orderId || '')}`;
+
+      const res = await fetch(endpoint);
       const data = await res.json();
       if (res.ok && data.invoice) setInvoiceNumber(data.invoice.invoiceNumber);
     } catch { } finally { setLoading(false); }

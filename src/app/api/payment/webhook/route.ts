@@ -653,8 +653,9 @@ async function handleVoucherOrder(
         }
       }
     }
-  }
 }
+
+  }
 
 // Generate random voucher code
 function generateVoucherCode(length: number = 8): string {
@@ -1580,6 +1581,14 @@ async function handleInvoicePayment(
           }
         }
       }
+    }
+  } else if (['expire', 'cancel', 'deny', 'failed'].includes(status)) {
+    if (invoice.status !== 'PAID' && invoice.status !== 'CANCELLED') {
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { status: 'CANCELLED' }
+      });
+      console.log(`❌ Invoice ${invoice.invoiceNumber} marked as CANCELLED`);
     }
   }
 }

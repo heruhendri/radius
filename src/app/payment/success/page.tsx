@@ -15,6 +15,7 @@ function PaymentSuccessContent() {
   const router = useRouter();
   const token = searchParams.get('token');
   const orderId = searchParams.get('order_id');
+  const transactionStatus = (searchParams.get('transaction_status') || '').toLowerCase();
   const [loading, setLoading] = useState(true);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [deposit, setDeposit] = useState<AgentDeposit | null>(null);
@@ -22,6 +23,16 @@ function PaymentSuccessContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (orderId && ['cancel', 'deny', 'expire', 'failed', 'failure'].includes(transactionStatus)) {
+      router.replace(`/payment/failed?order_id=${encodeURIComponent(orderId)}&reason=${encodeURIComponent(transactionStatus)}`);
+      return;
+    }
+
+    if (orderId && ['pending'].includes(transactionStatus)) {
+      router.replace(`/payment/pending?order_id=${encodeURIComponent(orderId)}`);
+      return;
+    }
+
     if (token) {
       if (token.startsWith('DEP-')) {
         setIsAgentDeposit(true);
@@ -35,15 +46,30 @@ function PaymentSuccessContent() {
       setError('Token tidak ditemukan');
       setLoading(false);
     }
-  }, [token, orderId]);
+  }, [token, orderId, transactionStatus]);
 
   const checkOrderId = async () => {
     try {
-      const res = await fetch(`/api/agent/deposit/check?orderId=${orderId}`);
+      const res = await fetch(`/api/payment/check-order?orderId=${encodeURIComponent(orderId || '')}`);
       const data = await res.json();
-      if (res.ok && data.deposit) {
+
+      if (res.ok && data.type === 'agent_deposit' && data.deposit) {
         setIsAgentDeposit(true);
         setDeposit(data.deposit);
+      } else if (res.ok && data.invoice) {
+        const normalizedStatus = (data.status || '').toLowerCase();
+
+        if (normalizedStatus === 'settlement' || data.invoice.status === 'PAID') {
+          setIsAgentDeposit(false);
+          setInvoice(data.invoice);
+        } else if (normalizedStatus === 'pending' || data.invoice.status === 'PENDING') {
+          const nextToken = data.invoice.paymentToken ? `token=${encodeURIComponent(data.invoice.paymentToken)}&` : '';
+          router.replace(`/payment/pending?${nextToken}order_id=${encodeURIComponent(orderId || '')}`);
+          return;
+        } else {
+          router.replace(`/payment/failed?order_id=${encodeURIComponent(orderId || '')}&reason=${encodeURIComponent(normalizedStatus || 'cancel')}`);
+          return;
+        }
       } else {
         setError(t('payment.paymentNotFound'));
       }

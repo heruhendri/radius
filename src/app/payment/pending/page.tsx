@@ -11,22 +11,57 @@ function PaymentPendingContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token');
+  const orderId = searchParams.get('order_id');
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  useEffect(() => { if (token) fetchInvoiceStatus(); else { setError('Token tidak ditemukan'); setLoading(false); } }, [token]);
-  useEffect(() => { if (!autoRefresh || !token) return; const interval = setInterval(() => fetchInvoiceStatus(true), 5000); return () => clearInterval(interval); }, [autoRefresh, token]);
+  useEffect(() => {
+    if (token || orderId) fetchInvoiceStatus();
+    else {
+      setError('Token/order_id tidak ditemukan');
+      setLoading(false);
+    }
+  }, [token, orderId]);
+
+  useEffect(() => {
+    if (!autoRefresh || (!token && !orderId)) return;
+    const interval = setInterval(() => fetchInvoiceStatus(true), 5000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, token, orderId]);
 
   const fetchInvoiceStatus = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const res = await fetch(`/api/invoices/check?token=${token}`);
+      const endpoint = token
+        ? `/api/invoices/check?token=${encodeURIComponent(token)}`
+        : `/api/payment/check-order?orderId=${encodeURIComponent(orderId || '')}`;
+
+      const res = await fetch(endpoint);
       const data = await res.json();
-      if (res.ok && data.invoice) { setInvoice(data.invoice); if (data.invoice.status === 'PAID') router.push(`/payment/success?token=${token}`); }
-      else setError(data.error || 'Invoice tidak ditemukan');
+
+      if (res.ok && data.invoice) {
+        setInvoice(data.invoice);
+        const normalized = (data.status || '').toLowerCase();
+
+        if (data.invoice.status === 'PAID' || normalized === 'settlement') {
+          if (token) router.push(`/payment/success?token=${encodeURIComponent(token)}`);
+          else router.push(`/payment/success?order_id=${encodeURIComponent(orderId || '')}`);
+          return;
+        }
+
+        if (data.invoice.status === 'CANCELLED' || ['cancel', 'deny', 'expire', 'failed'].includes(normalized)) {
+          const qp = token
+            ? `token=${encodeURIComponent(token)}`
+            : `order_id=${encodeURIComponent(orderId || '')}`;
+          router.push(`/payment/failed?${qp}&reason=${encodeURIComponent(normalized || 'cancel')}`);
+          return;
+        }
+      } else {
+        setError(data.error || 'Invoice tidak ditemukan');
+      }
     } catch { if (!silent) setError('Gagal mengecek status'); } finally { setLoading(false); setChecking(false); }
   };
 
@@ -124,7 +159,15 @@ function PaymentPendingContent() {
           <button onClick={() => { setChecking(true); fetchInvoiceStatus(); }} disabled={checking} className="w-full flex items-center justify-center gap-2 px-4 py-3 text-xs font-medium bg-[#0a0520] text-white rounded-xl border-2 border-[#bc13fe]/30 hover:border-[#00f7ff] disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 text-[#00f7ff] ${checking ? 'animate-spin' : ''}`} />{checking ? 'Mengecek...' : 'Cek Status'}
           </button>
-          <button onClick={() => router.push(`/pay/${token}`)} className="w-full px-4 py-3 text-xs font-medium text-[#e0d0ff]/70 hover:text-white">Kembali ke Invoice</button>
+          <button
+            onClick={() => {
+              if (token) router.push(`/pay/${token}`);
+              else router.push('/customer');
+            }}
+            className="w-full px-4 py-3 text-xs font-medium text-[#e0d0ff]/70 hover:text-white"
+          >
+            Kembali ke Invoice
+          </button>
         </div>
 
         <p className="text-center text-[10px] text-[#e0d0ff]/50">Halaman akan otomatis redirect setelah pembayaran berhasil</p>
