@@ -392,6 +392,80 @@ verify_installation() {
 
 export -f verify_installation
 
+detect_ssh_ports() {
+    local PORTS="22"
+
+    if [ -f /etc/ssh/sshd_config ]; then
+        local CFG_PORTS
+        CFG_PORTS=$(awk '/^[[:space:]]*Port[[:space:]]+[0-9]+/{print $2}' /etc/ssh/sshd_config 2>/dev/null | tr '\n' ' ')
+        if [ -n "$CFG_PORTS" ]; then
+            PORTS="$PORTS $CFG_PORTS"
+        fi
+    fi
+
+    # SSH_CLIENT format: <client_ip> <client_port> <server_port>
+    if [ -n "${SSH_CLIENT:-}" ]; then
+        local CONNECTED_PORT
+        CONNECTED_PORT=$(echo "$SSH_CLIENT" | awk '{print $3}')
+        if [[ "$CONNECTED_PORT" =~ ^[0-9]+$ ]]; then
+            PORTS="$PORTS $CONNECTED_PORT"
+        fi
+    fi
+
+    echo "$PORTS" | tr ' ' '\n' | grep -E '^[0-9]+$' | sort -u | tr '\n' ' '
+}
+
+export -f detect_ssh_ports
+
+ensure_ufw_enabled() {
+    if [ "${SKIP_UFW:-false}" = "true" ]; then
+        print_info "Skipping UFW enable (${DEPLOY_ENV_LABEL:-LXC/Container})"
+        return 0
+    fi
+
+    if ! command -v ufw &>/dev/null; then
+        print_warning "UFW tidak ditemukan, lewati aktivasi firewall"
+        return 0
+    fi
+
+    print_info "Ensuring UFW rules and activation..."
+
+    local SSH_PORTS
+    SSH_PORTS=$(detect_ssh_ports)
+
+    # Keep SSH access safe before enabling firewall
+    for PORT in $SSH_PORTS; do
+        ufw allow "${PORT}/tcp" comment "SSH" 2>/dev/null || true
+    done
+
+    # Ensure public web ports stay open for app access
+    ufw allow 80/tcp comment 'HTTP' 2>/dev/null || true
+    ufw allow 443/tcp comment 'HTTPS' 2>/dev/null || true
+
+    # Reasonable defaults for public servers
+    ufw default deny incoming >/dev/null 2>&1 || true
+    ufw default allow outgoing >/dev/null 2>&1 || true
+
+    if ufw status 2>/dev/null | grep -qi '^Status: active'; then
+        print_success "UFW already active"
+    else
+        if ! ufw --force enable >/dev/null 2>&1; then
+            print_error "Gagal mengaktifkan UFW"
+            ufw status verbose || true
+            return 1
+        fi
+        print_success "UFW enabled"
+    fi
+
+    local UFW_STATUS
+    UFW_STATUS=$(ufw status 2>/dev/null | head -1 | sed 's/^Status: //')
+    print_info "UFW status: ${UFW_STATUS:-unknown}"
+    print_info "SSH ports allowed: ${SSH_PORTS}"
+    return 0
+}
+
+export -f ensure_ufw_enabled
+
 # ============================================================================
 # BANNER FUNCTION
 # ============================================================================

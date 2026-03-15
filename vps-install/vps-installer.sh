@@ -423,7 +423,7 @@ Deploy Script   : ${APP_DIR}/deploy.sh
 Application URL : $([ -n "${VPS_DOMAIN:-}" ] && echo "https://${VPS_DOMAIN}" || echo "http://${VPS_IP}")
 Admin Panel     : $([ -n "${VPS_DOMAIN:-}" ] && echo "https://${VPS_DOMAIN}/admin" || echo "http://${VPS_IP}/admin")
 Default Login   : Lihat database seeders
-Firewall (UFW)  : $([ "${SKIP_UFW}" = "true" ] && echo "DILEWATI - konfigurasi di Proxmox host" || echo "Aktif")
+Firewall (UFW)  : $([ "${SKIP_UFW}" = "true" ] && echo "DILEWATI - konfigurasi di Proxmox host" || echo "$(ufw status 2>/dev/null | head -1 | sed 's/^Status: //')")
 
 [>] REDIS CACHE
 -----------------
@@ -460,7 +460,7 @@ PM2 App   : $(pm2 list 2>/dev/null | grep -q "salfanet-radius.*online" && echo "
 ----------------------
 Deploy Env: ${DEPLOY_ENV_LABEL}
 $([ "${SKIP_UFW}" = "true" ] && echo "UFW      : DILEWATI - konfigurasi firewall di Proxmox host/datacenter" || \
-  echo "UFW      : Aktif")
+    echo "UFW      : $(ufw status 2>/dev/null | head -1 | sed 's/^Status: //')")
 Port 80   : HTTP
 Port 443  : HTTPS
 Port 1812 : RADIUS Authentication (UDP)
@@ -604,6 +604,11 @@ main() {
 
     # Run installation
     run_installation
+
+    # Ensure firewall is active (except environments where UFW is skipped)
+    if ! ensure_ufw_enabled; then
+        print_warning "UFW tidak dapat diaktifkan otomatis. Cek manual: ufw status verbose"
+    fi
     
     # Finalize
     create_installation_info
