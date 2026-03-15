@@ -1,0 +1,111 @@
+#!/bin/bash
+# =============================================================
+# Salfanet Radius - Smart Update Script
+# Usage: bash scripts/update.sh [--force]
+# Writes output to /tmp/salfanet-update.log
+# =============================================================
+
+APP_DIR="/var/www/salfanet-radius"
+LOG_FILE="/tmp/salfanet-update.log"
+PID_FILE="/tmp/salfanet-update.pid"
+FORCE=${1:-""}
+
+# Write PID for "is running" check
+echo $$ > "$PID_FILE"
+
+# Redirect all output to log file (and stdout)
+exec > >(tee "$LOG_FILE") 2>&1
+
+log()  { echo "[$(date '+%H:%M:%S')] $1"; }
+ok()   { echo "[$(date '+%H:%M:%S')] ✔ $1"; }
+err()  { echo "[$(date '+%H:%M:%S')] ✘ $1"; rm -f "$PID_FILE"; exit 1; }
+
+echo ""
+echo "╔══════════════════════════════════════════════╗"
+echo "║      SALFANET RADIUS — UPDATE STARTED        ║"
+echo "║  $(date '+%Y-%m-%d %H:%M:%S')                         ║"
+echo "╚══════════════════════════════════════════════╝"
+echo ""
+
+cd "$APP_DIR" || err "Cannot cd to $APP_DIR"
+
+# ── Current state ──────────────────────────────────────────
+PREV_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "none")
+PREV_SHORT=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
+PREV_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+log "Current version : v$PREV_VERSION ($PREV_SHORT)"
+
+# ── Fetch from remote ─────────────────────────────────────
+log "Fetching latest from GitHub..."
+git fetch origin master 2>&1 || err "git fetch failed — check network or credentials"
+
+NEW_COMMIT=$(git rev-parse origin/master)
+NEW_SHORT=${NEW_COMMIT:0:7}
+
+if [ "$PREV_COMMIT" = "$NEW_COMMIT" ] && [ "$FORCE" != "--force" ]; then
+  echo ""
+  ok "Already up to date (v$PREV_VERSION / $PREV_SHORT)"
+  echo ""
+  echo "╔══════════════════════════════════════════════╗"
+  echo "║        NO UPDATE NEEDED — ALL GOOD ✔         ║"
+  echo "╚══════════════════════════════════════════════╝"
+  rm -f "$PID_FILE"
+  exit 0
+fi
+
+# ── Show changed files ────────────────────────────────────
+echo ""
+log "Changed files ($PREV_SHORT → $NEW_SHORT):"
+git diff --name-only "$PREV_COMMIT" "$NEW_COMMIT" 2>/dev/null | while read f; do
+  echo "   • $f"
+done
+CHANGED=$(git diff --name-only "$PREV_COMMIT" "$NEW_COMMIT" 2>/dev/null || echo "")
+
+# ── Apply code ────────────────────────────────────────────
+echo ""
+log "Applying code update..."
+git reset --hard origin/master 2>&1 || err "git reset --hard failed"
+ok "Code updated to $NEW_SHORT"
+
+# ── npm install (only if package.json changed) ────────────
+if echo "$CHANGED" | grep -qE '^package\.json$|^package-lock\.json$'; then
+  echo ""
+  log "package.json changed — installing dependencies..."
+  npm install 2>&1 | tail -5
+  ok "npm install done"
+fi
+
+# ── Prisma (only if schema changed) ───────────────────────
+if echo "$CHANGED" | grep -q '^prisma/schema\.prisma$'; then
+  echo ""
+  log "Prisma schema changed — running generate + db push..."
+  npx prisma generate 2>&1 | tail -3
+  npx prisma db push 2>&1 | tail -5
+  ok "Prisma updated"
+fi
+
+# ── Build ─────────────────────────────────────────────────
+echo ""
+log "Building application (this takes ~60s)..."
+npm run build 2>&1 | grep -E 'error|Error|warning|Compiled|Generating|Page|Route|✓|✗' | tail -15
+BUILD_EXIT=${PIPESTATUS[0]}
+[ "$BUILD_EXIT" -ne 0 ] && err "npm run build failed (exit $BUILD_EXIT)"
+ok "Build completed"
+
+# ── Restart PM2 ───────────────────────────────────────────
+echo ""
+log "Restarting services..."
+pm2 restart all --update-env 2>&1 | tail -5
+ok "Services restarted"
+
+# ── Done ──────────────────────────────────────────────────
+NEW_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+rm -f "$PID_FILE"
+
+echo ""
+echo "╔══════════════════════════════════════════════╗"
+echo "║          UPDATE COMPLETE ✔                   ║"
+echo "║  v$PREV_VERSION → v$NEW_VERSION                          ║"
+echo "║  $PREV_SHORT → $NEW_SHORT                           ║"
+echo "║  $(date '+%Y-%m-%d %H:%M:%S')                         ║"
+echo "╚══════════════════════════════════════════════╝"

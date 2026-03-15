@@ -37,6 +37,7 @@ import {
   FileText,
   Activity,
   Cable,
+  GitBranch,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -285,6 +286,7 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.database', href: '/admin/settings/database', requiredPermission: 'settings.view' },
           { titleKey: 'nav.cronJobs', href: '/admin/settings/cron', requiredPermission: 'settings.cron' },
           { titleKey: 'nav.genieacs', href: '/admin/settings/genieacs', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.systemUpdate', href: '/admin/system', requiredPermission: 'settings.view' },
         ],
       },
     ],
@@ -860,6 +862,11 @@ function AdminLayoutContent({
             ))}
           </nav>
 
+          {/* Version badge */}
+          <div className="flex-shrink-0 px-3 py-1.5">
+            <AppVersionBadge />
+          </div>
+
           {/* User - fixed at bottom */}
           <div className="flex-shrink-0 px-2.5 py-2 border-t border-cyan-500/20 bg-gradient-to-r from-cyan-500/5 via-transparent to-pink-500/5">
             <div className="relative">
@@ -1031,6 +1038,39 @@ function AdminLayoutContent({
         </div>
       )}
     </div>
+  );
+}
+
+// ── Version badge in sidebar footer ───────────────────────
+function AppVersionBadge() {
+  const [info, setInfo] = useState<{ version: string; commit: string; hasUpdate: boolean } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/system/info')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setInfo(d); })
+      .catch(() => {});
+  }, []);
+
+  if (!info) return null;
+
+  return (
+    <Link
+      href="/admin/system"
+      className="flex items-center justify-between w-full px-2.5 py-1.5 rounded-lg bg-card/50 hover:bg-primary/10 border border-border/50 hover:border-cyan-500/30 group transition-all duration-200"
+    >
+      <div className="flex items-center gap-1.5">
+        <GitBranch className="w-3 h-3 text-muted-foreground group-hover:text-cyan-400 transition-colors" />
+        <span className="text-[10px] font-mono text-muted-foreground group-hover:text-foreground transition-colors">
+          v{info.version} · {info.commit}
+        </span>
+      </div>
+      {info.hasUpdate && (
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">
+          UPDATE
+        </span>
+      )}
+    </Link>
   );
 }
 
