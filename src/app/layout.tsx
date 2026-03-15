@@ -64,7 +64,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script dangerouslySetInnerHTML={{ __html: swScript }} />
-        <link rel="apple-touch-icon" href="/pwa/icon-192.svg" />
+        <link rel="apple-touch-icon" href="/pwa/apple-touch-icon.png" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
