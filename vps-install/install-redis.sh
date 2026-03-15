@@ -72,9 +72,9 @@ configure_redis() {
     elif [ "$TOTAL_MEM_MB" -ge 1000 ]; then REDIS_MAX_MB=128
     else                                     REDIS_MAX_MB=64
     fi
-    print_info "RAM: ${TOTAL_MEM_MB}MB → maxmemory Redis: ${REDIS_MAX_MB}mb"
+    print_info "RAM: ${TOTAL_MEM_MB}MB â†’ maxmemory Redis: ${REDIS_MAX_MB}mb"
 
-    # Bind hanya ke localhost (keamanan — jangan expose ke luar)
+    # Bind hanya ke localhost (keamanan â€” jangan expose ke luar)
     sed -i 's/^bind .*/bind 127.0.0.1 -::1/' "$CONF"
 
     # Non-aktifkan protected mode (sudah aman karena bind localhost)
@@ -128,7 +128,7 @@ enable_redis_service() {
     local MAX_RETRY=10
     while [ $RETRY -lt $MAX_RETRY ]; do
         if redis-cli ping 2>/dev/null | grep -q "PONG"; then
-            print_success "Redis berjalan! (redis-cli ping → PONG)"
+            print_success "Redis berjalan! (redis-cli ping â†’ PONG)"
             return 0
         fi
         RETRY=$((RETRY + 1))
@@ -278,11 +278,11 @@ install_redis() {
     print_step "Step 8: Redis Cache Installation"
 
     print_info "Redis meningkatkan performa:"
-    print_info "  ✓ Cache RADIUS auth     → PPPoE login 5-10x lebih cepat"
-    print_info "  ✓ Dashboard cache       → Kurangi query DB berat (30s TTL)"
-    print_info "  ✓ Online user tracking  → Real-time tanpa full-scan radacct"
-    print_info "  ✓ Rate limiting         → API protection terdistribusi"
-    print_info "  ✓ Distributed cron lock → Cegah double-run multi-instance"
+    print_info "  âœ“ Cache RADIUS auth     â†’ PPPoE login 5-10x lebih cepat"
+    print_info "  âœ“ Dashboard cache       â†’ Kurangi query DB berat (30s TTL)"
+    print_info "  âœ“ Online user tracking  â†’ Real-time tanpa full-scan radacct"
+    print_info "  âœ“ Rate limiting         â†’ API protection terdistribusi"
+    print_info "  âœ“ Distributed cron lock â†’ Cegah double-run multi-instance"
     echo ""
 
     install_redis_server
@@ -327,7 +327,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         install)
             echo ""
             echo -e "${CYAN}=====================================================${NC}"
-            echo -e "${CYAN}  Salfanet Radius — Redis Standalone Installer${NC}"
+            echo -e "${CYAN}  Salfanet Radius â€” Redis Standalone Installer${NC}"
             echo -e "${CYAN}=====================================================${NC}"
             echo ""
 
