@@ -88,12 +88,12 @@ function AgentSidebar({
         'fixed top-0 left-0 h-full z-50 transition-all duration-300 ease-in-out',
         'w-64 bg-white dark:bg-[#0a0520]/95 backdrop-blur-xl border-r border-purple-200 dark:border-[#bc13fe]/20',
         'shadow-[5px_0_15px_rgba(0,0,0,0.08)] dark:shadow-[5px_0_30px_rgba(188,19,254,0.15)]',
-        'overflow-y-auto',
+        'flex flex-col',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:translate-x-0' // Always visible on desktop
       )}>
         {/* Logo */}
-        <div className="p-4 border-b border-purple-200 dark:border-[#bc13fe]/20">
+        <div className="flex-shrink-0 p-4 border-b border-purple-200 dark:border-[#bc13fe]/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-xl shadow-[0_0_20px_rgba(188,19,254,0.5)]">
@@ -117,7 +117,7 @@ function AgentSidebar({
 
         {/* Balance Card */}
         {agent && (
-          <div className="p-4">
+          <div className="flex-shrink-0 p-4">
             <div className="bg-gradient-to-br from-[#bc13fe]/20 to-[#00f7ff]/20 dark:from-[#bc13fe]/30 dark:to-[#00f7ff]/30 rounded-xl p-3 border border-cyan-200 dark:border-[#00f7ff]/30">
               <p className="text-[10px] text-slate-500 dark:text-[#e0d0ff]/70 uppercase tracking-wider">{t('agent.portal.yourBalance')}</p>
               <p className="text-lg font-bold text-[#00f7ff] drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]">
@@ -128,7 +128,7 @@ function AgentSidebar({
         )}
 
         {/* Navigation */}
-        <nav className="p-3 space-y-1">
+        <nav className="p-3 space-y-1 flex-1 min-h-0 overflow-y-auto">
           {menuItems.map((item) => (
             <Link
               key={item.href}
@@ -155,7 +155,7 @@ function AgentSidebar({
         </nav>
 
         {/* User Info & Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-purple-200 dark:border-[#bc13fe]/20 bg-slate-50/80 dark:bg-[#0a0520]/50">
+        <div className="flex-shrink-0 p-4 border-t border-purple-200 dark:border-[#bc13fe]/20 bg-slate-50/80 dark:bg-[#0a0520]/50">
           {agent && (
             <div className="mb-3">
               <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-purple-50 dark:bg-[#bc13fe]/10 border border-purple-200 dark:border-[#bc13fe]/20">

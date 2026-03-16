@@ -244,7 +244,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Navigation */}
-        <nav className="p-3 space-y-1 flex-1">
+        <nav className="p-3 space-y-1 flex-1 min-h-0 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
