@@ -33,6 +33,16 @@ function parseMikrotikUptime(uptime: string): number {
   return seconds;
 }
 
+/** Hard-limit a RouterOSAPI connection to avoid TCP-level hangs */
+function connectWithTimeout(api: RouterOSAPI, ms: number): Promise<unknown> {
+  return Promise.race([
+    api.connect(),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Router connection timed out')), ms),
+    ),
+  ]);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -98,9 +108,11 @@ export async function GET(request: NextRequest) {
       nasIp: string;
       uptime: string | null;
     }>();
+    // Only poll routers for non-expired vouchers (expired voucher routers may be unreachable)
+    const activeVouchers = vouchers.filter((v) => v.status !== 'EXPIRED');
     const nasIpSet = new Set([
       ...sessions.map((s) => s.nasipaddress).filter(Boolean),
-      ...vouchers.map((v) => v.router?.nasname).filter(Boolean),
+      ...activeVouchers.map((v) => v.router?.nasname).filter(Boolean),
     ]);
 
     if (nasIpSet.size > 0) {
@@ -124,7 +136,7 @@ export async function GET(request: NextRequest) {
           timeout: 5,
         });
         try {
-          await api.connect();
+          await connectWithTimeout(api, 4000);
           const hotspotActive = await api.write('/ip/hotspot/active/print');
           await api.close();
           const nasIp = r.ipAddress || r.nasname;

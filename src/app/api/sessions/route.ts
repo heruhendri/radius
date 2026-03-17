@@ -42,6 +42,16 @@ function formatDuration(seconds: number): string {
   return `${remainingSeconds}s`;
 }
 
+/** Hard-limit a RouterOSAPI connection to avoid TCP-level hangs */
+function connectWithTimeout(api: RouterOSAPI, ms: number): Promise<unknown> {
+  return Promise.race([
+    api.connect(),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Router connection timed out')), ms),
+    ),
+  ]);
+}
+
 // ─── Stale session cleanup ──────────────────────────────────────────────────
 
 /**
@@ -148,7 +158,7 @@ export async function GET(request: NextRequest) {
           timeout: 5,
         });
         try {
-          await api.connect();
+          await connectWithTimeout(api, 4000);
 
           // ── PPPoE: /interface/print (only when not filtering to hotspot-only)
           if (!type || type === 'pppoe') {
