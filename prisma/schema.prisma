@@ -36,6 +36,13 @@ model agentDeposit {
   paymentToken    String?  @unique
   paymentUrl      String?  @db.Text
   transactionId   String?
+  targetBankName          String?
+  targetBankAccountNumber String?
+  targetBankAccountName   String?
+  senderAccountName       String?
+  senderAccountNumber     String?
+  receiptImage            String?  @db.Text
+  note                    String?  @db.Text
   paidAt          DateTime?
   expiredAt       DateTime?
   createdAt       DateTime @default(now())

@@ -9,7 +9,17 @@ import { nowWIB } from '@/lib/timezone';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { agentId, amount, note } = body;
+    const {
+      agentId,
+      amount,
+      note,
+      targetBankName,
+      targetBankAccountNumber,
+      targetBankAccountName,
+      senderAccountName,
+      senderAccountNumber,
+      receiptImage,
+    } = body;
 
     if (!agentId || !amount) {
       return NextResponse.json({ error: 'Agent ID and amount are required' }, { status: 400 });
@@ -18,6 +28,27 @@ export async function POST(request: NextRequest) {
     const parsedAmount = Number(amount);
     if (!Number.isFinite(parsedAmount) || parsedAmount < 10000) {
       return NextResponse.json({ error: 'Minimum deposit amount is Rp 10.000' }, { status: 400 });
+    }
+
+    if (!targetBankName || !targetBankAccountNumber || !targetBankAccountName) {
+      return NextResponse.json(
+        { error: 'Rekening tujuan admin wajib dipilih' },
+        { status: 400 }
+      );
+    }
+
+    if (!senderAccountName) {
+      return NextResponse.json(
+        { error: 'Nama pemilik rekening pengirim wajib diisi' },
+        { status: 400 }
+      );
+    }
+
+    if (!receiptImage) {
+      return NextResponse.json(
+        { error: 'Bukti transfer wajib diupload' },
+        { status: 400 }
+      );
     }
 
     const agent = await prisma.agent.findUnique({ where: { id: agentId } });
@@ -55,8 +86,14 @@ export async function POST(request: NextRequest) {
         status: 'PENDING',
         paymentGateway: 'manual',
         paymentToken: token,
-        transactionId: note ? `NOTE:${String(note).slice(0, 120)}` : null,
-      },
+        targetBankName,
+        targetBankAccountNumber,
+        targetBankAccountName,
+        senderAccountName,
+        senderAccountNumber: senderAccountNumber || null,
+        receiptImage,
+        note: note || null,
+      } as any,
     });
 
     await prisma.notification.create({
@@ -64,7 +101,7 @@ export async function POST(request: NextRequest) {
         id: Math.random().toString(36).substring(2, 15),
         type: 'agent_deposit_request',
         title: 'Permintaan Deposit Agent',
-        message: `${agent.name} meminta top up manual sebesar Rp ${parsedAmount.toLocaleString('id-ID')}`,
+        message: `${agent.name} meminta top up manual Rp ${parsedAmount.toLocaleString('id-ID')} ke ${targetBankName} (${targetBankAccountNumber})`,
         link: '/admin/hotspot/agent/deposits',
         createdAt: nowWIB(),
       },

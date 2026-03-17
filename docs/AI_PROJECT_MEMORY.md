@@ -9,14 +9,29 @@
 
 **Salfanet Radius** adalah sistem billing ISP/RTRW.NET berbasis web dengan integrasi FreeRADIUS penuh. Mendukung PPPoE dan Hotspot, cocok untuk ISP kecil-menengah di Indonesia.
 
-- **Version**: 2.11.0
+- **Version**: 2.11.2
 - **Status**: Production-ready, deployed di VPS
-- **Last Updated**: March 17, 2026
+- **Last Updated**: March 18, 2026
 - **Latest Commit**: See GitHub
 - **GitHub**: https://github.com/s4lfanet/salfanet-radius (public)
 - **Live URL**: https://radius.yourdomain.com
 
 ### Recent Patch Log (March 2026)
+
+- **Enhancement: Manual agent deposit with transfer proof + target admin account**
+  - Agent manual top-up sekarang memilih rekening tujuan admin dari `company.bankAccounts` (API: `/api/company/info`).
+  - Modal top-up agent menambahkan input transfer manual lengkap: rekening tujuan, nama/nomor rekening pengirim, catatan, dan upload bukti transfer.
+  - Bukti transfer diproses via endpoint existing `/api/upload/payment-proof` lalu disimpan pada request manual.
+  - Admin page verifikasi deposit agent (`/admin/hotspot/agent/deposits`) kini menampilkan rekening tujuan transfer, data pengirim, catatan, dan link bukti transfer.
+  - API yang diperbarui:
+    - `POST /api/agent/deposit/manual-request`
+    - `GET/PATCH /api/admin/agent-deposits`
+    - `GET /api/company/info` (tambahan `bankAccounts`)
+  - Schema update `agentDeposit`:
+    - `targetBankName`, `targetBankAccountNumber`, `targetBankAccountName`
+    - `senderAccountName`, `senderAccountNumber`
+    - `receiptImage`, `note`
+  - Migration: `prisma/migrations/20260318120000_add_agent_manual_deposit_fields/migration.sql`
 
 - **Fix: MapPicker z-index behind form modal**
   - `MapPicker` membuat `fixed` overlay tanpa `createPortal`, sehingga ancestor layout (sidebar, transform) membentuk stacking context yang menjebak z-index-nya di bawah `SimpleModal` portal.

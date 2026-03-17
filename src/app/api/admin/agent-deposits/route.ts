@@ -76,7 +76,7 @@ export async function PATCH(request: NextRequest) {
     const deposit = await prisma.agentDeposit.findUnique({
       where: { id: depositId },
       include: { agent: true },
-    });
+    }) as any;
 
     if (!deposit || deposit.paymentGateway !== 'manual') {
       return NextResponse.json({ error: 'Deposit manual tidak ditemukan' }, { status: 404 });
@@ -85,6 +85,8 @@ export async function PATCH(request: NextRequest) {
     if (deposit.status !== 'PENDING') {
       return NextResponse.json({ error: 'Permintaan ini sudah diproses' }, { status: 400 });
     }
+
+    const targetBankLabel = deposit.targetBankName || 'manual';
 
     if (action === 'approve') {
       const result = await prisma.$transaction(async (tx) => {
@@ -121,7 +123,7 @@ export async function PATCH(request: NextRequest) {
             id: Math.random().toString(36).substring(2, 15),
             type: 'agent_deposit_approved',
             title: 'Deposit Agent Disetujui',
-            message: `Permintaan deposit ${deposit.agent.name} sebesar Rp ${deposit.amount.toLocaleString('id-ID')} telah disetujui`,
+            message: `Permintaan deposit ${deposit.agent.name} Rp ${deposit.amount.toLocaleString('id-ID')} (${targetBankLabel}) telah disetujui`,
             link: '/admin/hotspot/agent/deposits',
             createdAt: nowWIB(),
           },
@@ -161,7 +163,7 @@ export async function PATCH(request: NextRequest) {
         id: Math.random().toString(36).substring(2, 15),
         type: 'agent_deposit_rejected',
         title: 'Deposit Agent Ditolak',
-        message: `Permintaan deposit ${deposit.agent.name} sebesar Rp ${deposit.amount.toLocaleString('id-ID')} ditolak`,
+        message: `Permintaan deposit ${deposit.agent.name} Rp ${deposit.amount.toLocaleString('id-ID')} (${targetBankLabel}) ditolak`,
         link: '/admin/hotspot/agent/deposits',
         createdAt: nowWIB(),
       },

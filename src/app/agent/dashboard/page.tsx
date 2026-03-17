@@ -65,6 +65,12 @@ interface Voucher {
   createdAt: string;
 }
 
+interface AdminBankAccount {
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+}
+
 export default function AgentDashboardPage() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -103,6 +109,13 @@ export default function AgentDashboardPage() {
   const [depositMode, setDepositMode] = useState<'gateway' | 'manual'>('gateway');
   const [manualDepositNote, setManualDepositNote] = useState('');
   const [creatingManualDeposit, setCreatingManualDeposit] = useState(false);
+  const [adminBankAccounts, setAdminBankAccounts] = useState<AdminBankAccount[]>([]);
+  const [selectedAdminBankKey, setSelectedAdminBankKey] = useState('');
+  const [senderAccountName, setSenderAccountName] = useState('');
+  const [senderAccountNumber, setSenderAccountNumber] = useState('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreviewUrl, setProofPreviewUrl] = useState<string | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
 
   // WhatsApp functionality
   const [selectedVouchers, setSelectedVouchers] = useState<string[]>([]);
@@ -127,11 +140,12 @@ export default function AgentDashboardPage() {
     const agentData = JSON.parse(agentDataStr);
     setAgent(agentData);
     loadDashboard(agentData.id);
+    loadAdminBankAccounts();
   }, [router]);
 
   // Auto-load payment methods when modal is open and both gateway + amount are valid
   useEffect(() => {
-    if (showDepositModal && depositGateway) {
+    if (showDepositModal && depositMode === 'gateway' && depositGateway) {
       const parsed = parseInt(depositAmount);
       if (!isNaN(parsed) && parsed >= 10000) {
         loadPaymentMethods(depositGateway, parsed);
@@ -140,7 +154,22 @@ export default function AgentDashboardPage() {
         setDepositPaymentMethod('');
       }
     }
-  }, [showDepositModal, depositGateway, depositAmount]);
+  }, [showDepositModal, depositMode, depositGateway, depositAmount]);
+
+  const loadAdminBankAccounts = async () => {
+    try {
+      const res = await fetch('/api/company/info');
+      const data = await res.json();
+      const accounts = (data?.data?.bankAccounts || []) as AdminBankAccount[];
+      setAdminBankAccounts(accounts);
+      if (accounts.length > 0) {
+        const firstKey = `${accounts[0].bankName}|${accounts[0].accountNumber}|${accounts[0].accountName}`;
+        setSelectedAdminBankKey(firstKey);
+      }
+    } catch {
+      setAdminBankAccounts([]);
+    }
+  };
 
   const loadDashboard = async (agentId: string, page = 1, status = '', profileId = '', search = '') => {
     try {
@@ -465,14 +494,50 @@ export default function AgentDashboardPage() {
       return;
     }
 
+    if (adminBankAccounts.length === 0 || !selectedAdminBankKey) {
+      await showError('Rekening admin belum tersedia. Hubungi admin untuk mengisi rekening tujuan transfer.');
+      return;
+    }
+
+    if (!senderAccountName.trim()) {
+      await showError('Nama pemilik rekening pengirim wajib diisi');
+      return;
+    }
+
+    if (!proofFile) {
+      await showError('Bukti transfer wajib diupload');
+      return;
+    }
+
+    const [targetBankName, targetBankAccountNumber, targetBankAccountName] = selectedAdminBankKey.split('|');
+
     setCreatingManualDeposit(true);
     try {
+      setUploadingProof(true);
+      const uploadForm = new FormData();
+      uploadForm.append('file', proofFile);
+      const uploadRes = await fetch('/api/upload/payment-proof', {
+        method: 'POST',
+        body: uploadForm,
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok || !uploadData.success || !uploadData.url) {
+        throw new Error(uploadData.error || 'Gagal upload bukti transfer');
+      }
+      setUploadingProof(false);
+
       const res = await fetch('/api/agent/deposit/manual-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agentId: agent.id,
           amount,
+          targetBankName,
+          targetBankAccountNumber,
+          targetBankAccountName,
+          senderAccountName: senderAccountName.trim(),
+          senderAccountNumber: senderAccountNumber.trim() || undefined,
+          receiptImage: uploadData.url,
           note: manualDepositNote || undefined,
         }),
       });
@@ -488,10 +553,16 @@ export default function AgentDashboardPage() {
       setDepositPaymentMethod('');
       setPaymentMethods([]);
       setManualDepositNote('');
+      setSenderAccountName('');
+      setSenderAccountNumber('');
+      setProofFile(null);
+      if (proofPreviewUrl) URL.revokeObjectURL(proofPreviewUrl);
+      setProofPreviewUrl(null);
       await loadDashboard(agent.id);
     } catch (error: any) {
       await showError(error.message || 'Gagal membuat permintaan deposit manual');
     } finally {
+      setUploadingProof(false);
       setCreatingManualDeposit(false);
     }
   };
@@ -945,18 +1016,86 @@ export default function AgentDashboardPage() {
                   )}
                 </>
               ) : (
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-[#e0d0ff] mb-1.5">Catatan (opsional)</label>
-                  <textarea
-                    value={manualDepositNote}
-                    onChange={(e) => setManualDepositNote(e.target.value)}
-                    placeholder="Contoh: Transfer BCA a/n Agent"
-                    rows={3}
-                    className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
-                  />
-                  <p className="text-[11px] text-slate-500 dark:text-[#e0d0ff]/60 mt-1">
-                    Permintaan akan masuk ke admin untuk diverifikasi manual.
-                  </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-[#e0d0ff] mb-1.5">Rekening Tujuan Admin</label>
+                    {adminBankAccounts.length > 0 ? (
+                      <select
+                        value={selectedAdminBankKey}
+                        onChange={(e) => setSelectedAdminBankKey(e.target.value)}
+                        className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
+                      >
+                        {adminBankAccounts.map((account) => {
+                          const key = `${account.bankName}|${account.accountNumber}|${account.accountName}`;
+                          return (
+                            <option key={key} value={key} className="bg-white dark:bg-[#0a0520]">
+                              {account.bankName} - {account.accountNumber} (a/n {account.accountName})
+                            </option>
+                          );
+                        })}
+                      </select>
+                    ) : (
+                      <div className="text-sm text-[#ff6b8a] p-3 bg-[#ff4466]/10 rounded-xl border border-red-200 dark:border-[#ff4466]/30">
+                        Tidak ada rekening admin untuk transfer manual.
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-[#e0d0ff] mb-1.5">Nama Rekening Pengirim</label>
+                    <input
+                      type="text"
+                      value={senderAccountName}
+                      onChange={(e) => setSenderAccountName(e.target.value)}
+                      placeholder="Nama pemilik rekening pengirim"
+                      className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-[#e0d0ff] mb-1.5">Nomor Rekening Pengirim (opsional)</label>
+                    <input
+                      type="text"
+                      value={senderAccountNumber}
+                      onChange={(e) => setSenderAccountNumber(e.target.value)}
+                      placeholder="Contoh: 1234567890"
+                      className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-[#e0d0ff] mb-1.5">Upload Bukti Transfer</label>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        if (proofPreviewUrl) URL.revokeObjectURL(proofPreviewUrl);
+                        setProofFile(file);
+                        setProofPreviewUrl(file ? URL.createObjectURL(file) : null);
+                      }}
+                      className="w-full px-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-dashed border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white"
+                    />
+                    {proofPreviewUrl && (
+                      <div className="mt-2 rounded-lg overflow-hidden border border-purple-300 dark:border-[#bc13fe]/30">
+                        <img src={proofPreviewUrl} alt="Bukti transfer" className="w-full max-h-48 object-contain bg-black/20" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-[#e0d0ff] mb-1.5">Catatan (opsional)</label>
+                    <textarea
+                      value={manualDepositNote}
+                      onChange={(e) => setManualDepositNote(e.target.value)}
+                      placeholder="Contoh: Transfer BCA via m-banking"
+                      rows={3}
+                      className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
+                    />
+                    <p className="text-[11px] text-slate-500 dark:text-[#e0d0ff]/60 mt-1">
+                      Permintaan akan masuk ke admin untuk diverifikasi manual.
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -978,9 +1117,21 @@ export default function AgentDashboardPage() {
 
             <div className="px-5 py-4 border-t border-purple-200 dark:border-[#bc13fe]/20 flex gap-2 justify-end">
               <button
-                onClick={() => { setShowDepositModal(false); setDepositAmount(''); setPaymentMethods([]); setDepositPaymentMethod(''); setManualDepositNote(''); setDepositMode('gateway'); }}
+                onClick={() => {
+                  setShowDepositModal(false);
+                  setDepositAmount('');
+                  setPaymentMethods([]);
+                  setDepositPaymentMethod('');
+                  setManualDepositNote('');
+                  setSenderAccountName('');
+                  setSenderAccountNumber('');
+                  setProofFile(null);
+                  if (proofPreviewUrl) URL.revokeObjectURL(proofPreviewUrl);
+                  setProofPreviewUrl(null);
+                  setDepositMode('gateway');
+                }}
                 className="px-4 py-2 text-sm text-slate-500 dark:text-[#e0d0ff]/70 hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10 rounded-xl transition"
-                disabled={creatingDeposit || creatingManualDeposit}
+                disabled={creatingDeposit || creatingManualDeposit || uploadingProof}
               >
                 {t('agent.portal.cancel')}
               </button>
@@ -989,13 +1140,15 @@ export default function AgentDashboardPage() {
                 disabled={
                   creatingDeposit ||
                   creatingManualDeposit ||
+                  uploadingProof ||
                   !depositAmount ||
                   parseInt(depositAmount) < 10000 ||
-                  (depositMode === 'gateway' && paymentGateways.length === 0)
+                  (depositMode === 'gateway' && paymentGateways.length === 0) ||
+                  (depositMode === 'manual' && adminBankAccounts.length === 0)
                 }
                 className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-[#bc13fe] to-[#00f7ff] hover:from-[#a010e0] hover:to-[#00d4dd] text-white rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {creatingDeposit || creatingManualDeposit ? (
+                {creatingDeposit || creatingManualDeposit || uploadingProof ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></div>{t('agent.portal.processing')}...</>
                 ) : (
                   depositMode === 'manual' ? 'Kirim Permintaan' : t('agent.portal.payNow')

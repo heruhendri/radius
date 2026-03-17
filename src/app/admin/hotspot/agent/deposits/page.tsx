@@ -9,6 +9,13 @@ interface AgentDepositItem {
   amount: number;
   paymentGateway: string | null;
   status: string;
+  targetBankName: string | null;
+  targetBankAccountNumber: string | null;
+  targetBankAccountName: string | null;
+  senderAccountName: string | null;
+  senderAccountNumber: string | null;
+  receiptImage: string | null;
+  note: string | null;
   createdAt: string;
   paidAt: string | null;
   agent: {
@@ -136,20 +143,21 @@ export default function AgentDepositsPage() {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Agen</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Jumlah</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Metode</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Rekening Tujuan</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Tanggal</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Bukti TF</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">Memuat data...</td>
+                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">Memuat data...</td>
                 </tr>
               ) : deposits.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">Tidak ada deposit</td>
+                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">Tidak ada deposit</td>
                 </tr>
               ) : (
                 deposits.map((deposit) => (
@@ -159,7 +167,24 @@ export default function AgentDepositsPage() {
                       <div className="text-xs text-muted-foreground">{deposit.agent.phone}</div>
                     </td>
                     <td className="px-4 py-3 text-sm font-semibold">Rp {deposit.amount.toLocaleString('id-ID')}</td>
-                    <td className="px-4 py-3 text-sm uppercase">{deposit.paymentGateway || '-'}</td>
+                    <td className="px-4 py-3 text-xs">
+                      <div className="font-semibold">{deposit.targetBankName || '-'}</div>
+                      {deposit.targetBankAccountNumber && (
+                        <div className="text-muted-foreground font-mono">{deposit.targetBankAccountNumber}</div>
+                      )}
+                      {deposit.targetBankAccountName && (
+                        <div className="text-muted-foreground">a/n {deposit.targetBankAccountName}</div>
+                      )}
+                      {deposit.senderAccountName && (
+                        <div className="mt-1 text-[11px] text-cyan-300">
+                          Pengirim: {deposit.senderAccountName}
+                          {deposit.senderAccountNumber ? ` (${deposit.senderAccountNumber})` : ''}
+                        </div>
+                      )}
+                      {deposit.note && (
+                        <div className="mt-1 text-[11px] text-muted-foreground">Catatan: {deposit.note}</div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm">
                       <span className={`px-2 py-1 rounded text-xs font-semibold ${getStatusClass(deposit.status)}`}>
                         {deposit.status}
@@ -168,6 +193,20 @@ export default function AgentDepositsPage() {
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       <div>Request: {formatDate(deposit.createdAt)}</div>
                       {deposit.paidAt && <div>Paid: {formatDate(deposit.paidAt)}</div>}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {deposit.receiptImage ? (
+                        <a
+                          href={deposit.receiptImage}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1.5 text-xs rounded border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10"
+                        >
+                          Lihat Bukti
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       {deposit.status === 'PENDING' ? (

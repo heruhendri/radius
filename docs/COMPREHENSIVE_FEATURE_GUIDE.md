@@ -289,6 +289,9 @@ Format: INV-20251223-00001
 **Features**:
 - Agent balance management
 - Top-up via payment gateway
+- Manual transfer request (approve/reject by admin)
+- Admin bank account selection for manual transfer
+- Transfer proof upload and verification
 - Minimum balance threshold
 - Transaction history
 - Commission tracking
@@ -304,6 +307,10 @@ agent_deposits:
   - status: PENDING/PAID/EXPIRED
   - paymentGateway: midtrans/xendit/duitku
   - paymentUrl: Link pembayaran
+  - targetBankName/Account: Rekening admin tujuan transfer manual
+  - senderAccountName/Number: Data pengirim dari agent
+  - receiptImage: Bukti transfer manual
+  - note: Catatan agent saat request
 
 agent_sales:
   - paymentStatus: PAID/UNPAID
@@ -312,11 +319,14 @@ agent_sales:
 
 **Workflow**:
 1. Agent request deposit (min. Rp 10,000)
-2. Select payment gateway
-3. Get payment URL
-4. Pay via gateway
-5. Webhook → update balance
-6. Balance available untuk generate voucher
+2. Pilih metode:
+  - Payment gateway (Midtrans/Xendit/Duitku), atau
+  - Manual transfer (pilih rekening admin + upload bukti TF)
+3. Jika gateway: agent diarahkan ke payment URL
+4. Jika manual: request masuk ke admin verification queue
+5. Admin review bukti TF + rekening tujuan/pengirim
+6. Approve/reject request manual atau tunggu webhook gateway
+7. Saat status PAID, balance agent bertambah dan siap untuk generate voucher
 
 ---
 

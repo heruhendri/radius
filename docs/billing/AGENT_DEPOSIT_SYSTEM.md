@@ -1,7 +1,9 @@
 # Agent Deposit System Implementation Guide
 
 ## Overview
-Sistem deposit/saldo untuk agent dengan integrasi payment gateway (Midtrans, Xendit, Duitku).
+Sistem deposit/saldo untuk agent dengan dua mode top-up:
+- Payment gateway (Midtrans, Xendit, Duitku)
+- Manual transfer (upload bukti transfer, verifikasi admin)
 
 ## Database Schema Changes
 
@@ -23,6 +25,13 @@ CREATE TABLE agent_deposits (
   paymentToken VARCHAR(191) UNIQUE,
   paymentUrl TEXT,
   transactionId VARCHAR(191),
+  targetBankName VARCHAR(191),
+  targetBankAccountNumber VARCHAR(191),
+  targetBankAccountName VARCHAR(191),
+  senderAccountName VARCHAR(191),
+  senderAccountNumber VARCHAR(191),
+  receiptImage TEXT,
+  note TEXT,
   paidAt DATETIME,
   expiredAt DATETIME,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -85,6 +94,62 @@ Body: (varies by gateway)
 Action: Updates deposit status and agent balance
 ```
 
+### 3. Create Manual Deposit Request (Agent)
+```
+POST /api/agent/deposit/manual-request
+Body: {
+  agentId: string,
+  amount: number,                    // min 10000
+  targetBankName: string,
+  targetBankAccountNumber: string,
+  targetBankAccountName: string,
+  senderAccountName: string,
+  senderAccountNumber?: string,
+  receiptImage: string,              // URL/path hasil upload proof
+  note?: string
+}
+
+Response: {
+  success: true,
+  message: string,
+  deposit: {
+    id: string,
+    status: "PENDING",
+    paymentGateway: "manual"
+  }
+}
+```
+
+### 4. Admin Manual Deposit Verification
+```
+GET /api/admin/agent-deposits?status=ALL|PENDING|PAID|CANCELLED
+PATCH /api/admin/agent-deposits
+
+PATCH Body: {
+  depositId: string,
+  action: "approve" | "reject"
+}
+```
+
+### 5. Company Info (Bank Accounts Source)
+```
+GET /api/company/info
+
+Response includes:
+{
+  companyInfo: {
+    ...,
+    bankAccounts: [
+      {
+        bankName: string,
+        accountNumber: string,
+        accountName: string
+      }
+    ]
+  }
+}
+```
+
 ### 3. Generate Voucher (Updated)
 ```
 POST /api/agent/generate-voucher
@@ -111,7 +176,7 @@ Response: {
 }
 ```
 
-### 4. Agent Dashboard (Updated)
+### 6. Agent Dashboard (Updated)
 ```
 GET /api/agent/dashboard?agentId=xxx
 
@@ -136,7 +201,7 @@ Response includes:
 
 ## Workflow
 
-### Agent Deposit Flow
+### Agent Deposit Flow (Gateway)
 ```
 1. Agent login to /agent/dashboard
 2. Click "Top Up" button
@@ -153,6 +218,30 @@ Response includes:
     - deposit.paidAt = now()
     - agent.balance += deposit.amount
 12. Agent sees updated balance in dashboard
+```
+
+### Agent Deposit Flow (Manual Transfer)
+```
+1. Agent login ke /agent/dashboard
+2. Klik "Top Up"
+3. Pilih mode "Manual Transfer"
+4. Isi nominal + pilih rekening admin tujuan
+5. Isi data rekening pengirim
+6. Upload bukti transfer
+7. Submit request ke /api/agent/deposit/manual-request
+8. Admin review di /admin/hotspot/agent/deposits:
+   - nominal
+   - rekening tujuan
+   - data pengirim
+   - bukti transfer
+9. Admin approve/reject
+10. Jika approve:
+  - status deposit -> PAID
+  - saldo agent bertambah
+  - agent menerima notifikasi sukses
+11. Jika reject:
+  - status deposit -> CANCELLED
+  - agent menerima notifikasi ditolak
 ```
 
 ### Generate Voucher Flow
@@ -208,6 +297,13 @@ Add filter:
 Add bulk action:
 - Mark Selected as PAID
 
+### Manual Deposit Verification UI
+Halaman `/admin/hotspot/agent/deposits` menampilkan kolom tambahan:
+- Rekening tujuan admin
+- Rekening pengirim agent
+- Catatan request
+- Link bukti transfer (`receiptImage`)
+
 ## Configuration
 
 ### Set Minimum Balance (per agent)
@@ -222,6 +318,10 @@ Agent deposits use the same payment gateway config as invoices:
 - /admin/payment-gateway
 - Configure Midtrans/Xendit/Duitku
 - Webhook URL: https://yourdomain.com/api/agent/deposit/webhook
+
+### Manual Transfer Setup
+- Pastikan `company.bankAccounts` terisi dari halaman pengaturan company/admin.
+- Endpoint agent akan menolak request manual jika rekening tujuan/bukti transfer tidak diisi.
 
 ## Testing
 
@@ -251,6 +351,23 @@ curl -X POST http://localhost:3000/api/agent/deposit/webhook \
   }'
 ```
 
+### 4. Test Manual Request
+```bash
+curl -X POST http://localhost:3000/api/agent/deposit/manual-request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentId":"xxx",
+    "amount":100000,
+    "targetBankName":"BCA",
+    "targetBankAccountNumber":"1234567890",
+    "targetBankAccountName":"PT SALFANET",
+    "senderAccountName":"Nama Agent",
+    "senderAccountNumber":"0987654321",
+    "receiptImage":"/uploads/payment-proofs/receipt-xxx.jpg",
+    "note":"Top up manual Maret"
+  }'
+```
+
 ## Security Notes
 
 1. **Webhook Security**: Add signature validation for production
@@ -263,23 +380,27 @@ curl -X POST http://localhost:3000/api/agent/deposit/webhook \
 ### New Files
 - `/src/app/api/agent/deposit/create/route.ts`
 - `/src/app/api/agent/deposit/webhook/route.ts`
-- `/docs/AGENT_DEPOSIT_SYSTEM.md` (this file)
+- `/src/app/api/agent/deposit/manual-request/route.ts`
+- `/src/app/api/admin/agent-deposits/route.ts`
+- `/src/app/admin/hotspot/agent/deposits/page.tsx`
+- `/prisma/migrations/20260318120000_add_agent_manual_deposit_fields/migration.sql`
+- `/docs/billing/AGENT_DEPOSIT_SYSTEM.md` (this file)
 
 ### Modified Files
 - `/prisma/schema.prisma` - Added balance fields and agentDeposit model
+- `/src/app/api/company/info/route.ts` - Expose `bankAccounts` for agent manual transfer target
 - `/src/app/api/agent/generate-voucher/route.ts` - Added balance check and deduction
-- `/src/app/api/agent/dashboard/route.ts` - Added balance and deposits data (TODO)
-- `/src/app/agent/dashboard/page.tsx` - Added deposit UI (TODO)
-- `/src/app/admin/hotspot/agent/page.tsx` - Added balance management (TODO)
+- `/src/app/api/agent/dashboard/route.ts` - Include latest deposits for dashboard
+- `/src/app/agent/dashboard/page.tsx` - Add gateway/manual top-up UI + upload proof flow
+- `/src/app/admin/hotspot/agent/page.tsx` - Balance management
 
 ## Next Steps
 
-1. Push schema to database: `npx prisma db push`
-2. Update agent dashboard to show balance and deposit form
-3. Update admin agent page to manage balance
-4. Test deposit flow with sandbox payment gateway
-5. Configure webhook URLs in payment gateway dashboards
-6. Document for end users
+1. Push migration/schema ke database production
+2. Validasi upload proof (size/type) sesuai kebijakan deployment
+3. Uji end-to-end approval/rejection flow di environment staging
+4. Konfirmasi notifikasi agent/admin untuk status manual request
+5. Dokumentasikan SOP verifikasi deposit manual untuk tim finance
 
 ## Support
 

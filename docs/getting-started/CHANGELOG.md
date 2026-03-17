@@ -4,6 +4,43 @@ All notable changes to SALFANET RADIUS will be documented in this file.
 
 ---
 
+## [2.11.2] - 2026-03-18 (Manual Agent Deposit Proof + Admin Bank Target)
+
+### ✅ Enhancement: Manual Deposit Agent End-to-End
+
+- Agent manual top-up sekarang mengambil daftar rekening tujuan admin langsung dari Company Info (`bankAccounts`) saat memilih metode manual.
+- Modal top-up agent menambahkan field transfer manual:
+  - Rekening tujuan admin (pilih dari daftar)
+  - Nama pemilik rekening pengirim
+  - Nomor rekening pengirim
+  - Catatan
+  - Upload bukti transfer
+- Bukti transfer diupload melalui endpoint existing `/api/upload/payment-proof` dan dikirim ke request manual sebagai `receiptImage`.
+- API request manual (`/api/agent/deposit/manual-request`) kini menyimpan metadata transfer manual lengkap.
+
+### ✅ Enhancement: Admin Verifikasi Deposit Manual
+
+- Halaman admin verifikasi deposit agent (`/admin/hotspot/agent/deposits`) kini menampilkan:
+  - Rekening admin tujuan transfer
+  - Informasi rekening pengirim agent
+  - Catatan transfer
+  - Link "Lihat Bukti" transfer
+- API admin (`/api/admin/agent-deposits`) tetap mendukung approve/reject, dengan pesan notifikasi yang sudah menyertakan konteks transfer manual.
+
+### ✅ Database Update
+
+- `agent_deposits` ditambah kolom metadata transfer manual:
+  - `targetBankName`
+  - `targetBankAccountNumber`
+  - `targetBankAccountName`
+  - `senderAccountName`
+  - `senderAccountNumber`
+  - `receiptImage`
+  - `note`
+- Migration: `prisma/migrations/20260318120000_add_agent_manual_deposit_fields/migration.sql`
+
+---
+
 ## [2.11.1] - 2026-03-17 (MapPicker Z-Index Fix + Indonesian-Only Language)
 
 ### ✅ Fix: Popup Peta Muncul di Belakang Form Modal

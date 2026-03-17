@@ -1,6 +1,6 @@
 # Salfanet Radius — Documentation Index
 
-> Last updated: 2026-03-12 | Version 2.10.25
+> Last updated: 2026-03-18 | Version 2.11.2
 
 ---
 
@@ -77,7 +77,7 @@ docs/
 | [INVOICE_NUMBER_FORMAT.md](billing/INVOICE_NUMBER_FORMAT.md) | Format nomor invoice | Invoices |
 | [CUSTOMER_PAYMENT_SELF_SERVICE.md](billing/CUSTOMER_PAYMENT_SELF_SERVICE.md) | Self-service pembayaran pelanggan | Customer Portal |
 | [MANUAL_PAYMENT_AND_NOTIFICATION_SYSTEM.md](billing/MANUAL_PAYMENT_AND_NOTIFICATION_SYSTEM.md) | Pembayaran manual + notifikasi | Manual Payments |
-| [AGENT_DEPOSIT_SYSTEM.md](billing/AGENT_DEPOSIT_SYSTEM.md) | Sistem deposit & top-up agent | Top-up Requests |
+| [AGENT_DEPOSIT_SYSTEM.md](billing/AGENT_DEPOSIT_SYSTEM.md) | Sistem deposit & top-up agent (gateway + manual transfer + bukti TF) | Top-up Requests |
 
 ---
 

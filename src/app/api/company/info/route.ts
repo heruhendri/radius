@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
         address: true,
         logo: true,
         isolationMessage: true,
+        bankAccounts: true,
       }
     });
 
