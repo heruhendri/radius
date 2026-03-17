@@ -82,18 +82,25 @@ export default function SystemUpdatePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [info?.updateRunning]);
 
-  function startSse() {
+  function startSse(resume = false) {
     if (sseRef.current) sseRef.current.close();
     setUpdating(true);
     setShowLog(true);
-    setUpdateDone(false);
-    setLog('');
+    if (!resume) {
+      setUpdateDone(false);
+      setLog('');
+    }
 
     const es = new EventSource('/api/admin/system/update');
     sseRef.current = es;
 
     es.onmessage = (e) => {
-      const data = JSON.parse(e.data);
+      let data: any = {};
+      try {
+        data = JSON.parse(e.data);
+      } catch {
+        return;
+      }
       if (data.log) setLog(prev => prev + data.log);
       if (data.done) {
         es.close();
@@ -105,10 +112,24 @@ export default function SystemUpdatePage() {
       }
     };
 
-    es.onerror = () => {
-      // Server restarted → connection dropped
+    es.onerror = async () => {
       es.close();
       sseRef.current = null;
+
+      try {
+        const res = await fetch('/api/admin/system/update?action=status', { cache: 'no-store' });
+        if (res.ok) {
+          const status = await res.json();
+          if (status?.running) {
+            setLog(prev => prev + '\n[INFO] Koneksi log terputus, mencoba sambung ulang...\n');
+            setTimeout(() => startSse(true), 1200);
+            return;
+          }
+        }
+      } catch {
+        // ignore and fall through to restart wait
+      }
+
       if (!updateDone) {
         setRestartWait(true);
         setUpdating(false);

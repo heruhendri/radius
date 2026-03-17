@@ -61,6 +61,8 @@ export async function GET(request: Request) {
   const stream = new ReadableStream({
     start(controller) {
       const tick = () => {
+        const running = isUpdateRunning();
+
         if (existsSync(LOG_FILE)) {
           const content = readFileSync(LOG_FILE, 'utf-8');
           if (content.length > offset) {
@@ -69,10 +71,14 @@ export async function GET(request: Request) {
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ log: chunk, running: isUpdateRunning() })}\n\n`)
             );
+          } else {
+            // Keep SSE alive through reverse proxies/CDN during quiet build phases.
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ heartbeat: true, running })}\n\n`));
           }
+        } else {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ heartbeat: true, running })}\n\n`));
         }
 
-        const running = isUpdateRunning();
         if (!running && offset > 0 && !doneEmitted) {
           doneEmitted = true;
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, running: false })}\n\n`));
@@ -99,6 +105,8 @@ export async function GET(request: Request) {
       'Content-Type':  'text/event-stream',
       'Cache-Control': 'no-cache, no-store',
       Connection:      'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'Content-Encoding': 'identity',
     },
   });
 }
