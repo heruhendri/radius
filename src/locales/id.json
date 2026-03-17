@@ -279,6 +279,7 @@
     "catCustomer": "Pelanggan",
     "catCustomerAgent": "Pelanggan & Agent",
     "catCustomerOther": "Pelanggan Lainnya",
+    "catBillingTransactions": "Tagihan & Transaksi",
     "catNetwork": "Jaringan",
     "catManagement": "Manajemen",
     "dashboard": "Dashboard",

@@ -141,11 +141,6 @@ const menuGroups: MenuGroup[] = [
         href: '/admin/hotspot/agent',
         requiredPermission: 'hotspot.view',
       },
-    ],
-  },
-  {
-    titleKey: 'nav.catCustomerOther',
-    items: [
       {
         titleKey: 'nav.isolation',
         icon: <Shield className="w-4 h-4" />,
@@ -165,6 +160,11 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.referralSettings', href: '/admin/settings/referral', requiredPermission: 'settings.view' },
         ],
       },
+    ],
+  },
+  {
+    titleKey: 'nav.catBillingTransactions',
+    items: [
       {
         titleKey: 'nav.invoices',
         icon: <Receipt className="w-4 h-4" />,
