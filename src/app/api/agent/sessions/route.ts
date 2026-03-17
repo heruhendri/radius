@@ -33,12 +33,12 @@ function parseMikrotikUptime(uptime: string): number {
   return seconds;
 }
 
-/** Hard-limit a RouterOSAPI connection to avoid TCP-level hangs */
-function connectWithTimeout(api: RouterOSAPI, ms: number): Promise<unknown> {
+/** Hard-limit an entire async operation to avoid hangs on connect OR write */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
-    api.connect(),
+    promise,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Router connection timed out')), ms),
+      setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms),
     ),
   ]);
 }
@@ -127,39 +127,41 @@ export async function GET(request: NextRequest) {
         select: { nasname: true, ipAddress: true, username: true, password: true, port: true }
       });
 
-      await Promise.allSettled(routers.map(async (r) => {
-        const api = new RouterOSAPI({
-          host: r.ipAddress || r.nasname,
-          port: r.port || 8728,
-          user: r.username,
-          password: r.password,
-          timeout: 5,
-        });
-        try {
-          await connectWithTimeout(api, 4000);
-          const hotspotActive = await api.write('/ip/hotspot/active/print');
-          await api.close();
-          const nasIp = r.ipAddress || r.nasname;
-          for (const entry of hotspotActive) {
-            const username: string = entry.user || entry.username || '';
-            if (username) {
-              const uploadBytes = parseInt(entry['bytes-in'] || '0');
-              const downloadBytes = parseInt(entry['bytes-out'] || '0');
-              liveTrafficMap.set(username, { uploadBytes, downloadBytes });
-              liveHotspotSessions.set(username, {
-                uploadBytes,
-                downloadBytes,
-                framedIp: entry.address || entry['address'] || null,
-                macAddress: entry['mac-address'] || null,
-                nasIp,
-                uptime: entry.uptime || null,
-              });
+      await Promise.allSettled(routers.map((r) =>
+        withTimeout((async () => {
+          const api = new RouterOSAPI({
+            host: r.ipAddress || r.nasname,
+            port: r.port || 8728,
+            user: r.username,
+            password: r.password,
+            timeout: 5,
+          });
+          try {
+            await api.connect();
+            const hotspotActive = await api.write('/ip/hotspot/active/print');
+            await api.close();
+            const nasIp = r.ipAddress || r.nasname;
+            for (const entry of hotspotActive) {
+              const username: string = entry.user || entry.username || '';
+              if (username) {
+                const uploadBytes = parseInt(entry['bytes-in'] || '0');
+                const downloadBytes = parseInt(entry['bytes-out'] || '0');
+                liveTrafficMap.set(username, { uploadBytes, downloadBytes });
+                liveHotspotSessions.set(username, {
+                  uploadBytes,
+                  downloadBytes,
+                  framedIp: entry.address || entry['address'] || null,
+                  macAddress: entry['mac-address'] || null,
+                  nasIp,
+                  uptime: entry.uptime || null,
+                });
+              }
             }
+          } catch {
+            // Connection failed — fall back to radacct data
           }
-        } catch {
-          // Connection failed — fall back to radacct data
-        }
-      }));
+        })(), 5000),
+      ));
     }
 
     // Map sessions with live traffic merged in

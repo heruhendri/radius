@@ -85,7 +85,9 @@ export default function AgentSessionsPage() {
   const loadSessions = async (agentId: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/agent/sessions?agentId=${agentId}`);
+      const res = await fetch(`/api/agent/sessions?agentId=${agentId}`, {
+        signal: AbortSignal.timeout(15000),
+      });
       const data = await res.json();
 
       if (res.ok) {

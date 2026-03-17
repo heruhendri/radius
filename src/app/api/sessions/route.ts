@@ -42,12 +42,12 @@ function formatDuration(seconds: number): string {
   return `${remainingSeconds}s`;
 }
 
-/** Hard-limit a RouterOSAPI connection to avoid TCP-level hangs */
-function connectWithTimeout(api: RouterOSAPI, ms: number): Promise<unknown> {
+/** Hard-limit an entire async operation to avoid hangs on connect OR write */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
-    api.connect(),
+    promise,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Router connection timed out')), ms),
+      setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms),
     ),
   ]);
 }
@@ -149,70 +149,72 @@ export async function GET(request: NextRequest) {
         where: routerCredWhere,
         select: { nasname: true, ipAddress: true, username: true, password: true, port: true },
       });
-      await Promise.allSettled(routersWithCreds.map(async (r) => {
-        const api = new RouterOSAPI({
-          host: r.ipAddress || r.nasname,
-          port: r.port || 8728,
-          user: r.username,
-          password: r.password,
-          timeout: 5,
-        });
-        try {
-          await connectWithTimeout(api, 4000);
+      await Promise.allSettled(routersWithCreds.map((r) =>
+        withTimeout((async () => {
+          const api = new RouterOSAPI({
+            host: r.ipAddress || r.nasname,
+            port: r.port || 8728,
+            user: r.username,
+            password: r.password,
+            timeout: 5,
+          });
+          try {
+            await api.connect();
 
-          // ── PPPoE: /interface/print (only when not filtering to hotspot-only)
-          if (!type || type === 'pppoe') {
-            try {
-              const pppoeIfaces = await api.write('/interface/print', ['?type=pppoe-in']);
-              for (const iface of pppoeIfaces) {
-                const ifName: string = iface.name || '';
-                const match = ifName.match(/^<pppoe-(.+)>$/);
-                const username = match ? match[1] : '';
-                if (username && iface.running === 'true') {
-                  liveTrafficMap.set(username, {
-                    // rx-byte = bytes received BY router FROM client → client's UPLOAD
-                    // tx-byte = bytes sent BY router TO client → client's DOWNLOAD
-                    uploadBytes:   parseInt(iface['rx-byte'] || '0'),
-                    downloadBytes: parseInt(iface['tx-byte'] || '0'),
-                  });
+            // ── PPPoE: /interface/print (only when not filtering to hotspot-only)
+            if (!type || type === 'pppoe') {
+              try {
+                const pppoeIfaces = await api.write('/interface/print', ['?type=pppoe-in']);
+                for (const iface of pppoeIfaces) {
+                  const ifName: string = iface.name || '';
+                  const match = ifName.match(/^<pppoe-(.+)>$/);
+                  const username = match ? match[1] : '';
+                  if (username && iface.running === 'true') {
+                    liveTrafficMap.set(username, {
+                      // rx-byte = bytes received BY router FROM client → client's UPLOAD
+                      // tx-byte = bytes sent BY router TO client → client's DOWNLOAD
+                      uploadBytes:   parseInt(iface['rx-byte'] || '0'),
+                      downloadBytes: parseInt(iface['tx-byte'] || '0'),
+                    });
+                  }
                 }
+              } catch {
+                // PPPoE fetch failed for this router — ignore
               }
-            } catch {
-              // PPPoE fetch failed for this router — ignore
             }
-          }
 
-          // ── Hotspot: /ip/hotspot/active/print (only when not filtering to pppoe-only)
-          if (!type || type === 'hotspot') {
-            try {
-              const hotspotActive = await api.write('/ip/hotspot/active/print');
-              const nasIp = r.ipAddress || r.nasname;
-              for (const entry of hotspotActive) {
-                const username: string = entry.user || entry.username || '';
-                if (username) {
-                  const uploadBytes   = parseInt(entry['bytes-in']  || '0');
-                  const downloadBytes = parseInt(entry['bytes-out'] || '0');
-                  liveTrafficMap.set(username, { uploadBytes, downloadBytes });
-                  liveHotspotSessions.set(username, {
-                    uploadBytes,
-                    downloadBytes,
-                    framedIp: entry.address || entry['address'] || null,
-                    macAddress: entry['mac-address'] || null,
-                    nasIp,
-                    uptime: entry.uptime || null,
-                  });
+            // ── Hotspot: /ip/hotspot/active/print (only when not filtering to pppoe-only)
+            if (!type || type === 'hotspot') {
+              try {
+                const hotspotActive = await api.write('/ip/hotspot/active/print');
+                const nasIp = r.ipAddress || r.nasname;
+                for (const entry of hotspotActive) {
+                  const username: string = entry.user || entry.username || '';
+                  if (username) {
+                    const uploadBytes   = parseInt(entry['bytes-in']  || '0');
+                    const downloadBytes = parseInt(entry['bytes-out'] || '0');
+                    liveTrafficMap.set(username, { uploadBytes, downloadBytes });
+                    liveHotspotSessions.set(username, {
+                      uploadBytes,
+                      downloadBytes,
+                      framedIp: entry.address || entry['address'] || null,
+                      macAddress: entry['mac-address'] || null,
+                      nasIp,
+                      uptime: entry.uptime || null,
+                    });
+                  }
                 }
+              } catch {
+                // Hotspot active fetch failed for this router — ignore
               }
-            } catch {
-              // Hotspot active fetch failed for this router — ignore
             }
-          }
 
-          await api.close();
-        } catch {
-          // Connection failed for this router — keep stale radacct data as fallback
-        }
-      }));
+            await api.close();
+          } catch {
+            // Connection failed for this router — keep stale radacct data as fallback
+          }
+        })(), 5000),
+      ));
     }
 
     // ── 2. Query radacct for active sessions ────────────────────────────────
