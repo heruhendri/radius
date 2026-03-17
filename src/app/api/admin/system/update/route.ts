@@ -152,18 +152,25 @@ export async function POST(request: Request) {
   try {
     const logFd = openSync(LOG_FILE, 'w');
 
-    // Build a clean environment: inherit all env vars but strip problematic ones
-    // that Next.js server sets and that can break child npm/next processes
-    const cleanEnv = { ...process.env } as NodeJS.ProcessEnv;
-    // Remove vars that cause "TypeError: generate is not a function" in next build
-    delete cleanEnv['NODE_OPTIONS'];
-    delete cleanEnv['npm_lifecycle_event'];
-    delete cleanEnv['npm_lifecycle_script'];
-    delete cleanEnv['npm_package_name'];
-    delete cleanEnv['npm_package_version'];
-    delete cleanEnv['npm_config_cache'];
-    delete cleanEnv['npm_config_prefix'];
-    delete cleanEnv['NODE_APP_INSTANCE'];
+    // Use a minimal env set to avoid inheriting PM2/Next runtime variables that
+    // can break npm/next build when update is triggered from API route.
+    const cleanEnv: NodeJS.ProcessEnv = {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME || '/root',
+      USER: process.env.USER || 'root',
+      LOGNAME: process.env.LOGNAME || 'root',
+      SHELL: process.env.SHELL || '/bin/bash',
+      LANG: process.env.LANG || 'C.UTF-8',
+      TERM: process.env.TERM || 'xterm',
+      NODE_ENV: process.env.NODE_ENV || 'production',
+      NEXT_TELEMETRY_DISABLED: '1',
+      SALFANET_APP_DIR: appDir,
+    };
+
+    // Keep optional runtime vars if they exist and are needed by PM2/node setup.
+    if (process.env.PM2_HOME) cleanEnv.PM2_HOME = process.env.PM2_HOME;
+    if (process.env.NVM_DIR) cleanEnv.NVM_DIR = process.env.NVM_DIR;
+    if (process.env.NODE_EXTRA_CA_CERTS) cleanEnv.NODE_EXTRA_CA_CERTS = process.env.NODE_EXTRA_CA_CERTS;
 
     const child = spawn('bash', [scriptPath, ...args], {
       detached: true,
