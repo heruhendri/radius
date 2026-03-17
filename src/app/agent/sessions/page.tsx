@@ -1,7 +1,8 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { formatWIB, nowWIB } from '@/lib/timezone';
+import { nowWIB } from '@/lib/timezone';
+import { format } from 'date-fns';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
   Wifi,
@@ -118,6 +119,16 @@ export default function AgentSessionsPage() {
     if (hours > 0) return `${hours}h ${minutes}m ${secs}s`;
     if (minutes > 0) return `${minutes}m ${secs}s`;
     return `${secs}s`;
+  };
+
+  const formatLocal = (date: Date | string | null, formatStr: string) => {
+    if (!date) return '-';
+    try {
+      const d = typeof date === 'string' ? new Date(date) : date;
+      return format(d, formatStr);
+    } catch {
+      return '-';
+    }
   };
 
   const liveDuration = (startTimeStr: string | null) => {
@@ -273,7 +284,7 @@ export default function AgentSessionsPage() {
                         : formatDuration(liveDuration(session.acctStartTime))}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500 dark:text-[#e0d0ff]/60">
-                      {session.acctStartTime ? formatWIB(new Date(session.acctStartTime), 'dd MMM HH:mm') : '-'}
+                      {session.acctStartTime ? formatLocal(session.acctStartTime, 'dd MMM HH:mm') : '-'}
                     </td>
                   </tr>
                 ))
