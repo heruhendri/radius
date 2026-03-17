@@ -15,6 +15,23 @@
 - **GitHub**: https://github.com/s4lfanet/salfanet-radius (public)
 - **Live URL**: https://radius.yourdomain.com
 
+### Recent Patch Log (March 2026)
+
+- **System Update hardening (admin `/admin/system`)**
+  - Fix spawn stdio issue (`fd: null`) by using `openSync` for log fd.
+  - Resolve standalone `process.cwd()` mismatch with `getAppDir()` for system info/update routes.
+  - Sanitize spawn environment to avoid PM2/Next inherited vars breaking `next build`.
+  - Stabilize SSE live log stream with heartbeat + anti-buffering headers + auto reconnect.
+  - Update script now uses zero-downtime `pm2 reload salfanet-radius` (cron tetap restart).
+
+- **Nginx manifest fix**
+  - Serve all manifest files statically via regex location (`manifest.json`, `manifest-admin.json`, dll.)
+  - Prevent intermittent 500 during app restart window.
+
+- **UI spacing polish (admin cards)**
+  - Push Notifications page: explicit `CardHeader`/`CardContent` paddings, refined icon-title gaps.
+  - Additional consistency fixes applied on Manual Payments and Network Trace pages.
+
 ---
 
 ## 🖥️ Production VPS

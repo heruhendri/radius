@@ -301,7 +301,7 @@ export default function ManualPaymentsPage() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="px-5 pt-5 pb-5">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -356,13 +356,13 @@ export default function ManualPaymentsPage() {
 
       {/* Payments Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>{t('manualPayment.paymentList')}</CardTitle>
+        <CardHeader className="px-5 pt-5 pb-3">
+          <CardTitle className="leading-snug">{t('manualPayment.paymentList')}</CardTitle>
           <CardDescription>
             {filteredPayments.length} {t('manualPayment.paymentsFound')}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-5 pt-0 pb-5">
           {loading ? (
             <div className="text-center py-8">{t('common.loading')}</div>
           ) : filteredPayments.length === 0 ? (

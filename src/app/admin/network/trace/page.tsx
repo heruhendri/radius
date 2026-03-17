@@ -192,11 +192,11 @@ function PhysicalTraceTab() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Trace Fiber Path</CardTitle>
+        <CardHeader className="px-5 pt-5 pb-3">
+          <CardTitle className="leading-snug">Trace Fiber Path</CardTitle>
           <CardDescription>Enter a core ID or device to trace the complete physical fiber path</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-5 pt-0 pb-5">
           <div>
             <Label>Search By</Label>
             <Select value={searchType} onValueChange={(v: 'core' | 'device') => setSearchType(v)}>
@@ -245,12 +245,12 @@ function PhysicalTraceTab() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[['Cores in Path', traceResult.coreCount, 'text-blue-600'], ['Splice Points', traceResult.spliceCount, 'text-yellow-600'], ['Total Length (m)', traceResult.totalLength ? traceResult.totalLength.toFixed(2) : '-', 'text-green-600'], ['Total Loss (dB)', traceResult.totalLoss ? traceResult.totalLoss.toFixed(2) : '-', 'text-red-600']].map(([label, value, cls]) => (
-              <Card key={label as string}><CardContent className="pt-6 text-center"><p className={`text-3xl font-bold ${cls}`}>{value}</p><p className="text-sm text-gray-500">{label}</p></CardContent></Card>
+              <Card key={label as string}><CardContent className="p-5 text-center"><p className={`text-3xl font-bold ${cls}`}>{value}</p><p className="text-sm text-gray-500">{label}</p></CardContent></Card>
             ))}
           </div>
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Route className="h-5 w-5" />Fiber Path</CardTitle><CardDescription>Total points: {traceResult.path.length}</CardDescription></CardHeader>
-            <CardContent>
+            <CardHeader className="px-5 pt-5 pb-3"><CardTitle className="flex items-center gap-2.5 leading-snug"><Route className="h-5 w-5" />Fiber Path</CardTitle><CardDescription>Total points: {traceResult.path.length}</CardDescription></CardHeader>
+            <CardContent className="px-5 pt-0 pb-5">
               {traceResult.path.length === 0
                 ? <div className="text-center py-8"><AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" /><p className="text-gray-500">No fiber path found</p></div>
                 : <div className="pl-2">{traceResult.path.map((p, i) => renderTracePoint(p, i, i === traceResult.path.length - 1))}</div>}
@@ -258,8 +258,8 @@ function PhysicalTraceTab() {
           </Card>
           {traceResult.path.length > 0 && (
             <Card>
-              <CardHeader><CardTitle>Path Overview</CardTitle></CardHeader>
-              <CardContent>
+              <CardHeader className="px-5 pt-5 pb-3"><CardTitle className="leading-snug">Path Overview</CardTitle></CardHeader>
+              <CardContent className="px-5 pt-0 pb-5">
                 <div className="overflow-x-auto">
                   <div className="flex items-center gap-2 min-w-max py-4">
                     {traceResult.path.map((p, i) => (
@@ -285,7 +285,7 @@ function PhysicalTraceTab() {
 
       {!traceResult && !loading && (
         <Card className="bg-gray-50 dark:bg-gray-900 border-dashed">
-          <CardContent className="py-12 text-center">
+          <CardContent className="p-6 sm:p-8 text-center">
             <Route className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">How to Trace Fiber Paths</h3>
             <p className="text-gray-500 max-w-md mx-auto">Select a search type, enter the core ID or device details, and click Trace to visualize the complete fiber path.</p>
