@@ -581,7 +581,7 @@ export default function ODPsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <ModalLabel required>{t('network.olt')}</ModalLabel>
+                  <ModalLabel required>{t('olt.title')}</ModalLabel>
                   <ModalSelect value={formData.oltId} onChange={(e) => setFormData({ ...formData, oltId: e.target.value, odcId: '', parentOdpId: '' })} required>
                     <option value="" className="bg-[#0a0520]">{t('network.selectOlt')}</option>
                     {olts.map(olt => (<option key={olt.id} value={olt.id} className="bg-[#0a0520]">{olt.name}</option>))}

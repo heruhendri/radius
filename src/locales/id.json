@@ -274,7 +274,8 @@
     "openMap": "Buka Peta",
     "pickOnMap": "Pilih di Peta",
     "saveError": "Gagal menyimpan data",
-    "yourLocation": "Lokasi Anda"
+    "yourLocation": "Lokasi Anda",
+    "damaged": "Rusak"
   },
   "auth": {
     "login": "Masuk",
@@ -1678,7 +1679,6 @@
     "ports": "Port",
     "configureOdp": "Konfigurasi Optical Distribution Point",
     "odpNamePlaceholder": "ODP-01-001",
-    "olt": "OLT",
     "selectOlt": "Pilih OLT",
     "ponPort": "Port PON",
     "ponPortPlaceholder": "1",
@@ -1816,7 +1816,10 @@
     "map": {
       "customerUpdated": "Data pelanggan berhasil diupdate",
       "geolocationNotSupported": "Geolocation tidak didukung oleh browser Anda",
-      "failedLoadNetwork": "Gagal memuat data network"
+      "failedLoadNetwork": "Gagal memuat data network",
+      "legend": "Legenda",
+      "search": "Cari",
+      "showAll": "Tampilkan Semua"
     },
     "diagram": {
       "title": "Diagram Splitter Jaringan",
@@ -1831,7 +1834,13 @@
       "selectODP": "Pilih ODP",
       "noJointClosures": "Belum ada Joint Closure",
       "noODCs": "Belum ada ODC",
-      "noODPs": "Belum ada ODP"
+      "noODPs": "Belum ada ODP",
+      "assignedTo": "Ditugaskan ke",
+      "configureFiberCountFirst": "Konfigurasi jumlah fiber terlebih dahulu",
+      "configurePortsFirst": "Konfigurasi port terlebih dahulu",
+      "installedAt": "Dipasang di",
+      "legend": "Legenda",
+      "noPortData": "Tidak ada data port"
     },
     "tracing": {
       "title": "Pelacakan Jalur Fiber",
@@ -1937,16 +1946,66 @@
     "deleteRouterConfirm": "Hapus router ini? Semua pelanggan terkait akan kehilangan koneksi.",
     "failedSaveRouter": "Gagal menyimpan router",
     "odc": {
-      "title": "ODC"
+      "title": "ODC",
+      "portUtilization": "Utilisasi Port"
     },
     "odp": {
-      "title": "ODP"
+      "title": "ODP",
+      "activeCustomers": "Pelanggan Aktif",
+      "customer": "Pelanggan",
+      "customerPortStatus": "Status Port Pelanggan",
+      "customersActive": "Pelanggan Aktif",
+      "portsUsed": "Port Digunakan",
+      "splitterRatio": "Rasio Splitter",
+      "utilization": "Utilisasi"
     },
     "oltSelectLabel": "Pilih OLT",
     "routerUpdated": "Router berhasil diperbarui",
     "vpsRoutingNote": "Catatan Routing VPS",
     "vpsRoutingSetup": "Setup Routing VPS",
-    "vpsRoutingSetupDesc": "Konfigurasi routing VPS untuk jaringan PPPoE"
+    "vpsRoutingSetupDesc": "Konfigurasi routing VPS untuk jaringan PPPoE",
+    "common": {
+      "assignedTo": "Ditugaskan ke",
+      "connectedTo": "Terhubung ke",
+      "fiberConnections": "Koneksi Fiber",
+      "from": "Dari",
+      "moreConnections": "koneksi lainnya",
+      "port": "Port",
+      "ratio": "Rasio",
+      "signal": "Sinyal",
+      "status": "Status",
+      "to": "Ke"
+    },
+    "messages": {
+      "noData": "Tidak ada data"
+    },
+    "otb": {
+      "cableType": "Tipe Kabel",
+      "capacity": "Kapasitas",
+      "code": "Kode",
+      "connectedTo": "Terhubung ke",
+      "diagram": "Diagram",
+      "feederCable": "Kabel Feeder",
+      "input": "Input",
+      "name": "Nama",
+      "outputs": "Output",
+      "port": "Port",
+      "splitter": "Splitter",
+      "splitterRatio": "Rasio Splitter",
+      "utilization": "Utilisasi"
+    },
+    "olt": {
+      "code": "Kode",
+      "connectedTo": "Terhubung ke",
+      "diagram": "Diagram",
+      "model": "Model",
+      "name": "Nama",
+      "ponPort": "Port PON",
+      "ponPorts": "Port-Port PON",
+      "signalStrength": "Kekuatan Sinyal",
+      "utilization": "Utilisasi",
+      "vendor": "Vendor"
+    }
   },
   "settings": {
     "title": "Pengaturan",
