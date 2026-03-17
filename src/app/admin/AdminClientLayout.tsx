@@ -64,18 +64,14 @@ interface MenuGroup {
   items: MenuItem[];
 }
 
+const dashboardMenuItem: MenuItem = {
+  titleKey: 'nav.dashboard',
+  icon: <LayoutDashboard className="w-4 h-4" />,
+  href: '/admin',
+  requiredPermission: 'dashboard.view',
+};
+
 const menuGroups: MenuGroup[] = [
-  {
-    titleKey: 'nav.catOverview',
-    items: [
-      {
-        titleKey: 'nav.dashboard',
-        icon: <LayoutDashboard className="w-4 h-4" />,
-        href: '/admin',
-        requiredPermission: 'dashboard.view',
-      },
-    ],
-  },
   {
     titleKey: 'nav.catNotifikasi',
     items: [
@@ -346,10 +342,10 @@ function CategoryItem({ titleKey, items, pendingCount, manualPaymentsCount, unre
   if (visibleItems.length === 0) return null;
 
   return (
-    <div className="mb-0.5">
+    <div className="mb-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-2 px-2 pt-2.5 pb-1 group"
+        className="w-full flex items-center gap-1.5 px-2 py-1 group"
       >
         <span className="text-[9px] text-slate-600 tracking-[0.25em] uppercase font-bold group-hover:text-slate-800 dark:text-cyan-300/80 dark:group-hover:text-cyan-300 transition-colors flex-shrink-0">
           {t(titleKey)}
@@ -364,7 +360,7 @@ function CategoryItem({ titleKey, items, pendingCount, manualPaymentsCount, unre
       </button>
       <div
         className={cn(
-          'overflow-hidden transition-all duration-300 ease-in-out space-y-0.5',
+          'overflow-hidden transition-all duration-300 ease-in-out space-y-0',
           isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
         )}
       >
@@ -395,14 +391,14 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            'w-full flex items-center gap-2.5 px-2.5 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 group',
+            'w-full flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all duration-300 group',
             isActive
               ? 'text-cyan-400 bg-cyan-500/10 border border-cyan-400/30 shadow-[0_0_15px_rgba(0,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.05)]'
               : 'text-muted-foreground hover:text-foreground hover:bg-primary/10 border border-transparent hover:border-primary/20',
           )}
         >
           <span className={cn(
-            'flex-shrink-0 p-1.5 rounded-lg transition-all duration-300',
+            'flex-shrink-0 p-0.5 rounded-md transition-all duration-300',
             isActive ? 'text-cyan-400 bg-cyan-500/10 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]' : 'text-muted-foreground group-hover:text-cyan-400'
           )}>
             {item.icon}
@@ -417,16 +413,16 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
         {!collapsed && (
           <div className={cn(
             'overflow-hidden transition-all duration-300 ease-in-out',
-            isOpen ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
+            isOpen ? 'max-h-96 opacity-100 mt-0.5' : 'max-h-0 opacity-0'
           )}>
-            <div className="ml-4 pl-3 border-l-2 border-cyan-500/20 space-y-1">
+            <div className="ml-3.5 pl-2 border-l-2 border-cyan-500/20 space-y-0.5">
               {item.children.map((child) => (
                 <Link
                   key={child.href}
                   href={child.href}
                   onClick={onNavigate}
                   className={cn(
-                    'flex items-center justify-between px-3 py-2 text-xs rounded-lg transition-all duration-200 group/item',
+                    'flex items-center justify-between px-2.5 py-1 text-xs rounded-md transition-all duration-200 group/item',
                     pathname === child.href
                       ? 'text-cyan-400 bg-cyan-500/10 border border-cyan-400/20 shadow-[0_0_10px_rgba(0,255,255,0.1)]'
                       : 'text-muted-foreground hover:text-foreground hover:bg-primary/10'
@@ -465,14 +461,14 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
       href={item.href!}
       onClick={onNavigate}
       className={cn(
-        'flex items-center gap-2.5 px-2.5 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 group',
+        'flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all duration-300 group',
         pathname === item.href
           ? 'text-cyan-400 bg-cyan-500/10 border border-cyan-400/30 shadow-[0_0_15px_rgba(0,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.05)]'
           : 'text-muted-foreground hover:text-foreground hover:bg-primary/10 border border-transparent hover:border-primary/20',
       )}
     >
       <span className={cn(
-        'flex-shrink-0 p-1.5 rounded-lg transition-all duration-300',
+        'flex-shrink-0 p-0.5 rounded-md transition-all duration-300',
         pathname === item.href ? 'text-cyan-400 bg-cyan-500/10 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]' : 'text-muted-foreground group-hover:text-cyan-400'
       )}>
         {item.icon}
@@ -874,6 +870,16 @@ function AdminLayoutContent({
 
           {/* Navigation - optimized scrolling for mobile */}
           <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 py-1.5 custom-scrollbar touch-pan-y">
+            <div className="mb-1">
+              <NavItem
+                item={dashboardMenuItem}
+                pendingCount={pendingRegistrations}
+                manualPaymentsCount={pendingManualPayments}
+                unreadNotifications={unreadNotifications}
+                t={t}
+                onNavigate={() => setSidebarOpen(false)}
+              />
+            </div>
             {menuGroups.map(group => (
               <CategoryItem
                 key={group.titleKey}
