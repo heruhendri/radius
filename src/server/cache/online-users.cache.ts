@@ -38,6 +38,9 @@ export interface OnlineUserDetail {
   sessionId: string;
   startTime: string;
   type: 'pppoe' | 'hotspot' | 'unknown';
+  callingStationId?: string;
+  inputOctets?: number;
+  outputOctets?: number;
 }
 
 // ==================== MARK ONLINE ====================
@@ -59,6 +62,9 @@ export async function markUserOnline(detail: OnlineUserDetail): Promise<void> {
       sessionId: detail.sessionId ?? '',
       startTime: detail.startTime ?? new Date().toISOString(),
       type: detail.type ?? 'unknown',
+      callingStationId: detail.callingStationId ?? '',
+      inputOctets: String(detail.inputOctets ?? 0),
+      outputOctets: String(detail.outputOctets ?? 0),
     }),
     // Beri TTL pada key detail (safety net)
     (async () => {
@@ -147,6 +153,9 @@ export async function getOnlineUserDetail(username: string): Promise<OnlineUserD
     sessionId: data.sessionId ?? '',
     startTime: data.startTime ?? '',
     type: (data.type as OnlineUserDetail['type']) ?? 'unknown',
+    callingStationId: data.callingStationId || undefined,
+    inputOctets: data.inputOctets ? Number(data.inputOctets) : undefined,
+    outputOctets: data.outputOctets ? Number(data.outputOctets) : undefined,
   };
 }
 

@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       sessionId,
       nasIp,
       framedIp,
+      callingStationId,
       sessionTime,
       inputOctets,
       outputOctets,
@@ -56,6 +57,9 @@ export async function POST(request: NextRequest) {
         sessionId: sessionId ?? "",
         startTime: new Date().toISOString(),
         type: userType,
+        callingStationId: callingStationId || undefined,
+        inputOctets: inputOctets ? Number(inputOctets) : 0,
+        outputOctets: outputOctets ? Number(outputOctets) : 0,
       });
 
       console.log(`[ACCOUNTING] START: ${username} (${userType}) from ${nasIp}`);
@@ -77,13 +81,16 @@ export async function POST(request: NextRequest) {
 
     // ==================== INTERIM UPDATE ====================
     else if (normalizedStatus === "interim-update" || normalizedStatus === "alive") {
-      // Update framedIp jika berubah (DHCP re-assign)
-      if (framedIp) {
-        const client = await import("@/server/cache/redis").then(m => m.getRedisClient());
-        if (client) {
-          const detailKey = RedisKeys.onlineUserDetail(username);
-          await client.hset(detailKey, { framedIp, sessionId: sessionId ?? "" }).catch(() => {});
-        }
+      // Update framedIp, MAC, dan bytes di Redis
+      const client = await import("@/server/cache/redis").then(m => m.getRedisClient());
+      if (client) {
+        const detailKey = RedisKeys.onlineUserDetail(username);
+        const updates: Record<string, string> = { sessionId: sessionId ?? "" };
+        if (framedIp) updates.framedIp = framedIp;
+        if (callingStationId) updates.callingStationId = callingStationId;
+        if (inputOctets != null) updates.inputOctets = String(Number(inputOctets));
+        if (outputOctets != null) updates.outputOctets = String(Number(outputOctets));
+        await client.hset(detailKey, updates).catch(() => {});
       }
     }
 

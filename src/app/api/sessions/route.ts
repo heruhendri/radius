@@ -3,6 +3,7 @@ import { prisma } from '@/server/db/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { getTimezoneOffsetMs } from '@/lib/timezone';
+import { getOnlineUserDetail } from '@/server/cache/online-users.cache';
 
 // ─── Formatting helpers ─────────────────────────────────────────────────────
 
@@ -202,7 +203,11 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const syntheticHotspotSessions = orphanedActiveVouchers.map((voucher) => {
+    const orphanedRedisDetails = await Promise.allSettled(
+      orphanedActiveVouchers.map((v) => getOnlineUserDetail(v.code)),
+    );
+
+    const syntheticHotspotSessions = orphanedActiveVouchers.map((voucher, i) => {
         const effectiveStartMs = new Date(voucher.firstLoginAt!).getTime();
         const effectiveStartTime = new Date(effectiveStartMs).toISOString();
         const duration = Math.max(0, Math.floor((now - effectiveStartMs) / 1000));
@@ -210,25 +215,28 @@ export async function GET(request: NextRequest) {
           voucher.router
             ? { id: voucher.router.id, name: voucher.router.name }
             : { id: 'unknown', name: 'Unknown' };
+        const redis = orphanedRedisDetails[i].status === 'fulfilled' ? orphanedRedisDetails[i].value : null;
+        const uploadBytes = redis?.inputOctets ?? 0;
+        const downloadBytes = redis?.outputOctets ?? 0;
         return {
           id: `voucher-${voucher.id}`,
           username: voucher.code,
-          sessionId: null,
+          sessionId: redis?.sessionId || null,
           type: 'hotspot' as const,
           nasIpAddress: voucher.router?.nasname || null,
-          framedIpAddress: null,
-          macAddress: '-',
+          framedIpAddress: redis?.framedIp || null,
+          macAddress: redis?.callingStationId || '-',
           calledStationId: '-',
           startTime: effectiveStartTime,
           lastUpdate: null,
           duration,
           durationFormatted: formatDuration(duration),
-          uploadBytes: 0,
-          downloadBytes: 0,
-          totalBytes: 0,
-          uploadFormatted: formatBytes(0),
-          downloadFormatted: formatBytes(0),
-          totalFormatted: formatBytes(0),
+          uploadBytes,
+          downloadBytes,
+          totalBytes: uploadBytes + downloadBytes,
+          uploadFormatted: formatBytes(uploadBytes),
+          downloadFormatted: formatBytes(downloadBytes),
+          totalFormatted: formatBytes(uploadBytes + downloadBytes),
           router,
           user: null,
           voucher: {

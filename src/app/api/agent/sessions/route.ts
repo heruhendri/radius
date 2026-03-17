@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { getTimezoneOffsetMs } from '@/lib/timezone';
+import { getOnlineUserDetail } from '@/server/cache/online-users.cache';
 
 function formatBytes(bytes: number): string {
   if (!bytes) return '0 B';
@@ -137,33 +138,41 @@ export async function GET(request: NextRequest) {
     // Synthetic sessions: AKTIF vouchers that have no active radacct entry.
     // This covers cases where MikroTik authenticated the user but no
     // Accounting-Start was recorded in radacct.
-    const syntheticSessions = vouchers
-      .filter(
-        (v) =>
-          v.status === 'ACTIVE' &&
-          v.firstLoginAt !== null &&
-          !activeRadacctCodes.has(v.code),
-      )
-      .map((voucher) => {
+    // Enrich with Redis data (MAC/IP/bytes) if available from REST accounting hook.
+    const orphanedVouchers = vouchers.filter(
+      (v) =>
+        v.status === 'ACTIVE' &&
+        v.firstLoginAt !== null &&
+        !activeRadacctCodes.has(v.code),
+    );
+
+    const redisDetails = await Promise.allSettled(
+      orphanedVouchers.map((v) => getOnlineUserDetail(v.code)),
+    );
+
+    const syntheticSessions = orphanedVouchers.map((voucher, i) => {
         const effectiveStartMs = new Date(voucher.firstLoginAt!).getTime();
         const effectiveStartTime = new Date(effectiveStartMs).toISOString().replace('Z', '');
         const duration = Math.max(0, Math.floor((now - effectiveStartMs) / 1000));
+        const redis = redisDetails[i].status === 'fulfilled' ? redisDetails[i].value : null;
+        const uploadBytes = redis?.inputOctets ?? 0;
+        const downloadBytes = redis?.outputOctets ?? 0;
         return {
           id: `voucher-${voucher.id}`,
           username: voucher.code,
           nasIpAddress: voucher.router?.nasname || null,
           nasPortId: null,
-          framedIpAddress: null,
-          callingStationId: null,
+          framedIpAddress: redis?.framedIp || null,
+          callingStationId: redis?.callingStationId || null,
           calledStationId: null,
-          acctSessionId: null,
+          acctSessionId: redis?.sessionId || null,
           acctStartTime: effectiveStartTime,
-          acctInputOctets: 0,
-          acctOutputOctets: 0,
+          acctInputOctets: uploadBytes,
+          acctOutputOctets: downloadBytes,
           acctSessionTime: duration,
           durationFormatted: formatDuration(duration),
-          uploadFormatted: formatBytes(0),
-          downloadFormatted: formatBytes(0),
+          uploadFormatted: formatBytes(uploadBytes),
+          downloadFormatted: formatBytes(downloadBytes),
           expiresAt: voucher.expiresAt
             ? new Date(voucher.expiresAt).toISOString()
             : null,
