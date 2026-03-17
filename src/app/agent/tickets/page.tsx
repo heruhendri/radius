@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { showSuccess, showError, showConfirm } from '@/lib/sweetalert';
 import { useTranslation } from '@/hooks/useTranslation';
+import { formatWIB } from '@/lib/timezone';
 
 interface TicketMessage {
   id: string;
@@ -72,10 +73,7 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
 };
 
 function fmtDate(val: string) {
-  return new Date(val).toLocaleString('id-ID', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+  return formatWIB(val, 'dd MMM yyyy HH:mm');
 }
 
 export default function AgentTicketsPage() {

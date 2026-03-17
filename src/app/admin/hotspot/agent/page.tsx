@@ -17,6 +17,7 @@ import {
   ModalLabel,
   ModalButton,
 } from '@/components/cyberpunk';
+import { formatWIB } from '@/lib/timezone';
 
 interface Router {
   id: string;
@@ -334,8 +335,7 @@ export default function AgentPage() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 
-  const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const formatDate = (date: string) => formatWIB(date, 'dd MMM yyyy HH:mm');
 
   if (loading) {
     return (

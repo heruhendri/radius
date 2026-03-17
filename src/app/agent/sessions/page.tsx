@@ -1,7 +1,7 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { formatWIB } from '@/lib/timezone';
+import { formatWIB, nowWIB } from '@/lib/timezone';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
   Wifi,
@@ -43,7 +43,7 @@ export default function AgentSessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => nowWIB().getTime());
   const [stats, setStats] = useState({
     total: 0,
     totalUpload: 0,
@@ -52,7 +52,7 @@ export default function AgentSessionsPage() {
 
   // 1-second ticker for live duration counter
   useEffect(() => {
-    const ticker = setInterval(() => setNow(Date.now()), 1000);
+    const ticker = setInterval(() => setNow(nowWIB().getTime()), 1000);
     return () => clearInterval(ticker);
   }, []);
 

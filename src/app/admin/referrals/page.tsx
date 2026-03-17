@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
+import { formatWIB } from '@/lib/timezone';
 import { CyberCard, CyberButton, CyberBadge } from '@/components/cyberpunk';
 import {
   Gift, Users, Wallet, Clock, CheckCircle, XCircle, Search,
@@ -103,10 +104,7 @@ export default function AdminReferralsPage() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('id-ID', {
-      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+  const formatDate = (dateStr: string) => formatWIB(dateStr, 'd MMM yyyy HH:mm');
 
   if (loading) {
     return (

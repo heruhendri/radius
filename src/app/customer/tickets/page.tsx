@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Ticket, MessageSquare, Plus, Filter } from 'lucide-react';
 import { CyberCard, CyberButton } from '@/components/cyberpunk';
+import { formatWIB } from '@/lib/timezone';
 
 type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_CUSTOMER' | 'RESOLVED' | 'CLOSED';
 type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -208,13 +209,7 @@ export default function CustomerTicketsPage() {
                         <span>{ticket._count.messages} {t('ticket.messages')}</span>
                       </div>
                       <span>
-                        {t('ticket.created')}: {new Date(ticket.createdAt).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {t('ticket.created')}: {formatWIB(ticket.createdAt, 'd MMM yyyy HH:mm')}
                       </span>
                     </div>
                   </div>

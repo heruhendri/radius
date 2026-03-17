@@ -106,7 +106,7 @@ const ACTIVITY_TABS = [
 ];
 
 function timeAgo(isoString: string): string {
-  const diff = Date.now() - new Date(isoString).getTime();
+  const diff = nowWIB().getTime() - new Date(isoString).getTime();
   const s = Math.floor(diff / 1000);
   if (s < 60) return `${s}d`;
   const m = Math.floor(s / 60);

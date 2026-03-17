@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Users
 } from 'lucide-react';
+import { formatWIB } from '@/lib/timezone';
 
 type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_CUSTOMER' | 'RESOLVED' | 'CLOSED';
 type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -363,11 +364,7 @@ export default function AdminTicketsPage() {
                       </div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-muted-foreground hidden lg:table-cell">
-                      {new Date(ticket.createdAt).toLocaleDateString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      {formatWIB(ticket.createdAt, 'd MMM yyyy')}
                     </td>
                   </tr>
                 ))}
@@ -418,11 +415,7 @@ export default function AdminTicketsPage() {
                       {ticket._count.messages}
                     </div>
                     <span className="text-[10px] text-muted-foreground">
-                      {new Date(ticket.createdAt).toLocaleDateString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      {formatWIB(ticket.createdAt, 'd MMM yyyy')}
                     </span>
                   </div>
                 </div>

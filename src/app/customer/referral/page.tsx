@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatWIB } from '@/lib/timezone';
 import { 
   Gift, Copy, Share2, Users, Wallet, Clock, CheckCircle, 
   Loader2, AlertCircle, ExternalLink, QrCode
@@ -175,8 +176,7 @@ export default function CustomerReferralPage() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  const formatDate = (dateStr: string) => formatWIB(dateStr, 'd MMM yyyy');
 
   if (loading) {
     return (

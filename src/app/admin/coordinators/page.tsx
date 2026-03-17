@@ -26,6 +26,7 @@ import {
   ModalLabel,
   ModalButton,
 } from '@/components/cyberpunk';
+import { formatWIB } from '@/lib/timezone';
 
 interface Coordinator {
   id: string;
@@ -345,7 +346,7 @@ export default function CoordinatorsManagementPage() {
                       {coordinator.lastLoginAt ? (
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
-                          {new Date(coordinator.lastLoginAt).toLocaleDateString('id-ID')}
+                          {formatWIB(coordinator.lastLoginAt, 'dd/MM/yyyy')}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">-</span>
@@ -428,7 +429,7 @@ export default function CoordinatorsManagementPage() {
                       {coordinator.lastLoginAt ? (
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {new Date(coordinator.lastLoginAt).toLocaleDateString('id-ID')}
+                          {formatWIB(coordinator.lastLoginAt, 'dd/MM/yyyy')}
                         </div>
                       ) : (
                         '-'

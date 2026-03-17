@@ -23,6 +23,7 @@ import {
   ModalLabel,
   ModalButton,
 } from '@/components/cyberpunk';
+import { formatWIB } from '@/lib/timezone';
 
 interface Item {
   id: string;
@@ -288,7 +289,7 @@ export default function StockMovementsPage() {
                     <div><span className="text-muted-foreground">Ref:</span> <span className="text-foreground">{movement.referenceNo || '-'}</span></div>
                     <div><span className="text-muted-foreground">User:</span> <span className="text-foreground">{movement.userName || '-'}</span></div>
                   </div>
-                  <div className="text-[10px] text-muted-foreground">{new Date(movement.createdAt).toLocaleString('id-ID')}</div>
+                  <div className="text-[10px] text-muted-foreground">{formatWIB(movement.createdAt, 'dd/MM/yyyy HH:mm')}</div>
                   {movement.notes && <div className="text-[10px] text-muted-foreground mt-1">{movement.notes}</div>}
                 </div>
               ))
@@ -333,7 +334,7 @@ export default function StockMovementsPage() {
                       <td className="px-4 py-3 text-sm text-foreground">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {new Date(movement.createdAt).toLocaleString('id-ID')}
+                          {formatWIB(movement.createdAt, 'dd/MM/yyyy HH:mm')}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">

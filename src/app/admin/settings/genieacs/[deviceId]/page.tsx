@@ -9,6 +9,7 @@ import {
   ChevronDown, ChevronRight, RotateCcw, Power
 } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
+import { formatWIB } from '@/lib/timezone';
 
 interface DeviceDetail {
   _id: string;
@@ -258,7 +259,7 @@ export default function DeviceDetailPage({ params }: { params: Promise<{ deviceI
                   <InfoRow label={t('genieacsDevice.labels.hardwareVersion')} value={device.hardwareVersion} />
                   <InfoRow label={t('genieacsDevice.labels.softwareVersion')} value={device.softwareVersion} />
                   <InfoRow label={t('genieacsDevice.labels.macAddress')} value={device.macAddress} />
-                  <InfoRow label={t('genieacsDevice.labels.lastInform')} value={device.lastInform ? new Date(device.lastInform).toLocaleString('id-ID') : '-'} />
+                  <InfoRow label={t('genieacsDevice.labels.lastInform')} value={device.lastInform ? formatWIB(device.lastInform, 'dd/MM/yyyy HH:mm') : '-'} />
                 </div>
               )}
 

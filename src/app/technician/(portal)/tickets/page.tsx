@@ -23,6 +23,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
+import { formatWIB } from '@/lib/timezone';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface TicketData {
@@ -61,13 +62,7 @@ const STATUS_STYLE: Record<string, string> = {
 
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleString('id-ID', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatWIB(d, 'dd MMM yyyy HH:mm');
 }
 
 export default function TechnicianTicketsPage() {

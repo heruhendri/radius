@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { ArrowLeft, Send, User, Clock } from 'lucide-react';
+import { formatWIB } from '@/lib/timezone';
 
 type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_CUSTOMER' | 'RESOLVED' | 'CLOSED';
 type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -234,13 +235,7 @@ export default function TicketDetailPage() {
               {ticket.subject}
             </h2>
             <p className="text-xs text-gray-600 dark:text-gray-400">
-              {t('ticket.created')}: {new Date(ticket.createdAt).toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {t('ticket.created')}: {formatWIB(ticket.createdAt, 'd MMM yyyy HH:mm')}
             </p>
           </div>
         </div>
@@ -283,12 +278,7 @@ export default function TicketDetailPage() {
                   </span>
                   <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                     <Clock size={12} />
-                      {new Date(msg.createdAt).toLocaleDateString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatWIB(msg.createdAt, 'd MMM HH:mm')}
                     </div>
                   </div>
                   <p className="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap">

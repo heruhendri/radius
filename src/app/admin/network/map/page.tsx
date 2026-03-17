@@ -7,6 +7,7 @@ import { MapPin, Radio, Box, Server, Users, Filter, RefreshCw, Layers, Eye, EyeO
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import UserDetailModal from '@/components/UserDetailModal';
 import { useTranslation } from '@/hooks/useTranslation';
+import { formatWIB } from '@/lib/timezone';
 
 // Dynamic import Leaflet components
 const MapContainer = dynamic(
@@ -785,11 +786,7 @@ export default function NetworkMapPage() {
   // Format date
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatWIB(dateStr, 'dd MMM yyyy');
   };
 
   // Format currency

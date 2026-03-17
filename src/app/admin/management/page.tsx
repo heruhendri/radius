@@ -16,6 +16,7 @@ import {
   ModalLabel,
   ModalButton,
 } from '@/components/cyberpunk';
+import { formatWIB } from '@/lib/timezone';
 
 interface User {
   id: string;
@@ -464,11 +465,7 @@ export default function ManagementPage() {
                       </span>
                     )}
                     <span className="text-[10px] text-muted-foreground ml-auto">
-                      {new Date(user.createdAt).toLocaleDateString('id-ID', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      {formatWIB(user.createdAt, 'dd MMM yyyy')}
                     </span>
                   </div>
                 </div>
@@ -547,11 +544,7 @@ export default function ManagementPage() {
                       </td>
                       <td className="px-3 py-1.5 hidden lg:table-cell">
                         <span className="text-[10px] text-muted-foreground">
-                          {new Date(user.createdAt).toLocaleDateString('id-ID', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
+                          {formatWIB(user.createdAt, 'dd MMM yyyy')}
                         </span>
                       </td>
                       <td className="px-3 py-1.5">

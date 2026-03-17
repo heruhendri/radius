@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { formatWIB } from '@/lib/timezone';
 import {
   Shield, Users, Wifi, WifiOff, DollarSign, RefreshCw, Search, Download,
   AlertTriangle, CheckCircle, XCircle, Phone, Calendar, TrendingUp, Activity,
@@ -92,11 +93,9 @@ export default function IsolatedUsersMonitorPage() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  const formatDate = (d: string) => formatWIB(d, 'd MMM yyyy');
 
-  const formatDateTime = (d: string) =>
-    new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const formatDateTime = (d: string) => formatWIB(d, 'd MMM HH:mm');
 
   const getPayLink = (inv: UnpaidInvoice) =>
     inv.paymentLink || (inv.paymentToken ? `/pay/${inv.paymentToken}` : null);

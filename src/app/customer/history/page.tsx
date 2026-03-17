@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatWIB } from '@/lib/timezone';
 import { 
   Receipt, 
   CheckCircle, 
@@ -303,11 +304,9 @@ export default function PaymentHistoryPage() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  const formatDate = (dateStr: string) => formatWIB(dateStr, 'd MMM yyyy');
 
-  const formatDateTime = (dateStr: string) =>
-    new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(dateStr));
+  const formatDateTime = (dateStr: string) => formatWIB(dateStr, 'd MMM yyyy HH:mm');
 
   const getStatusConfig = (status: string) => {
     switch (status) {

@@ -20,6 +20,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
+import { formatWIB } from '@/lib/timezone';
 
 interface OnlineSession {
   uniqueId: string;
@@ -88,11 +89,7 @@ export default function TechnicianMonitorPage() {
   }, [loadData]);
 
   function formatDate(d: string) {
-    return new Date(d).toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatWIB(d, 'dd MMM yyyy');
   }
 
   return (

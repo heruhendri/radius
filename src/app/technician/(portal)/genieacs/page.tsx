@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Server, Search, RefreshCw, Loader2, Wifi, WifiOff, Eye, X, Power, Pencil, Check } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
+import { formatWIB } from '@/lib/timezone';
 
 interface GenieACSDevice {
   _id: string;
@@ -168,7 +169,7 @@ export default function TechnicianGenieACSPage() {
 
   const formatDate = (d: string | null) => {
     if (!d) return '-';
-    return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return formatWIB(d, 'dd/MM/yyyy HH:mm');
   };
 
   if (!isConfigured && !loading) {

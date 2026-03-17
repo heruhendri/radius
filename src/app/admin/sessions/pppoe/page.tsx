@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Power, RefreshCw, Wifi, Search, Download, Trash2, RotateCcw } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
+import { formatWIB } from '@/lib/timezone';
 
 interface Session {
   id: string;
@@ -93,11 +94,7 @@ export default function PPPoESessionsPage() {
 
   const formatDateTime = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('id-ID', { 
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
-    });
+    return formatWIB(dateStr, 'dd/MM/yyyy HH:mm');
   };
 
   // Format uptime to HH:MM:SS

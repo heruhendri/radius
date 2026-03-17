@@ -23,6 +23,7 @@ import {
   ArrowRight,
   Zap,
 } from 'lucide-react';
+import { formatWIB } from '@/lib/timezone';
 
 interface CompanyInfo {
   name: string;
@@ -71,8 +72,7 @@ const PG_META: Record<string, { label: string; color: string; border: string; ta
 const fmtCurrency = (n: number) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
 
-const fmtDate = (s: string) =>
-  new Date(s).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+const fmtDate = (s: string) => formatWIB(s, 'd MMMM yyyy');
 
 function IsolatedContent() {
   const searchParams = useSearchParams();

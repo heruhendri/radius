@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Mail, Phone, CreditCard, Calendar, Package, LogOut, Shield, Edit3, Save, X, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { formatWIB } from '@/lib/timezone';
 import { CyberCard, CyberButton } from '@/components/cyberpunk';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 
@@ -314,11 +315,7 @@ export default function CustomerProfilePage() {
                 <div className="flex-1">
                   <p className="text-xs text-accent font-bold uppercase tracking-wide">{t('profile.expiryDate')}</p>
                   <p className="text-sm text-white">
-                    {new Date(customer.expiryDate).toLocaleDateString('id-ID', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
+                    {formatWIB(customer.expiryDate, 'd MMMM yyyy')}
                   </p>
                 </div>
               </div>

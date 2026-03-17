@@ -1,6 +1,6 @@
 ﻿'use client';
 import { showSuccess, showError } from '@/lib/sweetalert';
-import { format } from 'date-fns';
+import { formatWIB } from '@/lib/timezone';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -350,17 +350,17 @@ export default function AgentVouchersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500 dark:text-[#e0d0ff]/60">
-                      {voucher.firstLoginAt ? format(new Date(voucher.firstLoginAt), 'dd MMM yyyy HH:mm') : '-'}
+                      {voucher.firstLoginAt ? formatWIB(voucher.firstLoginAt, 'dd MMM yyyy HH:mm') : '-'}
                     </td>
                     <td className="px-4 py-3 text-xs">
                       {voucher.expiresAt ? (
                         <span className={new Date(voucher.expiresAt) < new Date() ? 'text-[#ff6b8a]' : 'text-slate-500 dark:text-[#e0d0ff]/60'}>
-                          {format(new Date(voucher.expiresAt as string), 'dd MMM yyyy HH:mm')}
+                          {formatWIB(voucher.expiresAt, 'dd MMM yyyy HH:mm')}
                         </span>
                       ) : '-'}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500 dark:text-[#e0d0ff]/60">
-                      {voucher.createdAt ? format(new Date(voucher.createdAt), 'dd MMM yyyy HH:mm') : '-'}
+                      {voucher.createdAt ? formatWIB(voucher.createdAt, 'dd MMM yyyy HH:mm') : '-'}
                     </td>
                   </tr>
                 ))

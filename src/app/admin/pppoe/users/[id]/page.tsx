@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatWIB } from '@/lib/timezone';
 import {
   ArrowLeft, User, Wifi, WifiOff, Shield, ShieldOff, Ban, CheckCircle2,
   Phone, Mail, MapPin, Calendar, CreditCard, Copy, ExternalLink, RefreshCw,
@@ -164,11 +165,9 @@ export default function PppoeUserDetailPage({ params }: { params: Promise<{ id: 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  const formatDate = (d: string) => formatWIB(d, 'd MMM yyyy');
 
-  const formatDateTime = (d: string) =>
-    new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const formatDateTime = (d: string) => formatWIB(d, 'd MMM yyyy HH:mm');
 
   const getStatusStyle = (status: string) => {
     switch (status) {

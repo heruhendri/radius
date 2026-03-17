@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   if (!tech) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const TZ_OFFSET_MS = 7 * 60 * 60 * 1000; // WIB UTC+7
-  const now = Date.now();
+  const now = Date.now() + TZ_OFFSET_MS; // WIB-as-UTC for duration calc
 
   // 1. Customer stats by status
   const [statusCounts, onlineSessions] = await Promise.all([
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
 
   const sessions = onlineSessions.map((s) => {
     const startMs = s.acctstarttime
-      ? new Date(s.acctstarttime).getTime() - TZ_OFFSET_MS
+      ? new Date(s.acctstarttime).getTime()
       : now;
     const uptimeSec = Math.max(0, Math.floor((now - startMs) / 1000));
 

@@ -26,6 +26,7 @@ import {
   ModalLabel,
   ModalButton,
 } from '@/components/cyberpunk';
+import { formatWIB } from '@/lib/timezone';
 
 interface Technician {
   id: string;
@@ -349,7 +350,7 @@ export default function TechniciansManagementPage() {
                       {technician.lastLoginAt ? (
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3 text-muted-foreground" />
-                          {new Date(technician.lastLoginAt).toLocaleDateString('id-ID')}
+                          {formatWIB(technician.lastLoginAt, 'dd/MM/yyyy')}
                         </span>
                       ) : (
                         '-'
@@ -438,7 +439,7 @@ export default function TechniciansManagementPage() {
                       {technician.lastLoginAt ? (
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {new Date(technician.lastLoginAt).toLocaleDateString('id-ID')}
+                          {formatWIB(technician.lastLoginAt, 'dd/MM/yyyy')}
                         </div>
                       ) : (
                         '-'

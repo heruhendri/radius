@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatWIB } from '@/lib/timezone';
 import { CyberCard, CyberButton } from '@/components/cyberpunk';
 import { PauseCircle, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, Calendar } from 'lucide-react';
 
@@ -23,8 +24,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string; icon: React.E
   COMPLETED: { label: 'Selesai',             color: 'text-blue-400',    icon: CheckCircle2 },
 };
 
-const fmt = (d: string) =>
-  new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+const fmt = (d: string) => formatWIB(d, 'dd MMM yyyy');
 
 export default function CustomerSuspendPage() {
   const router = useRouter();

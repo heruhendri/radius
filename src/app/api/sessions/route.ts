@@ -266,23 +266,21 @@ export async function GET(request: NextRequest) {
     const voucherByCode = new Map(hotspotVouchers.map((v) => [v.code, v]));
 
     // ── 4. Build response sessions ──────────────────────────────────────────
-    const now = Date.now();
-    // Prisma treats MySQL DATETIME as UTC (appends 'Z'), but MySQL stores in
-    // local timezone (WIB / UTC+7). We must subtract the server's TZ offset
-    // from Prisma's epoch to get the correct Unix timestamp.
-    const TZ_OFFSET_MS = -(new Date().getTimezoneOffset()) * 60000; // e.g. +7h = 25200000ms
+    // All DB dates are WIB-as-UTC (Prisma reads WIB DATETIME and appends Z).
+    // Dates sent to client stay in WIB-as-UTC — frontend uses formatWIB().
+    // Duration calc uses WIB-aware "now" so both sides are in the same space.
+    const TZ_OFFSET_MS = -(new Date().getTimezoneOffset()) * 60000;
+    const now = Date.now() + TZ_OFFSET_MS; // WIB-as-UTC epoch for duration calc
     let allSessions = activeSessions.map((acct) => {
       const pppoeUser = pppoeByUsername.get(acct.username);
       const voucher = voucherByCode.get(acct.username);
       const sessionType: 'pppoe' | 'hotspot' = pppoeUser ? 'pppoe' : 'hotspot';
 
-      // For hotspot: use voucher firstLoginAt (true UTC) as start time when
-      // available. firstLoginAt and acctstarttime represent the same login event
-      // but in different timezones — firstLoginAt is true UTC from new Date(),
-      // acctstarttime is WIB stored as naive DATETIME in MySQL.
-      // Always prefer firstLoginAt for hotspot since it's already correct UTC.
+      // Both acctstarttime and firstLoginAt are stored as WIB naive DATETIME.
+      // Prisma appends Z so getTime() gives WIB-as-UTC epoch — matches our
+      // WIB-as-UTC "now" for correct duration calculation.
       const rawStartMs = acct.acctstarttime
-        ? new Date(acct.acctstarttime).getTime() - TZ_OFFSET_MS
+        ? new Date(acct.acctstarttime).getTime()
         : now;
 
       let effectiveStartMs = rawStartMs;
@@ -291,9 +289,7 @@ export async function GET(request: NextRequest) {
         : null;
 
       if (sessionType === 'hotspot' && voucher?.firstLoginAt) {
-        // firstLoginAt is stored as WIB naive DATETIME in MySQL (Prisma appends Z).
-        // Must subtract TZ_OFFSET_MS to get the correct UTC epoch, same as acctstarttime.
-        effectiveStartMs = new Date(voucher.firstLoginAt).getTime() - TZ_OFFSET_MS;
+        effectiveStartMs = new Date(voucher.firstLoginAt).getTime();
         effectiveStartTime = new Date(effectiveStartMs).toISOString();
       }
 
@@ -315,7 +311,7 @@ export async function GET(request: NextRequest) {
         calledStationId: acct.calledstationid || '-',
         startTime: effectiveStartTime,
         lastUpdate: acct.acctupdatetime
-          ? new Date(new Date(acct.acctupdatetime).getTime() - TZ_OFFSET_MS).toISOString()
+          ? new Date(acct.acctupdatetime).toISOString()
           : null,
         duration,
         durationFormatted: formatDuration(duration),
@@ -345,7 +341,7 @@ export async function GET(request: NextRequest) {
                 profile: voucher.profile?.name ?? null,
                 batchCode: voucher.batchCode,
                 expiresAt: voucher.expiresAt
-                  ? new Date(new Date(voucher.expiresAt).getTime() - TZ_OFFSET_MS).toISOString()
+                  ? new Date(voucher.expiresAt).toISOString()
                   : null,
                 agent: voucher.agent
                   ? { id: voucher.agent.id, name: voucher.agent.name }
@@ -389,8 +385,7 @@ export async function GET(request: NextRequest) {
           let effectiveStartMs: number = now;
           let effectiveStartTime: string = new Date(now).toISOString();
           if (voucher.firstLoginAt) {
-            // Same TZ correction: firstLoginAt is WIB naive DATETIME, Prisma appends Z
-            effectiveStartMs = new Date(voucher.firstLoginAt).getTime() - TZ_OFFSET_MS;
+            effectiveStartMs = new Date(voucher.firstLoginAt).getTime();
             effectiveStartTime = new Date(effectiveStartMs).toISOString();
           } else if (liveData.uptime) {
             const uptimeSec = parseMikrotikUptime(liveData.uptime);
@@ -433,7 +428,7 @@ export async function GET(request: NextRequest) {
               profile: voucher.profile?.name ?? null,
               batchCode: voucher.batchCode,
               expiresAt: voucher.expiresAt
-                ? new Date(new Date(voucher.expiresAt).getTime() - TZ_OFFSET_MS).toISOString()
+                ? new Date(voucher.expiresAt).toISOString()
                 : null,
               agent: voucher.agent
                 ? { id: voucher.agent.id, name: voucher.agent.name }

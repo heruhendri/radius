@@ -116,8 +116,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Map sessions with live traffic merged in
+    // All DB dates are WIB-as-UTC. Use WIB-aware "now" for duration calc.
     const TZ_OFFSET_MS = -(new Date().getTimezoneOffset()) * 60000;
-    const now = Date.now();
+    const now = Date.now() + TZ_OFFSET_MS;
 
     const sessionsWithProfile = sessions.map((session: any) => {
       const voucher = vouchers.find(v => v.code === session.username);
@@ -129,20 +130,18 @@ export async function GET(request: NextRequest) {
       const downloadBytes = liveBytes ? liveBytes.downloadBytes : Number(session.acctoutputoctets ?? 0);
 
       const rawStartMs = session.acctstarttime
-        ? new Date(session.acctstarttime).getTime() - TZ_OFFSET_MS
+        ? new Date(session.acctstarttime).getTime()
         : now;
 
-      // For hotspot: use voucher firstLoginAt (true UTC) as start time when
-      // available. acctstarttime is WIB stored as naive DATETIME, firstLoginAt
-      // is true UTC from new Date() — always prefer firstLoginAt.
+      // For hotspot: always prefer voucher firstLoginAt so displayed start time
+      // matches the voucher "waktu digunakan" value seen in voucher list.
       let effectiveStartMs = rawStartMs;
       let effectiveStartTime: string | null = session.acctstarttime
         ? new Date(rawStartMs).toISOString()
         : null;
 
       if (voucher?.firstLoginAt) {
-        // firstLoginAt is WIB naive DATETIME (Prisma appends Z) — must apply TZ correction
-        effectiveStartMs = new Date(voucher.firstLoginAt).getTime() - TZ_OFFSET_MS;
+        effectiveStartMs = new Date(voucher.firstLoginAt).getTime();
         effectiveStartTime = new Date(effectiveStartMs).toISOString();
       }
 
@@ -165,7 +164,7 @@ export async function GET(request: NextRequest) {
         uploadFormatted: formatBytes(uploadBytes),
         downloadFormatted: formatBytes(downloadBytes),
         expiresAt: voucher?.expiresAt
-          ? new Date(new Date(voucher.expiresAt).getTime() - TZ_OFFSET_MS).toISOString()
+          ? new Date(voucher.expiresAt).toISOString()
           : null,
         profileName: voucher?.profile?.name || null,
         routerName,

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslation } from '@/hooks/useTranslation';
 import { showSuccess, showError } from '@/lib/sweetalert';
 import { ArrowLeft, Send, User, Clock, Lock, MessageCircle, Edit2, Save } from 'lucide-react';
+import { formatWIB } from '@/lib/timezone';
 
 type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_CUSTOMER' | 'RESOLVED' | 'CLOSED';
 type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -359,13 +360,7 @@ export default function AdminTicketDetailPage() {
                 <div>
                   <span className="text-muted-foreground">{t('ticket.created')}:</span>
                   <p className="font-medium text-foreground">
-                    {new Date(ticket.createdAt).toLocaleDateString('id-ID', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatWIB(ticket.createdAt, 'd MMMM yyyy HH:mm')}
                   </p>
                 </div>
               </div>
@@ -407,12 +402,7 @@ export default function AdminTicketDetailPage() {
                       )}
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Clock size={14} />
-                        {new Date(msg.createdAt).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {formatWIB(msg.createdAt, 'd MMM HH:mm')}
                       </div>
                     </div>
                     <p className="text-foreground/80 whitespace-pre-wrap">{msg.message}</p>

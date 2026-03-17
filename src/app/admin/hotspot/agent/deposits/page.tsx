@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { showConfirm, showError, showSuccess } from '@/lib/sweetalert';
 import { RefreshCw } from 'lucide-react';
+import { formatWIB } from '@/lib/timezone';
 
 interface AgentDepositItem {
   id: string;
@@ -90,13 +91,7 @@ export default function AgentDepositsPage() {
 
   const formatDate = (value: string | null) => {
     if (!value) return '-';
-    return new Date(value).toLocaleString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatWIB(value, 'dd MMM yyyy HH:mm');
   };
 
   const getStatusClass = (status: string) => {

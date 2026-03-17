@@ -77,13 +77,13 @@ export async function GET(req: NextRequest) {
 
   const userMap = new Map(pppoeUsers.map((u) => [u.username, u]));
 
-  const now = Date.now();
   const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
+  const now = Date.now() + TZ_OFFSET_MS; // WIB-as-UTC for duration calc
 
   let sessions = onlineSessions.map((s) => {
     const pUser = userMap.get(s.username);
     const startMs = s.acctstarttime
-      ? new Date(s.acctstarttime).getTime() - TZ_OFFSET_MS
+      ? new Date(s.acctstarttime).getTime()
       : now;
     const durationSec = Math.max(0, Math.floor((now - startMs) / 1000));
 

@@ -19,6 +19,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
+import { formatWIB } from '@/lib/timezone';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface Customer {
@@ -79,7 +80,7 @@ function formatIDR(n: number) {
 }
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatWIB(d, 'dd MMM yyyy');
 }
 
 function isNearExpiry(d: string | null) {

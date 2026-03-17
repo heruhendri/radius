@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { formatWIB } from '@/lib/timezone';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,8 +53,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   COMPLETED: { label: 'Completed',  className: 'bg-blue-100   text-blue-800   border-blue-300'   },
 };
 
-const fmt = (d: string) =>
-  new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+const fmt = (d: string) => formatWIB(d, 'dd MMM yyyy');
 
 export default function AdminSuspendRequestsPage() {
   const { t } = useTranslation();

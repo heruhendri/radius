@@ -8,6 +8,7 @@ import { useToast } from '@/components/cyberpunk/CyberToast';
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 import { CyberCard, CyberButton } from '@/components/cyberpunk';
+import { formatWIB, nowWIB } from '@/lib/timezone';
 
 // Hardcoded Indonesian translations
 const translations: Record<string, string> = {
@@ -336,8 +337,8 @@ export default function CustomerDashboard() {
   if (!user) return null;
 
   const expiredDate = new Date(user.expiredAt);
-  const isExpired = expiredDate < new Date();
-  const daysLeft = Math.ceil((expiredDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+  const isExpired = expiredDate < nowWIB();
+  const daysLeft = Math.ceil((expiredDate.getTime() - nowWIB().getTime()) / (1000 * 60 * 60 * 24));
 
   return (
     <div className="p-3 lg:p-6">
@@ -363,7 +364,7 @@ export default function CustomerDashboard() {
               : <span className="px-2 py-0.5 bg-muted text-white text-[10px] font-bold rounded">{user.status}</span>}
             </div>
             <div className="col-span-2"><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.expiredDate')}</span>
-              <span className="font-medium text-white">{expiredDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+              <span className="font-medium text-white">{formatWIB(user.expiredAt, 'd MMMM yyyy')}
                 {!isExpired && <span className="text-muted-foreground ml-1">({daysLeft} {t('customer.daysLeft')})</span>}
               </span>
             </div>
@@ -638,7 +639,7 @@ export default function CustomerDashboard() {
                           : <span className="px-1.5 py-0.5 bg-warning/20 text-warning text-[10px] rounded border border-warning/40 font-bold">{t('customer.unpaid')}</span>}
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className="text-[10px] text-accent">{t('customer.dueDate')}: {dueDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                          <p className="text-[10px] text-accent">{t('customer.dueDate')}: {formatWIB(invoice.dueDate, 'd MMM yyyy')}</p>
                           <p className="text-xs font-bold text-white">{formatCurrency(invoice.amount)}</p>
                         </div>
                       </div>

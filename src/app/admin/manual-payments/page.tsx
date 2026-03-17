@@ -36,6 +36,7 @@ import {
 import { CheckCircle, XCircle, Eye, Trash2, Search, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+import { formatWIB } from '@/lib/timezone';
 
 interface ManualPayment {
   id: string;
@@ -392,7 +393,7 @@ export default function ManualPaymentsPage() {
                     <div>
                       <span className="text-muted-foreground">{t('common.date')}</span>
                       <div className="font-medium text-foreground">
-                        {format(new Date(payment.paymentDate), 'dd MMM yyyy', { locale: localeId })}
+                        {formatWIB(payment.paymentDate, 'dd MMM yyyy')}
                       </div>
                     </div>
                     <div>
@@ -487,7 +488,7 @@ export default function ManualPaymentsPage() {
                   {filteredPayments.map((payment) => (
                     <TableRow key={payment.id}>
                       <TableCell className="whitespace-nowrap">
-                        {format(new Date(payment.paymentDate), 'dd MMM yyyy', { locale: localeId })}
+                        {formatWIB(payment.paymentDate, 'dd MMM yyyy')}
                       </TableCell>
                       <TableCell>
                         <div>
@@ -585,9 +586,7 @@ export default function ManualPaymentsPage() {
                 <div className="space-y-1">
                   <Label className="text-xs text-accent font-bold uppercase tracking-wide">{t('manualPayment.paymentDate')}</Label>
                   <div className="mt-2 text-sm font-medium text-foreground">
-                    {format(new Date(selectedPayment.paymentDate), 'dd MMMM yyyy HH:mm', {
-                      locale: localeId,
-                    })}
+                    {formatWIB(selectedPayment.paymentDate, 'dd MMMM yyyy HH:mm')}
                   </div>
                 </div>
               </div>
@@ -630,9 +629,7 @@ export default function ManualPaymentsPage() {
                   <div>
                     <Label className="text-muted-foreground">{t('manualPayment.dueDate')}</Label>
                     <div className="mt-1">
-                      {format(new Date(selectedPayment.invoice.dueDate), 'dd MMM yyyy', {
-                        locale: localeId,
-                      })}
+                      {formatWIB(selectedPayment.invoice.dueDate, 'dd MMM yyyy')}
                     </div>
                   </div>
                   <div>
@@ -699,9 +696,7 @@ export default function ManualPaymentsPage() {
                     <div className="space-y-1">
                       <span className="text-xs text-success/80 font-bold uppercase tracking-wide">{t('common.date')}:</span>
                       <div className="text-sm font-medium text-foreground">
-                        {format(new Date(selectedPayment.approvedAt), 'dd MMM yyyy HH:mm', {
-                          locale: localeId,
-                        })}
+                        {formatWIB(selectedPayment.approvedAt, 'dd MMM yyyy HH:mm')}
                       </div>
                     </div>
                   </div>
@@ -720,9 +715,7 @@ export default function ManualPaymentsPage() {
                       <div>
                         <span className="text-muted-foreground">{t('common.date')}:</span>
                         <div className="font-medium">
-                          {format(new Date(selectedPayment.approvedAt), 'dd MMM yyyy HH:mm', {
-                            locale: localeId,
-                          })}
+                          {formatWIB(selectedPayment.approvedAt, 'dd MMM yyyy HH:mm')}
                         </div>
                       </div>
                     )}

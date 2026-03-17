@@ -6,6 +6,7 @@ import { Package, Loader2, CheckCircle, Zap, AlertCircle, CreditCard, ArrowRight
 import { CyberCard, CyberButton } from '@/components/cyberpunk';
 import { showSuccess, showError } from '@/lib/sweetalert';
 import { useTranslation } from '@/hooks/useTranslation';
+import { formatWIB } from '@/lib/timezone';
 
 interface InternetPackage {
   id: string;
@@ -293,7 +294,7 @@ export default function UpgradePackagePage() {
                   <div>
                     <p className="text-[10px] text-muted-foreground">Expired</p>
                     <p className="text-xs font-semibold text-white">
-                      {new Date(currentPackage.expiredAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {formatWIB(currentPackage.expiredAt, 'd MMMM yyyy')}
                     </p>
                   </div>
                 </div>

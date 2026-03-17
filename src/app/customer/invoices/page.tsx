@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { CyberCard, CyberButton } from '@/components/cyberpunk';
 import { useToast } from '@/components/cyberpunk/CyberToast';
+import { formatWIB } from '@/lib/timezone';
 
 export const dynamic = 'force-dynamic';
 
@@ -282,12 +283,12 @@ export default function CustomerInvoicesPage() {
                     <div className="flex items-center gap-4 mt-2 flex-wrap">
                       <div className="flex items-center gap-1 text-[11px] text-slate-500">
                         <CalendarClock className="w-3 h-3" />
-                        Jatuh tempo: {new Date(inv.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        Jatuh tempo: {formatWIB(inv.dueDate, 'd MMM yyyy')}
                       </div>
                       {inv.paidAt && (
                         <div className="flex items-center gap-1 text-[11px] text-green-500">
                           <CheckCircle className="w-3 h-3" />
-                          Lunas: {new Date(inv.paidAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          Lunas: {formatWIB(inv.paidAt, 'd MMM yyyy')}
                         </div>
                       )}
                     </div>

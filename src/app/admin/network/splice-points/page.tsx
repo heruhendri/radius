@@ -7,6 +7,7 @@ import {
   RefreshCcw, Plus, Trash2, Eye, Link2, Cable, X,
   Zap, Activity, AlertTriangle, Settings, Circle
 } from 'lucide-react';
+import { formatWIB } from '@/lib/timezone';
 
 // Fiber color coding (TIA-598-D standard)
 const FIBER_COLORS: Record<string, string> = {
@@ -536,7 +537,7 @@ export default function SplicePointsPage() {
                     {splice.splicedBy && <span>By: {splice.splicedBy}</span>}
                     {splice.splicedAt && (
                       <span className="ml-2">
-                        {new Date(splice.splicedAt).toLocaleDateString('id-ID')}
+                        {formatWIB(splice.splicedAt, 'dd/MM/yyyy')}
                       </span>
                     )}
                   </div>
@@ -891,7 +892,7 @@ export default function SplicePointsPage() {
                   <div className="flex items-center justify-between py-2 border-b dark:border-gray-700">
                     <span className="text-xs text-gray-500">{t('common.date')}</span>
                     <span className="text-sm">
-                      {new Date(selectedSplice.splicedAt).toLocaleString('id-ID')}
+                      {formatWIB(selectedSplice.splicedAt, 'dd/MM/yyyy HH:mm')}
                     </span>
                   </div>
                 )}
