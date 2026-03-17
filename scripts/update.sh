@@ -112,8 +112,9 @@ fi
 # ── Restart PM2 ───────────────────────────────────────────
 echo ""
 log "Restarting services..."
-pm2 restart all --update-env 2>&1 | tail -5
-ok "Services restarted"
+pm2 reload salfanet-radius --update-env 2>&1 | tail -3
+pm2 restart salfanet-cron --update-env 2>&1 | tail -3
+ok "Services reloaded (zero-downtime)"
 
 # ── Done ──────────────────────────────────────────────────
 NEW_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
