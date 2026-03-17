@@ -11,7 +11,6 @@ import {
   X,
   User,
   Wifi,
-  Globe,
   Sun,
   Moon,
   LifeBuoy,
@@ -188,7 +187,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [agent, setAgent] = useState<AgentData | null>(null);
   const [mounted, setMounted] = useState(false);
-  const { t, locale, setLocale } = useTranslation();
+  const { t } = useTranslation();
   const { isDark, toggleTheme } = useTheme();
 
   // Check if on login page
@@ -291,14 +290,6 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
               >
                 {isDark ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-slate-600" />}
               </button>
-              {/* Language Switcher */}
-              <button
-                onClick={() => setLocale(locale === 'id' ? 'en' : 'id')}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-[#bc13fe]/10 hover:bg-slate-200 dark:hover:bg-[#bc13fe]/20 text-slate-700 dark:text-[#e0d0ff] border border-slate-200 dark:border-[#bc13fe]/30 rounded-lg transition-all"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span className="uppercase">{locale}</span>
-              </button>
               {agent && <AgentNotificationDropdown agentId={agent.id} />}
             </div>
           </div>
@@ -326,13 +317,6 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                 className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition border border-white/20"
               >
                 {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-white" />}
-              </button>
-              {/* Language Switcher */}
-              <button
-                onClick={() => setLocale(locale === 'id' ? 'en' : 'id')}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition border border-white/20"
-              >
-                <Globe className="w-4 h-4 text-white" />
               </button>
               {agent && <AgentNotificationDropdown agentId={agent.id} />}
               <button

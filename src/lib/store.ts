@@ -15,9 +15,9 @@ interface CompanySettings {
 }
 
 interface AppState {
-  locale: 'id' | 'en';
+  locale: 'id';
   company: CompanySettings;
-  setLocale: (locale: 'id' | 'en') => void;
+  setLocale: (locale: string) => void;
   setCompany: (company: Partial<CompanySettings>) => void;
   initializeTimezone: () => Promise<void>;
 }
@@ -35,7 +35,7 @@ export const useAppStore = create<AppState>()(
         adminPhone: '+62 812-3456-7890',
         timezone: 'Asia/Jakarta',
       },
-      setLocale: (locale) => set({ locale }),
+      setLocale: () => {},
       setCompany: (company) => {
         // Update timezone lib when company timezone changes
         if (company.timezone) {

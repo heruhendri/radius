@@ -24,6 +24,14 @@
   - File: `src/components/MapPicker.tsx`
   - Mempengaruhi: tambah/edit pelanggan PPPoE (`/admin/pppoe/users`), fiber joint closures, ODCs, dan semua halaman yang menggunakan `MapPicker` di atas form modal.
 
+- **Refactor: Hapus bahasa Inggris — full Bahasa Indonesia only**
+  - Hapus `src/locales/en.json` dan `src/components/LanguageSwitcher.tsx`.
+  - Simplifikasi `useTranslation` hook: hardcode locale `'id'`, hapus English fallback, hapus import `en.json`.
+  - Hapus tombol language toggle dari: Admin layout, Agent login, Agent layout, Customer layout, Technician layout.
+  - Hapus import `Globe` yang tidak terpakai lagi di beberapa layout.
+  - `store.ts`: locale type disederhanakan menjadi `'id'` only.
+  - Hook `useTranslation` tetap mengembalikan `{ t, locale, setLocale, isID, isEN }` untuk kompatibilitas 131 file caller (setLocale jadi no-op, isEN selalu false).
+
 - **System Update hardening (admin `/admin/system`)**
   - Fix spawn stdio issue (`fd: null`) by using `openSync` for log fd.
   - Resolve standalone `process.cwd()` mismatch with `getAppDir()` for system info/update routes.
@@ -317,10 +325,11 @@ MikroTik (NAS) → FreeRADIUS → MySQL (radcheck/radreply/radgroupreply)
 ## 🌍 Translations / i18n
 
 Files in `src/locales/`:
-- `id.json` — Indonesian (default)
-- `en.json` — English
+- `id.json` — Indonesian (satu-satunya bahasa)
 
-Technician portal uses `useTranslations('technician')` namespace.
+Bahasa Inggris (`en.json`) sudah dihapus. Semua UI menggunakan Bahasa Indonesia.
+Hook `useTranslation()` tetap digunakan di 131+ file, hanya saja locale hardcoded ke `'id'`.
+Language switcher sudah dihapus dari semua portal (Admin, Agent, Customer, Technician).
 
 ---
 

@@ -2,7 +2,7 @@
 
 Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with FreeRADIUS integration supporting PPPoE and Hotspot authentication.
 
-> **Latest:** v2.11.0 — PWA (installable semua portal), Web Push Notifications (VAPID), System Update admin (stabil + live log SSE), UI spacing polish untuk card layout admin; Fix MapPicker z-index (popup peta muncul di depan form modal)
+> **Latest:** v2.11.1 — MapPicker z-index fix (popup peta muncul di depan form modal); Hapus bahasa Inggris — full Bahasa Indonesia only
 
 ---
 
@@ -31,7 +31,7 @@ Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with Free
 | **Roles & Permissions** | 53 permissions, 6 role templates (SuperAdmin/Finance/CS/Technician/Marketing/Viewer) |
 | **Activity Log** | Audit trail with auto-cleanup (30 days) |
 | **Security** | Session timeout 30 min, idle warning, RBAC, HTTPS/SSL |
-| **Multi-language** | Indonesian & English (i18n) |
+| **Bahasa** | Bahasa Indonesia (full) |
 | **PWA** | Installable di semua portal (admin, customer, agent, technician), offline fallback, service worker cache |
 | **Web Push** | VAPID-based browser push notifications, subscribe/unsubscribe toggle, admin broadcast, FCM parallel |
 | **System Update** | One-click update dari GitHub via admin panel, live log streaming, no SSH required |

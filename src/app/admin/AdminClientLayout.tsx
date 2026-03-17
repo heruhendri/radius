@@ -509,7 +509,7 @@ function AdminLayoutContent({
   const [showIdleWarning, setShowIdleWarning] = useState(false);
   const [idleCountdown, setIdleCountdown] = useState(60);
   const { company, setCompany } = useAppStore();
-  const { t, locale, setLocale } = useTranslation();
+  const { t } = useTranslation();
   const { isDark, toggleTheme } = useTheme();
 
   const isLoginPage = pathname === '/admin/login';
@@ -961,15 +961,6 @@ function AdminLayoutContent({
                 {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4" />}
               </button>
               <NotificationDropdown />
-              {/* Language toggle - same style as agent portal */}
-              <button
-                onClick={() => setLocale(locale === 'id' ? 'en' : 'id')}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold rounded-lg hover:bg-primary/20 text-muted-foreground hover:text-primary border border-transparent hover:border-primary/30 transition-all duration-200 uppercase tracking-widest"
-                title={locale === 'id' ? 'Switch to English' : 'Ganti ke Indonesia'}
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span>{locale}</span>
-              </button>
             </div>
           </div>
         </header>

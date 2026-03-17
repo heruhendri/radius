@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogIn, Phone, Loader2, Shield, Ticket, MessageCircle, Globe } from 'lucide-react';
+import { LogIn, Phone, Loader2, Shield, Ticket, MessageCircle } from 'lucide-react';
 import { showError } from '@/lib/sweetalert';
 import { useTranslation } from '@/hooks/useTranslation';
 
 export default function AgentLoginPage() {
   const router = useRouter();
-  const { t, locale, setLocale } = useTranslation();
+  const { t } = useTranslation();
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -93,14 +93,7 @@ export default function AgentLoginPage() {
           </h1>
           <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('agent.portal.loginSubtitle')}</p>
           
-          {/* Language Switcher */}
-          <button
-            onClick={() => setLocale(locale === 'id' ? 'en' : 'id')}
-            className="mt-3 inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-[#bc13fe]/10 hover:bg-[#bc13fe]/20 text-[#e0d0ff] border border-[#bc13fe]/30 rounded-lg transition-all"
-          >
-            <Globe className="w-4 h-4" />
-            <span className="uppercase">{locale === 'id' ? 'Bahasa Indonesia' : 'English'}</span>
-          </button>
+
         </div>
 
         {/* Login Form Card */}

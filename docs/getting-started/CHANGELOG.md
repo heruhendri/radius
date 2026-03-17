@@ -4,7 +4,7 @@ All notable changes to SALFANET RADIUS will be documented in this file.
 
 ---
 
-## [2.11.1] - 2026-03-17 (MapPicker Z-Index Fix)
+## [2.11.1] - 2026-03-17 (MapPicker Z-Index Fix + Indonesian-Only Language)
 
 ### ✅ Fix: Popup Peta Muncul di Belakang Form Modal
 
@@ -13,6 +13,21 @@ All notable changes to SALFANET RADIUS will be documented in this file.
 - **Perbaikan**: Tambahkan `createPortal(jsx, document.body)` pada return statement `MapPicker` agar dirender langsung di `document.body` (level root), sama seperti `SimpleModal`.
 - File: `src/components/MapPicker.tsx`
 - Halaman yang terpengaruh: `/admin/pppoe/users` (tambah/edit pelanggan), fiber joint closures, ODCs, dan semua halaman dengan `MapPicker` di atas form modal.
+
+### ✅ Refactor: Hapus Bahasa Inggris — Full Bahasa Indonesia
+
+- Menghapus dukungan multi-bahasa (Inggris) agar UI konsisten full Bahasa Indonesia.
+- **File dihapus**:
+  - `src/locales/en.json` — File terjemahan Bahasa Inggris
+  - `src/components/LanguageSwitcher.tsx` — Komponen pemilih bahasa
+- **File diubah**:
+  - `src/hooks/useTranslation.ts` — Disederhanakan: hardcode locale `'id'`, hapus import `en.json`, hapus English fallback logic
+  - `src/lib/store.ts` — Tipe locale disederhanakan menjadi `'id'` only, `setLocale` jadi no-op
+  - `src/app/admin/AdminClientLayout.tsx` — Hapus tombol language toggle dari header
+  - `src/app/agent/page.tsx` — Hapus tombol language switcher dari login page
+  - `src/app/agent/AgentLayoutClient.tsx` — Hapus tombol language switcher (desktop + mobile header)
+  - `src/app/customer/CustomerClientLayout.tsx` — Hapus tombol language toggle (desktop + mobile header), hapus import `useTranslation` yang tidak terpakai
+  - `src/app/technician/TechnicianPortalLayout.tsx` — Hapus tombol language switcher (desktop + mobile header)
 
 ---
 

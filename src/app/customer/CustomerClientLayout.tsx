@@ -1,14 +1,13 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, MessageSquare, User, Receipt, Shield, Menu, X, Package, Clock, LogOut, Bell, CheckCircle2, XCircle, RefreshCw, Trash2, Wifi, FileText, PauseCircle, Gift, Sun, Moon, Globe } from 'lucide-react';
+import { Home, MessageSquare, User, Receipt, Shield, Menu, X, Package, Clock, LogOut, Bell, CheckCircle2, XCircle, RefreshCw, Trash2, Wifi, FileText, PauseCircle, Gift, Sun, Moon } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { CyberToastProvider, useToast } from '@/components/cyberpunk/CyberToast';
 import { registerGlobalToast, registerGlobalConfirm } from '@/lib/sweetalert';
 import { formatWIB } from '@/lib/timezone';
 import { useTheme } from '@/hooks/useTheme';
-import { useTranslation } from '@/hooks/useTranslation';
 import { PushNotificationToggle } from '@/components/push-notification-toggle';
 
 interface MenuItem {
@@ -46,7 +45,6 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const { isDark, toggleTheme } = useTheme();
-  const { locale, setLocale } = useTranslation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifHistory, setNotifHistory] = useState<NotifEvent[]>([]);
   // Default: look back 24h so events that happened before page load are caught
@@ -382,15 +380,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
                 : <Moon className="w-4 h-4 text-slate-400" />
               }
             </button>
-            {/* Language Toggle — Desktop */}
-            <button
-              onClick={() => setLocale(locale === 'id' ? 'en' : 'id')}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold rounded-lg hover:bg-cyan-500/10 text-muted-foreground hover:text-cyan-400 border border-transparent hover:border-cyan-500/20 transition-all duration-200 uppercase tracking-widest"
-              title={locale === 'id' ? 'Switch to English' : 'Ganti ke Indonesia'}
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>{locale}</span>
-            </button>
+
           </div>
         </header>
 
@@ -500,15 +490,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
                   : <Moon className="w-4 h-4 text-slate-400" />
                 }
               </button>
-              {/* Language Toggle — Mobile */}
-              <button
-                onClick={() => setLocale(locale === 'id' ? 'en' : 'id')}
-                className="flex items-center gap-1 px-2 py-1.5 text-[10px] font-bold rounded-lg hover:bg-cyan-500/20 text-muted-foreground hover:text-cyan-400 border border-cyan-500/30 transition-all uppercase tracking-widest"
-                title={locale === 'id' ? 'Switch to English' : 'Ganti ke Indonesia'}
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span>{locale}</span>
-              </button>
+
             </div>
           </div>
         </header>

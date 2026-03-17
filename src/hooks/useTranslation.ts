@@ -1,15 +1,11 @@
 'use client';
 
-import { useAppStore } from '@/lib/store';
 import idTranslations from '@/locales/id.json';
-import enTranslations from '@/locales/en.json';
 
-export type Locale = 'id' | 'en';
+export type Locale = 'id';
 
-// Type-safe translations
 const translations = {
   id: idTranslations,
-  en: enTranslations,
 } as const;
 
 type TranslationKeys = typeof idTranslations;
@@ -23,28 +19,20 @@ function getNestedValue(obj: any, path: string): string {
     if (result && typeof result === 'object' && key in result) {
       result = result[key];
     } else {
-      return path; // Return path if not found
+      return path;
     }
   }
   
   return typeof result === 'string' ? result : path;
 }
 
-// Translation function with interpolation
+// Translation function with interpolation (Indonesian only)
 function translate(
-  locale: Locale,
   key: string,
   params?: Record<string, string | number>
 ): string {
-  const localeData = translations[locale] || translations.id;
-  let text = getNestedValue(localeData, key);
+  let text = getNestedValue(idTranslations, key);
   
-  // Fallback to English if not found in current locale
-  if (text === key && locale !== 'en') {
-    text = getNestedValue(translations.en, key);
-  }
-  
-  // Interpolate params
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
       text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
@@ -56,32 +44,24 @@ function translate(
 
 // React hook for translations
 export function useTranslation() {
-  const { locale, setLocale } = useAppStore();
-  
   const t = (key: string, params?: Record<string, string | number>): string => {
-    return translate(locale, key, params);
-  };
-  
-  const changeLocale = (newLocale: Locale) => {
-    setLocale(newLocale);
-    // Optionally save to cookie for server-side detection
-    document.cookie = `locale=${newLocale};path=/;max-age=31536000`;
+    return translate(key, params);
   };
   
   return {
     t,
-    locale,
-    setLocale: changeLocale,
-    isID: locale === 'id',
-    isEN: locale === 'en',
+    locale: 'id' as const,
+    setLocale: (_newLocale: string) => {},
+    isID: true,
+    isEN: false,
   };
 }
 
 // Non-hook version for use outside React components
-export function getTranslation(locale: Locale) {
+export function getTranslation(_locale?: string) {
   return {
     t: (key: string, params?: Record<string, string | number>) => 
-      translate(locale, key, params),
+      translate(key, params),
   };
 }
 

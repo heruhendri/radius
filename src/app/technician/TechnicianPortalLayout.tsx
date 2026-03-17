@@ -18,7 +18,6 @@ import {
   Phone,
   Sun,
   Moon,
-  Globe,
   Loader2,
   ChevronRight,
   User,
@@ -295,7 +294,7 @@ function TechSidebar({
 function TechnicianPortalInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { t, locale, setLocale } = useTranslation();
+  const { t } = useTranslation();
   const { isDark, toggleTheme } = useTheme();
   const { addToast, confirm } = useToast();
 
@@ -403,13 +402,6 @@ function TechnicianPortalInner({ children }: { children: React.ReactNode }) {
               >
                 {isDark ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-slate-600" />}
               </button>
-              <button
-                onClick={() => setLocale(locale === 'id' ? 'en' : 'id')}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-[#bc13fe]/10 hover:bg-slate-200 dark:hover:bg-[#bc13fe]/20 text-slate-700 dark:text-[#e0d0ff] border border-slate-200 dark:border-[#bc13fe]/30 rounded-lg transition-all"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span className="uppercase">{locale}</span>
-              </button>
               <NotificationBell />
             </div>
           </div>
@@ -436,12 +428,6 @@ function TechnicianPortalInner({ children }: { children: React.ReactNode }) {
                 className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition border border-white/20"
               >
                 {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-white" />}
-              </button>
-              <button
-                onClick={() => setLocale(locale === 'id' ? 'en' : 'id')}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition border border-white/20"
-              >
-                <Globe className="w-4 h-4 text-white" />
               </button>
               <NotificationBell />
               <button
