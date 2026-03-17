@@ -443,14 +443,14 @@ export default function PushNotificationsPage() {
         <TabsContent value="send" className="space-y-5 mt-4">
           {/* Recipient Role Selector */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <CardHeader className="px-5 pt-5 pb-3">
+              <CardTitle className="text-sm font-semibold leading-snug flex items-center gap-2.5">
                 <Users className="w-4 h-4 text-indigo-500" />
                 Kirim ke Siapa?
               </CardTitle>
               <CardDescription className="text-xs">Pilih penerima notifikasi ini</CardDescription>
             </CardHeader>
-            <CardContent className="pt-0 pb-5">
+            <CardContent className="px-5 pt-0 pb-5">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {([
                   { value: 'customer' as RecipientRole, label: 'Pelanggan', icon: Users, color: 'bg-blue-500/10 text-blue-600 border-blue-500/30', activeColor: 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/25', count: stats?.usersWithTokens ?? 0, unit: 'push' },
@@ -464,7 +464,7 @@ export default function PushNotificationsPage() {
                     <button
                       key={role.value}
                       onClick={() => handleRoleChange(role.value)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200
+                      className={`flex flex-col items-center gap-2 p-3.5 rounded-xl border-2 transition-all duration-200
                         ${active ? role.activeColor : `${role.color} hover:scale-[1.02]`}`}
                     >
                       <RoleIcon className="w-5 h-5" />
@@ -482,13 +482,13 @@ export default function PushNotificationsPage() {
             <div className="lg:col-span-2 space-y-4">
               {/* Tipe Notifikasi */}
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <CardHeader className="px-5 pt-5 pb-3">
+                  <CardTitle className="text-sm font-semibold leading-snug flex items-center gap-2.5">
                     <Zap className="w-4 h-4 text-blue-500" />
                     {t('pushNotif.notificationType')}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-0 pb-5">
+                <CardContent className="px-5 pt-0 pb-5">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {activeTypeDefs.map((nt) => {
                       const Icon = nt.icon;
@@ -513,14 +513,14 @@ export default function PushNotificationsPage() {
 
               {/* Template Cepat */}
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <CardHeader className="px-5 pt-5 pb-3">
+                  <CardTitle className="text-sm font-semibold leading-snug flex items-center gap-2.5">
                     <MessageSquare className="w-4 h-4 text-purple-500" />
                     {t('pushNotif.quickTemplate')}
                   </CardTitle>
                   <CardDescription className="text-xs">{t('pushNotif.clickToAutoFill')}</CardDescription>
                 </CardHeader>
-                <CardContent className="pt-0 pb-5">
+                <CardContent className="px-5 pt-0 pb-5">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {activeTemplates.map((tpl) => {
                       const Icon = tpl.icon;
@@ -541,13 +541,13 @@ export default function PushNotificationsPage() {
 
               {/* Isi Notifikasi */}
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <CardHeader className="px-5 pt-5 pb-3">
+                  <CardTitle className="text-sm font-semibold leading-snug flex items-center gap-2.5">
                     <Bell className="w-4 h-4 text-orange-500" />
                     {t('pushNotif.notificationContent')}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4 pt-0 pb-5">
+                <CardContent className="space-y-4 px-5 pt-0 pb-5">
                   <div>
                     <Label htmlFor="title" className="text-xs font-medium mb-1.5 block">
                       {t('pushNotif.titleLabel')} <span className="text-red-500">*</span>
@@ -599,13 +599,13 @@ export default function PushNotificationsPage() {
             <div className="space-y-4">
               {/* Target */}
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <CardHeader className="px-5 pt-5 pb-3">
+                  <CardTitle className="text-sm font-semibold leading-snug flex items-center gap-2.5">
                     <Users className="w-4 h-4 text-blue-500" />
                     {t('pushNotif.targetRecipient')}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 pt-0 pb-5">
+                <CardContent className="space-y-3 px-5 pt-0 pb-5">
                   {recipientRole === 'customer' && (
                     <>
                       <div>
@@ -709,13 +709,13 @@ export default function PushNotificationsPage() {
               {/* Preview */}
               {(title || message) && (
                 <Card className="overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <CardHeader className="px-5 pt-5 pb-2">
+                    <CardTitle className="text-sm font-semibold leading-snug flex items-center gap-2.5">
                       <Smartphone className="w-4 h-4 text-indigo-500" />
                       {t('pushNotif.previewNotification')}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pb-5">
+                  <CardContent className="px-5 pb-5">
                     {/* Phone mockup */}
                     <div className="mx-auto max-w-[280px]">
                       <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl p-1 shadow-xl">
@@ -785,10 +785,10 @@ export default function PushNotificationsPage() {
         {/* History Tab */}
         <TabsContent value="history" className="mt-4">
           <Card>
-            <CardHeader className="pb-4">
+            <CardHeader className="px-5 pt-5 pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="text-base leading-snug flex items-center gap-2.5">
                     <Megaphone className="w-4 h-4 text-orange-500" />
                     {t('pushNotif.broadcastHistory')}
                   </CardTitle>
@@ -800,7 +800,7 @@ export default function PushNotificationsPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-5 pb-5 pt-0">
               {historyLoading ? (
                 <div className="flex items-center justify-center py-16">
                   <div className="text-center">
