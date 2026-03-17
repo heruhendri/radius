@@ -1927,6 +1927,7 @@
     "testFailed": "Gagal mengirim test message",
     "baseUrlHelp": "URL untuk payment link & customer portal",
     "companySaved": "Pengaturan perusahaan berhasil disimpan",
+    "bankAccountsSaved": "Rekening bank berhasil disimpan",
     "saveSettingsFailed": "Gagal menyimpan pengaturan",
     "jobExecuted": "Job Dijalankan",
     "jobRunSuccess": "berhasil dijalankan",
