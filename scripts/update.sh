@@ -85,8 +85,7 @@ if echo "$CHANGED" | grep -q '^prisma/schema\.prisma$'; then
 fi
 
 # ── Clean stale build artifacts ──────────────────────────
-rm -f .next/lock
-rm -rf .next/server 2>/dev/null || true
+rm -rf .next 2>/dev/null || true
 
 # ── Build ─────────────────────────────────────────────────
 echo ""
