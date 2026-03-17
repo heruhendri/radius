@@ -865,16 +865,16 @@ export default function AgentDashboardPage() {
 
       {/* Deposit Modal */}
       {showDepositModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-[#1a0f35] border-2 border-purple-400 dark:border-[#bc13fe]/50 rounded-2xl shadow-[0_0_50px_rgba(188,19,254,0.3)] max-w-sm w-full">
-            <div className="px-5 py-4 border-b border-purple-200 dark:border-[#bc13fe]/20">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto overscroll-contain">
+          <div className="bg-white dark:bg-[#1a0f35] border-2 border-purple-400 dark:border-[#bc13fe]/50 rounded-2xl shadow-[0_0_50px_rgba(188,19,254,0.3)] w-full max-w-sm sm:max-w-lg max-h-[92vh] flex flex-col">
+            <div className="px-4 sm:px-5 py-4 border-b border-purple-200 dark:border-[#bc13fe]/20 shrink-0">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Wallet className="h-5 w-5 text-[#00f7ff]" />
                 {t('agent.portal.topUpBalance')}
               </h2>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto min-h-0">
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -1115,7 +1115,7 @@ export default function AgentDashboardPage() {
               )}
             </div>
 
-            <div className="px-5 py-4 border-t border-purple-200 dark:border-[#bc13fe]/20 flex gap-2 justify-end">
+            <div className="px-4 sm:px-5 py-4 border-t border-purple-200 dark:border-[#bc13fe]/20 flex flex-col-reverse sm:flex-row gap-2 justify-end shrink-0">
               <button
                 onClick={() => {
                   setShowDepositModal(false);
@@ -1130,7 +1130,7 @@ export default function AgentDashboardPage() {
                   setProofPreviewUrl(null);
                   setDepositMode('gateway');
                 }}
-                className="px-4 py-2 text-sm text-slate-500 dark:text-[#e0d0ff]/70 hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10 rounded-xl transition"
+                className="px-4 py-2 text-sm text-slate-500 dark:text-[#e0d0ff]/70 hover:bg-purple-50 dark:hover:bg-[#bc13fe]/10 rounded-xl transition w-full sm:w-auto"
                 disabled={creatingDeposit || creatingManualDeposit || uploadingProof}
               >
                 {t('agent.portal.cancel')}
@@ -1146,7 +1146,7 @@ export default function AgentDashboardPage() {
                   (depositMode === 'gateway' && paymentGateways.length === 0) ||
                   (depositMode === 'manual' && adminBankAccounts.length === 0)
                 }
-                className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-[#bc13fe] to-[#00f7ff] hover:from-[#a010e0] hover:to-[#00d4dd] text-white rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-[#bc13fe] to-[#00f7ff] hover:from-[#a010e0] hover:to-[#00d4dd] text-white rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
               >
                 {creatingDeposit || creatingManualDeposit || uploadingProof ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></div>{t('agent.portal.processing')}...</>
