@@ -109,7 +109,7 @@ const menuGroups: MenuGroup[] = [
     ],
   },
   {
-    titleKey: 'nav.catCustomer',
+    titleKey: 'nav.catCustomerAgent',
     items: [
       {
         titleKey: 'nav.pppoe',
@@ -132,10 +132,20 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.rekapVoucher', href: '/admin/hotspot/rekap-voucher', requiredPermission: 'vouchers.view' },
           { titleKey: 'nav.profile', href: '/admin/hotspot/profile', requiredPermission: 'hotspot.view' },
           { titleKey: 'nav.template', href: '/admin/hotspot/template', requiredPermission: 'hotspot.view' },
-          { titleKey: 'nav.agent', href: '/admin/hotspot/agent', requiredPermission: 'hotspot.view' },
           { titleKey: 'nav.evoucher', href: '/admin/hotspot/evoucher', requiredPermission: 'vouchers.view' },
         ],
       },
+      {
+        titleKey: 'nav.agent',
+        icon: <UserCheck className="w-4 h-4" />,
+        href: '/admin/hotspot/agent',
+        requiredPermission: 'hotspot.view',
+      },
+    ],
+  },
+  {
+    titleKey: 'nav.catCustomerOther',
+    items: [
       {
         titleKey: 'nav.isolation',
         icon: <Shield className="w-4 h-4" />,

@@ -277,6 +277,8 @@
     "catOverview": "Overview",
     "catNotifikasi": "Notifikasi",
     "catCustomer": "Pelanggan",
+    "catCustomerAgent": "Pelanggan & Agent",
+    "catCustomerOther": "Pelanggan Lainnya",
     "catNetwork": "Jaringan",
     "catManagement": "Manajemen",
     "dashboard": "Dashboard",
