@@ -194,22 +194,14 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("[AUTHORIZE] Error:", error);
     
-    // Even on error, if we have the username (parsed before error),
-    // return Cleartext-Password so FreeRADIUS PAP can still verify.
-    // (Hotspot vouchers use voucher code as both username and password)
-    if (username) {
-      return NextResponse.json({
-        "control:Cleartext-Password": username,
-        success: true,
-        action: "allow",
-        message: "Error but allowing",
-        error: error.message
-      });
-    }
+    // On error, allow FreeRADIUS to proceed to SQL/radcheck lookup.
+    // Do NOT set Cleartext-Password here — hotspot voucher passwords are stored
+    // in radcheck (via hotspot-sync), and PPPoE user passwords are in radcheck too.
+    // Setting username as Cleartext-Password would break PPPoE auth when username ≠ password.
     return NextResponse.json({
       success: true,
       action: "allow",
-      message: "Error but allowing (no username)",
+      message: "Error but allowing — SQL radcheck will handle",
       error: error.message
     });
   }

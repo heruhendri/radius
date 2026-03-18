@@ -69,16 +69,20 @@ export async function GET(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Connect to MikroTik
-    const api = new RouterOSAPI({
-      host: router.ipAddress || router.nasname,
-      port: router.port || 8728,
-      user: router.username,
-      password: router.password,
-      timeout: 30,
-    });
+    // Connect to MikroTik — try plaintext port first, fall back to SSL port
+    const apiHost = router.ipAddress || router.nasname;
+    const apiPortPlain = router.port || 8728;
+    const apiPortSsl = (router as any).apiPort || 8729;
 
-    await api.connect();
+    let api: any;
+    try {
+      api = new RouterOSAPI({ host: apiHost, port: apiPortPlain, user: router.username, password: router.password, timeout: 10 });
+      await api.connect();
+    } catch {
+      // Plaintext port failed — try SSL
+      api = new RouterOSAPI({ host: apiHost, port: apiPortSsl, user: router.username, password: router.password, timeout: 15, tls: { rejectUnauthorized: false } } as any);
+      await api.connect();
+    }
 
     // Get PPPoE secrets
     const secrets = await api.write('/ppp/secret/print') as MikrotikPPPoESecret[];
@@ -181,16 +185,20 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Connect to MikroTik
-    const api = new RouterOSAPI({
-      host: router.ipAddress || router.nasname,
-      port: router.port || 8728,
-      user: router.username,
-      password: router.password,
-      timeout: 30,
-    });
+    // Connect to MikroTik — try plaintext port first, fall back to SSL port
+    const apiHost2 = router.ipAddress || router.nasname;
+    const apiPortPlain2 = router.port || 8728;
+    const apiPortSsl2 = (router as any).apiPort || 8729;
 
-    await api.connect();
+    let api: any;
+    try {
+      api = new RouterOSAPI({ host: apiHost2, port: apiPortPlain2, user: router.username, password: router.password, timeout: 10 });
+      await api.connect();
+    } catch {
+      // Plaintext port failed — try SSL
+      api = new RouterOSAPI({ host: apiHost2, port: apiPortSsl2, user: router.username, password: router.password, timeout: 15, tls: { rejectUnauthorized: false } } as any);
+      await api.connect();
+    }
 
     // Get PPPoE secrets
     const secrets = await api.write('/ppp/secret/print') as MikrotikPPPoESecret[];

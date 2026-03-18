@@ -61,8 +61,9 @@ export async function syncNasClients(): Promise<boolean> {
       '',
     ];
 
-    // Track VPN server gateways to generate gateway client entries
-    const vpnGateways = new Map<string, { gatewayIp: string; secret: string; serverName: string }>();
+    // Track VPN server gateways to generate gateway client entries.
+    // gatewaySecrets maps serverId → Set of unique NAS secrets.
+    const vpnGateways = new Map<string, { gatewayIp: string; secrets: Set<string>; serverName: string }>();
 
     for (const nas of nasEntries) {
       const safeShort = (nas.shortname || nas.nasname).replace(/[^a-z0-9_-]/gi, '_');
@@ -89,26 +90,48 @@ export async function syncNasClients(): Promise<boolean> {
 
           vpnGateways.set(server.id, {
             gatewayIp,
-            secret: nas.secret, // First NAS's secret becomes the VPN server gateway secret
+            secrets: new Set([nas.secret]),
             serverName: safeName,
           });
+        } else {
+          // Collect all distinct secrets so we can detect mismatches
+          vpnGateways.get(server.id)!.secrets.add(nas.secret);
         }
       }
     }
 
     // Generate VPN gateway client entries (one per VPN server)
-    // This handles CHR masquerade: all NAS packets arrive from the gateway IP
+    // This handles CHR masquerade: all NAS packets arrive from the gateway IP.
+    // REQUIREMENT: All NAS behind the same VPN server MUST share the same RADIUS secret.
+    // If they differ, the gateway entry is skipped (NAS bypass rule must be active instead).
     if (vpnGateways.size > 0) {
       lines.push('# --- VPN Server Gateway Clients ---');
       lines.push('# When CHR VPN server masquerades traffic, all NAS packets');
       lines.push('# arrive from the gateway IP. All NAS behind the same VPN');
       lines.push('# server MUST use the same RADIUS shared secret.');
+      lines.push('# If secrets differ, configure a NAT bypass on the CHR for RADIUS UDP ports.');
       lines.push('');
 
       for (const [, gw] of vpnGateways) {
+        if (gw.secrets.size > 1) {
+          // Multiple different secrets — gateway entry would use the wrong secret for some NAS.
+          // Skip it and log a warning. A CHR NAT bypass rule for RADIUS (UDP 1812-1813) is required.
+          console.warn(
+            `[FreeRADIUS] VPN gateway ${gw.gatewayIp} skipped: NAS behind it have ` +
+            `${gw.secrets.size} different RADIUS secrets. ` +
+            `Add a CHR srcnat accept rule for UDP 1812-1813 to bypass masquerade, ` +
+            `or make all NAS use the same shared secret.`
+          );
+          lines.push(`# SKIPPED: vpn_gw_${gw.serverName} — NAS secrets differ (${gw.secrets.size} unique secrets).`);
+          lines.push(`# Add a CHR NAT bypass rule: srcnat accept, protocol=udp, dst-port=1812-1813, dst=${gw.gatewayIp.replace('.1', '.10')}`);
+          lines.push('');
+          continue;
+        }
+
+        const [secret] = gw.secrets;
         lines.push(`client vpn_gw_${gw.serverName} {`);
         lines.push(`    ipaddr = ${gw.gatewayIp}`);
-        lines.push(`    secret = ${gw.secret}`);
+        lines.push(`    secret = ${secret}`);
         lines.push(`    shortname = vpn_gw_${gw.serverName}`);
         lines.push(`    nas_type = other`);
         lines.push(`    require_message_authenticator = no`);
