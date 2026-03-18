@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Power, RefreshCw, Wifi, Search, Download, Trash2, RotateCcw } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
-import { formatWIB } from '@/lib/timezone';
+import { formatWIB, nowWIB } from '@/lib/timezone';
 
 interface Session {
   id: string;
@@ -66,6 +66,18 @@ export default function PPPoESessionsPage() {
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 10, totalPages: 1 });
   const [pageSize, setPageSize] = useState<number>(10);
+  const [now, setNow] = useState(() => nowWIB().getTime());
+
+  // 1-second ticker for live uptime counter
+  useEffect(() => {
+    const ticker = setInterval(() => setNow(nowWIB().getTime()), 1000);
+    return () => clearInterval(ticker);
+  }, []);
+
+  const liveDuration = (startTimeStr: string | null) => {
+    if (!startTimeStr) return 0;
+    return Math.max(0, Math.floor((now - new Date(startTimeStr).getTime()) / 1000));
+  };
 
   const fetchSessions = useCallback(async (page: number = 1) => {
     try {
@@ -335,7 +347,7 @@ export default function PPPoESessionsPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t('sessions.uptime')}:</span>
-                    <span className="font-medium text-info">{formatUptime(session.duration)}</span>
+                    <span className="font-medium text-info">{formatUptime(liveDuration(session.startTime))}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t('sessions.upload')}:</span>
@@ -422,7 +434,7 @@ export default function PPPoESessionsPage() {
                     <td className="px-2 py-2 font-mono text-[10px] text-muted-foreground">{session.username}</td>
                     <td className="px-2 py-2 text-[10px] text-muted-foreground whitespace-nowrap">{formatDateTime(session.startTime)}</td>
                     <td className="px-2 py-2 text-[10px] text-muted-foreground whitespace-nowrap">{formatDateTime(session.lastUpdate)}</td>
-                    <td className="px-2 py-2 text-[10px] font-medium text-info">{formatUptime(session.duration)}</td>
+                    <td className="px-2 py-2 text-[10px] font-medium text-info">{formatUptime(liveDuration(session.startTime))}</td>
                     <td className="px-2 py-2 text-[10px] text-success">{session.uploadFormatted}</td>
                     <td className="px-2 py-2 text-[10px] text-info">{session.downloadFormatted}</td>
                     <td className="px-2 py-2 text-[10px] text-muted-foreground">{session.router?.name || '-'}</td>
