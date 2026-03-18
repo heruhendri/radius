@@ -127,8 +127,17 @@ export async function GET(request: NextRequest) {
       // Accounting-Start arrived — i.e. the code does NOT appear in radacct at all
       // (neither active nor stopped). Vouchers with a stopped session have properly
       // disconnected and must NOT be counted as online.
+      const now = new Date();
       const activeCandidates = await prisma.hotspotVoucher.findMany({
-        where: { status: 'ACTIVE', firstLoginAt: { not: null } },
+        where: {
+          status: 'ACTIVE',
+          firstLoginAt: { not: null },
+          // Exclude already-expired vouchers whose status hasn't been updated yet
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: now } },
+          ],
+        },
         select: { code: true },
       });
       if (activeCandidates.length > 0) {

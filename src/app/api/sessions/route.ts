@@ -206,10 +206,16 @@ export async function GET(request: NextRequest) {
         .map((s) => s.username),
     );
 
+    const nowDate = new Date();
     const orphanedVoucherWhere: any = {
       status: 'ACTIVE',
       firstLoginAt: { not: null },
       code: { notIn: [...activeHotspotUsernames] },
+      // Exclude already-expired vouchers whose status hasn't been updated yet
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gt: nowDate } },
+      ],
     };
     if (routerId) orphanedVoucherWhere.routerId = routerId;
 

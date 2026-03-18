@@ -197,12 +197,15 @@ export async function GET(request: NextRequest) {
     });
     const stoppedCodeSet = new Set(stoppedCodes.map(s => s.username));
 
+    const nowMs = Date.now();
     const orphanedVouchers = vouchers.filter(
       (v) =>
         v.status === 'ACTIVE' &&
         v.firstLoginAt !== null &&
         !activeRadacctCodes.has(v.code) &&
-        !stoppedCodeSet.has(v.code),
+        !stoppedCodeSet.has(v.code) &&
+        // Exclude already-expired vouchers whose status hasn't been updated yet
+        (v.expiresAt === null || new Date(v.expiresAt).getTime() > nowMs),
     );
 
     const redisDetails = await Promise.allSettled(
