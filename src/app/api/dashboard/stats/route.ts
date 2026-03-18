@@ -71,21 +71,13 @@ export async function GET(request: NextRequest) {
     try {
       // ── Sumber kebenaran: radacct + Redis online-users ──
       // Sama dengan halaman Sesi: if username ada di pppoeUser → PPPoE, else → Hotspot.
-      // Tidak menggunakan RADIUS attrs (servicetype/framedprotocol) karena MikroTik hotspot
-      // bisa mengirim Service-Type = Framed-User yang menyebabkan misklasifikasi.
-      //
-      // Supplement Redis: beberapa sesi mungkin sudah ada di Redis (via accounting hook)
-      // tetapi belum masuk radacct (Accounting-Start terlambat/hilang di rlm_sql).
+      const normalizeUsername = (u: string) => u.includes('@') ? u.split('@')[0] : u;
+
       const activeRadacctSessions = await prisma.radacct.findMany({
-        where: {
-          acctstoptime: null,
-        },
-        select: {
-          username: true,
-        },
+        where: { acctstoptime: null },
+        select: { username: true },
       });
 
-      // Kumpulkan semua username aktif dari radacct
       const onlineUsernames = new Set<string>(
         activeRadacctSessions.map(s => s.username).filter(Boolean) as string[]
       );
@@ -103,13 +95,10 @@ export async function GET(request: NextRequest) {
       }
 
       const allUsernames = [...onlineUsernames];
+      let pppoeUsernameSet = new Set<string>();
 
       if (allUsernames.length > 0) {
-        // Klasifikasi sederhana: pppoeUser lookup → pppoe, selainnya → hotspot
-        // Konsisten dengan halaman Sesi PPPoE/Hotspot
-        const normalizeUsername = (u: string) => u.includes('@') ? u.split('@')[0] : u;
         const normalizedUsernames = [...new Set(allUsernames.map(normalizeUsername))];
-
         const pppoeUsers = await prisma.pppoeUser.findMany({
           where: {
             OR: [
@@ -120,7 +109,7 @@ export async function GET(request: NextRequest) {
           select: { username: true },
         });
 
-        const pppoeUsernameSet = new Set(pppoeUsers.map(u => u.username.toLowerCase()));
+        pppoeUsernameSet = new Set(pppoeUsers.map(u => u.username.toLowerCase()));
 
         for (const username of allUsernames) {
           const raw = username.toLowerCase();
@@ -132,6 +121,23 @@ export async function GET(request: NextRequest) {
           }
         }
       }
+
+      // Supplement: count ACTIVE vouchers not in radacct/Redis (synthetic sessions)
+      const hotspotCodesInRadacctOrRedis = new Set(
+        [...onlineUsernames].filter(u => {
+          const raw = u.toLowerCase();
+          const normalized = normalizeUsername(u).toLowerCase();
+          return !pppoeUsernameSet.has(raw) && !pppoeUsernameSet.has(normalized);
+        })
+      );
+      const orphanActiveCount = await prisma.hotspotVoucher.count({
+        where: {
+          status: 'ACTIVE',
+          firstLoginAt: { not: null },
+          code: { notIn: [...hotspotCodesInRadacctOrRedis] },
+        },
+      });
+      activeSessionsHotspot += orphanActiveCount;
     } catch (e) {
       console.error('[Dashboard] Error counting active sessions:', e);
     }

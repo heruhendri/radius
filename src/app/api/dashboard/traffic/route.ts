@@ -2,29 +2,10 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth/config";
 import { prisma } from "@/server/db/client";
-import { RouterOSAPI } from "node-routeros";
 
 // Disable caching - always fetch fresh data
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-interface InterfaceTraffic {
-  name: string;
-  rxBytes: number;
-  txBytes: number;
-  rxRate: number;
-  txRate: number;
-  rxPackets: number;
-  txPackets: number;
-  running: boolean;
-}
-
-interface RouterTraffic {
-  routerId: string;
-  routerName: string;
-  interfaces: InterfaceTraffic[];
-  error?: string;
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,13 +17,12 @@ export async function GET(request: NextRequest) {
 
     // Get all active routers
     const routers = await prisma.router.findMany({
+      where: { isActive: true },
       select: {
         id: true,
         name: true,
+        nasname: true,
         ipAddress: true,
-        port: true,
-        username: true,
-        password: true,
       },
     });
 
@@ -54,62 +34,54 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fetch traffic data from all routers in parallel
-    const trafficPromises = routers.map(async (router): Promise<RouterTraffic> => {
-      try {
-        const conn = new RouterOSAPI({
-          host: router.ipAddress,
-          port: router.port || 8728,
-          user: router.username,
-          password: router.password,
-          timeout: 5,
-        });
-
-        await conn.connect();
-
-        // Get interface stats
-        const interfaces = await conn.write('/interface/print', [
-          '=.proplist=name,running,rx-byte,tx-byte,rx-packet,tx-packet',
-        ]);
-
-        await conn.close();
-
-        // Parse interface data
-        const interfaceTraffic: InterfaceTraffic[] = interfaces.map((iface: any) => {
-          // MikroTik returns running status as string 'true'/'false' OR boolean true/false
-          // We only check 'running' property - if it's running in MikroTik, show as running
-          const isRunning = iface.running === 'true' || iface.running === true;
-          
-          return {
-            name: iface.name || 'unknown',
-            rxBytes: parseInt(iface['rx-byte'] || '0'),
-            txBytes: parseInt(iface['tx-byte'] || '0'),
-            rxRate: 0, // Will be calculated on frontend
-            txRate: 0, // Will be calculated on frontend
-            rxPackets: parseInt(iface['rx-packet'] || '0'),
-            txPackets: parseInt(iface['tx-packet'] || '0'),
-            // Use running status directly from MikroTik (R flag means running)
-            running: isRunning,
-          };
-        });
-
-        return {
-          routerId: router.id,
-          routerName: router.name,
-          interfaces: interfaceTraffic,
-        };
-      } catch (error: any) {
-        console.error(`[Traffic] Error fetching from ${router.name}:`, error.message);
-        return {
-          routerId: router.id,
-          routerName: router.name,
-          interfaces: [],
-          error: error.message || 'Connection failed',
-        };
-      }
+    // Aggregate active session bytes per NAS IP from radacct (Full RADIUS — no RouterOS connection)
+    const sessionAggs = await prisma.radacct.groupBy({
+      by: ['nasipaddress'],
+      where: { acctstoptime: null },
+      _sum: {
+        acctinputoctets: true,
+        acctoutputoctets: true,
+      },
+      _count: { radacctid: true },
     });
 
-    const routerTraffic = await Promise.all(trafficPromises);
+    // Build map: nasipaddress → aggregated stats
+    const aggByNas = new Map<string, { rxBytes: number; txBytes: number; sessions: number }>();
+    for (const agg of sessionAggs) {
+      aggByNas.set(agg.nasipaddress, {
+        // From NAS perspective: inputOctets = bytes received from user (user upload)
+        //                       outputOctets = bytes sent to user (user download)
+        rxBytes: Number(agg._sum.acctoutputoctets ?? 0), // user download
+        txBytes: Number(agg._sum.acctinputoctets ?? 0),  // user upload
+        sessions: agg._count.radacctid,
+      });
+    }
+
+    // Build response in the same format as the original RouterOSAPI-based route
+    // so frontend components (TrafficMonitor, TrafficChartMonitor) work without changes.
+    const routerTraffic = routers.map((router) => {
+      const stats =
+        aggByNas.get(router.nasname) ||
+        aggByNas.get(router.ipAddress) ||
+        { rxBytes: 0, txBytes: 0, sessions: 0 };
+
+      return {
+        routerId: router.id,
+        routerName: router.name,
+        interfaces: [
+          {
+            name: 'active-sessions',
+            rxBytes: stats.rxBytes,
+            txBytes: stats.txBytes,
+            rxRate: 0, // calculated on frontend between polls
+            txRate: 0,
+            rxPackets: 0,
+            txPackets: 0,
+            running: stats.sessions > 0,
+          },
+        ],
+      };
+    });
 
     return NextResponse.json({
       success: true,
