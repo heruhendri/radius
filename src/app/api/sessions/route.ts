@@ -28,6 +28,31 @@ function formatDuration(seconds: number): string {
   return `${remainingSeconds}s`;
 }
 
+async function getLatestMacByUsernames(usernames: string[]): Promise<Map<string, string>> {
+  if (usernames.length === 0) return new Map();
+
+  const rows = await prisma.radacct.findMany({
+    where: {
+      username: { in: usernames },
+      callingstationid: { not: '' },
+    },
+    select: {
+      username: true,
+      callingstationid: true,
+      acctstarttime: true,
+    },
+    orderBy: { acctstarttime: 'desc' },
+  });
+
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    if (!map.has(row.username) && row.callingstationid) {
+      map.set(row.username, row.callingstationid);
+    }
+  }
+  return map;
+}
+
 // ─── Stale session cleanup ──────────────────────────────────────────────────────
 
 /**
@@ -290,7 +315,7 @@ export async function GET(request: NextRequest) {
         type: sessionType,
         nasIpAddress: acct.nasipaddress,
         framedIpAddress: acct.framedipaddress || null,
-        macAddress: acct.callingstationid || '-',
+        macAddress: acct.callingstationid || '',
         calledStationId: acct.calledstationid || '-',
         startTime: effectiveStartTime,
         lastUpdate: acct.acctupdatetime
@@ -360,6 +385,26 @@ export async function GET(request: NextRequest) {
           framedIpAddress: s.framedIpAddress || redis.framedIp || null,
           macAddress: s.macAddress || redis.callingStationId || '-',
         };
+      });
+    }
+
+    // ── 4d. Historical MAC fallback from radacct ───────────────────────────
+    // If current active row and Redis still miss MAC, reuse latest known MAC
+    // from previous accounting rows for the same username.
+    const missingMacUsernames = [
+      ...new Set(
+        allSessions
+          .filter((s) => s.type === 'hotspot' && (!s.macAddress || s.macAddress === '-'))
+          .map((s) => s.username),
+      ),
+    ];
+    if (missingMacUsernames.length > 0) {
+      const historicalMacMap = await getLatestMacByUsernames(missingMacUsernames);
+      allSessions = allSessions.map((s) => {
+        if (s.type !== 'hotspot') return s;
+        if (s.macAddress && s.macAddress !== '-') return s;
+        const historicalMac = historicalMacMap.get(s.username);
+        return historicalMac ? { ...s, macAddress: historicalMac } : s;
       });
     }
 

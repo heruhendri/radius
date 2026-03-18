@@ -20,6 +20,31 @@ function formatDuration(seconds: number): string {
   return `${s}s`;
 }
 
+async function getLatestMacByUsernames(usernames: string[]): Promise<Map<string, string>> {
+  if (usernames.length === 0) return new Map();
+
+  const rows = await prisma.radacct.findMany({
+    where: {
+      username: { in: usernames },
+      callingstationid: { not: '' },
+    },
+    select: {
+      username: true,
+      callingstationid: true,
+      acctstarttime: true,
+    },
+    orderBy: { acctstarttime: 'desc' },
+  });
+
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    if (!map.has(row.username) && row.callingstationid) {
+      map.set(row.username, row.callingstationid);
+    }
+  }
+  return map;
+}
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -204,7 +229,26 @@ export async function GET(request: NextRequest) {
         };
       });
 
-    return NextResponse.json({ sessions: [...sessionsWithProfile, ...syntheticSessions] });
+    const allSessions = [...sessionsWithProfile, ...syntheticSessions];
+
+    // Historical MAC fallback if both active row and Redis miss MAC.
+    const missingMacUsernames = [
+      ...new Set(
+        allSessions
+          .filter((s) => !s.callingStationId)
+          .map((s) => s.username),
+      ),
+    ];
+    if (missingMacUsernames.length > 0) {
+      const historicalMacMap = await getLatestMacByUsernames(missingMacUsernames);
+      for (const s of allSessions) {
+        if (s.callingStationId) continue;
+        const historicalMac = historicalMacMap.get(s.username);
+        if (historicalMac) s.callingStationId = historicalMac;
+      }
+    }
+
+    return NextResponse.json({ sessions: allSessions });
   } catch (error) {
     console.error('Get agent sessions error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
