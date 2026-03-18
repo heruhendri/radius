@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Only process Access-Accept
     if (reply !== "Access-Accept") {
-      return NextResponse.json({ success: true, action: "ignore" });
+      return NextResponse.json({});
     }
 
     // Find voucher
@@ -37,11 +37,7 @@ export async function POST(request: NextRequest) {
     // - A legacy/test voucher in radcheck only
     // Return success to allow authentication to proceed
     if (!voucher) {
-      return NextResponse.json({
-        success: true,
-        action: "ignore",
-        message: "Not a managed voucher",
-      });
+      return NextResponse.json({});
     }
 
     // Get current WIB time stored as WIB-as-UTC (matches the rest of the app's timezone pattern)
@@ -181,28 +177,13 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      return NextResponse.json({
-        success: true,
-        action: "first_login",
-        firstLoginAt: updated?.firstLoginAt,
-        expiresAt: updated?.expiresAt,
-      });
+      return NextResponse.json({});
     }
 
     // Subsequent logins: just verify not expired
-    return NextResponse.json({
-      success: true,
-      action: "allow",
-      expiresAt: voucher.expiresAt,
-    });
+    return NextResponse.json({});
   } catch (error: any) {
     console.error("RADIUS post-auth error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message,
-      },
-      { status: 500 },
-    );
+    return NextResponse.json({}, { status: 500 });
   }
 }
