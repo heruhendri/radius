@@ -66,7 +66,8 @@ async function getLatestMacByUsernames(usernames: string[]): Promise<Map<string,
 async function cleanupStaleSessions(): Promise<number> {
   const STALE_THRESHOLD_MINUTES = 480; // 8 hours (MikroTik may not send interim updates regularly)
   try {
-    const result = await prisma.$executeRawUnsafe(`
+    // Case 1: last interim-update is too old (normal stale detection)
+    const result1 = await prisma.$executeRawUnsafe(`
       UPDATE radacct
       SET acctstoptime = NOW(),
           acctterminatecause = 'Lost-Carrier',
@@ -74,10 +75,28 @@ async function cleanupStaleSessions(): Promise<number> {
       WHERE acctstoptime IS NULL
         AND acctupdatetime < DATE_SUB(NOW(), INTERVAL ${STALE_THRESHOLD_MINUTES} MINUTE)
     `);
-    if (result > 0) {
-      console.log(`[Sessions] Cleaned up ${result} stale radacct session(s)`);
+
+    // Case 2: session timestamps are IN THE FUTURE relative to MySQL NOW().
+    // This happens when FreeRADIUS records timestamps from the NAS clock
+    // (via FROM_UNIXTIME) while the VPS/MySQL clock drifts behind. These
+    // sessions will never appear "old enough" to be caught by Case 1.
+    // Safe threshold: if acctstarttime is more than 2 minutes in the future,
+    // the session data is from a clock-skew event and is effectively stale.
+    const result2 = await prisma.$executeRawUnsafe(`
+      UPDATE radacct
+      SET acctstoptime = NOW(),
+          acctterminatecause = 'Lost-Carrier',
+          acctsessiontime = COALESCE(acctsessiontime,
+            TIMESTAMPDIFF(SECOND, acctstarttime, acctupdatetime))
+      WHERE acctstoptime IS NULL
+        AND acctstarttime > DATE_ADD(NOW(), INTERVAL 2 MINUTE)
+    `);
+
+    const total = Number(result1) + Number(result2);
+    if (total > 0) {
+      console.log(`[Sessions] Cleaned up ${total} stale radacct session(s) (normal=${result1}, future-ts=${result2})`);
     }
-    return result;
+    return total;
   } catch (err) {
     console.error('[Sessions] Failed to cleanup stale sessions:', err);
     return 0;
@@ -321,7 +340,23 @@ export async function GET(request: NextRequest) {
         effectiveStartTime = new Date(effectiveStartMs).toISOString();
       }
 
-      const duration = Math.max(0, Math.floor((now - effectiveStartMs) / 1000));
+      // Compute duration clock-independently: prefer (updateTime - startTime)
+      // which is derived entirely from DB timestamps written by the NAS clock
+      // (via FROM_UNIXTIME). Falls back to (now - startMs) for the case where
+      // acctupdatetime is unavailable or earlier than starttime.
+      let duration: number;
+      const rawUpdateMs = acct.acctupdatetime ? new Date(acct.acctupdatetime).getTime() : 0;
+      if (rawUpdateMs > effectiveStartMs) {
+        // DB-based: session time = updateTime - startTime (no VPS-clock dependency)
+        duration = Math.floor((rawUpdateMs - effectiveStartMs) / 1000);
+      } else {
+        // Fallback to acctsessiontime field if available (also from NAS clock)
+        duration = Number(acct.acctsessiontime ?? 0);
+        if (duration === 0) {
+          // Last fallback: VPS-clock based (may be 0 if VPS clock is behind NAS clock)
+          duration = Math.max(0, Math.floor((now - effectiveStartMs) / 1000));
+        }
+      }
 
       // Use radacct bytes (updated by Interim-Update packets from router)
       const uploadBytes   = Number(acct.acctinputoctets  ?? 0);
