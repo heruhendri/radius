@@ -101,11 +101,11 @@ export default function SessionsPage() {
     return Math.max(0, Math.floor((now - startMs) / 1000));
   };
 
-  const fetchSessions = async (page: number = 1) => {
+  const fetchSessions = async (page: number = 1, silent = false) => {
     try {
       // Pastikan page adalah number
       const pageNum = typeof page === 'number' ? page : 1;
-      setLoading(true);
+      if (!silent) setLoading(true);
       const params = new URLSearchParams();
       // Full RADIUS mode dengan pagination
       params.set('page', pageNum.toString());
@@ -153,11 +153,19 @@ export default function SessionsPage() {
 
   useEffect(() => {
     fetchSessions(1);
-    // Auto-refresh setiap 10 detik - live bytes dari MikroTik API
+    // Auto-refresh setiap 10 detik — silent refresh to prevent full-page spinner
     const interval = setInterval(() => {
-      fetchSessions(currentPage);
+      fetchSessions(currentPage, true);
     }, 10000);
-    return () => clearInterval(interval);
+    // Refresh immediately when tab becomes visible (browser throttles background timers)
+    const onVisible = () => {
+      if (!document.hidden) fetchSessions(currentPage, true);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [typeFilter, routerFilter, searchFilter, pageSize, currentPage]);
 
   // Export functions

@@ -73,7 +73,17 @@ export default function AgentSessionsPage() {
     const interval = setInterval(() => {
       loadSessions(agentData.id, true);
     }, 30000);
-    return () => clearInterval(interval);
+
+    // Refresh immediately when tab becomes visible (browser throttles background timers)
+    const onVisible = () => {
+      if (!document.hidden) loadSessions(agentData.id, true);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [router]);
 
   useEffect(() => {

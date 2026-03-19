@@ -318,7 +318,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
               >
                 {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-white" />}
               </button>
-              {agent && <AgentNotificationDropdown agentId={agent.id} />}
+              {agent && <AgentNotificationDropdown agentId={agent.id} enableToasts={false} />}
               <button
                 onClick={handleLogout}
                 className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition border border-white/20"

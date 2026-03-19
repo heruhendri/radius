@@ -24,8 +24,8 @@ export default function NotificationDropdown() {
 
   useEffect(() => {
     loadNotifications();
-    // Refresh every 30 seconds
-    const interval = setInterval(loadNotifications, 30000);
+    // Refresh every 60 seconds (layout already polls at 30s for toasts + badge)
+    const interval = setInterval(loadNotifications, 60000);
     return () => clearInterval(interval);
   }, []);
 

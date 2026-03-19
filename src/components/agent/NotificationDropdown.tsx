@@ -18,9 +18,13 @@ interface Notification {
 
 interface AgentNotificationDropdownProps {
   agentId: string;
+  enableToasts?: boolean;
 }
 
-export default function AgentNotificationDropdown({ agentId }: AgentNotificationDropdownProps) {
+// Module-level dedup: prevents two mounted instances from polling simultaneously
+let _agentPollingInstance: string | null = null;
+
+export default function AgentNotificationDropdown({ agentId, enableToasts = true }: AgentNotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -28,15 +32,25 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
   const dropdownRef = useRef<HTMLDivElement>(null);
   const isFirstLoadRef = useRef(true);
   const shownNotifIdsRef = useRef<Set<string>>(new Set());
+  const instanceIdRef = useRef(Math.random().toString(36).slice(2));
   const { addToast } = useToast();
 
   useEffect(() => {
-    if (agentId) {
-      loadNotifications();
-      // Refresh every 15 seconds for agent (more frequent)
-      const interval = setInterval(loadNotifications, 15000);
-      return () => clearInterval(interval);
+    if (!agentId) return;
+    // Only the first mounted instance polls (prevents double polling from desktop+mobile headers)
+    const id = instanceIdRef.current;
+    if (_agentPollingInstance && _agentPollingInstance !== id) {
+      // Another instance is already polling — just load once for the dropdown UI
+      loadNotifications(true);
+      return;
     }
+    _agentPollingInstance = id;
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 15000);
+    return () => {
+      clearInterval(interval);
+      if (_agentPollingInstance === id) _agentPollingInstance = null;
+    };
   }, [agentId]);
 
   useEffect(() => {
@@ -68,16 +82,19 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
     }
   };
 
-  const loadNotifications = async () => {
+  const loadNotifications = async (skipToasts = false) => {
     if (!agentId) return;
     
     try {
       const res = await fetch(`/api/agent/notifications?limit=10&agentId=${agentId}`);
       const data = await res.json();
       if (data.success) {
-        if (isFirstLoadRef.current) {
+        if (skipToasts || !enableToasts) {
+          // Passive instance — just update dropdown data, no toasts
+          data.notifications.forEach((n: Notification) => shownNotifIdsRef.current.add(n.id));
+          isFirstLoadRef.current = false;
+        } else if (isFirstLoadRef.current) {
           // On first load: show toasts for RECENT unread notifications (created in last 15 min)
-          // This ensures agent sees notifications that arrived before they opened the portal
           const recentThreshold = new Date(Date.now() - 15 * 60 * 1000);
           const recentUnread = (data.notifications as Notification[]).filter(
             (n) => !n.isRead && new Date(n.createdAt) > recentThreshold
@@ -90,7 +107,6 @@ export default function AgentNotificationDropdown({ agentId }: AgentNotification
               duration: 7000,
             });
           }
-          // Record all IDs so they don't toast again on subsequent polls
           data.notifications.forEach((n: Notification) => shownNotifIdsRef.current.add(n.id));
           isFirstLoadRef.current = false;
         } else {
