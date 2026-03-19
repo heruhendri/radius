@@ -3,7 +3,6 @@ import { prisma } from '@/server/db/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { getTimezoneOffsetMs } from '@/lib/timezone';
-import { getOnlineUserDetail } from '@/server/cache/online-users.cache';
 
 // ─── Formatting helpers ─────────────────────────────────────────────────────
 
@@ -260,9 +259,7 @@ export async function GET(request: NextRequest) {
     // Vouchers with only OLD stop records (before firstLoginAt) have a new login
     // that isn't yet in radacct — they should show as synthetic.
     // lastKnownIpMap: fallback IP from the most recent radacct row (even if stopped).
-    // Needed because cleanupStaleSessions() may have marked the active row as stopped
-    // before the active-session query runs, turning the session into a synthetic one
-    // with no Redis entry — the framedipaddress in radacct is the only IP source left.
+    // Needed because cleanupStaleSessions() may have marked the active row as stopped\n    // before the active-session query runs — the framedipaddress in radacct is the only IP source left.
     const lastKnownIpMap = new Map<string, string>();
     if (orphanedActiveVouchers.length > 0) {
       const orphanCodes = orphanedActiveVouchers.map(v => v.code);
@@ -289,10 +286,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const orphanedRedisDetails = await Promise.allSettled(
-      orphanedActiveVouchers.map((v) => getOnlineUserDetail(v.code)),
-    );
-
     const syntheticHotspotSessions = orphanedActiveVouchers.map((voucher, i) => {
         const effectiveStartMs = new Date(voucher.firstLoginAt!).getTime();
         const effectiveStartTime = new Date(effectiveStartMs).toISOString();
@@ -301,28 +294,25 @@ export async function GET(request: NextRequest) {
           voucher.router
             ? { id: voucher.router.id, name: voucher.router.name }
             : { id: 'unknown', name: 'Unknown' };
-        const redis = orphanedRedisDetails[i].status === 'fulfilled' ? orphanedRedisDetails[i].value : null;
-        const uploadBytes = redis?.inputOctets ?? 0;
-        const downloadBytes = redis?.outputOctets ?? 0;
         return {
           id: `voucher-${voucher.id}`,
           username: voucher.code,
-          sessionId: redis?.sessionId || null,
+          sessionId: null,
           type: 'hotspot' as const,
           nasIpAddress: voucher.router?.nasname || null,
-          framedIpAddress: redis?.framedIp || lastKnownIpMap.get(voucher.code) || null,
-          macAddress: redis?.callingStationId || '-',
+          framedIpAddress: lastKnownIpMap.get(voucher.code) || null,
+          macAddress: '-',
           calledStationId: '-',
           startTime: effectiveStartTime,
           lastUpdate: null,
           duration,
           durationFormatted: formatDuration(duration),
-          uploadBytes,
-          downloadBytes,
-          totalBytes: uploadBytes + downloadBytes,
-          uploadFormatted: formatBytes(uploadBytes),
-          downloadFormatted: formatBytes(downloadBytes),
-          totalFormatted: formatBytes(uploadBytes + downloadBytes),
+          uploadBytes: 0,
+          downloadBytes: 0,
+          totalBytes: 0,
+          uploadFormatted: formatBytes(0),
+          downloadFormatted: formatBytes(0),
+          totalFormatted: formatBytes(0),
           router,
           user: null,
           voucher: {
@@ -447,36 +437,8 @@ export async function GET(request: NextRequest) {
       };
     }), ...syntheticHotspotSessions];
 
-    // ── 4c. Redis enrichment for hotspot sessions missing MAC/IP ────────────
-    // Covers: radacct entry exists but callingstationid/framedipaddress are
-    // empty (MikroTik sent Accounting-Start without those attributes, but
-    // the REST hook captured them and stored in Redis).
-    const hotspotSessionsMissingData = allSessions.filter(
-      (s) => s.type === 'hotspot' && (!s.macAddress || !s.framedIpAddress),
-    );
-    if (hotspotSessionsMissingData.length > 0) {
-      const redisEnrich = await Promise.allSettled(
-        hotspotSessionsMissingData.map((s) => getOnlineUserDetail(s.username)),
-      );
-      const redisMap = new Map<string, Awaited<ReturnType<typeof getOnlineUserDetail>>>();
-      hotspotSessionsMissingData.forEach((s, i) => {
-        const r = redisEnrich[i];
-        if (r.status === 'fulfilled' && r.value) redisMap.set(s.username, r.value);
-      });
-      allSessions = allSessions.map((s) => {
-        if (s.type !== 'hotspot') return s;
-        const redis = redisMap.get(s.username);
-        if (!redis) return s;
-        return {
-          ...s,
-          framedIpAddress: s.framedIpAddress || redis.framedIp || null,
-          macAddress: s.macAddress || redis.callingStationId || '-',
-        };
-      });
-    }
-
-    // ── 4d. Historical MAC fallback from radacct ───────────────────────────
-    // If current active row and Redis still miss MAC, reuse latest known MAC
+    // ── 4c. Historical MAC fallback from radacct ───────────────────────────
+    // If current active row still misses MAC, reuse latest known MAC
     // from previous accounting rows for the same username.
     const missingMacUsernames = [
       ...new Set(

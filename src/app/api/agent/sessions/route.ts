@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { getTimezoneOffsetMs } from '@/lib/timezone';
-import { getOnlineUserDetail } from '@/server/cache/online-users.cache';
+
 
 function formatBytes(bytes: number): string {
   if (!bytes) return '0 B';
@@ -172,29 +172,6 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Redis enrichment for real radacct sessions missing MAC/IP.
-    // Covers the case where radacct has empty callingstationid/framedipaddress
-    // but the REST accounting hook stored them in Redis.
-    const realSessionsMissingData = sessionsWithProfile.filter(
-      (s) => !s.callingStationId || !s.framedIpAddress,
-    );
-    if (realSessionsMissingData.length > 0) {
-      const redisEnrich = await Promise.allSettled(
-        realSessionsMissingData.map((s) => getOnlineUserDetail(s.username)),
-      );
-      const redisMap = new Map<string, Awaited<ReturnType<typeof getOnlineUserDetail>>>();
-      realSessionsMissingData.forEach((s, i) => {
-        const r = redisEnrich[i];
-        if (r.status === 'fulfilled' && r.value) redisMap.set(s.username, r.value);
-      });
-      for (const s of sessionsWithProfile) {
-        const redis = redisMap.get(s.username);
-        if (!redis) continue;
-        if (!s.framedIpAddress) s.framedIpAddress = redis.framedIp || '';
-        if (!s.callingStationId) s.callingStationId = redis.callingStationId || '';
-      }
-    }
-
     // Synthetic sessions: ACTIVE vouchers that have no current radacct record.
     // A voucher is orphaned only if it authenticated (firstLoginAt set) but the
     // current login is not yet in radacct (Accounting-Start not received).
@@ -236,33 +213,26 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const redisDetails = await Promise.allSettled(
-      orphanedVouchers.map((v) => getOnlineUserDetail(v.code)),
-    );
-
     const syntheticSessions = orphanedVouchers.map((voucher, i) => {
         const effectiveStartMs = new Date(voucher.firstLoginAt!).getTime();
         const effectiveStartTime = new Date(effectiveStartMs).toISOString().replace('Z', '');
         const duration = Math.max(0, Math.floor((now - effectiveStartMs) / 1000));
-        const redis = redisDetails[i].status === 'fulfilled' ? redisDetails[i].value : null;
-        const uploadBytes = redis?.inputOctets ?? 0;
-        const downloadBytes = redis?.outputOctets ?? 0;
         return {
           id: `voucher-${voucher.id}`,
           username: voucher.code,
           nasIpAddress: voucher.router?.nasname || null,
           nasPortId: null,
-          framedIpAddress: redis?.framedIp || lastKnownIpMap.get(voucher.code) || null,
-          callingStationId: redis?.callingStationId || null,
+          framedIpAddress: lastKnownIpMap.get(voucher.code) || null,
+          callingStationId: null,
           calledStationId: null,
-          acctSessionId: redis?.sessionId || null,
+          acctSessionId: null,
           acctStartTime: effectiveStartTime,
-          acctInputOctets: uploadBytes,
-          acctOutputOctets: downloadBytes,
+          acctInputOctets: 0,
+          acctOutputOctets: 0,
           acctSessionTime: duration,
           durationFormatted: formatDuration(duration),
-          uploadFormatted: formatBytes(uploadBytes),
-          downloadFormatted: formatBytes(downloadBytes),
+          uploadFormatted: formatBytes(0),
+          downloadFormatted: formatBytes(0),
           expiresAt: voucher.expiresAt
             ? new Date(voucher.expiresAt).toISOString()
             : null,
@@ -273,7 +243,7 @@ export async function GET(request: NextRequest) {
 
     const allSessions = [...sessionsWithProfile, ...syntheticSessions];
 
-    // Historical MAC fallback if both active row and Redis miss MAC.
+    // Historical MAC fallback from radacct.
     const missingMacUsernames = [
       ...new Set(
         allSessions
