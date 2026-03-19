@@ -49,7 +49,7 @@ Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with Free
 | Database | MySQL 8.0 + Prisma ORM |
 | RADIUS | FreeRADIUS 3.0.26 |
 | Process Manager | PM2 (cluster × 2) |
-| Cache | Redis (optional) |
+| Session Tracking | FreeRADIUS radacct (real-time) |
 | Maps | Leaflet / OpenStreetMap |
 
 ---
@@ -101,7 +101,7 @@ bash vps-install/vps-installer.sh
 ```
 
 The installer handles everything:
-- Node.js 20, MySQL 8.0 (auto-tuned to your RAM), FreeRADIUS 3.0.26, Nginx (performance-tuned), PM2, Redis
+- Node.js 20, MySQL 8.0 (auto-tuned to your RAM), FreeRADIUS 3.0.26, Nginx (performance-tuned), PM2
 - Database creation, Prisma schema push, seed data
 - FreeRADIUS config from `freeradius-config/` backup
 - Nginx upstream keepalive + gzip + SSL (Let's Encrypt or self-signed)
@@ -115,7 +115,6 @@ Supported environments: **Public VPS**, **Proxmox LXC**, **Proxmox VM**, **Bare 
 bash vps-install/install-system.sh      # System packages
 bash vps-install/install-nodejs.sh      # Node.js 20
 bash vps-install/install-mysql.sh       # MySQL 8.0 + performance tuning
-bash vps-install/install-redis.sh       # Redis
 bash vps-install/install-nginx.sh       # Nginx + global tuning
 bash vps-install/install-pm2.sh         # PM2 + build + start
 bash vps-install/install-freeradius.sh  # FreeRADIUS 3.0
@@ -244,23 +243,7 @@ Jika semua check local di atas OK, cek mapping di host Proxmox/router/cloud fire
 
 Catatan: `IP:2020` adalah port SSH, bukan URL web aplikasi.
 
-### 2) Redis gagal start (`redis-server.service failed`)
-
-```bash
-systemctl status redis-server --no-pager
-journalctl -xeu redis-server.service --no-pager -n 120
-tail -n 120 /var/log/redis/redis-server.log
-redis-cli -h 127.0.0.1 ping
-```
-
-Jalankan ulang installer Redis terbaru (sudah termasuk hardening config + diagnostic output):
-
-```bash
-cd /var/www/salfanet-radius
-bash vps-install/install-redis.sh
-```
-
-### 3) PM2 jalan tapi web tetap blank/error
+### 2) PM2 jalan tapi web tetap blank/error
 
 ```bash
 pm2 status
@@ -352,7 +335,7 @@ Dashboard · PPPoE · Hotspot · Agent · Invoice · Payment · Keuangan · Sess
 - Zero-downtime reload on update (`pm2 reload salfanet-radius`)
 - Admin UI card spacing polish (Push Notifications, Manual Payments, Network Trace)
 - Fix: hotspot profile modal showing raw i18n key (`hotspot.evoucherAccess` case fix)
-- Fix: dashboard SESI HOTSPOT AKTIF counting 0 despite active sessions (classification logic simplified + Redis supplement)
+- Fix: dashboard SESI HOTSPOT AKTIF counting 0 despite active sessions (classification logic simplified)
 
 ### v2.10.28 — March 12, 2026
 - Bank Accounts moved to Payment menu as separate page

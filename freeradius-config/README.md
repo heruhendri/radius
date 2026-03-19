@@ -153,7 +153,7 @@ Calls the Next.js app at `http://localhost:3000`:
 |---------|-----|---------|
 | `authorize` | `/api/radius/authorize` | Check user status BEFORE auth — returns Reject if expired/blocked |
 | `post-auth` | `/api/radius/post-auth` | After successful auth — set `firstLoginAt`, `expiresAt`, create billing transaction |
-| `accounting` | `/api/radius/accounting` | Every Start/Stop/Interim-Update — update Redis online session data |
+| `accounting` | `/api/radius/accounting` | Every Start/Stop/Interim-Update — session tracking via radacct |
 
 Pool: `start = 0`, `min = 0` — connections are made **lazily**
 (Next.js app may not be running yet at FreeRADIUS startup).
