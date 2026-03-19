@@ -67,6 +67,13 @@ export default function AgentSessionsPage() {
     const agentData = JSON.parse(agentDataStr);
     setAgent(agentData);
     loadSessions(agentData.id);
+
+    // Auto-refresh setiap 30 detik agar trafik upload/download hotspot ter-update
+    // (MikroTik mengirim Interim-Update setiap 60 detik)
+    const interval = setInterval(() => {
+      loadSessions(agentData.id, true);
+    }, 30000);
+    return () => clearInterval(interval);
   }, [router]);
 
   useEffect(() => {
@@ -82,8 +89,8 @@ export default function AgentSessionsPage() {
     }
   }, [searchQuery, sessions]);
 
-  const loadSessions = async (agentId: string) => {
-    setLoading(true);
+  const loadSessions = async (agentId: string, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(`/api/agent/sessions?agentId=${agentId}`, {
         signal: AbortSignal.timeout(15000),
@@ -167,7 +174,7 @@ export default function AgentSessionsPage() {
           <p className="text-xs lg:text-sm text-slate-500 dark:text-[#e0d0ff]/60 mt-1">{t('agent.portal.activeVouchers')}</p>
         </div>
         <button
-          onClick={() => agent && loadSessions(agent.id)}
+          onClick={() => agent && loadSessions(agent.id, false)}
           className="flex items-center gap-2 px-4 py-2 bg-[#bc13fe]/20 hover:bg-[#bc13fe]/30 border border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white transition"
         >
           <RefreshCcw className="h-4 w-4" />
