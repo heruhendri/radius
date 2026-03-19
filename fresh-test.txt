@@ -1,0 +1,34 @@
+=== Kill stray processes ===
+Killed port 3799
+Port 1812 free
+=== Start FreeRADIUS ===
+active
+
+=== Test 1: server1 via gateway secret PIQTqHhO22A6vkdu (NAS-IP=10.20.30.12) ===
+Sent Access-Request Id 173 from 0.0.0.0:54450 to 127.0.0.1:1812 length 77
+	User-Name = "server1"
+	User-Password = "salfanet"
+	NAS-IP-Address = 10.20.30.12
+	NAS-Port = 0
+	Cleartext-Password = "salfanet"
+Sent Access-Request Id 173 from 0.0.0.0:54450 to 127.0.0.1:1812 length 77
+	User-Name = "server1"
+	User-Password = "salfanet"
+	NAS-IP-Address = 10.20.30.12
+	NAS-Port = 0
+	Cleartext-Password = "salfanet"
+Sent Access-Request Id 173 from 0.0.0.0:54450 to 127.0.0.1:1812 length 77
+	User-Name = "server1"
+	User-Password = "salfanet"
+	NAS-IP-Address = 10.20.30.12
+	NAS-Port = 0
+	Cleartext-Password = "salfanet"
+(0) No reply from server for ID 173 socket 3
+Packet summary:
+	Accepted      : 0
+	Rejected      : 0
+	Lost          : 1
+	Passed filter : 0
+	Failed filter : 0
+
+=== Test 2: server1 via dstpaska secret jXXBZ7JDDwEhiOul (NAS-IP=10.20.30.12) ===

@@ -26,6 +26,8 @@ export DB_NAME="${DB_NAME:-salfanet_radius}"
 export DB_USER="${DB_USER:-salfanet_user}"
 export DB_PASSWORD="${DB_PASSWORD:-salfanetradius123}"
 export DB_ROOT_PASSWORD="${DB_ROOT_PASSWORD:-root123}"
+export SYSTEM_TIMEZONE="${SYSTEM_TIMEZONE:-Asia/Jakarta}"
+export MYSQL_TZ_OFFSET="${MYSQL_TZ_OFFSET:-+07:00}"
 export INSTALL_LOG="${INSTALL_LOG:-/var/log/salfanet-vps-install.log}"
 export INSTALL_INFO_FILE="${APP_DIR}/INSTALLATION_INFO.txt"
 

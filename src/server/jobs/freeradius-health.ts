@@ -387,14 +387,19 @@ export async function freeradiusHealthCheck(autoRestart = true): Promise<{
 
         // ==================== Isolir radgroupreply Init ====================
         // Ensure radgroupreply rows for the 'isolir' group exist.
-        // Uses INSERT IGNORE so this is a no-op when rows already exist.
+        // Rate-limit uses UPSERT so admin changes propagate automatically.
         try {
             const company = await prisma.company.findFirst({
                 select: { isolationRateLimit: true }
             });
             const rateLimit = company?.isolationRateLimit ?? '64k/64k';
+            // Upsert rate-limit: delete old value and re-insert so admin changes propagate
             await prisma.$executeRaw`
-                INSERT IGNORE INTO radgroupreply (groupname, attribute, op, value)
+                DELETE FROM radgroupreply
+                WHERE groupname = 'isolir' AND attribute = 'Mikrotik-Rate-Limit'
+            `;
+            await prisma.$executeRaw`
+                INSERT INTO radgroupreply (groupname, attribute, op, value)
                 VALUES ('isolir', 'Mikrotik-Rate-Limit', ':=', ${rateLimit})
             `;
             await prisma.$executeRaw`

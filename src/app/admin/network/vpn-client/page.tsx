@@ -323,10 +323,11 @@ export default function VpnClientPage() {
   authentication-port=1812 \\
   accounting-port=1813 \\
   timeout=3s \\
+  require-message-auth=no \\
   comment="SALFANET RADIUS via VPN"
 
-# Enable RADIUS for PPPoE
-/ppp aaa set use-radius=yes accounting=yes
+# Enable RADIUS for PPPoE (with interim-update every 5 minutes)
+/ppp aaa set use-radius=yes accounting=yes interim-update=5m
 
 # Enable RADIUS for Hotspot
 /ip hotspot profile set [find] use-radius=yes

@@ -1,0 +1,31 @@
+=== Capture RADIUS packets (15 detik) ===
+01:55:11.622004 ppp0  In  IP 10.20.30.12.37775 > 10.20.30.10.1812: RADIUS, Access-Request (1), id: 0x29 length: 267
+01:55:12.524793 ppp0  Out IP 10.20.30.10.1812 > 10.20.30.12.48731: RADIUS, Access-Reject (3), id: 0x28 length: 121
+01:55:12.634463 ppp0  Out IP 10.20.30.10.1812 > 10.20.30.12.37775: RADIUS, Access-Reject (3), id: 0x29 length: 121
+01:55:15.673743 ppp0  In  IP 10.20.30.12.51433 > 10.20.30.10.1812: RADIUS, Access-Request (1), id: 0x2a length: 268
+01:55:16.301148 ppp0  In  IP 10.20.30.12.59547 > 10.20.30.10.1812: RADIUS, Access-Request (1), id: 0x2b length: 282
+01:55:16.685166 ppp0  Out IP 10.20.30.10.1812 > 10.20.30.12.51433: RADIUS, Access-Reject (3), id: 0x2a length: 121
+01:55:17.311991 ppp0  Out IP 10.20.30.10.1812 > 10.20.30.12.59547: RADIUS, Access-Reject (3), id: 0x2b length: 121
+
+
+=== Cek listening interface ===
+UNCONN 0      0            0.0.0.0:1812       0.0.0.0:*    users:(("freeradius",pid=974108,fd=15))
+UNCONN 0      0          127.0.0.1:18120      0.0.0.0:*    users:(("freeradius",pid=974108,fd=14))
+
+=== All network interfaces ===
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    inet 127.0.0.1/8 scope host lo
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    inet 103.151.140.110/25 brd 103.151.140.127 scope global eth0
+24: ppp0: <POINTOPOINT,MULTICAST,NOARP,UP,LOWER_UP> mtu 1450 qdisc fq_codel state UNKNOWN group default qlen 3
+    inet 10.20.30.10 peer 10.20.30.1/32 scope global ppp0
+
+=== tcpdump raw di eth0 (public) ===
+
+
+=== tcpdump raw di ppp0 (VPN) ===
+01:55:26.928333 IP 10.20.30.12.44908 > 10.20.30.10.1812: RADIUS, Access-Request (1), id: 0x2c length: 281
+01:55:27.403204 IP 10.20.30.12.42325 > 10.20.30.10.1812: RADIUS, Access-Request (1), id: 0x2d length: 265
+01:55:27.940163 IP 10.20.30.10.1812 > 10.20.30.12.44908: RADIUS, Access-Reject (3), id: 0x2c length: 121
+01:55:28.121807 IP 10.20.30.12.39687 > 10.20.30.10.1812: RADIUS, Access-Request (1), id: 0x2e length: 267
+01:55:28.415948 IP 10.20.30.10.1812 > 10.20.30.12.42325: RADIUS, Access-Reject (3), id: 0x2d length: 121

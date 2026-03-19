@@ -271,9 +271,9 @@ setup_ppp_tun() {
 configure_timezone() {
     print_step "Configuring timezone and NTP synchronization"
     
-    # Set timezone to Asia/Jakarta (WIB)
-    print_info "Setting timezone to Asia/Jakarta (WIB)..."
-    timedatectl set-timezone Asia/Jakarta
+    # Set timezone (configurable via SYSTEM_TIMEZONE in common.sh)
+    print_info "Setting timezone to ${SYSTEM_TIMEZONE}..."
+    timedatectl set-timezone "${SYSTEM_TIMEZONE}"
     print_success "Timezone set to: $(timedatectl show --property=Timezone --value)"
 }
 

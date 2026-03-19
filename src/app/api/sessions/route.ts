@@ -365,7 +365,7 @@ export async function GET(request: NextRequest) {
       // wrong (e.g. hours ahead/behind). Since duration = DB(update) - DB(start)
       // cancels the NAS clock offset, we use:
       //   real startTime (WIB-as-UTC) = VPS_now - duration
-      //   real lastUpdate (WIB-as-UTC) ≈ VPS_now (last interim was ≤ 300s ago)
+      //   real lastUpdate (WIB-as-UTC) ≈ VPS_now (last interim was ≤ Acct-Interim-Interval ago)
       if (acct.acctstarttime && duration > 0) {
         effectiveStartTime = new Date(now - duration * 1000).toISOString();
       }
@@ -385,7 +385,7 @@ export async function GET(request: NextRequest) {
         calledStationId: acct.calledstationid || '-',
         startTime: effectiveStartTime,
         lastUpdate: acct.acctupdatetime
-          ? new Date(now).toISOString()  // VPS real time ≈ last interim-update time (±300s)
+          ? new Date(now).toISOString()  // VPS real time ≈ last interim-update time
           : null,
         duration,
         durationFormatted: formatDuration(duration),

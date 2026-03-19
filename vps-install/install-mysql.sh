@@ -243,7 +243,7 @@ EOF
 }
 
 configure_mysql_timezone() {
-    print_info "Setting MySQL timezone to Asia/Jakarta..."
+    print_info "Setting MySQL timezone to ${SYSTEM_TIMEZONE} (${MYSQL_TZ_OFFSET})..."
     
     # Detect RAM to scale InnoDB buffer pool (use 25% of total RAM)
     local TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
@@ -271,8 +271,8 @@ configure_mysql_timezone() {
 # RAM: ${TOTAL_RAM_MB}MB
 # ============================================================
 
-# Timezone (WIB = UTC+7)
-default-time-zone = '+07:00'
+# Timezone (${SYSTEM_TIMEZONE} = ${MYSQL_TZ_OFFSET})
+default-time-zone = '${MYSQL_TZ_OFFSET}'
 log_bin_trust_function_creators = 1
 
 # Character set
@@ -316,7 +316,7 @@ EOF
         return 1
     fi
 
-    mysql_root_exec "SET GLOBAL time_zone = '+07:00';" || true
+    mysql_root_exec "SET GLOBAL time_zone = '${MYSQL_TZ_OFFSET}';" || true
     mysql_root_exec "SET GLOBAL log_bin_trust_function_creators = 1;" || true
     
     # Verify timezone
