@@ -1025,7 +1025,7 @@ export default function HotspotVoucherPage() {
                     </TableCell>
                     <TableCell className="py-1.5 text-[10px] hidden lg:table-cell">{v.createdAt ? <div><div>{formatLocal(v.createdAt, 'dd/MM/yyyy')}</div><div className="text-muted-foreground">{formatLocal(v.createdAt, 'HH:mm:ss')}</div></div> : <span className="text-muted-foreground">-</span>}</TableCell>
                     <TableCell className="py-1.5 text-[10px] hidden sm:table-cell">{v.firstLoginAt ? <div><div>{formatLocal(v.firstLoginAt, 'dd/MM/yyyy')}</div><div className="text-muted-foreground">{formatLocal(v.firstLoginAt, 'HH:mm:ss')}</div></div> : <span className="text-muted-foreground italic">-</span>}</TableCell>
-                    <TableCell className="py-1.5 text-[10px] hidden md:table-cell">{v.expiresAt ? <div><div>{formatLocal(v.expiresAt, 'dd/MM/yyyy')}</div>{v.status === 'ACTIVE' && <div className="text-primary font-medium">{timeLeft(v.expiresAt)}</div>}</div> : <span className="text-muted-foreground">-</span>}</TableCell>
+                    <TableCell className="py-1.5 text-[10px] hidden md:table-cell">{v.expiresAt ? <div><div>{formatLocal(v.expiresAt, 'dd MMM yyyy HH:mm')}</div>{v.status === 'ACTIVE' && <div className="text-primary font-medium">{timeLeft(v.expiresAt)}</div>}</div> : <span className="text-muted-foreground">-</span>}</TableCell>
                     <TableCell className="py-1.5 text-right">
                       <div className="flex items-center justify-end gap-0.5">
                         <button onClick={() => openEditSingle(v)} className="p-1 text-primary hover:bg-primary/10 rounded"><Pencil className="h-3 w-3" /></button>
