@@ -100,37 +100,52 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Supplement: count truly orphaned ACTIVE vouchers.
-      // A voucher is "orphaned" only if it authenticated (firstLoginAt set) but no
-      // Accounting-Start arrived — i.e. the code does NOT appear in radacct at all
-      // (neither active nor stopped). Vouchers with a stopped session have properly
-      // disconnected and must NOT be counted as online.
-      const now = new Date();
+      // Supplement: count synthetic ACTIVE hotspot vouchers.
+      // These are vouchers that are ACTIVE + firstLoginAt set but have NO active
+      // radacct row. Matches the same logic as /api/sessions synthetic sessions:
+      //   - Exclude vouchers already counted via active radacct (in onlineUsernames)
+      //   - For vouchers with prior stopped records, only count if latest stop is
+      //     BEFORE firstLoginAt (new login has no Accounting-Start yet).
+      const nowTs = new Date();
       const activeCandidates = await prisma.hotspotVoucher.findMany({
         where: {
           status: 'ACTIVE',
           firstLoginAt: { not: null },
+          // Exclude vouchers already counted via active radacct
+          code: { notIn: [...onlineUsernames] },
           // Exclude already-expired vouchers whose status hasn't been updated yet
           OR: [
             { expiresAt: null },
-            { expiresAt: { gt: now } },
+            { expiresAt: { gt: nowTs } },
           ],
         },
-        select: { code: true },
+        select: { code: true, firstLoginAt: true },
       });
       if (activeCandidates.length > 0) {
         const candidateCodes = activeCandidates.map(v => v.code);
-        // Find which candidates have ANY radacct record (active or stopped)
-        const accountedInRadacct = await prisma.radacct.findMany({
-          where: { username: { in: candidateCodes } },
-          select: { username: true },
-          distinct: ['username'],
+        // Find the latest stopped session per voucher code
+        const stoppedRows = await prisma.radacct.findMany({
+          where: {
+            username: { in: candidateCodes },
+            acctstoptime: { not: null },
+          },
+          select: { username: true, acctstoptime: true },
+          orderBy: { acctstoptime: 'desc' },
         });
-        const accountedSet = new Set(accountedInRadacct.map(r => r.username));
-        const orphanCount = candidateCodes.filter(
-          code => !accountedSet.has(code)
-        ).length;
-        activeSessionsHotspot += orphanCount;
+        const latestStopMap = new Map<string, Date>();
+        for (const r of stoppedRows) {
+          if (r.acctstoptime && !latestStopMap.has(r.username)) {
+            latestStopMap.set(r.username, new Date(r.acctstoptime));
+          }
+        }
+        // Count vouchers where session is still "active" (not properly stopped after last login)
+        const syntheticCount = activeCandidates.filter(v => {
+          const latestStop = latestStopMap.get(v.code);
+          if (!latestStop || !v.firstLoginAt) return true; // No prior stop → count as synthetic
+          // Count if latest stop is BEFORE firstLoginAt (new login has no Accounting-Start yet)
+          return latestStop.getTime() < new Date(v.firstLoginAt).getTime();
+        }).length;
+        activeSessionsHotspot += syntheticCount;
       }
     } catch (e) {
       console.error('[Dashboard] Error counting active sessions:', e);
