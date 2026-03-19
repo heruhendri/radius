@@ -183,29 +183,40 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Synthetic sessions: ACTIVE vouchers that have no radacct record at all.
-    // A voucher is orphaned only if it authenticated (firstLoginAt set) but no
-    // Accounting-Start was ever recorded — not even a stopped entry.
-    // Vouchers with a stopped radacct entry properly disconnected; exclude them.
-    const stoppedCodes = await prisma.radacct.findMany({
+    // Synthetic sessions: ACTIVE vouchers that have no current radacct record.
+    // A voucher is orphaned only if it authenticated (firstLoginAt set) but the
+    // current login is not yet in radacct (Accounting-Start not received).
+    // Only exclude if the LATEST stop record is >= firstLoginAt (already disconnected).
+    // Vouchers with only OLD stop records have a new login → show as synthetic.
+    const stoppedRows = await prisma.radacct.findMany({
       where: {
         username: { in: voucherCodes },
         acctstoptime: { not: null },
       },
-      select: { username: true },
-      distinct: ['username'],
+      select: { username: true, acctstoptime: true },
+      orderBy: { acctstoptime: 'desc' },
     });
-    const stoppedCodeSet = new Set(stoppedCodes.map(s => s.username));
+    // Build map: username → latest stop time
+    const latestStopMap = new Map<string, Date>();
+    for (const r of stoppedRows) {
+      if (r.acctstoptime && !latestStopMap.has(r.username)) {
+        latestStopMap.set(r.username, new Date(r.acctstoptime));
+      }
+    }
 
     const nowMs = Date.now();
     const orphanedVouchers = vouchers.filter(
-      (v) =>
-        v.status === 'ACTIVE' &&
-        v.firstLoginAt !== null &&
-        !activeRadacctCodes.has(v.code) &&
-        !stoppedCodeSet.has(v.code) &&
-        // Exclude already-expired vouchers whose status hasn't been updated yet
-        (v.expiresAt === null || new Date(v.expiresAt).getTime() > nowMs),
+      (v) => {
+        if (v.status !== 'ACTIVE') return false;
+        if (!v.firstLoginAt) return false;
+        if (activeRadacctCodes.has(v.code)) return false;
+        // Exclude already-expired vouchers
+        if (v.expiresAt !== null && new Date(v.expiresAt).getTime() <= nowMs) return false;
+        // Only exclude if latest stop >= firstLoginAt (properly disconnected after latest login)
+        const latestStop = latestStopMap.get(v.code);
+        if (latestStop && latestStop.getTime() >= new Date(v.firstLoginAt).getTime()) return false;
+        return true;
+      }
     );
 
     const redisDetails = await Promise.allSettled(

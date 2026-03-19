@@ -255,17 +255,30 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Filter out vouchers that have a stopped radacct record — they properly
-    // disconnected and are NOT currently online.
+    // Filter out vouchers whose latest stop was AFTER their current firstLoginAt.
+    // This means they properly disconnected after this login.
+    // Vouchers with only OLD stop records (before firstLoginAt) have a new login
+    // that isn't yet in radacct — they should show as synthetic.
     if (orphanedActiveVouchers.length > 0) {
       const orphanCodes = orphanedActiveVouchers.map(v => v.code);
-      const accountedOrphans = await prisma.radacct.findMany({
-        where: { username: { in: orphanCodes } },
-        select: { username: true },
-        distinct: ['username'],
+      const stoppedRows = await prisma.radacct.findMany({
+        where: { username: { in: orphanCodes }, acctstoptime: { not: null } },
+        select: { username: true, acctstoptime: true },
+        orderBy: { acctstoptime: 'desc' },
       });
-      const accountedSet = new Set(accountedOrphans.map(r => r.username));
-      orphanedActiveVouchers = orphanedActiveVouchers.filter(v => !accountedSet.has(v.code));
+      // Build map: username → latest stop time
+      const latestStopMap = new Map<string, Date>();
+      for (const r of stoppedRows) {
+        if (r.acctstoptime && !latestStopMap.has(r.username)) {
+          latestStopMap.set(r.username, new Date(r.acctstoptime));
+        }
+      }
+      orphanedActiveVouchers = orphanedActiveVouchers.filter(v => {
+        const latestStop = latestStopMap.get(v.code);
+        if (!latestStop || !v.firstLoginAt) return true; // No prior stop → show synthetic
+        // Exclude only if the most recent stop is >= firstLoginAt (session already ended)
+        return latestStop.getTime() < new Date(v.firstLoginAt).getTime();
+      });
     }
 
     const orphanedRedisDetails = await Promise.allSettled(
