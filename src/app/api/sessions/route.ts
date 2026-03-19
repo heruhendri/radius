@@ -400,8 +400,11 @@ export async function GET(request: NextRequest) {
         macAddress: acct.callingstationid || '',
         calledStationId: acct.calledstationid || '-',
         startTime: effectiveStartTime,
+        // Keep DB value as source of truth. `acctupdatetime` comes from RADIUS
+        // accounting updates and is already in the same WIB-as-UTC space
+        // as other session timestamps displayed by formatWIB().
         lastUpdate: acct.acctupdatetime
-          ? new Date(now).toISOString()  // VPS real time ≈ last interim-update time
+          ? new Date(acct.acctupdatetime).toISOString()
           : null,
         duration,
         durationFormatted: formatDuration(duration),
@@ -496,7 +499,9 @@ export async function GET(request: NextRequest) {
           s.uploadFormatted = formatBytes(uploadBytes);
           s.downloadFormatted = formatBytes(downloadBytes);
           s.totalFormatted = formatBytes(totalBytes);
-          s.lastUpdate = new Date().toISOString();
+          // Only synthesize lastUpdate when DB update time is missing.
+          // Use WIB-as-UTC epoch to stay consistent with formatWIB().
+          s.lastUpdate = s.lastUpdate || new Date(Date.now() + TZ_OFFSET_MS).toISOString();
           s.dataSource = s.dataSource === 'radius' ? 'radius+realtime' : s.dataSource;
         }
       }
