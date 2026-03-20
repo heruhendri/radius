@@ -23,6 +23,7 @@ interface PPPoEProfile {
   rateLimit?: string;
   validityValue: number; validityUnit: 'DAYS' | 'MONTHS';
   sharedUser: boolean; isActive: boolean; syncedToRadius: boolean; createdAt: string;
+  userCount?: number;
 }
 
 type UnitType = 'Mbps' | 'Kbps';
@@ -346,37 +347,79 @@ export default function PPPoEProfilesPage() {
             <span className="text-xs font-medium">{t('pppoe.profilesList')}</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[900px]">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase">{t('common.name')}</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden md:table-cell">{t('pppoe.groupLabel')}</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase">{t('hotspot.price')}</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden sm:table-cell">{t('hotspot.speed')}</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase hidden lg:table-cell">{t('pppoe.validity')}</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase">{t('common.status')}</th>
-                  <th className="px-3 py-2 text-right text-[10px] font-medium text-muted-foreground uppercase"></th>
+                  <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nama Paket</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Group RADIUS</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Kecepatan</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Harga</th>
+                  <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pelanggan</th>
+                  <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RADIUS</th>
+                  <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">MikroTik</th>
+                  <th className="px-3 py-2.5 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {profiles.length === 0 ? (
-                  <tr><td colSpan={7} className="px-3 py-8 text-center text-muted-foreground text-xs">{t('pppoe.noProfiles')}</td></tr>
+                  <tr>
+                    <td colSpan={9} className="px-3 py-12 text-center">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <FileText className="h-8 w-8 opacity-30" />
+                        <p className="text-xs">Belum ada paket PPPoE</p>
+                        <button onClick={() => { resetForm(); setEditingProfile(null); setIsDialogOpen(true); }} className="text-xs text-primary hover:underline">+ Buat Paket Pertama</button>
+                      </div>
+                    </td>
+                  </tr>
                 ) : (
                   profiles.map((profile) => (
-                    <tr key={profile.id} className="hover:bg-muted/50">
-                      <td className="px-3 py-2"><p className="font-medium text-xs">{profile.name}</p>{profile.description && <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">{profile.description}</p>}</td>
-                      <td className="px-3 py-2 font-mono text-xs hidden md:table-cell">{profile.groupName}</td>
-                      <td className="px-3 py-2 text-xs">Rp {profile.price.toLocaleString('id-ID')}</td>
-                      <td className="px-3 py-2 font-mono text-xs hidden sm:table-cell">{profile.downloadSpeed}M/{profile.uploadSpeed}M</td>
-                      <td className="px-3 py-2 text-xs hidden lg:table-cell">{profile.validityValue} {profile.validityUnit === 'MONTHS' ? 'Mo' : 'D'}</td>
-                      <td className="px-3 py-2">
-                        {profile.syncedToRadius ? (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-success/10 text-success"><CheckCircle2 className="h-2 w-2 mr-0.5" />{t('pppoe.synced')}</span>
-                        ) : (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-warning/10 text-warning"><XCircle className="h-2 w-2 mr-0.5" />{t('pppoe.pending')}</span>
+                    <tr key={profile.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-3 py-2.5">
+                        <p className="font-medium text-xs text-foreground">{profile.name}</p>
+                        {profile.description && <p className="text-[10px] text-muted-foreground truncate max-w-[160px] mt-0.5">{profile.description}</p>}
+                        <p className="text-[9px] text-muted-foreground mt-0.5">{profile.validityValue} {profile.validityUnit === 'MONTHS' ? 'Bulan' : 'Hari'}</p>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="font-mono text-[11px] text-foreground">{profile.groupName}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="font-mono text-xs font-medium text-foreground">{profile.downloadSpeed}M/{profile.uploadSpeed}M</span>
+                        {profile.rateLimit && profile.rateLimit.includes(' ') && (
+                          <p className="text-[9px] text-muted-foreground mt-0.5 font-mono truncate max-w-[120px]">{profile.rateLimit}</p>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-3 py-2.5">
+                        <p className="text-xs font-medium text-foreground">Rp {profile.price.toLocaleString('id-ID')}</p>
+                        {profile.hpp && <p className="text-[9px] text-muted-foreground">HPP: Rp {profile.hpp.toLocaleString('id-ID')}</p>}
+                        {profile.ppnActive && <p className="text-[9px] text-[#00f7ff]">+PPN {profile.ppnRate ?? 11}%</p>}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <span className="text-sm font-semibold text-foreground">{profile.userCount ?? 0}</span>
+                        <p className="text-[9px] text-muted-foreground">pelanggan</p>
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {profile.isActive ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-green-500/10 text-green-400 border border-green-500/20"><CheckCircle2 className="h-2.5 w-2.5 mr-1" />Aktif</span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-muted text-muted-foreground border border-border"><XCircle className="h-2.5 w-2.5 mr-1" />Nonaktif</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {profile.syncedToRadius ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20"><CheckCircle2 className="h-2.5 w-2.5 mr-1" />Sync</span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"><XCircle className="h-2.5 w-2.5 mr-1" />Pending</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {profile.rateLimit ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20"><CheckCircle2 className="h-2.5 w-2.5 mr-1" />Terkonfigurasi</span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-muted text-muted-foreground border border-border"><XCircle className="h-2.5 w-2.5 mr-1" />Belum</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
                         <div className="flex justify-end gap-0.5">
                           <button onClick={() => handleEdit(profile)} className="p-1 text-muted-foreground hover:bg-muted rounded"><Pencil className="h-3 w-3" /></button>
                           <button onClick={() => setDeleteProfileId(profile.id)} className="p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-3 w-3" /></button>
