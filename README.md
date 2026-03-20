@@ -2,7 +2,7 @@
 
 Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with FreeRADIUS integration supporting PPPoE and Hotspot authentication.
 
-> **Latest:** v2.11.4 — Duplicate Notification Fix + Sessions Traffic Auto-Refresh
+> **Latest:** v2.11.5 — Ghost Session Fix + RADIUS Auth Hardening + Deploy Tooling Cleanup
 
 ---
 
@@ -327,6 +327,16 @@ Dashboard · PPPoE · Hotspot · Agent · Invoice · Payment · Keuangan · Sess
 ---
 
 ## 📝 Changelog
+
+### v2.11.5 — March 20, 2026
+- Fix: ghost sessions filtered from session list (sessions not in `pppoeUser` or `hotspotVoucher` are hidden)
+- Fix: RADIUS authorize now returns explicit REJECT for unregistered users (was allowing access via empty `{}`)
+- Fix: dashboard hotspot count cross-referenced against `hotspotVoucher` table (no more phantom counts)
+- Fix: `src/app/global-error.tsx` created to prevent Next.js 16 prerender crash on `/_global-error`
+- Fix: customer WiFi page card padding (explicit `p-4 sm:p-5` on all CyberCard instances)
+- Chore: restore `scripts/scan-api-endpoints.js` and `scripts/test-all-apis.js`
+- Chore: fix deploy script paths, add cross-platform `scripts/run-deploy.js` wrapper
+- Chore: add `npm run clean:local` and `clean:all` scripts, tidy `.gitignore`
 
 ### v2.11.0 — March 17, 2026
 - System Update admin hardened (spawn fd fix, app root resolver, sanitized env)

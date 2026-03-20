@@ -4,6 +4,61 @@ All notable changes to SALFANET RADIUS will be documented in this file.
 
 ---
 
+## [2.11.5] - 2026-03-20 (Ghost Session Fix + RADIUS Auth Hardening + Tooling Cleanup)
+
+### ✅ Fix: Ghost Sessions Filtered from Session List
+
+- `src/app/api/sessions/route.ts`: tambah `.filter()` sebelum `.map()` — session yang tidak terdaftar di `pppoeUser` maupun `hotspotVoucher` tidak akan ditampilkan.
+  - Mencegah "ghost session" dari user yang sudah dihapus atau tidak dikenal tetap muncul di halaman Sesi.
+
+### ✅ Fix: RADIUS Authorize Now Rejects Unregistered Users
+
+- `src/app/api/radius/authorize/route.ts`: pengguna yang tidak ditemukan di `pppoeUser` dan bukan voucher kini dikembalikan REJECT eksplisit, bukan `{}` (allow).
+  - Sebelumnya, user tidak dikenal bisa melewati FreeRADIUS karena `{}` diterjemahkan sebagai Access-Accept.
+  - Response baru: `"control:Auth-Type": "Reject"`, `"reply:Reply-Message": "User Tidak Terdaftar"`.
+
+### ✅ Fix: Dashboard Hotspot Session Count Only Counts Registered Vouchers
+
+- `src/app/api/dashboard/stats/route.ts`: counter `activeSessionsHotspot` sekarang cross-reference ke tabel `hotspotVoucher`.
+  - Session dari username yang tidak ada di `hotspotVoucher` diabaikan secara diam-diam.
+  - Tambah `Promise.all` untuk lookup `hotspotVoucherSet` secara paralel, menjaga performa.
+
+### ✅ Fix: Next.js 16 Build Crash on `/_global-error`
+
+- Buat `src/app/global-error.tsx` sebagai custom `'use client'` error boundary component.
+  - Tanpa file ini, Next.js 16 auto-generate `/_global-error` yang crash saat prerender dengan `TypeError: Cannot read properties of null (reading 'useContext')`.
+  - Component menampilkan pesan error dengan tombol "Coba Lagi" (`reset()`).
+
+### ✅ Fix: Customer WiFi Page Card Padding
+
+- `src/app/customer/wifi/page.tsx`: semua `CyberCard` kini memiliki `p-4 sm:p-5` eksplisit.
+  - Container wrapper menggunakan `p-4 sm:p-5 lg:p-6 space-y-4 sm:space-y-5`.
+
+### ✅ Chore: npm Scripts & Deploy Tooling
+
+- Restore `scripts/scan-api-endpoints.js` — scan semua `route.ts`, detect HTTP methods, output `API_ENDPOINTS.md`.
+- Restore `scripts/test-all-apis.js` — smoke test untuk endpoint publik (`/api/health`, `/api/public/*`).
+- Fix path deploy: `bash smart-deploy.sh` → `bash production/smart-deploy.sh`.
+- Buat `scripts/run-deploy.js` — cross-platform wrapper:
+  - Windows: print panduan WSL/Git Bash (graceful, exit 1)
+  - Linux/macOS: delegate ke `production/smart-deploy.sh`
+- Tambah scripts: `npm run clean:local`, `npm run clean:all`, `npm run deploy:status`, dll.
+- Tidy `.gitignore`: hapus duplikat, hapus `/.git/`, rapikan per section.
+
+### Files Changed
+- `src/app/api/sessions/route.ts` — ghost session filter
+- `src/app/api/radius/authorize/route.ts` — reject unregistered users
+- `src/app/api/dashboard/stats/route.ts` — hotspot count cross-ref
+- `src/app/global-error.tsx` — created (Next.js error boundary)
+- `src/app/customer/wifi/page.tsx` — explicit card padding
+- `scripts/scan-api-endpoints.js` — created (API scanner)
+- `scripts/test-all-apis.js` — created (smoke test)
+- `scripts/run-deploy.js` — created (cross-platform deploy wrapper)
+- `package.json` — restored test:api/test:scan, clean:local, fixed deploy paths
+- `.gitignore` — deduplicated and organized
+
+---
+
 ## [2.11.4] - 2026-03-19 (Duplicate Notification Fix + Sessions Traffic Auto-Refresh)
 
 ### ✅ Fix: Duplicate Toast Notifications

@@ -9,14 +9,38 @@
 
 **Salfanet Radius** adalah sistem billing ISP/RTRW.NET berbasis web dengan integrasi FreeRADIUS penuh. Mendukung PPPoE dan Hotspot, cocok untuk ISP kecil-menengah di Indonesia.
 
-- **Version**: 2.11.4
+- **Version**: 2.11.5
 - **Status**: Production-ready, deployed di VPS
-- **Last Updated**: March 19, 2026
+- **Last Updated**: March 20, 2026
 - **Latest Commit**: See GitHub
 - **GitHub**: https://github.com/s4lfanet/salfanet-radius (public)
 - **Live URL**: https://radius.yourdomain.com
 
 ### Recent Patch Log (March 2026)
+
+- **Fix: Ghost sessions filtered from display and RADIUS authorize** (`4e89616`)
+  - `sessions/route.ts`: tambah `.filter()` sebelum `.map()` — skip session yang tidak ada di `pppoeUser` maupun `hotspotVoucher`.
+  - `authorize/route.ts`: pengguna tidak terdaftar sekarang dikembalikan REJECT (`control:Auth-Type = Reject`) bukan `{}` (allow).
+
+- **Fix: Dashboard hotspot count cross-ref ke hotspotVoucher** (`57db2e6`)
+  - `dashboard/stats/route.ts`: counter `activeSessionsHotspot` hanya naik jika username ada di tabel `hotspotVoucher`.
+  - Tambah `Promise.all` lookup `hotspotVoucherSet` bersamaan dengan `pppoeByUsername`.
+  - Sesi yang tidak terdaftar di table manapun (ghost) sepenuhnya diabaikan dari hitungan.
+
+- **Fix: Next.js prerender crash pada `/_global-error`** (`bc3086c`)
+  - Buat `src/app/global-error.tsx` sebagai `'use client'` component dengan `<html>/<body>` tags.
+  - Tanpa file ini, Next.js 16 auto-generate `/_global-error` yang crash saat prerender dengan `TypeError: Cannot read properties of null (reading 'useContext')`.
+
+- **Fix: Customer WiFi page padding** (`027749e`)
+  - Semua `CyberCard` di `src/app/customer/wifi/page.tsx` kini punya `p-4 sm:p-5` eksplisit.
+  - Container wrapper menggunakan `p-4 sm:p-5 lg:p-6 space-y-4 sm:space-y-5`.
+
+- **Chore: Cleanup npm scripts + cross-platform deploy wrapper** (`9101c90`, `d646116`)
+  - Restore `scripts/scan-api-endpoints.js` dan `scripts/test-all-apis.js` yang hilang.
+  - Fix path deploy dari `bash smart-deploy.sh` → `bash production/smart-deploy.sh`.
+  - Buat `scripts/run-deploy.js` — wrapper cross-platform; di Windows menampilkan panduan WSL/Git Bash; di Linux/macOS meneruskan ke `production/smart-deploy.sh`.
+  - Tambah `npm run clean:local` dan `clean:all` untuk membersihkan `.next`, tsbuildinfo, dll.
+  - Tidy `.gitignore`: hapus duplikat, hapus entry `/.git/`, rapikan per section.
 
 - **Enhancement: Manual agent deposit with transfer proof + target admin account**
   - Agent manual top-up sekarang memilih rekening tujuan admin dari `company.bankAccounts` (API: `/api/company/info`).
@@ -111,7 +135,6 @@
 | Language | TypeScript |
 | Styling | Tailwind CSS + shadcn/ui + Radix UI |
 | Database | MySQL 8.0 + Prisma ORM v6 |
-| Cache | Redis (ioredis) |
 | Auth | next-auth v4, bcryptjs, JWT |
 | RADIUS | FreeRADIUS 3.0.26 (MySQL + REST) |
 | Jobs | node-cron (via `cron-service.js`) |
@@ -274,7 +297,16 @@ npm run dev              # Start Next.js dev server (Turbopack)
 npm run build            # Production build
 npx tsc --noEmit         # TypeScript check (must = 0 errors)
 npm run lint             # ESLint
-npm run test:run         # Vitest (15/15 must pass)
+npm run test:run         # Vitest (must pass)
+npm run test:api         # Smoke test public API endpoints
+npm run test:scan        # Scan & document all API endpoints → API_ENDPOINTS.md
+npm run clean:local      # Remove .next, tsconfig.tsbuildinfo, coverage, .turbo, .cache
+npm run clean:all        # clean:local + remove console.log (cleanup)
+npm run deploy           # Run production/smart-deploy.sh (bash required)
+npm run deploy:quick     # Quick deploy (build + PM2 restart)
+npm run deploy:full      # Full deploy (install deps + build + restart)
+npm run deploy:status    # Check deploy status
+npm run deploy:rollback  # Rollback last deploy
 
 # Database
 npx prisma db push       # Sync schema to DB (fresh install)
