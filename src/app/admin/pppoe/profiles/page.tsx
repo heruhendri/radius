@@ -1,7 +1,7 @@
 ﻿'use client';
 import { showSuccess, showError, showConfirm } from '@/lib/sweetalert';
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Pencil, Trash2, CheckCircle2, XCircle, FileText, RefreshCw, Download, Upload, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, CheckCircle2, XCircle, FileText, RefreshCw, Download, Upload, ChevronRight, ChevronDown, Eye, Radio, Wifi, WifiOff, RotateCcw } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
   SimpleModal,
@@ -47,6 +47,13 @@ export default function PPPoEProfilesPage() {
   const [formData, setFormData] = useState(defaultForm);
   const [showBurst, setShowBurst] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
+
+  // Detail view state
+  const [detailProfile, setDetailProfile] = useState<PPPoEProfile | null>(null);
+
+  // Sync state
+  const [syncingRadiusId, setSyncingRadiusId] = useState<string | null>(null);
+  const [syncingMikrotikId, setSyncingMikrotikId] = useState<string | null>(null);
 
   // Import state
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -176,6 +183,44 @@ export default function PPPoEProfilesPage() {
   };
 
   const resetForm = () => { setFormData({ ...defaultForm, groupName: '' }); setShowBurst(false); setFieldErrors({}); };
+
+  const handleSyncRadius = async (profile: PPPoEProfile) => {
+    setSyncingRadiusId(profile.id);
+    try {
+      const res = await fetch('/api/pppoe/profiles/sync-radius', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: profile.id }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        await showSuccess(result.message || 'Berhasil sync ke FreeRADIUS');
+        loadProfiles();
+      } else {
+        await showError(result.error || 'Gagal sync ke FreeRADIUS');
+      }
+    } catch (e) { await showError('Gagal sync ke FreeRADIUS'); }
+    finally { setSyncingRadiusId(null); }
+  };
+
+  const handleSyncMikrotik = async (profile: PPPoEProfile) => {
+    setSyncingMikrotikId(profile.id);
+    try {
+      const res = await fetch('/api/pppoe/profiles/sync-mikrotik', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: profile.id }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        await showSuccess(result.message || 'Berhasil sync ke MikroTik');
+        loadProfiles();
+      } else {
+        await showError(result.error || 'Gagal sync ke MikroTik');
+      }
+    } catch (e) { await showError('Gagal sync ke MikroTik'); }
+    finally { setSyncingMikrotikId(null); }
+  };
 
   // Export CSV
   const handleExport = () => {
@@ -420,9 +465,34 @@ export default function PPPoEProfilesPage() {
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-right">
-                        <div className="flex justify-end gap-0.5">
-                          <button onClick={() => handleEdit(profile)} className="p-1 text-muted-foreground hover:bg-muted rounded"><Pencil className="h-3 w-3" /></button>
-                          <button onClick={() => setDeleteProfileId(profile.id)} className="p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-3 w-3" /></button>
+                        <div className="flex justify-end items-center gap-0.5">
+                          <button
+                            title="Lihat Detail"
+                            onClick={() => setDetailProfile(profile)}
+                            className="p-1.5 text-muted-foreground hover:text-[#00f7ff] hover:bg-[#00f7ff]/10 rounded transition-colors"
+                          ><Eye className="h-3.5 w-3.5" /></button>
+                          <button
+                            title="Sync ke FreeRADIUS"
+                            onClick={() => handleSyncRadius(profile)}
+                            disabled={syncingRadiusId === profile.id}
+                            className="p-1.5 text-muted-foreground hover:text-blue-400 hover:bg-blue-400/10 rounded transition-colors disabled:opacity-40"
+                          >{syncingRadiusId === profile.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Radio className="h-3.5 w-3.5" />}</button>
+                          <button
+                            title="Sync ke MikroTik"
+                            onClick={() => handleSyncMikrotik(profile)}
+                            disabled={syncingMikrotikId === profile.id}
+                            className="p-1.5 text-muted-foreground hover:text-purple-400 hover:bg-purple-400/10 rounded transition-colors disabled:opacity-40"
+                          >{syncingMikrotikId === profile.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5" />}</button>
+                          <button
+                            title="Edit"
+                            onClick={() => handleEdit(profile)}
+                            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                          ><Pencil className="h-3.5 w-3.5" /></button>
+                          <button
+                            title="Hapus"
+                            onClick={() => setDeleteProfileId(profile.id)}
+                            className="p-1.5 text-destructive hover:bg-destructive/10 rounded transition-colors"
+                          ><Trash2 className="h-3.5 w-3.5" /></button>
                         </div>
                       </td>
                     </tr>
@@ -684,6 +754,140 @@ export default function PPPoEProfilesPage() {
               </ModalButton>
             )}
           </ModalFooter>
+        </SimpleModal>
+
+        {/* Detail Modal */}
+        <SimpleModal isOpen={!!detailProfile} onClose={() => setDetailProfile(null)} size="md">
+          {detailProfile && (
+            <>
+              <ModalHeader>
+                <div className="flex items-start justify-between w-full">
+                  <div>
+                    <ModalTitle className="text-lg">{detailProfile.name}</ModalTitle>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-[#bc13fe]/20 text-[#bc13fe] border border-[#bc13fe]/30">{detailProfile.groupName}</span>
+                      <span className="text-[10px] text-muted-foreground">{detailProfile.validityValue} {detailProfile.validityUnit === 'MONTHS' ? 'MONTHS' : 'DAYS'}</span>
+                      {detailProfile.isActive
+                        ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-green-500/10 text-green-400 border border-green-500/20"><CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />Aktif</span>
+                        : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-muted text-muted-foreground border border-border"><XCircle className="h-2.5 w-2.5 mr-0.5" />Nonaktif</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </ModalHeader>
+              <ModalBody className="space-y-4">
+                {detailProfile.description && (
+                  <p className="text-xs text-muted-foreground">{detailProfile.description}</p>
+                )}
+
+                {/* Kecepatan */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Kecepatan</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                      <p className="text-[10px] text-muted-foreground mb-1">Download</p>
+                      <p className="text-base font-bold text-foreground">{detailProfile.downloadSpeed} Mbps</p>
+                      <p className="text-[9px] text-muted-foreground">{(detailProfile.downloadSpeed * 1024).toLocaleString('id-ID')} Kbps</p>
+                    </div>
+                    <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                      <p className="text-[10px] text-muted-foreground mb-1">Upload</p>
+                      <p className="text-base font-bold text-foreground">{detailProfile.uploadSpeed} Mbps</p>
+                      <p className="text-[9px] text-muted-foreground">{(detailProfile.uploadSpeed * 1024).toLocaleString('id-ID')} Kbps</p>
+                    </div>
+                  </div>
+                  {detailProfile.rateLimit && (
+                    <p className="text-[10px] text-muted-foreground mt-2 font-mono bg-muted/30 px-2 py-1 rounded">Rate Limit: {detailProfile.rateLimit}</p>
+                  )}
+                </div>
+
+                {/* Harga */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Harga</p>
+                  <div className="border border-border rounded-lg divide-y divide-border">
+                    {detailProfile.hpp != null && (
+                      <div className="flex justify-between items-center px-3 py-2 text-xs">
+                        <span className="text-muted-foreground">Harga Modal</span>
+                        <span className="text-foreground">Rp {detailProfile.hpp.toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center px-3 py-2 text-xs">
+                      <span className="text-muted-foreground">Harga Jual</span>
+                      <span className="font-semibold text-foreground">Rp {detailProfile.price.toLocaleString('id-ID')}</span>
+                    </div>
+                    {detailProfile.hpp != null && (
+                      <div className="flex justify-between items-center px-3 py-2 text-xs">
+                        <span className="text-muted-foreground">Fee Reseller</span>
+                        <span className="text-green-400">Rp {(detailProfile.price - detailProfile.hpp).toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                    {detailProfile.ppnActive && (
+                      <>
+                        <div className="flex justify-between items-center px-3 py-2 text-xs">
+                          <span className="text-muted-foreground">PPN</span>
+                          <span className="text-yellow-400">{detailProfile.ppnRate ?? 11}%</span>
+                        </div>
+                        <div className="flex justify-between items-center px-3 py-2 text-xs">
+                          <span className="text-muted-foreground">Harga Final (incl. PPN)</span>
+                          <span className="font-bold text-[#00f7ff]">Rp {Math.round(detailProfile.price * (1 + (detailProfile.ppnRate ?? 11) / 100)).toLocaleString('id-ID')}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status & Pengaturan */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Pengaturan</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      {detailProfile.sharedUser
+                        ? <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                        : <CheckCircle2 className="h-3.5 w-3.5 text-[#00f7ff]" />}
+                      <span className="text-muted-foreground">Shared User</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {detailProfile.syncedToRadius
+                        ? <CheckCircle2 className="h-3.5 w-3.5 text-blue-400" />
+                        : <XCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+                      <span className="text-muted-foreground">RADIUS Synced</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">{detailProfile.userCount ?? 0} Pelanggan</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">{detailProfile.validityValue} {detailProfile.validityUnit === 'MONTHS' ? 'Bulan' : 'Hari'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sync Actions */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    onClick={() => { handleSyncRadius(detailProfile); setDetailProfile(null); }}
+                    disabled={syncingRadiusId === detailProfile.id}
+                    className="flex items-center justify-center gap-2 px-3 py-2 text-xs border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                  >
+                    <Radio className="h-3.5 w-3.5" />Sync FreeRADIUS
+                  </button>
+                  <button
+                    onClick={() => { handleSyncMikrotik(detailProfile); setDetailProfile(null); }}
+                    disabled={syncingMikrotikId === detailProfile.id}
+                    className="flex items-center justify-center gap-2 px-3 py-2 text-xs border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors"
+                  >
+                    <Wifi className="h-3.5 w-3.5" />Sync MikroTik
+                  </button>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <ModalButton variant="secondary" onClick={() => setDetailProfile(null)}>Tutup</ModalButton>
+                <ModalButton variant="primary" onClick={() => { setDetailProfile(null); handleEdit(detailProfile); }}>
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" />Edit Paket
+                </ModalButton>
+              </ModalFooter>
+            </>
+          )}
         </SimpleModal>
 
         {/* Delete Dialog */}
