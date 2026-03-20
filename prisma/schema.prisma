@@ -429,6 +429,8 @@ model pppoeProfile {
   uploadSpeed    Int
   rateLimit      String?                     // Store complex MikroTik rate limit formats
   groupName      String
+  hpp            Int?                        // Harga Modal / Biaya Pokok Penjualan
+  ppnActive      Boolean                     @default(false) // PPN aktif
   isActive       Boolean                     @default(true)
   lastSyncAt     DateTime?
   syncedToRadius Boolean                     @default(false)

@@ -53,6 +53,8 @@ export async function POST(request: NextRequest) {
       validityValue,
       validityUnit,
       sharedUser,
+      hpp,
+      ppnActive,
     } = body;
 
     // Parse rateLimit if provided (format: "10M/5M" or full MikroTik format)
@@ -93,6 +95,8 @@ export async function POST(request: NextRequest) {
         validityUnit,
         sharedUser: sharedUser !== undefined ? sharedUser : true,
         isActive: true,
+        hpp: hpp !== undefined ? parseInt(hpp) || null : null,
+        ppnActive: ppnActive === true,
       },
     });
 
@@ -189,6 +193,8 @@ export async function PUT(request: NextRequest) {
       validityUnit,
       sharedUser,
       isActive,
+      hpp,
+      ppnActive,
     } = body;
 
     if (!id) {
@@ -249,6 +255,8 @@ export async function PUT(request: NextRequest) {
     if (validityUnit) updateData.validityUnit = validityUnit;
     if (sharedUser !== undefined) updateData.sharedUser = sharedUser;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (hpp !== undefined) updateData.hpp = hpp !== null ? (parseInt(hpp) || null) : null;
+    if (ppnActive !== undefined) updateData.ppnActive = ppnActive === true;
 
     // Update profile
     const profile = await prisma.pppoeProfile.update({
