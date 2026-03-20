@@ -95,6 +95,14 @@ temp/
 # Build error logs
 build-error.log
 
+# Manual debug artifacts
+capture-result.txt
+chr-nat-result.txt
+fix-chr-result.txt
+fresh-test.txt
+test-result-output.txt
+test3-result.txt
+
 # Cache
 .cache/
 .parcel-cache/
