@@ -46,6 +46,8 @@ export async function POST(request: NextRequest) {
       name,
       description,
       groupName,
+      mikrotikProfileName,
+      ipPoolName,
       price,
       downloadSpeed: rawDownloadSpeed,
       uploadSpeed: rawUploadSpeed,
@@ -81,13 +83,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const finalGroupName = String(groupName).trim();
+    const finalMikrotikProfileName = String(mikrotikProfileName || name || groupName).trim();
+    const finalIpPoolName = typeof ipPoolName === 'string' ? ipPoolName.trim() || null : null;
+
     // Create profile
     const profile = await prisma.pppoeProfile.create({
       data: {
         id: crypto.randomUUID(),
         name,
         description: description || null,
-        groupName,
+        groupName: finalGroupName,
+        mikrotikProfileName: finalMikrotikProfileName,
+        ipPoolName: finalIpPoolName,
         price: parseInt(price),
         downloadSpeed: parseInt(downloadSpeed),
         uploadSpeed: parseInt(uploadSpeed),
@@ -109,7 +117,7 @@ export async function POST(request: NextRequest) {
 
       // Check if radgroupreply already exists for this groupName
       const existingGroup = await prisma.radgroupreply.findFirst({
-        where: { groupname: groupName, attribute: 'Mikrotik-Group' },
+        where: { groupname: finalGroupName, attribute: 'Mikrotik-Group' },
       });
 
       // Only create radgroupreply if not exists (allow multiple profiles with same group)
@@ -117,17 +125,17 @@ export async function POST(request: NextRequest) {
         // Create Mikrotik-Group attribute (maps to MikroTik PPP profile)
         await prisma.radgroupreply.create({
           data: {
-            groupname: groupName,
+            groupname: finalGroupName,
             attribute: 'Mikrotik-Group',
             op: ':=',
-            value: groupName, // Must match PPP profile name in MikroTik
+            value: finalMikrotikProfileName,
           },
         });
 
         // Create Mikrotik-Rate-Limit attribute (bandwidth limitation)
         await prisma.radgroupreply.create({
           data: {
-            groupname: groupName,
+            groupname: finalGroupName,
             attribute: 'Mikrotik-Rate-Limit',
             op: ':=',
             value: finalRateLimit,
@@ -138,7 +146,7 @@ export async function POST(request: NextRequest) {
         if (sharedUser !== false) {
           await prisma.radgroupcheck.create({
             data: {
-              groupname: groupName,
+              groupname: finalGroupName,
               attribute: 'Simultaneous-Use',
               op: ':=',
               value: '1', // Only 1 concurrent session
@@ -187,6 +195,8 @@ export async function PUT(request: NextRequest) {
       name,
       description,
       groupName,
+      mikrotikProfileName,
+      ipPoolName,
       price,
       downloadSpeed: rawDownloadSpeed,
       uploadSpeed: rawUploadSpeed,
@@ -232,14 +242,22 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check if groupName changed and new one already exists
-    if (groupName && groupName !== currentProfile.groupName) {
+    const normalizedGroupName = typeof groupName === 'string' ? groupName.trim() : undefined;
+    const normalizedMikrotikProfileName = typeof mikrotikProfileName === 'string'
+      ? mikrotikProfileName.trim()
+      : undefined;
+    const normalizedIpPoolName = typeof ipPoolName === 'string'
+      ? ipPoolName.trim() || null
+      : undefined;
+
+    if (normalizedGroupName && normalizedGroupName !== currentProfile.groupName) {
       const existingProfile = await prisma.pppoeProfile.findFirst({
-        where: { groupName },
+        where: { groupName: normalizedGroupName },
       });
 
       if (existingProfile) {
         return NextResponse.json(
-          { error: `Group name "${groupName}" already exists.` },
+          { error: `Group name "${normalizedGroupName}" already exists.` },
           { status: 400 }
         );
       }
@@ -249,7 +267,9 @@ export async function PUT(request: NextRequest) {
     const updateData: any = {};
     if (name) updateData.name = name;
     if (description !== undefined) updateData.description = description;
-    if (groupName) updateData.groupName = groupName;
+    if (normalizedGroupName) updateData.groupName = normalizedGroupName;
+    if (normalizedMikrotikProfileName !== undefined) updateData.mikrotikProfileName = normalizedMikrotikProfileName || (name || currentProfile.name);
+    if (normalizedIpPoolName !== undefined) updateData.ipPoolName = normalizedIpPoolName;
     if (price) updateData.price = parseInt(price);
     if (downloadSpeed !== undefined) updateData.downloadSpeed = parseInt(downloadSpeed.toString());
     if (uploadSpeed !== undefined) updateData.uploadSpeed = parseInt(uploadSpeed.toString());
@@ -269,10 +289,11 @@ export async function PUT(request: NextRequest) {
     });
 
     // Re-sync to RADIUS if groupName or speeds or sharedUser changed
-    if (groupName || parsedFromRateLimit || bodyRateLimit || sharedUser !== undefined) {
+    if (normalizedGroupName || normalizedMikrotikProfileName !== undefined || parsedFromRateLimit || bodyRateLimit || sharedUser !== undefined) {
       try {
         const oldGroupName = currentProfile.groupName;
-        const newGroupName = groupName || currentProfile.groupName;
+        const newGroupName = normalizedGroupName || currentProfile.groupName;
+        const newMikrotikProfileName = normalizedMikrotikProfileName || profile.mikrotikProfileName || newGroupName;
         const newDownload = downloadSpeed !== undefined ? downloadSpeed : currentProfile.downloadSpeed;
         const newUpload = uploadSpeed !== undefined ? uploadSpeed : currentProfile.uploadSpeed;
         // Use full rateLimit if provided, otherwise simple format
@@ -298,7 +319,7 @@ export async function PUT(request: NextRequest) {
               groupname: newGroupName,
               attribute: 'Mikrotik-Group',
               op: ':=',
-              value: newGroupName,
+              value: newMikrotikProfileName,
             },
             {
               groupname: newGroupName,

@@ -32,17 +32,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id, routerId } = await request.json();
+    const { id, routerId, mikrotikProfileName, ipPoolName } = await request.json();
     if (!id) {
       return NextResponse.json({ error: 'Profile ID is required' }, { status: 400 });
     }
 
-    const profile = await prisma.pppoeProfile.findUnique({ where: { id } });
+    const profile = await prisma.pppoeProfile.findUnique({ where: { id } }) as any;
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
     const rateLimit = profile.rateLimit || `${profile.downloadSpeed}M/${profile.uploadSpeed}M`;
+    const resolvedMikrotikProfileName = String(mikrotikProfileName || profile.mikrotikProfileName || profile.groupName || profile.name).trim();
+    const resolvedIpPoolName = typeof ipPoolName === 'string' ? ipPoolName.trim() : (profile.ipPoolName || '');
+
+    if (!resolvedMikrotikProfileName) {
+      return NextResponse.json({ error: 'Nama PPP Profile MikroTik wajib diisi' }, { status: 400 });
+    }
+
+    if (
+      profile.mikrotikProfileName !== resolvedMikrotikProfileName ||
+      (profile.ipPoolName || '') !== resolvedIpPoolName
+    ) {
+      await prisma.pppoeProfile.update({
+        where: { id },
+        data: {
+          mikrotikProfileName: resolvedMikrotikProfileName,
+          ipPoolName: resolvedIpPoolName || null,
+        },
+      } as any);
+    }
 
     // Get router — use specified router or first active router
     const router = routerId
@@ -66,7 +85,7 @@ export async function POST(request: NextRequest) {
 
       // Check if PPP profile already exists
       const existingProfiles = await api.write('/ppp/profile/print', [
-        `?name=${profile.groupName}`,
+        `?name=${resolvedMikrotikProfileName}`,
       ]);
 
       const sharedUserLimit = profile.sharedUser ? undefined : '1';
@@ -76,7 +95,9 @@ export async function POST(request: NextRequest) {
         const profileId = existingProfiles[0]['.id'];
         const updateParams: string[] = [
           `=.id=${profileId}`,
+          `=name=${resolvedMikrotikProfileName}`,
           `=rate-limit=${rateLimit}`,
+          `=remote-address=${resolvedIpPoolName}`,
         ];
         if (sharedUserLimit) {
           updateParams.push(`=only-one=${sharedUserLimit}`);
@@ -85,11 +106,14 @@ export async function POST(request: NextRequest) {
       } else {
         // Create new PPP profile
         const createParams: string[] = [
-          `=name=${profile.groupName}`,
+          `=name=${resolvedMikrotikProfileName}`,
           `=rate-limit=${rateLimit}`,
           '=use-encryption=default',
           '=change-tcp-mss=default',
         ];
+        if (resolvedIpPoolName) {
+          createParams.push(`=remote-address=${resolvedIpPoolName}`);
+        }
         if (sharedUserLimit) {
           createParams.push(`=only-one=${sharedUserLimit}`);
         }
@@ -100,7 +124,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: `Profile "${profile.name}" (${profile.groupName}) berhasil disinkronkan ke MikroTik ${router.ipAddress || router.nasname}`,
+        message: `Profile "${profile.name}" disinkronkan ke MikroTik ${router.ipAddress || router.nasname} dengan PPP Profile "${resolvedMikrotikProfileName}"${resolvedIpPoolName ? ` dan IP Pool "${resolvedIpPoolName}"` : ''}`,
         router: { id: router.id, name: router.name || router.nasname, ip: router.ipAddress || router.nasname },
       });
     } catch (mkError: any) {

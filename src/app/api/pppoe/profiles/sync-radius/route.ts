@@ -16,12 +16,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile ID is required' }, { status: 400 });
     }
 
-    const profile = await prisma.pppoeProfile.findUnique({ where: { id } });
+    const profile = await prisma.pppoeProfile.findUnique({ where: { id } }) as any;
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
     const rateLimit = profile.rateLimit || `${profile.downloadSpeed}M/${profile.uploadSpeed}M`;
+    const mikrotikProfileName = profile.mikrotikProfileName || profile.groupName;
 
     // Upsert radgroupreply: Mikrotik-Group
     const existingGroup = await prisma.radgroupreply.findFirst({
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (existingGroup) {
       await prisma.radgroupreply.update({
         where: { id: existingGroup.id },
-        data: { value: profile.groupName },
+        data: { value: mikrotikProfileName },
       });
     } else {
       await prisma.radgroupreply.create({
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
           groupname: profile.groupName,
           attribute: 'Mikrotik-Group',
           op: ':=',
-          value: profile.groupName,
+          value: mikrotikProfileName,
         },
       });
     }
