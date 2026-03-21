@@ -65,26 +65,29 @@ export async function POST(request: NextRequest) {
       port: router.port || 8728,
       user: router.username,
       password: router.password,
-      timeout: 10,
+      timeout: 15,
     });
 
     try {
-      await api.connect();
-
-      // Check if PPP profile already exists
-      const existingProfiles = await api.write('/ppp/profile/print', [
-        `?name=${resolvedMikrotikProfileName}`,
+      // Hard connection timeout — node-routeros "timeout" is idle-only, won't catch unreachable hosts
+      await Promise.race([
+        api.connect(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Connection timed out (15s)')), 15000)),
       ]);
 
-      const sharedUserLimit = profile.sharedUser ? undefined : '1';
+      // Fetch all profiles and filter in JS — avoids RouterOS query syntax ambiguity
+      const allProfiles = await api.write('/ppp/profile/print');
+      const existingProfile = allProfiles.find((p: any) => p['name'] === resolvedMikrotikProfileName);
 
-      if (existingProfiles && existingProfiles.length > 0) {
+      const sharedUserLimit = profile.sharedUser ? 'no' : 'yes';
+
+      if (existingProfile) {
         // Update existing profile
-        const profileId = existingProfiles[0]['.id'];
+        const profileId = existingProfile['.id'];
         const updateParams: string[] = [
           `=.id=${profileId}`,
-          `=name=${resolvedMikrotikProfileName}`,
           `=rate-limit=${rateLimit}`,
+          `=only-one=${sharedUserLimit}`,
         ];
         if (resolvedIpPoolName) {
           updateParams.push(`=remote-address=${resolvedIpPoolName}`);
@@ -92,15 +95,13 @@ export async function POST(request: NextRequest) {
         if (resolvedLocalAddress) {
           updateParams.push(`=local-address=${resolvedLocalAddress}`);
         }
-        if (sharedUserLimit) {
-          updateParams.push(`=only-one=${sharedUserLimit}`);
-        }
         await api.write('/ppp/profile/set', updateParams);
       } else {
         // Create new PPP profile
         const createParams: string[] = [
           `=name=${resolvedMikrotikProfileName}`,
           `=rate-limit=${rateLimit}`,
+          `=only-one=${sharedUserLimit}`,
           '=use-encryption=default',
           '=change-tcp-mss=default',
         ];
@@ -110,24 +111,25 @@ export async function POST(request: NextRequest) {
         if (resolvedLocalAddress) {
           createParams.push(`=local-address=${resolvedLocalAddress}`);
         }
-        if (sharedUserLimit) {
-          createParams.push(`=only-one=${sharedUserLimit}`);
-        }
         await api.write('/ppp/profile/add', createParams);
       }
 
       await api.close();
 
-      // Save pool, localAddress, and lastRouterId so next sync is 1-click
-      await prisma.pppoeProfile.update({
-        where: { id },
-        data: {
-          mikrotikProfileName: resolvedMikrotikProfileName,
-          ipPoolName: resolvedIpPoolName || null,
-          localAddress: resolvedLocalAddress || null,
-          lastRouterId: router.id,
-        },
-      } as any);
+      // Save sync config to DB for 1-click re-sync (non-critical — don't fail sync if DB update fails)
+      try {
+        await prisma.pppoeProfile.update({
+          where: { id },
+          data: {
+            mikrotikProfileName: resolvedMikrotikProfileName,
+            ipPoolName: resolvedIpPoolName || null,
+            localAddress: resolvedLocalAddress || null,
+            lastRouterId: router.id,
+          },
+        } as any);
+      } catch (dbErr: any) {
+        console.warn('[SyncMikroTik] DB update gagal (mungkin migrasi belum dijalankan):', dbErr?.message);
+      }
 
       return NextResponse.json({
         success: true,
@@ -136,9 +138,10 @@ export async function POST(request: NextRequest) {
       });
     } catch (mkError: any) {
       try { await api.close(); } catch { /* ignore */ }
-      console.error('MikroTik API error:', mkError);
+      const errMsg = mkError?.message || String(mkError);
+      console.error('MikroTik API error:', errMsg);
       return NextResponse.json({
-        error: `Gagal terhubung ke MikroTik: ${mkError?.message || mkError}`,
+        error: `Gagal ke MikroTik (${router.ipAddress || router.nasname}): ${errMsg}`,
         router: { name: router.name || router.nasname, ip: router.ipAddress || router.nasname },
       }, { status: 502 });
     }
