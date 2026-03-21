@@ -21,6 +21,7 @@ interface PPPoEProfile {
   hpp?: number | null; ppnActive?: boolean; ppnRate?: number | null;
   downloadSpeed: number; uploadSpeed: number; groupName: string;
   mikrotikProfileName?: string | null; ipPoolName?: string | null;
+  localAddress?: string | null; lastRouterId?: string | null;
   rateLimit?: string;
   validityValue: number; validityUnit: 'DAYS' | 'MONTHS';
   sharedUser: boolean; isActive: boolean; syncedToRadius: boolean; createdAt: string;
@@ -43,7 +44,7 @@ const defaultForm = {
   downloadSpeed: '10', uploadSpeed: '10', speedUnit: 'Mbps' as UnitType,
   burstDownload: '', burstUpload: '',
   burstThresholdDownload: '', burstThresholdUpload: '', burstTime: '8',
-  groupName: '', ipPoolName: '', validityValue: '1', validityUnit: 'MONTHS' as 'DAYS' | 'MONTHS',
+  groupName: '', validityValue: '1', validityUnit: 'MONTHS' as 'DAYS' | 'MONTHS',
   sharedUser: true, isActive: true,
 };
 
@@ -69,7 +70,6 @@ export default function PPPoEProfilesPage() {
   const [syncMikrotikTarget, setSyncMikrotikTarget] = useState<PPPoEProfile | null>(null);
   const [routers, setRouters] = useState<RouterOption[]>([]);
   const [selectedRouterId, setSelectedRouterId] = useState<string>('');
-  const [loadingRouters, setLoadingRouters] = useState(false);
   const [syncIpPoolName, setSyncIpPoolName] = useState('');
   const [syncLocalAddress, setSyncLocalAddress] = useState('');
 
@@ -80,12 +80,20 @@ export default function PPPoEProfilesPage() {
   const [importResults, setImportResults] = useState<{ success: number; error: number; errors: string[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadProfiles(); }, []);
+  useEffect(() => { loadProfiles(); loadRouterList(); }, []);
 
   const loadProfiles = async () => {
     try { const res = await fetch('/api/pppoe/profiles'); const data = await res.json(); setProfiles(data.profiles || []); }
     catch (e) { console.error('Load error:', e); }
     finally { setLoading(false); }
+  };
+
+  const loadRouterList = async () => {
+    try {
+      const res = await fetch('/api/pppoe/profiles/sync-mikrotik');
+      const data = await res.json();
+      setRouters(data.routers || []);
+    } catch { setRouters([]); }
   };
 
   const toKbpsDisplay = (speed: string, unit: UnitType) => {
@@ -142,7 +150,6 @@ export default function PPPoEProfilesPage() {
         name: formData.name,
         description: formData.description || undefined,
         groupName: generatedGroupName,
-        ipPoolName: formData.ipPoolName.trim() || null,
         price: parseInt(formData.price),
         hpp: formData.hpp ? parseInt(formData.hpp) : null,
         ppnActive: formData.ppnActive,
@@ -194,7 +201,7 @@ export default function PPPoEProfilesPage() {
       downloadSpeed: profile.downloadSpeed.toString(), uploadSpeed: profile.uploadSpeed.toString(), speedUnit: 'Mbps',
       burstDownload: burstDl, burstUpload: burstUl,
       burstThresholdDownload: thDl, burstThresholdUpload: thUl, burstTime: burstT,
-      groupName: profile.groupName, ipPoolName: profile.ipPoolName || '', validityValue: profile.validityValue.toString(), validityUnit: profile.validityUnit,
+      groupName: profile.groupName, validityValue: profile.validityValue.toString(), validityUnit: profile.validityUnit,
       sharedUser: profile.sharedUser, isActive: profile.isActive,
       ppnRate: profile.ppnRate?.toString() || '11',
     });
@@ -214,7 +221,7 @@ export default function PPPoEProfilesPage() {
     finally { setDeleteProfileId(null); }
   };
 
-  const resetForm = () => { setFormData({ ...defaultForm, groupName: '', ipPoolName: '' }); setShowBurst(false); setFieldErrors({}); };
+  const resetForm = () => { setFormData({ ...defaultForm, groupName: '' }); setShowBurst(false); setFieldErrors({}); };
 
   const handleSyncRadius = async (profile: PPPoEProfile) => {
     setSyncingRadiusId(profile.id);
@@ -236,19 +243,42 @@ export default function PPPoEProfilesPage() {
   };
 
   const handleSyncMikrotik = async (profile: PPPoEProfile) => {
+    // 1-click re-sync: jika pool + router sudah tersimpan, langsung sync tanpa buka modal
+    if (profile.ipPoolName && profile.lastRouterId) {
+      setSyncingMikrotikId(profile.id);
+      try {
+        const res = await fetch('/api/pppoe/profiles/sync-mikrotik', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: profile.id,
+            routerId: profile.lastRouterId,
+            ipPoolName: profile.ipPoolName,
+            localAddress: profile.localAddress || '',
+          }),
+        });
+        const result = await res.json();
+        if (res.ok) {
+          await showSuccess(result.message || 'Berhasil re-sync ke MikroTik');
+          loadProfiles();
+        } else {
+          // Gagal auto-sync → buka modal untuk konfirmasi ulang
+          setSyncMikrotikTarget(profile);
+          setSelectedRouterId(profile.lastRouterId || '');
+          setSyncIpPoolName(profile.ipPoolName || '');
+          setSyncLocalAddress(profile.localAddress || '');
+          await showError(`Auto re-sync gagal: ${result.error || 'Error'}\nSilakan cek konfigurasi dan coba lagi lewat modal.`);
+        }
+      } catch { await showError('Gagal sync ke MikroTik'); }
+      finally { setSyncingMikrotikId(null); }
+      return;
+    }
+
+    // Data belum lengkap → buka modal untuk isi pool/router pertama kali
     setSyncMikrotikTarget(profile);
-    setLoadingRouters(true);
-    setSelectedRouterId('');
+    setSelectedRouterId(profile.lastRouterId || (routers.length === 1 ? routers[0].id : ''));
     setSyncIpPoolName(profile.ipPoolName || '');
-    setSyncLocalAddress('');
-    try {
-      const res = await fetch('/api/pppoe/profiles/sync-mikrotik');
-      const data = await res.json();
-      const list: RouterOption[] = data.routers || [];
-      setRouters(list);
-      if (list.length === 1) setSelectedRouterId(list[0].id);
-    } catch { setRouters([]); }
-    finally { setLoadingRouters(false); }
+    setSyncLocalAddress(profile.localAddress || '');
   };
 
   const handleConfirmSyncMikrotik = async () => {
@@ -634,19 +664,6 @@ export default function PPPoEProfilesPage() {
                 </p>
               </div>
 
-              <div>
-                <ModalLabel>IP Pool MikroTik Default</ModalLabel>
-                <ModalInput
-                  type="text"
-                  value={formData.ipPoolName}
-                  onChange={(e) => setFormData({ ...formData, ipPoolName: e.target.value })}
-                  placeholder="contoh: pppoe-pool"
-                />
-                <p className="text-[9px] text-[#ffd84d] mt-1">
-                  Default untuk sync MikroTik. Bisa diganti lagi saat sync/re-sync.
-                </p>
-              </div>
-
               {/* Kecepatan */}
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -1019,11 +1036,7 @@ export default function PPPoEProfilesPage() {
             </p>
           </ModalHeader>
           <ModalBody>
-            {loadingRouters ? (
-              <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
-                <RotateCcw className="h-4 w-4 animate-spin mr-2" />Memuat daftar router...
-              </div>
-            ) : routers.length === 0 ? (
+            {routers.length === 0 ? (
               <div className="text-center py-6 text-sm text-muted-foreground">
                 Tidak ada router aktif yang tersedia.
               </div>
@@ -1088,7 +1101,7 @@ export default function PPPoEProfilesPage() {
             <ModalButton
               variant="primary"
               onClick={handleConfirmSyncMikrotik}
-              disabled={!selectedRouterId || loadingRouters}
+              disabled={!selectedRouterId}
             >
               <Wifi className="h-3.5 w-3.5 mr-1.5" />{syncMikrotikTarget?.ipPoolName ? 'Re-sync MikroTik' : 'Sync ke MikroTik'}
             </ModalButton>

@@ -431,6 +431,8 @@ model pppoeProfile {
   groupName      String
   mikrotikProfileName String?
   ipPoolName     String?
+  localAddress   String?  // IP lokal PPP profile MikroTik
+  lastRouterId   String?  // Router terakhir yang digunakan sync MikroTik
   hpp            Int?                        // Harga Modal / Biaya Pokok Penjualan
   ppnActive      Boolean                     @default(false) // PPN aktif
   ppnRate        Int                         @default(11)    // Tarif PPN (%)

@@ -51,19 +51,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Nama PPP Profile MikroTik wajib diisi' }, { status: 400 });
     }
 
-    if (
-      profile.groupName !== resolvedMikrotikProfileName ||
-      (profile.ipPoolName || '') !== resolvedIpPoolName
-    ) {
-      await prisma.pppoeProfile.update({
-        where: { id },
-        data: {
-          mikrotikProfileName: resolvedMikrotikProfileName,
-          ipPoolName: resolvedIpPoolName || null,
-        },
-      } as any);
-    }
-
     // Get router — use specified router or first active router
     const router = routerId
       ? await prisma.router.findUnique({ where: { id: routerId } })
@@ -130,6 +117,17 @@ export async function POST(request: NextRequest) {
       }
 
       await api.close();
+
+      // Save pool, localAddress, and lastRouterId so next sync is 1-click
+      await prisma.pppoeProfile.update({
+        where: { id },
+        data: {
+          mikrotikProfileName: resolvedMikrotikProfileName,
+          ipPoolName: resolvedIpPoolName || null,
+          localAddress: resolvedLocalAddress || null,
+          lastRouterId: router.id,
+        },
+      } as any);
 
       return NextResponse.json({
         success: true,
