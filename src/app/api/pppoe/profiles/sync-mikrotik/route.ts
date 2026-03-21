@@ -4,6 +4,29 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { RouterOSAPI } from 'node-routeros';
 
+const CMD_TIMEOUT = 12_000; // 12 seconds per command
+
+/** Wraps api.write with per-command timeout + error capture (same pattern as vpn-server/setup) */
+async function apiCmd(api: any, command: string, params: string[] = [], label = command): Promise<{ ok: boolean; data?: any; error?: string }> {
+  try {
+    const data = await Promise.race([
+      api.write(command, params),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Command timeout (${CMD_TIMEOUT / 1000}s): ${label}`)), CMD_TIMEOUT)
+      ),
+    ]);
+    // Check if RouterOS returned a !trap (error) in the response data
+    if (Array.isArray(data)) {
+      const trap = data.find((item: any) => item['!trap'] || (item['message'] && item['type'] === 'error'));
+      if (trap) {
+        return { ok: false, error: trap['message'] || trap['!trap'] || JSON.stringify(trap) };
+      }
+    }
+    return { ok: true, data };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+}
 // GET - List all active routers (for picker UI)
 export async function GET() {
   try {
@@ -112,7 +135,7 @@ export async function POST(request: NextRequest) {
     const primaryPort = router.port || 8728;
     const fallbackPort = router.apiPort || 8729;
 
-    const connectAndSync = async (port: number) => {
+    const connectAndSync = async (port: number): Promise<{ port: number; action: string; profileName: string; debug: string[] }> => {
       const api = new RouterOSAPI({
         host,
         port,
@@ -121,20 +144,29 @@ export async function POST(request: NextRequest) {
         timeout: 15,
       });
 
+      const debug: string[] = [];
+
       await Promise.race([
         api.connect(),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`Connection timed out (15s) to ${host}:${port}`)), 15000)),
       ]);
+      debug.push(`✅ Connected to ${host}:${port}`);
 
       try {
-        // Fetch all profiles and filter in JS — avoids RouterOS query syntax ambiguity
-        const allProfiles = await api.write('/ppp/profile/print');
+        // Fetch all profiles
+        const printResult = await apiCmd(api, '/ppp/profile/print', [], 'profile/print');
+        if (!printResult.ok) throw new Error(`Gagal baca profile list: ${printResult.error}`);
+
+        const allProfiles: any[] = printResult.data || [];
         const existingProfile = allProfiles.find((p: any) => p['name'] === resolvedMikrotikProfileName);
+        debug.push(`📋 Total profiles di MikroTik: ${allProfiles.length}, target: "${resolvedMikrotikProfileName}", exists: ${!!existingProfile}`);
 
         const sharedUserLimit = profile.sharedUser ? 'no' : 'yes';
+        let action: string;
 
         if (existingProfile) {
           const profileId = existingProfile['.id'];
+          debug.push(`🔄 Update profile id=${profileId}`);
           const updateParams: string[] = [
             `=.id=${profileId}`,
             `=rate-limit=${rateLimit}`,
@@ -142,36 +174,42 @@ export async function POST(request: NextRequest) {
           ];
           if (resolvedIpPoolName) updateParams.push(`=remote-address=${resolvedIpPoolName}`);
           if (resolvedLocalAddress) updateParams.push(`=local-address=${resolvedLocalAddress}`);
-          await api.write('/ppp/profile/set', updateParams);
+
+          debug.push(`📝 Params: ${updateParams.join(', ')}`);
+          const setResult = await apiCmd(api, '/ppp/profile/set', updateParams, 'profile/set');
+          if (!setResult.ok) throw new Error(`Gagal update profile: ${setResult.error}`);
+          action = 'updated';
         } else {
           const createParams: string[] = [
             `=name=${resolvedMikrotikProfileName}`,
             `=rate-limit=${rateLimit}`,
             `=only-one=${sharedUserLimit}`,
-            '=use-encryption=default',
-            '=change-tcp-mss=default',
           ];
           if (resolvedIpPoolName) createParams.push(`=remote-address=${resolvedIpPoolName}`);
           if (resolvedLocalAddress) createParams.push(`=local-address=${resolvedLocalAddress}`);
-          await api.write('/ppp/profile/add', createParams);
+
+          debug.push(`➕ Create profile, params: ${createParams.join(', ')}`);
+          const addResult = await apiCmd(api, '/ppp/profile/add', createParams, 'profile/add');
+          if (!addResult.ok) throw new Error(`Gagal buat profile: ${addResult.error}`);
+          action = 'created';
         }
 
         await api.close();
-        return port;
+        return { port, action, profileName: resolvedMikrotikProfileName, debug };
       } catch (e) {
         try { await api.close(); } catch { /* ignore */ }
         throw e;
       }
     };
 
-    let usedPort = primaryPort;
+    let syncResult: { port: number; action: string; profileName: string; debug: string[] };
     try {
       try {
-        usedPort = await connectAndSync(primaryPort);
+        syncResult = await connectAndSync(primaryPort);
       } catch (e1: any) {
         if (fallbackPort === primaryPort) throw e1;
         console.warn(`[SyncMikroTik] Port ${primaryPort} gagal (${e1?.message}), coba port ${fallbackPort}...`);
-        usedPort = await connectAndSync(fallbackPort);
+        syncResult = await connectAndSync(fallbackPort);
       }
 
       // Save sync config to DB for 1-click re-sync (non-critical — don't fail sync if DB update fails)
@@ -189,16 +227,18 @@ export async function POST(request: NextRequest) {
         console.warn('[SyncMikroTik] DB update gagal (mungkin migrasi belum dijalankan):', dbErr?.message);
       }
 
+      const actionLabel = syncResult.action === 'created' ? 'dibuat' : 'diperbarui';
       return NextResponse.json({
         success: true,
-        message: `Profile "${profile.name}" berhasil di-sync ke MikroTik ${host}:${usedPort} dengan PPP Profile "${resolvedMikrotikProfileName}"${resolvedIpPoolName ? ` | Pool: "${resolvedIpPoolName}"` : ''}${resolvedLocalAddress ? ` | Local IP: "${resolvedLocalAddress}"` : ''}`,
-        router: { id: router.id, name: router.name || router.nasname, ip: host, port: usedPort },
+        message: `✅ PPP Profile "${resolvedMikrotikProfileName}" berhasil ${actionLabel} di MikroTik ${host}:${syncResult.port}${resolvedIpPoolName ? ` | Pool: ${resolvedIpPoolName}` : ''}${resolvedLocalAddress ? ` | Local IP: ${resolvedLocalAddress}` : ''}`,
+        debug: syncResult.debug,
+        router: { id: router.id, name: router.name || router.nasname, ip: host, port: syncResult.port },
       });
     } catch (mkError: any) {
       const errMsg = mkError?.message || String(mkError);
       console.error('[SyncMikroTik] MikroTik API error:', errMsg);
       return NextResponse.json({
-        error: `Gagal konek ke MikroTik.\n\nHost: ${host}\nPort dicoba: ${primaryPort}${fallbackPort !== primaryPort ? ` dan ${fallbackPort}` : ''}\nUser: ${router.username}\n\nError: ${errMsg}\n\n💡 Pastikan:\n- Port API MikroTik terbuka (firewall)\n- /ip service api enabled=yes\n- Kredensial username/password benar`,
+        error: `Gagal sync ke MikroTik (${host}): ${errMsg}`,
         host,
         portsAttempted: [primaryPort, fallbackPort !== primaryPort ? fallbackPort : null].filter(Boolean),
       }, { status: 502 });

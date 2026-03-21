@@ -259,7 +259,8 @@ export default function PPPoEProfilesPage() {
         });
         const result = await res.json();
         if (res.ok) {
-          await showSuccess(result.message || 'Berhasil re-sync ke MikroTik');
+          const debugInfo = result.debug?.length ? `\n\nDetail:\n${result.debug.join('\n')}` : '';
+          await showSuccess((result.message || 'Berhasil re-sync ke MikroTik') + debugInfo);
           loadProfiles();
         } else {
           // Gagal auto-sync → buka modal untuk konfirmasi ulang
@@ -294,7 +295,8 @@ export default function PPPoEProfilesPage() {
       });
       const result = await res.json();
       if (res.ok) {
-        await showSuccess(result.message || 'Berhasil sync ke MikroTik');
+        const debugInfo = result.debug?.length ? `\n\nDetail:\n${result.debug.join('\n')}` : '';
+        await showSuccess((result.message || 'Berhasil sync ke MikroTik') + debugInfo);
         loadProfiles();
       } else {
         await showError(result.error || 'Gagal sync ke MikroTik');
