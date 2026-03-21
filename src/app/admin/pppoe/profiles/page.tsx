@@ -316,11 +316,25 @@ export default function PPPoEProfilesPage() {
         body: JSON.stringify({ routerId: selectedRouterId }),
       });
       const result = await res.json();
-      if (res.ok) {
-        const okPort = result.results?.find((r: any) => r.success);
-        await showSuccess(`✅ Koneksi berhasil ke ${result.host}\nRouter: ${result.routerName}\nIdentity: ${okPort?.identity}\nPort: ${okPort?.port}`);
+      const okPort = result.results?.find((r: any) => r.success);
+      if (okPort) {
+        const pppReadOk = okPort.pppRead;
+        const pppWriteOk = okPort.pppWrite;
+        const lines = [
+          `Router: ${result.routerName}  |  User: ${result.user}`,
+          `Port: ${okPort.port}  |  Identity: ${okPort.identity}`,
+          ``,
+          `PPP Profile Read: ${pppReadOk ? '✅ ' + okPort.pppReadError : '❌ ' + okPort.pppReadError}`,
+          `PPP Profile Write: ${pppWriteOk ? '✅ OK' : '❌ ' + okPort.pppWriteError}`,
+        ];
+        if (result.hint) lines.push('', '⚠️ ' + result.hint);
+        if (!pppReadOk || !pppWriteOk) {
+          await showError('Koneksi OK tapi akses PPP gagal:\n\n' + lines.join('\n'));
+        } else {
+          await showSuccess('✅ Semua test berhasil!\n\n' + lines.join('\n'));
+        }
       } else {
-        const detail = result.results?.map((r: any) => `  Port ${r.port}: ${r.success ? '✅' : '❌ ' + r.error}`).join('\n') || '';
+        const detail = result.results?.map((r: any) => `Port ${r.port}: ❌ ${r.error}`).join('\n') || '';
         await showError(`❌ Gagal konek ke ${result.host}\n\n${detail}\n\n${result.hint || ''}`);
       }
     } catch { await showError('Gagal test koneksi'); }

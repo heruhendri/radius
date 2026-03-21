@@ -48,7 +48,7 @@ export async function GET() {
   }
 }
 
-// PUT - Test connection to a router (diagnostic)
+// PUT - Test connection to a router (diagnostic — tests identity + PPP read/write access)
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -63,32 +63,83 @@ export async function PUT(request: NextRequest) {
 
     const host = router.ipAddress || router.nasname;
     const portsToTry = [router.port || 8728, router.apiPort || 8729].filter((p, i, arr) => arr.indexOf(p) === i);
-    const results: { port: number; success: boolean; identity?: string; error?: string }[] = [];
+
+    type PortResult = {
+      port: number; success: boolean; identity?: string;
+      pppRead?: boolean; pppReadError?: string;
+      pppWrite?: boolean; pppWriteError?: string;
+      error?: string;
+    };
+    const results: PortResult[] = [];
 
     for (const port of portsToTry) {
-      const api = new RouterOSAPI({ host, port, user: router.username, password: router.password, timeout: 8 });
+      const api = new RouterOSAPI({ host, port, user: router.username, password: router.password, timeout: 10 });
+      const r: PortResult = { port, success: false };
       try {
         await Promise.race([
           api.connect(),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`Timeout 8s`)), 8000)),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`Timeout 10s`)), 10000)),
         ]);
+
+        // Test 1: identity
         const identity = await api.write('/system/identity/print');
+        r.identity = identity[0]?.name || 'unknown';
+        r.success = true;
+
+        // Test 2: PPP profile read
+        try {
+          const profiles = await api.write('/ppp/profile/print');
+          r.pppRead = true;
+          r.pppReadError = `OK (${Array.isArray(profiles) ? profiles.length : '?'} profiles)`;
+        } catch (e: any) {
+          r.pppRead = false;
+          r.pppReadError = e?.message || String(e);
+        }
+
+        // Test 3: PPP profile write (try to add then immediately remove a test profile)
+        const testProfileName = `__salfanet_test_${Date.now()}`;
+        try {
+          const addResult = await api.write('/ppp/profile/add', [`=name=${testProfileName}`]);
+          // If add succeeded, clean up
+          try {
+            const testProfile = await api.write('/ppp/profile/print');
+            const found = Array.isArray(testProfile) ? testProfile.find((p: any) => p['name'] === testProfileName) : null;
+            if (found) await api.write('/ppp/profile/remove', [`=.id=${found['.id']}`]);
+          } catch { /* ignore cleanup error */ }
+          r.pppWrite = true;
+          r.pppWriteError = 'OK';
+        } catch (e: any) {
+          r.pppWrite = false;
+          r.pppWriteError = e?.message || String(e);
+        }
+
         await api.close();
-        results.push({ port, success: true, identity: identity[0]?.name || 'unknown' });
       } catch (e: any) {
         try { await api.close(); } catch { /* ignore */ }
-        results.push({ port, success: false, error: e?.message || String(e) });
+        r.error = e?.message || String(e);
       }
+      results.push(r);
     }
 
-    const anySuccess = results.some(r => r.success);
+    const bestResult = results.find(r => r.success);
+    const anySuccess = !!bestResult;
+
+    let hint: string | null = null;
+    if (!anySuccess) {
+      hint = `Tidak bisa konek ke ${host}.\nPastikan:\n1. /ip service api enabled=yes di MikroTik\n2. Port ${portsToTry.join('/')} tidak diblokir firewall\n3. IP dan kredensial benar`;
+    } else if (bestResult && !bestResult.pppRead) {
+      hint = `Koneksi berhasil tapi tidak bisa baca /ppp/profile.\nPastikan user "${router.username}" di MikroTik ada di group dengan policy=read,write,api`;
+    } else if (bestResult && !bestResult.pppWrite) {
+      hint = `Bisa baca tapi tidak bisa menulis /ppp/profile.\nPastikan user "${router.username}" di MikroTik ada di group dengan policy=write`;
+    }
+
     return NextResponse.json({
       success: anySuccess,
       host,
       user: router.username,
       routerName: router.name || router.nasname,
       results,
-      hint: anySuccess ? null : `Pastikan:\n1. /ip service api enable=yes di MikroTik\n2. Firewall MikroTik izinkan port ${portsToTry.join(' atau ')} dari ${process.env.SERVER_IP || 'server ini'}\n3. IP ${host} dapat dijangkau dari server`,
+      hint,
     }, { status: anySuccess ? 200 : 502 });
   } catch (error) {
     console.error('Test router error:', error);
