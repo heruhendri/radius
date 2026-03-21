@@ -93,7 +93,7 @@ salfanet-radius/
 ssh root@YOUR_VPS_IP
 
 # Clone repository (replace with your repo URL)
-git clone https://github.com/YOUR_USERNAME/salfanet-radius.git /root/salfanet-radius
+git clone https://github.com/s4lfanet/salfanet-radius.git /root/salfanet-radius
 cd /root/salfanet-radius
 
 # Run installer (interactive — detects environment automatically)

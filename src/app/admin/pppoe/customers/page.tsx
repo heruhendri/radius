@@ -182,20 +182,20 @@ export default function PppoeCustomersPage() {
           <ModalTextarea value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="Alamat lengkap customer..." rows={3} />
         </div>
         <div>
-          <ModalLabel>No. KTP</ModalLabel>
+          <ModalLabel>No. KTP <span className="text-muted-foreground text-[10px]">(opsional)</span></ModalLabel>
           <ModalInput type="text" value={formData.idCardNumber} onChange={(e) => setFormData({ ...formData, idCardNumber: e.target.value })} placeholder="16 digit NIK KTP" maxLength={16} />
         </div>
         <div>
           <ModalLabel>ID Customer</ModalLabel>
-          <div className="flex gap-2">
-            <ModalInput type="text" value={formData.customerId} onChange={(e) => setFormData({ ...formData, customerId: e.target.value })} placeholder="8 digit ID" maxLength={10} className="flex-1" />
+          <div className="flex items-center gap-2 px-3 py-2 bg-muted/60 border border-border rounded-lg">
+            <span className="font-mono text-sm font-semibold text-[#00f7ff] flex-1 tracking-widest">{formData.customerId}</span>
             {!isEdit && (
-              <button type="button" onClick={() => setFormData({ ...formData, customerId: generateCustomerId() })} className="px-3 py-1.5 text-xs border border-border rounded hover:bg-muted text-muted-foreground flex-shrink-0">
+              <button type="button" onClick={() => setFormData({ ...formData, customerId: generateCustomerId() })} className="p-1 text-muted-foreground hover:text-foreground" title="Generate ulang ID">
                 <RefreshCw className="h-3 w-3" />
               </button>
             )}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">ID unik customer, akan di-generate otomatis jika kosong</p>
+          <p className="text-[10px] text-muted-foreground mt-1">{isEdit ? 'ID customer tidak dapat diubah' : 'ID di-generate otomatis, klik ↻ untuk generate ulang'}</p>
         </div>
       </ModalBody>
       <ModalFooter>
@@ -305,7 +305,11 @@ export default function PppoeCustomersPage() {
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-foreground">{c.name}</p>
-                          <p className="text-[10px] text-[#00f7ff] font-mono">{c.customerId}</p>
+                          <button
+                            onClick={() => openDetail(c)}
+                            className="text-[10px] text-[#00f7ff] font-mono hover:underline hover:text-[#00c7d4] transition-colors"
+                            title="Lihat detail customer"
+                          >{c.customerId}</button>
                         </div>
                       </div>
                     </td>

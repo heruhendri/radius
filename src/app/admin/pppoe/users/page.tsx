@@ -33,6 +33,7 @@ interface PppoeUser {
   status: string; ipAddress: string | null; expiredAt: string | null;
   customerId: string | null;
   pppoeCustomerId?: string | null;
+  pppoeCustomer?: { id: string; customerId: string; name: string; phone: string; email: string | null } | null;
   syncedToRadius: boolean; createdAt: string; updatedAt: string;
   subscriptionType?: 'PREPAID' | 'POSTPAID';
   billingDay?: number | null;
@@ -942,9 +943,20 @@ export default function PppoeUsersPage() {
                         <div className="flex items-center gap-2">
                           <Users className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                           <div>
-                            <p className="text-xs font-semibold">{user.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{user.phone}</p>
-                            {user.email && <p className="text-[10px] text-[#00f7ff] truncate max-w-[140px]">{user.email}</p>}
+                            {user.pppoeCustomer ? (
+                              <>
+                                <p className="text-xs font-semibold">{user.pppoeCustomer.name}</p>
+                                <p className="text-[10px] text-muted-foreground">{user.pppoeCustomer.phone}</p>
+                                {user.pppoeCustomer.email && <p className="text-[10px] text-[#00f7ff] truncate max-w-[140px]">{user.pppoeCustomer.email}</p>}
+                                <p className="text-[9px] font-mono text-[#00f7ff]/60">{user.pppoeCustomer.customerId}</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-xs font-semibold">{user.name}</p>
+                                <p className="text-[10px] text-muted-foreground">{user.phone}</p>
+                                {user.email && <p className="text-[10px] text-[#00f7ff] truncate max-w-[140px]">{user.email}</p>}
+                              </>
+                            )}
                           </div>
                         </div>
                       </td>

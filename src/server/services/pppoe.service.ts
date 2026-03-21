@@ -17,6 +17,7 @@ export interface CreatePppoeUserInput {
   username: string;
   password: string;
   profileId: string;
+  pppoeCustomerId?: string;
   routerId?: string;
   areaId?: string;
   name: string;
@@ -42,6 +43,7 @@ export interface UpdatePppoeUserInput {
   username?: string;
   password?: string;
   profileId?: string;
+  pppoeCustomerId?: string | null;
   routerId?: string | null;
   areaId?: string | null;
   name?: string;
@@ -81,6 +83,7 @@ export async function listPppoeUsers(params: { status?: string | null }) {
       router: true,
       area: true,
       odpAssignment: { include: { odp: true } },
+      pppoeCustomer: { select: { id: true, customerId: true, name: true, phone: true, email: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -138,7 +141,7 @@ export async function createPppoeUser(
   request: NextRequest
 ) {
   const {
-    username, password, profileId, routerId, areaId, name, phone,
+    username, password, profileId, pppoeCustomerId, routerId, areaId, name, phone,
     email, address, latitude, longitude, ipAddress, macAddress, comment,
     expiredAt, subscriptionType, billingDay, idCardNumber, idCardPhoto,
     installationPhotos, followRoad,
@@ -220,6 +223,7 @@ export async function createPppoeUser(
       installationPhotos: installationPhotos ?? null,
       followRoad: !!followRoad,
       referralCode: await generateUniqueReferralCode(),
+      ...(pppoeCustomerId ? { pppoeCustomerId } : {}),
     } as never,
   });
 
