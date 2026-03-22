@@ -231,6 +231,15 @@ export default function PppoeUsersPage() {
     } catch (error) { console.error('Status error:', error); await showError(t('common.failed')); }
   };
 
+  const handleSyncToRadius = async (user: PppoeUser) => {
+    try {
+      const res = await fetch(`/api/pppoe/users/${user.id}/sync-radius`, { method: 'POST' });
+      const result = await res.json();
+      if (res.ok) { await showSuccess(`${user.username} berhasil di-sync ke RADIUS`); loadData(); }
+      else { await showError(result.error || 'Gagal sync ke RADIUS'); }
+    } catch { await showError('Gagal sync ke RADIUS'); }
+  };
+
   const handleMarkAllPaid = async (userId: string, userName: string) => {
     const confirmed = await showConfirm(
       t('pppoe.markAllInvoicesPaid').replace('{name}', userName),
@@ -948,7 +957,10 @@ export default function PppoeUsersPage() {
                                 <p className="text-xs font-semibold">{user.pppoeCustomer.name}</p>
                                 <p className="text-[10px] text-muted-foreground">{user.pppoeCustomer.phone}</p>
                                 {user.pppoeCustomer.email && <p className="text-[10px] text-[#00f7ff] truncate max-w-[140px]">{user.pppoeCustomer.email}</p>}
-                                <p className="text-[9px] font-mono text-[#00f7ff]/60">{user.pppoeCustomer.customerId}</p>
+                                <button
+                                  onClick={() => router.push(`/admin/pppoe/users?pppoeCustomerId=${user.pppoeCustomer!.id}`)}
+                                  className="text-[9px] font-mono text-[#00f7ff]/60 hover:text-[#00f7ff] hover:underline cursor-pointer"
+                                >{user.pppoeCustomer.customerId}</button>
                               </>
                             ) : (
                               <>
@@ -1000,51 +1012,48 @@ export default function PppoeUsersPage() {
                         )}
                       </td>
                       {/* Aksi */}
-                      <td className="px-3 py-2 text-right">
-                        <div className="flex justify-end gap-0.5">
-                          <div className="relative">
-                            <button onClick={() => setActionMenuOpen(actionMenuOpen === user.id ? null : user.id)} className="p-1 text-muted-foreground hover:bg-muted rounded"><MoreVertical className="h-3 w-3" /></button>
-                            {actionMenuOpen === user.id && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setActionMenuOpen(null)}></div>
-                                <div className="fixed right-4 mt-1 w-32 bg-card rounded shadow-2xl border border-border z-50" style={{ top: 'auto' }}>
-                                  <button onClick={() => handleStatusChange(user.id, 'active')} className="w-full px-2 py-1.5 text-left text-[10px] hover:bg-muted flex items-center gap-1.5 rounded-t"><Shield className="h-3 w-3 text-success" />{t('pppoe.active')}</button>
-                                  <button onClick={() => handleStatusChange(user.id, 'isolated')} className="w-full px-2 py-1.5 text-left text-[10px] hover:bg-muted flex items-center gap-1.5"><ShieldOff className="h-3 w-3 text-warning" />{t('pppoe.isolir')}</button>
-                                  <button onClick={() => handleStatusChange(user.id, 'blocked')} className="w-full px-2 py-1.5 text-left text-[10px] hover:bg-muted flex items-center gap-1.5"><Ban className="h-3 w-3 text-destructive" />{t('pppoe.block')}</button>
-                                  <button onClick={() => handleStatusChange(user.id, 'stop')} className="w-full px-2 py-1.5 text-left text-[10px] hover:bg-muted flex items-center gap-1.5 rounded-b"><X className="h-3 w-3 text-muted-foreground" />{t('pppoe.stop')}</button>
-                                </div>
-                              </>
-                            )}
-                          </div>
+                      <td className="px-3 py-2">
+                        <div className="flex justify-end items-center gap-0.5">
+                          {/* Detail */}
                           <button
-                            onClick={() => window.location.href = `/admin/pppoe/users/${user.id}/balance`}
-                            className="p-1 text-primary hover:bg-primary/10 rounded"
-                            title={t('pppoe.manageBalance')}
+                            onClick={() => handleEdit(user)}
+                            className="p-1.5 text-green-500 hover:bg-green-500/10 rounded"
+                            title="Lihat detail"
                           >
-                            <Wallet className="h-3 w-3" />
+                            <Eye className="h-3.5 w-3.5" />
                           </button>
-                          <button onClick={() => handleEdit(user)} className="p-1 text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/30 rounded" title="Edit"><Pencil className="h-3 w-3" /></button>
-                          <button onClick={() => handleStatusChange(user.id, 'isolated')} className="p-1 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded" title="Isolir"><Shield className="h-3 w-3" /></button>
-                          <button onClick={() => setDeleteUserId(user.id)} className="p-1 text-destructive hover:bg-destructive/10 rounded" title="Hapus"><Trash2 className="h-3 w-3" /></button>
-                          {invoiceCounts[user.id] > 0 ? (
-                            <button
-                              onClick={() => handleMarkAllPaid(user.id, user.name)}
-                              disabled={markingPaid === user.id}
-                              className="px-1.5 py-0.5 text-[10px] font-medium bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50"
-                              title={t('pppoe.markAllInvoicesPaid').replace('{name}', user.name)}
-                            >
-                              {markingPaid === user.id ? <Loader2 className="h-3 w-3 animate-spin" /> : t('pppoe.markPaid')}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleManualExtend(user)}
-                              disabled={extending === user.id}
-                              className="p-1 text-warning hover:bg-warning/10 dark:hover:bg-yellow-900/20 rounded disabled:opacity-50"
-                              title={t('pppoe.extendManual')}
-                            >
-                              {extending === user.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-                            </button>
-                          )}
+                          {/* Edit */}
+                          <button
+                            onClick={() => handleEdit(user)}
+                            className="p-1.5 text-[#00f7ff] hover:bg-[#00f7ff]/10 rounded"
+                            title="Edit"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          {/* Sync ke RADIUS */}
+                          <button
+                            onClick={() => handleSyncToRadius(user)}
+                            className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded"
+                            title="Sync ke RADIUS"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          </button>
+                          {/* Isolir */}
+                          <button
+                            onClick={() => handleStatusChange(user.id, user.status === 'isolated' ? 'active' : 'isolated')}
+                            className={`p-1.5 rounded ${user.status === 'isolated' ? 'text-success hover:bg-success/10' : 'text-orange-500 hover:bg-orange-500/10'}`}
+                            title={user.status === 'isolated' ? 'Aktifkan' : 'Isolir'}
+                          >
+                            <Shield className="h-3.5 w-3.5" />
+                          </button>
+                          {/* Hapus */}
+                          <button
+                            onClick={() => setDeleteUserId(user.id)}
+                            className="p-1.5 text-destructive hover:bg-destructive/10 rounded"
+                            title="Hapus"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
