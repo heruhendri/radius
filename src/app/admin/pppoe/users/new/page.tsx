@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { showSuccess, showError } from '@/lib/sweetalert';
-import { formatWIB, endOfDayWIBtoUTC } from '@/lib/timezone';
 import { ArrowLeft, MapPin, Map, Eye, EyeOff, Loader2, X } from 'lucide-react';
 import MapPicker from '@/components/MapPicker';
 import {
@@ -118,7 +117,16 @@ export default function NewPppoeUserPage() {
     try {
       const payload = {
         ...formData,
-        ...(formData.expiredAt && { expiredAt: endOfDayWIBtoUTC(formData.expiredAt).toISOString() }),
+        ...(formData.expiredAt && {
+          expiredAt: (() => {
+            // datetime-local gives YYYY-MM-DDTHH:mm (16 chars) — no seconds, invalid ISO
+            // Normalize by appending :00 if needed, then convert as WIB end-of-day
+            const raw = formData.expiredAt;
+            const normalized = raw.length === 16 ? raw + ':00' : raw;
+            const d = new Date(normalized);
+            return isNaN(d.getTime()) ? undefined : d.toISOString();
+          })()
+        }),
       };
       const res = await fetch('/api/pppoe/users', {
         method: 'POST',
@@ -259,8 +267,8 @@ export default function NewPppoeUserPage() {
           <div>
             <ModalLabel>Expired At (Auto-calculated)</ModalLabel>
             <ModalInput
-              type="datetime-local"
-              value={formData.expiredAt}
+              type="date"
+              value={formData.expiredAt ? formData.expiredAt.slice(0, 10) : ''}
               onChange={(e) => field('expiredAt', e.target.value)}
             />
             {(() => {
