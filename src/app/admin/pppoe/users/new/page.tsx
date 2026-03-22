@@ -361,8 +361,11 @@ export default function NewPppoeUserPage() {
                   if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
                       (p) => {
-                        field('latitude', p.coords.latitude.toFixed(6));
-                        setTimeout(() => field('longitude', p.coords.longitude.toFixed(6)), 10);
+                        setFormData(prev => ({
+                          ...prev,
+                          latitude: p.coords.latitude.toFixed(6),
+                          longitude: p.coords.longitude.toFixed(6),
+                        }));
                       },
                       async () => { await showError('Gagal mendapatkan GPS'); },
                       { enableHighAccuracy: true, timeout: 10000 }

@@ -20,8 +20,8 @@ export interface CreatePppoeUserInput {
   pppoeCustomerId?: string;
   routerId?: string;
   areaId?: string;
-  name: string;
-  phone: string;
+  name?: string;
+  phone?: string;
   email?: string;
   address?: string;
   latitude?: string | number;
@@ -141,11 +141,27 @@ export async function createPppoeUser(
   request: NextRequest
 ) {
   const {
-    username, password, profileId, pppoeCustomerId, routerId, areaId, name, phone,
+    username, password, profileId, pppoeCustomerId, routerId, areaId,
     email, address, latitude, longitude, ipAddress, macAddress, comment,
     expiredAt, subscriptionType, billingDay, idCardNumber, idCardPhoto,
     installationPhotos, followRoad,
   } = data;
+
+  // Resolve name/phone: prefer explicit values, fall back to linked customer
+  let resolvedName = data.name || '';
+  let resolvedPhone = data.phone || '';
+  if (pppoeCustomerId && (!resolvedName || !resolvedPhone)) {
+    const linkedCustomer = await (prisma as any).pppoeCustomer.findUnique({
+      where: { id: pppoeCustomerId },
+      select: { name: true, phone: true },
+    });
+    if (linkedCustomer) {
+      resolvedName = resolvedName || linkedCustomer.name;
+      resolvedPhone = resolvedPhone || linkedCustomer.phone;
+    }
+  }
+  if (!resolvedName) resolvedName = username;
+  if (!resolvedPhone) resolvedPhone = '-';
 
   // Check duplicate
   const existingUser = await prisma.pppoeUser.findUnique({ where: { username } });
@@ -205,8 +221,8 @@ export async function createPppoeUser(
       profileId,
       routerId: routerId || null,
       areaId: areaId || null,
-      name,
-      phone,
+      name: resolvedName,
+      phone: resolvedPhone,
       email: email || null,
       address: address || null,
       latitude: latitude ? parseFloat(String(latitude)) : null,
@@ -275,8 +291,8 @@ export async function createPppoeUser(
 
   try {
     await sendAdminCreateUser({
-      customerName: name,
-      customerPhone: phone,
+      customerName: resolvedName,
+      customerPhone: resolvedPhone,
       customerId: user.customerId || undefined,
       username,
       password,
@@ -294,7 +310,7 @@ export async function createPppoeUser(
         const { EmailService } = await import('@/server/services/notifications/email.service');
         await EmailService.sendAdminCreateUser({
           email,
-          customerName: name,
+          customerName: resolvedName,
           username,
           password,
           profileName: profile.name,
