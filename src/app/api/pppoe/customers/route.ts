@@ -28,9 +28,10 @@ export async function GET(request: NextRequest) {
         include: {
           pppoeUsers: {
             select: {
-              id: true, username: true, status: true,
-              profile: { select: { name: true } },
+              id: true, username: true, status: true, customerId: true, expiredAt: true,
+              profile: { select: { name: true, downloadSpeed: true, uploadSpeed: true } },
             },
+            orderBy: { createdAt: 'desc' },
           },
         },
       });

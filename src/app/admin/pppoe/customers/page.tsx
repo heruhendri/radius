@@ -28,7 +28,10 @@ interface Customer {
   createdAt: string;
   updatedAt: string;
   _count?: { pppoeUsers: number };
-  pppoeUsers?: { id: string; username: string; status: string; profile: { name: string } }[];
+  pppoeUsers?: {
+    id: string; username: string; status: string; customerId: string | null; expiredAt: string | null;
+    profile: { name: string; downloadSpeed: number; uploadSpeed: number };
+  }[];
 }
 
 function generateCustomerId(): string {
@@ -404,110 +407,102 @@ export default function PppoeCustomersPage() {
 
       {/* Detail Modal */}
       <SimpleModal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} size="md">
-        <ModalHeader>
-          <ModalTitle>📋 Detail Customer</ModalTitle>
-          <ModalDescription>{selectedCustomer?.customerId}</ModalDescription>
-        </ModalHeader>
-        <ModalBody className="space-y-4">
-          {selectedCustomer && (
-            <>
-              {/* Informasi Dasar */}
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-border pb-1">Informasi Dasar</h3>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-muted-foreground block">Nama Lengkap</span>
-                    <span className="font-medium">{selectedCustomer.name}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">ID Customer</span>
-                    <span className="font-mono text-[#00f7ff]">{selectedCustomer.customerId}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">No. HP / WhatsApp</span>
-                    <span>{selectedCustomer.phone}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Email</span>
-                    <span>{selectedCustomer.email || '-'}</span>
-                  </div>
+        {selectedCustomer && (
+          <>
+            <ModalHeader>
+              <ModalTitle>{selectedCustomer.name}</ModalTitle>
+              <ModalDescription>
+                <span className="font-mono text-[#00f7ff]">{selectedCustomer.customerId}</span>
+              </ModalDescription>
+            </ModalHeader>
+            <ModalBody className="space-y-4">
+              {/* Compact contact info */}
+              <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-1.5">
+                <div className="flex items-center gap-4 text-xs">
+                  <span className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-green-500" />{selectedCustomer.phone}</span>
+                  {selectedCustomer.email && <span className="flex items-center gap-1.5"><Mail className="h-3 w-3 text-muted-foreground" />{selectedCustomer.email}</span>}
                 </div>
                 {selectedCustomer.address && (
-                  <div className="text-xs">
-                    <span className="text-muted-foreground block">Alamat</span>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 text-red-400 flex-shrink-0" />
                     <span>{selectedCustomer.address}</span>
                   </div>
                 )}
               </div>
 
-              {/* Informasi KTP */}
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-border pb-1">Informasi KTP</h3>
-                <div className="text-xs">
-                  <span className="text-muted-foreground block">Nomor KTP</span>
-                  <span>{selectedCustomer.idCardNumber || '-'}</span>
-                </div>
-                {selectedCustomer.idCardPhoto ? (
-                  <img src={selectedCustomer.idCardPhoto} alt="Foto KTP" className="w-full h-32 object-cover rounded border border-border" />
-                ) : (
-                  <p className="text-xs text-muted-foreground italic">Belum ada foto KTP</p>
-                )}
-              </div>
-
-              {/* Status */}
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-border pb-1">Status</h3>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-muted-foreground block">Status Customer</span>
-                    <span className={`inline-flex items-center gap-1 font-medium ${selectedCustomer.isActive ? 'text-success' : 'text-destructive'}`}>
-                      {selectedCustomer.isActive ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                      {selectedCustomer.isActive ? 'Aktif' : 'Nonaktif'}
+              {/* Langganan PPPoE */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-semibold">Langganan PPPoE</h3>
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-primary/20 text-primary text-[10px] font-bold">
+                      {selectedCustomer.pppoeUsers?.length ?? selectedCustomer._count?.pppoeUsers ?? 0}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground block">Langganan PPPoE</span>
-                    <span className="font-medium">{selectedCustomer.pppoeUsers?.length ?? selectedCustomer._count?.pppoeUsers ?? 0} langganan</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Dibuat Pada</span>
-                    <span>{formatWIB(selectedCustomer.createdAt, 'dd MMM yyyy HH:mm')}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Diperbarui</span>
-                    <span>{formatWIB(selectedCustomer.updatedAt, 'dd MMM yyyy HH:mm')}</span>
-                  </div>
+                  <button
+                    onClick={() => { setIsDetailOpen(false); router.push(`/admin/pppoe/users/new?pppoeCustomerId=${selectedCustomer.id}`); }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium bg-success hover:bg-success/90 text-white rounded"
+                  >
+                    <Plus className="h-3 w-3" /> Tambah PPPoE
+                  </button>
                 </div>
-              </div>
 
-              {/* PPPoE langganan */}
-              {selectedCustomer.pppoeUsers && selectedCustomer.pppoeUsers.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-border pb-1">Langganan PPPoE</h3>
-                  <div className="space-y-1">
-                    {selectedCustomer.pppoeUsers.map((u) => (
-                      <div key={u.id} className="flex items-center justify-between px-2 py-1.5 bg-muted/50 rounded text-xs">
-                        <span className="font-mono font-medium">{u.username}</span>
+                {selectedCustomer.pppoeUsers && selectedCustomer.pppoeUsers.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedCustomer.pppoeUsers.slice(0, 3).map((u) => (
+                      <div key={u.id} className="bg-muted/50 border border-border rounded-lg px-3 py-2.5 flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold">{u.username}</span>
+                            {u.customerId && <span className="text-[9px] font-mono text-muted-foreground">{u.customerId}</span>}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {u.profile?.name} · {(u.profile?.downloadSpeed / 1024).toLocaleString()}/{(u.profile?.uploadSpeed / 1024).toLocaleString()} Mbps
+                          </p>
+                        </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">{u.profile?.name}</span>
-                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${u.status === 'active' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>{u.status}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${u.status === 'active' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
+                            {u.status}
+                          </span>
+                          {u.expiredAt && (
+                            <button
+                              onClick={() => { setIsDetailOpen(false); router.push(`/admin/pppoe/users?search=${u.username}`); }}
+                              className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5"
+                            >
+                              {formatWIB(u.expiredAt, 'dd MMM yy')} →
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
+                    {(selectedCustomer.pppoeUsers?.length ?? 0) > 3 && (
+                      <p className="text-[10px] text-muted-foreground text-center">+{(selectedCustomer.pppoeUsers?.length ?? 0) - 3} lainnya</p>
+                    )}
                   </div>
-                </div>
-              )}
-            </>
-          )}
-        </ModalBody>
-        <ModalFooter>
-          <ModalButton variant="secondary" onClick={() => setIsDetailOpen(false)}>Tutup</ModalButton>
-          {selectedCustomer && (
-            <ModalButton variant="primary" onClick={() => { setIsDetailOpen(false); router.push(`/admin/pppoe/users?pppoeCustomerId=${selectedCustomer.id}`); }}>
-              <UserPlus className="h-3 w-3 mr-1" /> Lihat Langganan PPPoE
-            </ModalButton>
-          )}
-        </ModalFooter>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic py-3 text-center">Belum ada langganan PPPoE</p>
+                )}
+
+                {(selectedCustomer.pppoeUsers?.length ?? 0) > 0 && (
+                  <button
+                    onClick={() => { setIsDetailOpen(false); router.push(`/admin/pppoe/users?pppoeCustomerId=${selectedCustomer.id}`); }}
+                    className="block w-full text-center text-[11px] text-[#00f7ff] hover:text-[#00c7d4] mt-2 py-1"
+                  >
+                    Lihat semua di halaman PPPoE →
+                  </button>
+                )}
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <ModalButton variant="secondary" onClick={() => { setIsDetailOpen(false); openEdit(selectedCustomer); }}>
+                <Pencil className="h-3 w-3 mr-1" /> Edit Customer
+              </ModalButton>
+              <ModalButton variant="primary" onClick={() => setIsDetailOpen(false)}>
+                Tutup
+              </ModalButton>
+            </ModalFooter>
+          </>
+        )}
       </SimpleModal>
     </div>
   );

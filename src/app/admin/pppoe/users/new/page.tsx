@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { showSuccess, showError } from '@/lib/sweetalert';
 import { formatWIB, endOfDayWIBtoUTC } from '@/lib/timezone';
-import { ArrowLeft, MapPin, Map, Eye, EyeOff, User, Loader2, X, Camera, CreditCard } from 'lucide-react';
+import { ArrowLeft, MapPin, Map, Eye, EyeOff, Loader2, X } from 'lucide-react';
 import MapPicker from '@/components/MapPicker';
 import {
-  ModalInput, ModalSelect, ModalTextarea, ModalLabel,
+  ModalInput, ModalSelect, ModalLabel,
 } from '@/components/cyberpunk';
 
 interface Profile { id: string; name: string; groupName: string; price: number; }
@@ -153,7 +153,7 @@ export default function NewPppoeUserPage() {
           <h1 className="text-xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent">
             Tambah User PPPoE
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Buat akun PPPoE baru dan daftarkan ke RADIUS</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Buat akun pelanggan PPPoE baru</p>
         </div>
       </div>
 
@@ -208,159 +208,112 @@ export default function NewPppoeUserPage() {
           <div>
             <ModalLabel>Customer</ModalLabel>
             <ModalSelect value={formData.pppoeCustomerId} onChange={(e) => handleCustomerSelect(e.target.value)}>
-              <option value="">-- Pilih Customer (opsional) --</option>
+              <option value="">— Tidak ada —</option>
               {customers.map(c => (
                 <option key={c.id} value={c.id}>{c.customerId} - {c.name}</option>
               ))}
             </ModalSelect>
-            <p className="text-[10px] text-muted-foreground mt-1">Hubungkan ke data pelanggan yang sudah ada</p>
+          </div>
+
+          <div>
+            <ModalLabel>NAS / Router</ModalLabel>
+            <ModalSelect value={formData.routerId} onChange={(e) => field('routerId', e.target.value)}>
+              <option value="">— Pilih NAS (opsional) —</option>
+              {routers.map(r => (
+                <option key={r.id} value={r.id}>{r.name} ({r.ipAddress})</option>
+              ))}
+            </ModalSelect>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <ModalLabel>NAS / Router</ModalLabel>
-              <ModalSelect value={formData.routerId} onChange={(e) => field('routerId', e.target.value)}>
-                <option value="">Global</option>
-                {routers.map(r => (
-                  <option key={r.id} value={r.id}>{r.name} ({r.ipAddress})</option>
-                ))}
-              </ModalSelect>
-            </div>
-            <div>
-              <ModalLabel>ODP / Area</ModalLabel>
-              <ModalSelect value={formData.areaId} onChange={(e) => field('areaId', e.target.value)}>
-                <option value="">-- Pilih Area --</option>
-                {areas.map(a => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </ModalSelect>
-            </div>
-          </div>
-
-          <div>
-            <ModalLabel>IP Statis</ModalLabel>
-            <ModalInput
-              type="text"
-              value={formData.ipAddress}
-              onChange={(e) => field('ipAddress', e.target.value)}
-              placeholder="10.10.10.2 (kosongkan untuk auto)"
-            />
-          </div>
-
-          <div>
-            <ModalLabel required>Tipe Langganan</ModalLabel>
-            <div className="grid grid-cols-2 gap-2">
-              <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${formData.subscriptionType === 'POSTPAID' ? 'border-primary bg-primary/10 dark:border-[#00f7ff] dark:bg-[#00f7ff]/10' : 'border-border hover:border-primary/50'}`}>
-                <input
-                  type="radio"
-                  name="subscriptionType"
-                  value="POSTPAID"
-                  checked={formData.subscriptionType === 'POSTPAID'}
-                  onChange={() => field('subscriptionType', 'POSTPAID')}
-                  className="w-3 h-3 accent-primary"
-                />
-                <div className="ml-2">
-                  <div className="text-xs font-medium">Postpaid</div>
-                  <div className="text-[10px] text-muted-foreground">Tagihan tiap bulan</div>
-                </div>
-              </label>
-              <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${formData.subscriptionType === 'PREPAID' ? 'border-primary bg-primary/10 dark:border-[#bc13fe] dark:bg-[#bc13fe]/10' : 'border-border hover:border-primary/50'}`}>
-                <input
-                  type="radio"
-                  name="subscriptionType"
-                  value="PREPAID"
-                  checked={formData.subscriptionType === 'PREPAID'}
-                  onChange={() => field('subscriptionType', 'PREPAID')}
-                  className="w-3 h-3 accent-primary"
-                />
-                <div className="ml-2">
-                  <div className="text-xs font-medium">Prepaid</div>
-                  <div className="text-[10px] text-muted-foreground">Bayar di awal</div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          {formData.subscriptionType === 'POSTPAID' ? (
-            <div>
-              <ModalLabel>Tanggal Tagihan</ModalLabel>
-              <ModalSelect value={formData.billingDay} onChange={(e) => field('billingDay', e.target.value)}>
-                {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                  <option key={d} value={d}>Tanggal {d}</option>
-                ))}
-              </ModalSelect>
-            </div>
-          ) : (
-            <div>
-              <ModalLabel>Expired At</ModalLabel>
+              <ModalLabel>IP Statis</ModalLabel>
               <ModalInput
-                type="date"
-                value={formData.expiredAt}
-                onChange={(e) => field('expiredAt', e.target.value)}
+                type="text"
+                value={formData.ipAddress}
+                onChange={(e) => field('ipAddress', e.target.value)}
+                placeholder="Kosongkan jika dinamis"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">Kosongkan untuk tidak ada tanggal kedaluwarsa</p>
             </div>
-          )}
+            <div>
+              <ModalLabel required>Tipe Langganan</ModalLabel>
+              <div className="grid grid-cols-2 gap-2">
+                <label className={`flex items-center p-2.5 border-2 rounded-lg cursor-pointer transition-all ${formData.subscriptionType === 'POSTPAID' ? 'border-primary bg-primary/10 dark:border-[#00f7ff] dark:bg-[#00f7ff]/10' : 'border-border hover:border-primary/50'}`}>
+                  <input type="radio" name="subscriptionType" value="POSTPAID" checked={formData.subscriptionType === 'POSTPAID'} onChange={() => field('subscriptionType', 'POSTPAID')} className="w-3 h-3 accent-primary" />
+                  <div className="ml-1.5">
+                    <div className="text-[10px] font-medium">📅 Postpaid</div>
+                    <div className="text-[9px] text-muted-foreground">Tagihan bulanan</div>
+                  </div>
+                </label>
+                <label className={`flex items-center p-2.5 border-2 rounded-lg cursor-pointer transition-all ${formData.subscriptionType === 'PREPAID' ? 'border-primary bg-primary/10 dark:border-[#bc13fe] dark:bg-[#bc13fe]/10' : 'border-border hover:border-primary/50'}`}>
+                  <input type="radio" name="subscriptionType" value="PREPAID" checked={formData.subscriptionType === 'PREPAID'} onChange={() => field('subscriptionType', 'PREPAID')} className="w-3 h-3 accent-primary" />
+                  <div className="ml-1.5">
+                    <div className="text-[10px] font-medium">🎫 Prepaid</div>
+                    <div className="text-[9px] text-muted-foreground">Bayar di muka</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <ModalLabel>Expired At (Auto-calculated)</ModalLabel>
+            <ModalInput
+              type="datetime-local"
+              value={formData.expiredAt}
+              onChange={(e) => field('expiredAt', e.target.value)}
+            />
+            {(() => {
+              const profile = profiles.find(p => p.id === formData.profileId);
+              if (profile) {
+                const now = new Date();
+                const expDate = new Date(now);
+                expDate.setMonth(expDate.getMonth() + 1);
+                return (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    📅 {expDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} · 30 hari dari sekarang
+                  </p>
+                );
+              }
+              return null;
+            })()}
+          </div>
         </div>
 
         {/* Data Network & Teknis */}
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <h2 className="text-sm font-semibold text-foreground border-b border-border pb-2">Data Network &amp; Teknis</h2>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <ModalLabel required>Nama Pelanggan</ModalLabel>
-              <ModalInput
-                type="text"
-                value={formData.name}
-                onChange={(e) => field('name', e.target.value)}
-                placeholder="Nama lengkap"
-                required
-              />
-            </div>
-            <div>
-              <ModalLabel required>No. HP</ModalLabel>
-              <ModalInput
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => field('phone', e.target.value)}
-                placeholder="08xxxxxxxxxx"
-                required
-              />
-            </div>
-          </div>
-
           <div>
             <ModalLabel>Alamat Instalasi</ModalLabel>
-            <ModalTextarea
+            <ModalInput
+              type="text"
               value={formData.address}
               onChange={(e) => field('address', e.target.value)}
-              placeholder="Alamat lengkap lokasi instalasi..."
-              rows={2}
+              placeholder="Alamat lengkap lokasi instalasi CPE"
             />
           </div>
 
           <div>
-            <ModalLabel>MAC / SN</ModalLabel>
+            <ModalLabel>MAC/SN</ModalLabel>
             <ModalInput
               type="text"
               value={formData.macAddress}
               onChange={(e) => field('macAddress', e.target.value)}
-              placeholder="AA:BB:CC:DD:EE:FF"
+              placeholder="00:11:22:33:44:55 atau Serial Number"
             />
           </div>
 
           {/* Foto Instalasi */}
-          <div className="border border-border dark:border-[#00f7ff]/20 rounded-lg p-3 space-y-3">
-            <div className="text-xs font-semibold flex items-center gap-1.5">
-              <Camera className="h-3.5 w-3.5" /> Foto Instalasi
-            </div>
+          <div>
+            <ModalLabel>Foto Instalasi</ModalLabel>
             <input type="file" accept="image/*" onChange={handleUploadInstallation} disabled={uploadingInstallation} className="hidden" id="installUpload" />
-            <label htmlFor="installUpload" className={`w-full block px-3 py-1.5 text-xs text-center border border-border rounded cursor-pointer hover:bg-muted text-muted-foreground ${uploadingInstallation ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              {uploadingInstallation ? <span className="flex items-center justify-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Mengupload...</span> : '📸 Upload Foto Instalasi'}
+            <label htmlFor="installUpload" className={`w-full block px-3 py-4 text-xs text-center border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted text-muted-foreground ${uploadingInstallation ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              {uploadingInstallation ? <span className="flex items-center justify-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Mengupload...</span> : '📸 Tambah Foto Instalasi'}
             </label>
+            <p className="text-[10px] text-muted-foreground mt-1">Max 5 file @ 5MB each ({formData.installationPhotos.length}/5)</p>
             {formData.installationPhotos.length > 0 && (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2 mt-2">
                 {formData.installationPhotos.map((photo, i) => (
                   <div key={i} className="relative">
                     <img src={photo} alt={`Instalasi ${i + 1}`} className="w-full h-20 object-cover rounded border" />
@@ -379,91 +332,67 @@ export default function NewPppoeUserPage() {
 
           {/* GPS */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <ModalLabel>Lokasi GPS</ModalLabel>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (navigator.geolocation) {
-                      navigator.geolocation.getCurrentPosition(
-                        (p) => field('latitude', p.coords.latitude.toFixed(6)),
-                        async () => { await showError('Gagal mendapatkan GPS'); },
-                        { enableHighAccuracy: true, timeout: 10000 }
-                      );
-                    }
-                  }}
-                  className="inline-flex items-center px-2 py-0.5 text-[10px] bg-green-100 text-green-600 border border-green-300 rounded hover:bg-green-200 dark:bg-[#00ff88]/20 dark:text-[#00ff88] dark:border-[#00ff88]/50"
-                >
-                  <MapPin className="h-2.5 w-2.5 mr-1" /> 📍 Lokasi Saya
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowMapPicker(true)}
-                  className="inline-flex items-center px-2 py-0.5 text-[10px] bg-primary/10 text-primary border border-primary/50 rounded hover:bg-primary/20"
-                >
-                  <Map className="h-2.5 w-2.5 mr-1" /> 🗺️ Pilih di Map
-                </button>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <ModalLabel>Latitude</ModalLabel>
+                <ModalInput
+                  type="number"
+                  step="any"
+                  value={formData.latitude}
+                  onChange={(e) => field('latitude', e.target.value)}
+                  placeholder="-6.200000"
+                />
+              </div>
+              <div>
+                <ModalLabel>Longitude</ModalLabel>
+                <ModalInput
+                  type="number"
+                  step="any"
+                  value={formData.longitude}
+                  onChange={(e) => field('longitude', e.target.value)}
+                  placeholder="106.816666"
+                />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <ModalInput
-                type="number"
-                step="any"
-                value={formData.latitude}
-                onChange={(e) => field('latitude', e.target.value)}
-                placeholder="Latitude"
-              />
-              <ModalInput
-                type="number"
-                step="any"
-                value={formData.longitude}
-                onChange={(e) => field('longitude', e.target.value)}
-                placeholder="Longitude"
-              />
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                      (p) => {
+                        field('latitude', p.coords.latitude.toFixed(6));
+                        setTimeout(() => field('longitude', p.coords.longitude.toFixed(6)), 10);
+                      },
+                      async () => { await showError('Gagal mendapatkan GPS'); },
+                      { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                  }
+                }}
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg"
+              >
+                <MapPin className="h-3.5 w-3.5" /> Lokasi Saya
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMapPicker(true)}
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-primary hover:bg-primary/90 text-white rounded-lg"
+              >
+                <Map className="h-3.5 w-3.5" /> Pilih di Map
+              </button>
             </div>
           </div>
 
+          {/* Assign ke Agent */}
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              id="followRoad"
-              checked={formData.followRoad}
-              onChange={(e) => field('followRoad', e.target.checked)}
+              id="assignToAgent"
               className="w-3.5 h-3.5 accent-primary"
             />
-            <label htmlFor="followRoad" className="text-xs cursor-pointer">Follow Road</label>
-          </div>
-
-          {/* dokumen KTP */}
-          <div className="border border-border dark:border-[#bc13fe]/30 rounded-lg p-3 space-y-3">
-            <div className="text-xs font-semibold flex items-center gap-1.5">
-              <CreditCard className="h-3.5 w-3.5" /> Dokumen KTP (Opsional)
-            </div>
-            <div>
-              <ModalLabel>No. NIK KTP</ModalLabel>
-              <ModalInput
-                type="text"
-                value={formData.idCardNumber}
-                onChange={(e) => field('idCardNumber', e.target.value)}
-                placeholder="3201XXXXXXXXXXXX"
-                maxLength={16}
-              />
-            </div>
-            <div>
-              <input type="file" accept="image/*" onChange={handleUploadIdCard} disabled={uploadingIdCard} className="hidden" id="ktpUpload" />
-              <label htmlFor="ktpUpload" className={`w-full block px-3 py-1.5 text-xs text-center border border-border rounded cursor-pointer hover:bg-muted text-muted-foreground ${uploadingIdCard ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                {uploadingIdCard ? <span className="flex items-center justify-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Mengupload...</span> : '📎 Upload Foto KTP'}
-              </label>
-              {formData.idCardPhoto && (
-                <div className="mt-2 relative">
-                  <img src={formData.idCardPhoto} alt="Preview KTP" className="w-full h-28 object-cover rounded border" />
-                  <button type="button" onClick={() => field('idCardPhoto', '')} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
-            </div>
+            <label htmlFor="assignToAgent" className="text-xs cursor-pointer">
+              Assign ke Agent <span className="text-[10px] text-muted-foreground">(opsional — untuk tracking komisi reseller)</span>
+            </label>
           </div>
         </div>
 
