@@ -257,10 +257,23 @@ export async function GET(request: NextRequest) {
       console.error('[Dashboard] Error loading upcoming invoices:', e);
     }
 
-    // ==================== 7. Voucher Revenue (this month) ====================
+    // ==================== 7. Voucher Revenue (today + this month) ====================
     let voucherRevenue = 0;
+    let voucherRevenueToday = 0;
     try {
-      // Try from Keuangan transactions with hotspot/voucher category
+      const startOfToday = startOfDayWIBtoUTC(now);
+
+      // Estimate from sold vouchers — today
+      const soldToday = await prisma.hotspotVoucher.findMany({
+        where: {
+          status: { in: ['ACTIVE', 'EXPIRED'] },
+          firstLoginAt: { gte: startOfToday },
+        },
+        include: { profile: { select: { sellingPrice: true } } },
+      });
+      voucherRevenueToday = soldToday.reduce((sum, v) => sum + (v.profile?.sellingPrice || 0), 0);
+
+      // Try from Keuangan transactions with hotspot/voucher category for this month
       const voucherCategory = await prisma.transactionCategory.findFirst({
         where: {
           OR: [
@@ -283,7 +296,7 @@ export async function GET(request: NextRequest) {
         voucherRevenue = Number(voucherIncome._sum.amount) || 0;
       }
 
-      // If no category found, estimate from sold vouchers (by firstLoginAt)
+      // If no category found, estimate from sold vouchers this month
       if (voucherRevenue === 0) {
         const soldVouchers = await prisma.hotspotVoucher.findMany({
           where: {
@@ -298,17 +311,44 @@ export async function GET(request: NextRequest) {
       console.error('[Dashboard] Error calculating voucher revenue:', e);
     }
 
-    // ==================== 8. Invoice Revenue (Tagihan) this month ====================
+    // ==================== 8. Invoice Revenue — today, this month, unpaid, all-time ====================
     let invoiceRevenue = 0;
+    let invoiceRevenueToday = 0;
+    let invoiceCountToday = 0;
+    let invoiceCountMonth = 0;
+    let unpaidInvoicesCount = 0;
+    let totalAllTimeRevenue = 0;
     try {
-      const paidInvoices = await prisma.invoice.aggregate({
-        where: {
-          status: 'PAID',
-          paidAt: { gte: startOfMonth, lt: startOfNextMonth },
-        },
-        _sum: { amount: true },
-      });
-      invoiceRevenue = Number(paidInvoices._sum.amount) || 0;
+      const startOfToday = startOfDayWIBtoUTC(now);
+
+      const [todayAgg, monthAgg, monthCount, unpaidCount, allTimeAgg] = await Promise.all([
+        prisma.invoice.aggregate({
+          where: { status: 'PAID', paidAt: { gte: startOfToday } },
+          _sum: { amount: true },
+          _count: { id: true },
+        }),
+        prisma.invoice.aggregate({
+          where: { status: 'PAID', paidAt: { gte: startOfMonth, lt: startOfNextMonth } },
+          _sum: { amount: true },
+        }),
+        prisma.invoice.count({
+          where: { status: 'PAID', paidAt: { gte: startOfMonth, lt: startOfNextMonth } },
+        }),
+        prisma.invoice.count({
+          where: { status: { in: ['PENDING', 'OVERDUE'] } },
+        }),
+        prisma.invoice.aggregate({
+          where: { status: 'PAID' },
+          _sum: { amount: true },
+        }),
+      ]);
+
+      invoiceRevenueToday = Number(todayAgg._sum.amount) || 0;
+      invoiceCountToday = todayAgg._count.id || 0;
+      invoiceRevenue = Number(monthAgg._sum.amount) || 0;
+      invoiceCountMonth = monthCount;
+      unpaidInvoicesCount = unpaidCount;
+      totalAllTimeRevenue = Number(allTimeAgg._sum.amount) || 0;
     } catch (e) {
       console.error('[Dashboard] Error calculating invoice revenue:', e);
     }
@@ -413,8 +453,17 @@ export async function GET(request: NextRequest) {
         upcomingInvoices,
         voucherRevenue,
         voucherRevenueFormatted: formatCurrency(voucherRevenue),
+        voucherRevenueToday,
+        voucherRevenueTodayFormatted: formatCurrency(voucherRevenueToday),
         invoiceRevenue,
         invoiceRevenueFormatted: formatCurrency(invoiceRevenue),
+        invoiceRevenueToday,
+        invoiceRevenueTodayFormatted: formatCurrency(invoiceRevenueToday),
+        invoiceCountToday,
+        invoiceCountMonth,
+        unpaidInvoicesCount,
+        totalAllTimeRevenue,
+        totalAllTimeRevenueFormatted: formatCurrency(totalAllTimeRevenue),
       },
       activities,
       systemStatus: {

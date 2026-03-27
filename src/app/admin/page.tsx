@@ -60,8 +60,17 @@ interface DashboardStats {
   upcomingInvoices: UpcomingInvoice[];
   voucherRevenue: number;
   voucherRevenueFormatted: string;
+  voucherRevenueToday: number;
+  voucherRevenueTodayFormatted: string;
   invoiceRevenue: number;
   invoiceRevenueFormatted: string;
+  invoiceRevenueToday: number;
+  invoiceRevenueTodayFormatted: string;
+  invoiceCountToday: number;
+  invoiceCountMonth: number;
+  unpaidInvoicesCount: number;
+  totalAllTimeRevenue: number;
+  totalAllTimeRevenueFormatted: string;
 }
 
 interface UpcomingInvoice {
@@ -165,9 +174,11 @@ interface StatCard {
   title: string;
   value: string;
   subtitle?: string;
+  detail?: string;
   icon: IconElement;
   gradient: string;
   bgGlow: string;
+  href?: string;
 }
 
 export default function AdminDashboard() {
@@ -415,6 +426,7 @@ export default function AdminDashboard() {
       title: t('dashboard.voucherRevenue'),
       value: stats.voucherRevenueFormatted,
       subtitle: periodLabel || t('dashboard.thisMonth'),
+      detail: `Hari ini: ${stats.voucherRevenueTodayFormatted}`,
       icon: <DollarSign className="w-5 h-5" />,
       gradient: 'from-fuchsia-500 to-pink-400',
       bgGlow: 'bg-fuchsia-500/20',
@@ -422,10 +434,28 @@ export default function AdminDashboard() {
     {
       title: t('dashboard.invoiceRevenue'),
       value: stats.invoiceRevenueFormatted,
-      subtitle: periodLabel || t('dashboard.thisMonth'),
+      subtitle: `${stats.invoiceCountMonth} tagihan • ${periodLabel || t('dashboard.thisMonth')}`,
+      detail: `Hari ini: ${stats.invoiceRevenueTodayFormatted} (${stats.invoiceCountToday})`,
       icon: <Receipt className="w-5 h-5" />,
       gradient: 'from-teal-500 to-cyan-400',
       bgGlow: 'bg-teal-500/20',
+    },
+    {
+      title: 'Belum Bayar',
+      value: stats.unpaidInvoicesCount.toLocaleString(),
+      subtitle: 'Tagihan pending & overdue',
+      icon: <AlertTriangle className="w-5 h-5" />,
+      gradient: 'from-orange-500 to-red-400',
+      bgGlow: 'bg-orange-500/20',
+      href: '/admin/invoices',
+    },
+    {
+      title: 'Omzet Total',
+      value: stats.totalAllTimeRevenueFormatted,
+      subtitle: 'Semua tagihan terbayar',
+      icon: <TrendingUp className="w-5 h-5" />,
+      gradient: 'from-lime-500 to-green-400',
+      bgGlow: 'bg-lime-500/20',
     },
   ] : [];
 
@@ -490,33 +520,40 @@ export default function AdminDashboard() {
             <Loader2 className="h-8 w-8 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
-            {statCards.map((card) => (
-              <div
-                key={card.title}
-                className="relative bg-card/60 backdrop-blur-xl rounded-xl border border-white/10 p-3 sm:p-4 hover:border-white/20 hover:shadow-[0_0_30px_rgba(188,19,254,0.2)] transition-all group overflow-hidden"
-              >
-                {/* Background glow */}
-                <div className={`absolute -top-8 -right-8 w-24 h-24 ${card.bgGlow} rounded-full blur-2xl opacity-50 group-hover:opacity-80 transition-opacity`} />
-
-                <div className="relative flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground uppercase tracking-wider truncate">
-                      {card.title}
-                    </p>
-                    <p className="text-lg sm:text-2xl font-bold text-foreground mt-1 sm:mt-1.5 truncate">
-                      {card.value}
-                    </p>
-                    {card.subtitle && (
-                      <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5">{card.subtitle}</p>
-                    )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
+            {statCards.map((card) => {
+              const inner = (
+                <>
+                  {/* Background glow */}
+                  <div className={`absolute -top-8 -right-8 w-24 h-24 ${card.bgGlow} rounded-full blur-2xl opacity-50 group-hover:opacity-80 transition-opacity`} />
+                  <div className="relative flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground uppercase tracking-wider truncate">
+                        {card.title}
+                      </p>
+                      <p className="text-lg sm:text-2xl font-bold text-foreground mt-1 sm:mt-1.5 truncate">
+                        {card.value}
+                      </p>
+                      {card.subtitle && (
+                        <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5">{card.subtitle}</p>
+                      )}
+                      {card.detail && (
+                        <p className="text-[9px] sm:text-[10px] text-[#00f7ff]/60 mt-0.5 font-medium">{card.detail}</p>
+                      )}
+                    </div>
+                    <div className={`p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl bg-gradient-to-br ${card.gradient} text-white shadow-lg flex-shrink-0`}>
+                      {React.cloneElement(card.icon, { className: 'w-4 h-4 sm:w-5 sm:h-5' })}
+                    </div>
                   </div>
-                  <div className={`p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl bg-gradient-to-br ${card.gradient} text-white shadow-lg flex-shrink-0`}>
-                    {React.cloneElement(card.icon, { className: 'w-4 h-4 sm:w-5 sm:h-5' })}
-                  </div>
-                </div>
-              </div>
-            ))}
+                </>
+              );
+              const cls = 'relative bg-card/60 backdrop-blur-xl rounded-xl border border-white/10 p-3 sm:p-4 hover:border-white/20 hover:shadow-[0_0_30px_rgba(188,19,254,0.2)] transition-all group overflow-hidden';
+              return card.href ? (
+                <a key={card.title} href={card.href} className={cls}>{inner}</a>
+              ) : (
+                <div key={card.title} className={cls}>{inner}</div>
+              );
+            })}
           </div>
         )}
 
