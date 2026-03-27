@@ -42,8 +42,7 @@ Template berisi kolom-kolom berikut:
 | password | Ya | Password PPPoE | pass123 |
 | name | Ya | Nama lengkap pelanggan | John Doe |
 | phone | Ya | Nomor telepon | 08123456789 |
-| email | Tidak | Email pelanggan | john@example.com |
-| address | Tidak | Alamat lengkap | Jl. Example No. 123 |
+| email | Tidak | Email pelanggan | john@example.com || area | Tidak | Nama area/wilayah pelanggan | Cluster A || address | Tidak | Alamat lengkap | Jl. Example No. 123 |
 | ipAddress | Tidak | IP Address static | 10.10.10.2 |
 | expiredAt | Tidak | Tanggal expired (YYYY-MM-DD) | 2025-12-31 |
 | latitude | Tidak | Koordinat GPS latitude | -6.200000 |

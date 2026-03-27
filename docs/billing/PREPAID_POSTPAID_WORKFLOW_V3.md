@@ -130,100 +130,12 @@ Schedule: 0 * * * *  (Hourly)
 
 ---
 
-**Version:** 4.0  
+**Version:** 4.1 — Updated March 27, 2026  
 **Reference:** https://github.com/hotspotbilling/phpnuxbill  
-**Last Updated:** January 4, 2026  
-**Status:** ✅ Sesuai standar phpnuxbill
+**Last Updated:** March 27, 2026  
+**Status:** ✅ Sesuai implementasi v2.11.6
 
----
-
-## 📊 POSTPAID WORKFLOW (Pascabayar)
-
-### **Karakteristik:**
-- ✅ User pakai layanan dulu, bayar belakangan
-- ✅ **expiredAt = NULL** (tidak ada masa aktif, permanent selama bayar)
-- ✅ Tagihan generate **TANGGAL 1** setiap bulan (FIXED)
-- ✅ Grace period: **7 hari** (jatuh tempo tanggal 8)
-- ✅ Tolerance: **7 hari** tambahan (isolate tanggal 15 jika belum bayar)
-
-### **Timeline POSTPAID:**
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  BULAN JANUARI 2026                                         │
-├─────────────────────────────────────────────────────────────┤
-│  1 Jan  → Invoice generate otomatis (Rp 200.000)           │
-│           Due Date: 8 Jan (grace period 7 hari)             │
-│           Status: PENDING                                   │
-│                                                             │
-│  8 Jan  → Jatuh tempo                                       │
-│           Jika belum bayar: Status → OVERDUE                │
-│                                                             │
-│  15 Jan → Tolerance habis (OVERDUE + 7 hari)               │
-│           Jika belum bayar: AUTO-ISOLATE                    │
-│           - Status user: active → isolated                  │
-│           - RADIUS: masuk grup 'isolir'                     │
-│           - Session: CoA disconnect                         │
-│                                                             │
-│  20 Jan → User bayar invoice                                │
-│           - Invoice: OVERDUE → PAID                         │
-│           - Status user: isolated → active                  │
-│           - RADIUS: kembali ke grup normal                  │
-│           - Session: reconnect                              │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### **Database Schema:**
-```typescript
-{
-  subscriptionType: 'POSTPAID',
-  expiredAt: null,           // ← WAJIB NULL
-  billingDay: 1,             // ← TIDAK DIGUNAKAN (always tanggal 1)
-  status: 'active',
-  balance: 0,
-  autoRenewal: false,        // ← N/A untuk POSTPAID
-}
-```
-
-### **Invoice Generation Query:**
-```typescript
-// Cron: Daily at 00:01 WIB
-const currentDay = now.getDate();
-
-if (currentDay === 1) {
-  const postpaidUsers = await prisma.pppoeUser.findMany({
-    where: {
-      status: { in: ['active', 'isolated', 'blocked', 'suspended'] },
-      subscriptionType: 'POSTPAID',
-      expiredAt: null, // MUST be null
-    }
-  });
-  
-  // Generate invoice untuk semua POSTPAID users
-  // Due date = 8 Januari (tanggal 1 + 7 hari)
-}
-```
-
-### **Auto-Isolation Query:**
-```typescript
-// Cron: Hourly
-const sevenDaysAgo = new Date();
-sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-const postpaidToIsolate = await prisma.pppoeUser.findMany({
-  where: {
-    status: 'active',
-    subscriptionType: 'POSTPAID',
-    expiredAt: null,
-    invoices: {
-      some: {
-        status: 'OVERDUE',
-        dueDate: { lt: sevenDaysAgo } // Overdue > 7 hari
-      }
-    }
-  }
-});
-```
+> ⚠️ **CATATAN PENTING (v2.11.6):** Workflow lama yang menyebutkan `expiredAt = NULL` untuk POSTPAID sudah **TIDAK BERLAKU**. Implementasi saat ini (sesuai Workflow 1 di atas) menggunakan `expiredAt = billingDay bulan berikutnya` untuk semua tipe. Saat admin mengedit `billingDay` user POSTPAID, `expiredAt` otomatis di-recalculate di `updatePppoeUser` service.
 
 ---
 

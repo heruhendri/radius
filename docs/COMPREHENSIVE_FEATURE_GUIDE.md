@@ -1,7 +1,7 @@
 ﻿# SALFANET RADIUS - Comprehensive Feature Guide
 
-**Version**: 2.10.21  
-**Last Updated**: March 5, 2026  
+**Version**: 2.11.6  
+**Last Updated**: March 27, 2026  
 **Project**: ISP/RTRW.NET Billing & RADIUS Management System
 
 > **Ringkasan Lengkap**: Dokumentasi ini merangkum semua fitur dan kemampuan dari SALFANET RADIUS. Konten dasar guide ini mencakup fitur hingga v2.7.5; untuk fitur baru v2.10.x–v2.11.x (Dark Mode, Admin Dashboard v2, PPPoE Session Sync, PPN Fix, Area badge, billingDay recalc, dll) lihat [`CHANGELOG.md`](getting-started/CHANGELOG.md) dan [`ROADMAP.md`](ROADMAP.md).
@@ -121,13 +121,25 @@ Public IP: 103.67.244.131
 **Features**:
 - Create/Edit/Delete PPPoE users
 - Profile assignment (bandwidth, speed limit)
-- Area/wilayah grouping
-- GPS location tracking (optional)
+- Area/wilayah grouping (badge ditampilkan di kolom Data Pelanggan)
+- GPS location tracking (optional) — koordinat clickable ke Google Maps
 - Auto-isolation when expired
 - Manual extension (perpanjangan)
 - Stop langganan (unsubscribe)
 - Import from MikroTik
 - Bulk operations
+- Per-user RADIUS sync via API `POST /api/pppoe/users/[userId]/sync-radius`
+- NIK KTP + foto KTP + foto instalasi
+
+**Tabel PPPoE — Kolom**:
+- **ID** — customerId (clickable filter)
+- **Data Pelanggan** — nama/telepon/email/customerId + badge Area (kuning)
+- **PPPoE** — username/password/IP statis user
+- **Paket** — profile name + groupName
+- **Network** — NAS name + IP NAS router dari database
+- **Teknis** — alamat + koordinat GPS (clickable Google Maps) + area + lantai (dl)
+- **Status** — badge status + subscriptionType + billingDay/expiredAt
+- **Aksi** — 5 ikon: Eye (detail), Pencil (edit), RefreshCw (sync RADIUS), Shield (isolir/aktifkan), Trash (hapus)
 
 **Status Types**:
 - `active` - User dapat login

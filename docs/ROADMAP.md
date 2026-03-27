@@ -1,6 +1,6 @@
 # SALFANET RADIUS — Roadmap 2026
 
-> Last updated: **March 10, 2026** | Version: **2.10.27**  
+> Last updated: **March 27, 2026** | Version: **2.11.6**  
 > Legend: ✅ Done · 🔄 In Progress · 📅 Planned · 🐛 Bug/Debt · 🔒 Security
 
 ---
@@ -34,6 +34,8 @@
 - [x] **POSTPAID auto-expiry extension after payment** — Webhook extends expiry from `max(expiredAt, paymentDate)` + validity period. Admin PUT handler same logic. `billingDay` branch removed from both. ✅ (Mar 8, 2026)
 - [x] **Duitku payment methods API** — `/api/payment/duitku-methods`, individual method buttons with `MIN_AMOUNT` filter, `BV`=BSI VA / `BC`=BCA VA corrected. ✅ (Mar 8, 2026)
 - [x] **Invoice catch-up cron** — Auto-generate missing invoices for isolated/expired users in scheduled cron & admin manual trigger. ✅ (Mar 8, 2026)
+- [x] **PPN calculation fix** — Formula `ppnAmount = round(base × ppn/100)` diterapkan konsisten di 9 file (billing.service, pppoe.service, 4 API routes). ✅ (Mar 20–27, 2026)
+- [x] **POSTPAID billingDay recalculation** — `updatePppoeUser` sekarang recalculate `expiredAt` ke billingDay bulan depan saat edit user POSTPAID. ✅ (Mar 27, 2026)
 
 ### Customer Portal (Web)
 - [x] Customer login via username+password (atau OTP WhatsApp)
@@ -61,6 +63,10 @@
 - [x] Cron job system (auto-billing, renewal, expiry, reminder)
 - [x] Top-up request management
 - [x] GPS location tracking lapangan + peta
+- [x] **GPS koordinat clickable ke Google Maps** — di tabel PPPoE Users dan halaman registrasi. ✅ (Mar 20, 2026)
+- [x] **PPPoE action buttons revamp** — 5 ikon bersih (Eye/Pencil/RefreshCw/Shield/Trash), tooltip per aksi, warna per fungsi. CustomerId & jumlah langganan bisa diklik sebagai filter. API `POST /api/pppoe/users/[userId]/sync-radius`. ✅ (Mar 20, 2026)
+- [x] **Network column NAS IP** — Kolom Network sekarang tampilkan IP NAS router dari database, bukan IP statis user. ✅ (Mar 27, 2026)
+- [x] **Area badge & form** — Badge area (kuning) di kolom Data Pelanggan tabel PPPoE. Select Area ditambahkan di form Tambah Pelanggan. ✅ (Mar 27, 2026)
 - [x] WhatsApp integration (multi-provider: Dripsender, WA Business, dll)
 - [x] Push notification (Firebase FCM)
 - [x] Email notifications + template editor

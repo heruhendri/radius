@@ -58,6 +58,19 @@ Fitur ini memungkinkan pelanggan yang mendaftar untuk menandai lokasi GPS mereka
 ## Komponen yang Digunakan
 - **MapPicker**: Komponen yang sudah ada di `src/components/MapPicker.tsx`
 - Menggunakan Leaflet untuk menampilkan peta interaktif
+
+---
+
+## GPS Koordinat Clickable ke Google Maps (v2.11.6 — Phase 16)
+
+Koordinat GPS di **tabel PPPoE Users** (`/admin/pppoe/users`) dapat diklik langsung untuk membuka lokasi di Google Maps di tab baru.
+
+- Ditampilkan di kolom **Teknis** tabel PPPoE
+- Jika pelanggan memiliki `latitude` dan `longitude`, tampil link yang bisa diklik
+- Format URL: `https://www.google.com/maps?q={lat},{lng}`
+- Jika tidak ada koordinat, tidak ada link yang tampil
+
+Fitur ini berbeda dari GPS di halaman Registrasi (yang sudah ada sejak sebelumnya). GPS clickable di tabel PPPoE memudahkan admin melihat lokasi pelanggan aktif langsung dari halaman manajemen user.
 - Support multiple basemap (street, satellite)
 - Support marker drag untuk memilih lokasi
 

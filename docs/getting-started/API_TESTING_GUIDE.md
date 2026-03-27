@@ -389,5 +389,5 @@ mysql -e "SHOW STATUS LIKE 'Threads_connected';"
 
 ---
 
-**Last Updated:** January 18, 2026  
-**Version:** SALFANET RADIUS v2.10.7
+**Last Updated:** March 27, 2026  
+**Version:** SALFANET RADIUS v2.11.6
