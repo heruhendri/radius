@@ -296,6 +296,7 @@ export async function sendPaymentSuccess(data: {
   profileName: string;
   invoiceNumber: string;
   amount: number;
+  newExpiredAt?: Date | string | null;
 }) {
   try {
     const company = await prisma.company.findFirst();
@@ -310,6 +311,15 @@ export async function sendPaymentSuccess(data: {
       return;
     }
 
+    // Format expired date for ID locale
+    const expiredDate = data.newExpiredAt
+      ? new Date(data.newExpiredAt).toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        })
+      : '-';
+
     // Prepare variables
     const variables = {
       customerName: data.customerName,
@@ -318,6 +328,7 @@ export async function sendPaymentSuccess(data: {
       profileName: data.profileName,
       invoiceNumber: data.invoiceNumber,
       amount: `Rp ${data.amount.toLocaleString('id-ID')}`,
+      expiredDate,
       companyName,
       companyPhone,
     };

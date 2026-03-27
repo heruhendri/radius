@@ -1381,6 +1381,7 @@ async function handleInvoicePayment(
             profileName: profile.name,
             invoiceNumber: invoice.invoiceNumber,
             amount: invoice.amount,
+            newExpiredAt: finalExpiredAt ?? undefined,
           });
           console.log(`✅ WhatsApp payment success notification sent`);
         } catch (waError) {
@@ -1401,6 +1402,13 @@ async function handleInvoicePayment(
 
               if (emailTemplate) {
                 const company = await prisma.company.findFirst();
+                const expiredDateStr = finalExpiredAt
+                  ? new Date(finalExpiredAt).toLocaleDateString('id-ID', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                    })
+                  : '-';
                 const variables: Record<string, string> = {
                   customerId: user.customerId || '',
                   customerName: user.name || invoice.customerName || 'Pelanggan',
@@ -1408,6 +1416,7 @@ async function handleInvoicePayment(
                   profileName: profile.name,
                   invoiceNumber: invoice.invoiceNumber,
                   amount: `Rp ${invoice.amount.toLocaleString('id-ID')}`,
+                  expiredDate: expiredDateStr,
                   companyName: company?.name || 'ISP',
                   companyPhone: company?.phone || '-',
                 };

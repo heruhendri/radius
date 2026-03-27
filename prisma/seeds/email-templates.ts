@@ -1086,6 +1086,102 @@ export const emailTemplates = [
 </html>`,
     isActive: true,
   },
+  {
+    type: 'payment-confirmation',
+    name: 'Konfirmasi Pembayaran Invoice',
+    subject: '✅ Pembayaran Dikonfirmasi - Invoice {{invoiceNumber}}',
+    htmlBody: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Konfirmasi Pembayaran</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">✅ Pembayaran Berhasil</h1>
+              <p style="color: #d1fae5; margin: 8px 0 0 0; font-size: 15px;">Terima kasih atas pembayaran Anda</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                Halo <strong>{{customerName}}</strong>,
+              </p>
+              <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+                Pembayaran Anda telah dikonfirmasi. Akun internet Anda sekarang aktif dan siap digunakan.
+              </p>
+              <table width="100%" cellpadding="12" cellspacing="0" style="background-color: #f0fdf4; border-radius: 8px; margin: 20px 0; border: 2px solid #10b981;">
+                <tr>
+                  <td style="color: #666666; font-size: 14px; border-bottom: 1px solid #d1fae5; padding: 12px;">
+                    <strong>No. Invoice:</strong>
+                  </td>
+                  <td style="color: #333333; font-size: 14px; border-bottom: 1px solid #d1fae5; padding: 12px; font-family: monospace;">
+                    {{invoiceNumber}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="color: #666666; font-size: 14px; border-bottom: 1px solid #d1fae5; padding: 12px;">
+                    <strong>Jumlah Dibayar:</strong>
+                  </td>
+                  <td style="color: #10b981; font-size: 18px; font-weight: bold; border-bottom: 1px solid #d1fae5; padding: 12px;">
+                    Rp {{amount}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="color: #666666; font-size: 14px; border-bottom: 1px solid #d1fae5; padding: 12px;">
+                    <strong>Username:</strong>
+                  </td>
+                  <td style="color: #333333; font-size: 14px; border-bottom: 1px solid #d1fae5; padding: 12px; font-family: monospace;">
+                    {{customerUsername}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="color: #666666; font-size: 14px; border-bottom: 1px solid #d1fae5; padding: 12px;">
+                    <strong>Metode Pembayaran:</strong>
+                  </td>
+                  <td style="color: #333333; font-size: 14px; border-bottom: 1px solid #d1fae5; padding: 12px;">
+                    {{paymentMethod}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="color: #666666; font-size: 14px; padding: 12px;">
+                    <strong>Aktif Hingga:</strong>
+                  </td>
+                  <td style="color: #059669; font-size: 14px; font-weight: bold; padding: 12px;">
+                    {{newExpiredAt}}
+                  </td>
+                </tr>
+              </table>
+              <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <p style="color: #065f46; margin: 0; font-size: 14px; line-height: 1.6;">
+                  🌐 <strong>Akun Anda sudah aktif.</strong> Nikmati layanan internet berkualitas dari kami!
+                </p>
+              </div>
+              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                Jika ada pertanyaan, silakan hubungi kami di <strong>{{companyPhone}}</strong>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
+              <p style="color: #666666; font-size: 14px; margin: 0 0 5px 0;"><strong>{{companyName}}</strong></p>
+              <p style="color: #999999; font-size: 12px; margin: 0;">Email ini dikirim secara otomatis oleh sistem</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+    isActive: true,
+  },
 ];
 
 export async function seedEmailTemplates() {

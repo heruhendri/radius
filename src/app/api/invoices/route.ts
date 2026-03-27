@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { sendPaymentSuccess } from '@/server/services/notifications/whatsapp-templates.service';
 import { sendPushToUser } from '@/server/services/notifications/push-templates.service';
+import { EmailService } from '@/server/services/notifications/email.service';
 import { randomBytes } from 'crypto';
 import { nanoid } from 'nanoid';
 import { startOfDayWIBtoUTC, endOfDayWIBtoUTC } from '@/lib/timezone';
@@ -416,11 +417,36 @@ export async function PUT(request: NextRequest) {
               profileName: targetProfile ? targetProfile.name : profile.name,
               invoiceNumber: existingInvoice.invoiceNumber,
               amount: existingInvoice.amount,
+              newExpiredAt: finalExpiry,
             });
             console.log(`  - WhatsApp: Payment success notification sent`);
           } catch (waError) {
             console.error(`  - WhatsApp: Failed to send notification:`, waError);
             // Don't fail the payment if WhatsApp fails
+          }
+        }
+
+        // ============================================
+        // SEND EMAIL NOTIFICATION (PAYMENT CONFIRMATION)
+        // ============================================
+        const customerEmail = existingInvoice.customerEmail || user.email;
+        if (customerEmail) {
+          try {
+            const emailCompany = await prisma.company.findFirst();
+            await EmailService.sendPaymentConfirmation({
+              email: customerEmail,
+              customerName: user.name,
+              customerUsername: user.username,
+              invoiceNumber: existingInvoice.invoiceNumber,
+              amount: existingInvoice.amount,
+              paymentMethod: 'Manual',
+              companyName: emailCompany?.name || '',
+              companyPhone: emailCompany?.phone || '',
+              newExpiredAt: finalExpiry.toISOString(),
+            });
+            console.log(`  - Email: Payment confirmation sent to ${customerEmail}`);
+          } catch (emailErr) {
+            console.error(`  - Email: Failed to send payment confirmation:`, emailErr);
           }
         }
 

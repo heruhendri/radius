@@ -147,6 +147,7 @@ export async function GET(request: NextRequest) {
         include: {
           profile: { select: { name: true, price: true } },
           area: { select: { name: true } },
+          pppoeCustomer: { select: { email: true } },
         },
         take: 5000,
       });
@@ -156,7 +157,7 @@ export async function GET(request: NextRequest) {
         'Nama': c.name,
         'Username': c.username,
         'Telepon': c.phone,
-        'Email': c.email || '-',
+        'Email': c.email || c.pppoeCustomer?.email || '-',
         'Status': c.status,
         'Jenis': c.subscriptionType,
         'Paket': c.profile?.name || '-',

@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
         profile: true,
         area: true,
         router: true,
+        pppoeCustomer: true,
       },
     });
 
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
         profile: true,
         area: true,
         router: true,
+        pppoeCustomer: true,
       },
     });
 
@@ -106,6 +108,7 @@ export async function POST(request: NextRequest) {
         profile: true,
         area: true,
         router: true,
+        pppoeCustomer: true,
       },
     });
 
@@ -233,7 +236,7 @@ export async function POST(request: NextRequest) {
             userId: user.id,
             customerName: user.name,
             customerPhone: user.phone,
-            customerEmail: user.email,
+            customerEmail: user.email ?? user.pppoeCustomer?.email ?? null,
             customerUsername: user.username,
             amount: invoiceAmount,
             baseAmount: baseAmount,

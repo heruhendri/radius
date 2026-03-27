@@ -297,6 +297,7 @@ const defaultTemplates = [
         <p style="margin: 5px 0;"><strong>Jumlah Dibayar:</strong> {{amount}}</p>
         <p style="margin: 5px 0;"><strong>Username:</strong> {{username}}</p>
         <p style="margin: 5px 0;"><strong>Paket:</strong> {{profileName}}</p>
+        <p style="margin: 5px 0;"><strong>Aktif Hingga:</strong> {{expiredDate}}</p>
       </div>
       
       <p>Akun internet Anda sudah aktif dan siap digunakan. Terima kasih telah mempercayai layanan kami.</p>
