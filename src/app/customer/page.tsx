@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Wifi, Receipt, Loader2, ExternalLink, Edit2, X, Check, Package, Zap, FileText, MessageSquare, Gift, PauseCircle, Banknote } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
+import { PushNotificationToggle } from '@/components/push-notification-toggle';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -618,6 +619,11 @@ export default function CustomerDashboard() {
             </div>
           )}
         </CyberCard>
+      </div>
+
+      {/* Web Push Notification banner */}
+      <div className="mt-3">
+        <PushNotificationToggle />
       </div>
 
       {/* Quick Actions */}
