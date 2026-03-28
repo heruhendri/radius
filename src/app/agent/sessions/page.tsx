@@ -66,17 +66,17 @@ export default function AgentSessionsPage() {
 
     const agentData = JSON.parse(agentDataStr);
     setAgent(agentData);
-    loadSessions(agentData.id);
+    loadSessions();
 
     // Auto-refresh setiap 30 detik agar trafik upload/download hotspot ter-update
     // (MikroTik mengirim Interim-Update setiap 60 detik)
     const interval = setInterval(() => {
-      loadSessions(agentData.id, true);
+      loadSessions(true);
     }, 30000);
 
     // Refresh immediately when tab becomes visible (browser throttles background timers)
     const onVisible = () => {
-      if (!document.hidden) loadSessions(agentData.id, true);
+      if (!document.hidden) loadSessions(true);
     };
     document.addEventListener('visibilitychange', onVisible);
 
@@ -99,10 +99,13 @@ export default function AgentSessionsPage() {
     }
   }, [searchQuery, sessions]);
 
-  const loadSessions = async (agentId: string, silent = false) => {
+  const loadSessions = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const res = await fetch(`/api/agent/sessions?agentId=${agentId}`, {
+      const token = localStorage.getItem('agentToken');
+      if (!token) { router.push('/agent'); return; }
+      const res = await fetch('/api/agent/sessions', {
+        headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(15000),
       });
       const data = await res.json();
@@ -184,7 +187,7 @@ export default function AgentSessionsPage() {
           <p className="text-xs lg:text-sm text-slate-500 dark:text-[#e0d0ff]/60 mt-1">{t('agent.portal.activeVouchers')}</p>
         </div>
         <button
-          onClick={() => agent && loadSessions(agent.id, false)}
+          onClick={() => loadSessions(false)}
           className="flex items-center gap-2 px-4 py-2 bg-[#bc13fe]/20 hover:bg-[#bc13fe]/30 border border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white transition"
         >
           <RefreshCcw className="h-4 w-4" />

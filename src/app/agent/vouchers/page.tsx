@@ -69,7 +69,7 @@ export default function AgentVouchersPage() {
 
     const agentData = JSON.parse(agentDataStr);
     setAgent(agentData);
-    loadVouchers(agentData.id);
+    loadVouchers();
   }, [router]);
 
   // API /api/agent/dashboard returns voucher datetimes as local datetime strings
@@ -84,10 +84,11 @@ export default function AgentVouchersPage() {
     }
   };
 
-  const loadVouchers = async (agentId: string, page = 1, status = '', profileId = '', search = '', limit = 20) => {
+  const loadVouchers = async (page = 1, status = '', profileId = '', search = '', limit = 20) => {
     try {
+      const token = localStorage.getItem('agentToken');
+      if (!token) { router.push('/agent'); return; }
       const params = new URLSearchParams({
-        agentId,
         page: page.toString(),
         limit: limit.toString(),
       });
@@ -95,7 +96,9 @@ export default function AgentVouchersPage() {
       if (profileId) params.append('profileId', profileId);
       if (search) params.append('search', search);
 
-      const res = await fetch(`/api/agent/dashboard?${params.toString()}`);
+      const res = await fetch(`/api/agent/dashboard?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
 
       if (res.ok) {
@@ -112,24 +115,18 @@ export default function AgentVouchersPage() {
 
   const handleFilter = () => {
     setCurrentPage(1);
-    if (agent) {
-      loadVouchers(agent.id, 1, filterStatus, filterProfile, searchCode, perPage);
-    }
+    loadVouchers(1, filterStatus, filterProfile, searchCode, perPage);
   };
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    if (agent) {
-      loadVouchers(agent.id, newPage, filterStatus, filterProfile, searchCode, perPage);
-    }
+    loadVouchers(newPage, filterStatus, filterProfile, searchCode, perPage);
   };
 
   const handlePerPageChange = (newPerPage: number) => {
     setPerPage(newPerPage);
     setCurrentPage(1);
-    if (agent) {
-      loadVouchers(agent.id, 1, filterStatus, filterProfile, searchCode, newPerPage);
-    }
+    loadVouchers(1, filterStatus, filterProfile, searchCode, newPerPage);
   };
 
   const handleClearFilter = () => {
@@ -137,9 +134,7 @@ export default function AgentVouchersPage() {
     setFilterProfile('');
     setSearchCode('');
     setCurrentPage(1);
-    if (agent) {
-      loadVouchers(agent.id, 1, '', '', '', perPage);
-    }
+    loadVouchers(1, '', '', '', perPage);
   };
 
   const handleSelectVoucher = (voucherId: string) => {

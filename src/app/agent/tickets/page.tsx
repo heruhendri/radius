@@ -80,7 +80,6 @@ export default function AgentTicketsPage() {
   const router = useRouter();
   const { t } = useTranslation();
 
-  const [agentId, setAgentId] = useState<string | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,18 +98,20 @@ export default function AgentTicketsPage() {
   useEffect(() => {
     const data = localStorage.getItem('agentData');
     if (!data) { router.push('/agent'); return; }
-    const parsed = JSON.parse(data);
-    setAgentId(parsed.id);
-    loadTickets(parsed.id);
+    loadTickets();
     loadCategories();
   }, [router]);
 
-  const loadTickets = async (id: string, status = filterStatus) => {
+  const loadTickets = async (status = filterStatus) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ agentId: id });
+      const token = localStorage.getItem('agentToken');
+      if (!token) { router.push('/agent'); return; }
+      const params = new URLSearchParams();
       if (status) params.append('status', status);
-      const res = await fetch(`/api/agent/tickets?${params}`);
+      const res = await fetch(`/api/agent/tickets?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       if (data.success) setTickets(data.tickets);
     } catch {
@@ -131,24 +132,24 @@ export default function AgentTicketsPage() {
   };
 
   const handleCreate = async () => {
-    if (!agentId) return;
     if (!form.subject.trim() || !form.description.trim()) {
       await showError('Subjek dan deskripsi wajib diisi.');
       return;
     }
     setCreating(true);
     try {
+      const token = localStorage.getItem('agentToken');
       const res = await fetch('/api/agent/tickets', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId, ...form }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...form }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         await showSuccess(`Tiket #${data.ticket.ticketNumber} berhasil dibuat!`);
         setForm({ subject: '', description: '', priority: 'MEDIUM', categoryId: '' });
         setShowForm(false);
-        loadTickets(agentId);
+        loadTickets();
       } else {
         await showError(data.error || 'Gagal membuat tiket.');
       }
@@ -160,21 +161,21 @@ export default function AgentTicketsPage() {
   };
 
   const handleReply = async (ticketId: string) => {
-    if (!agentId) return;
     const msg = replyText[ticketId]?.trim();
     if (!msg) return;
     setSendingReply(ticketId);
     try {
+      const token = localStorage.getItem('agentToken');
       const res = await fetch(`/api/agent/tickets/${ticketId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId, message: msg }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ message: msg }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setReplyText(prev => ({ ...prev, [ticketId]: '' }));
         // Reload tickets to refresh messages
-        await loadTickets(agentId, filterStatus);
+        await loadTickets(filterStatus);
         // Keep expanded
         setExpandedId(ticketId);
       } else {
@@ -189,7 +190,7 @@ export default function AgentTicketsPage() {
 
   const handleFilterChange = (status: string) => {
     setFilterStatus(status);
-    if (agentId) loadTickets(agentId, status);
+    loadTickets(status);
   };
 
   const statusLabel: Record<string, string> = {
@@ -218,7 +219,7 @@ export default function AgentTicketsPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => agentId && loadTickets(agentId)}
+            onClick={() => loadTickets()}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition-all"
           >
             <RefreshCw className="w-3.5 h-3.5" />

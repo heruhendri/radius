@@ -50,6 +50,7 @@ export default function AgentLoginPage() {
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('agentData', JSON.stringify(data.agent));
+        localStorage.setItem('agentToken', data.token);
         router.push('/agent/dashboard');
       } else {
         setError(data.error || t('agent.portal.errors.loginFailed'));

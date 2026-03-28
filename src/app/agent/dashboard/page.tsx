@@ -139,7 +139,7 @@ export default function AgentDashboardPage() {
 
     const agentData = JSON.parse(agentDataStr);
     setAgent(agentData);
-    loadDashboard(agentData.id);
+    loadDashboard();
     loadAdminBankAccounts();
   }, [router]);
 
@@ -171,10 +171,11 @@ export default function AgentDashboardPage() {
     }
   };
 
-  const loadDashboard = async (agentId: string, page = 1, status = '', profileId = '', search = '') => {
+  const loadDashboard = async (page = 1, status = '', profileId = '', search = '') => {
     try {
+      const token = localStorage.getItem('agentToken');
+      if (!token) { router.push('/agent'); return; }
       const params = new URLSearchParams({
-        agentId,
         page: page.toString(),
         limit: '20',
       });
@@ -182,7 +183,9 @@ export default function AgentDashboardPage() {
       if (profileId) params.append('profileId', profileId);
       if (search) params.append('search', search);
 
-      const res = await fetch(`/api/agent/dashboard?${params.toString()}`);
+      const res = await fetch(`/api/agent/dashboard?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
 
       if (res.ok) {
@@ -217,16 +220,12 @@ export default function AgentDashboardPage() {
 
   const handleFilter = () => {
     setCurrentPage(1);
-    if (agent) {
-      loadDashboard(agent.id, 1, filterStatus, filterProfile, searchCode);
-    }
+    loadDashboard(1, filterStatus, filterProfile, searchCode);
   };
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    if (agent) {
-      loadDashboard(agent.id, newPage, filterStatus, filterProfile, searchCode);
-    }
+    loadDashboard(newPage, filterStatus, filterProfile, searchCode);
   };
 
   const handleClearFilter = () => {
@@ -234,13 +233,12 @@ export default function AgentDashboardPage() {
     setFilterProfile('');
     setSearchCode('');
     setCurrentPage(1);
-    if (agent) {
-      loadDashboard(agent.id, 1, '', '', '');
-    }
+    loadDashboard(1, '', '', '');
   };
 
   const handleLogout = () => {
     localStorage.removeItem('agentData');
+    localStorage.removeItem('agentToken');
     router.push('/agent');
   };
 
@@ -352,9 +350,10 @@ export default function AgentDashboardPage() {
 
     setGenerating(true);
     try {
+      const token = localStorage.getItem('agentToken');
       const res = await fetch('/api/agent/generate-voucher', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           agentId: agent.id,
           profileId: selectedProfile,
@@ -373,7 +372,7 @@ export default function AgentDashboardPage() {
         if (data.newBalance !== undefined && agent) {
           setAgent({ ...agent, balance: data.newBalance });
         }
-        loadDashboard(agent.id);
+        loadDashboard();
         await showSuccess(t('agent.portal.vouchersGeneratedSuccess', {
           count: data.vouchers.length.toString(),
           balance: formatCurrency(data.newBalance || 0)
@@ -451,9 +450,10 @@ export default function AgentDashboardPage() {
 
     setCreatingDeposit(true);
     try {
+      const token = localStorage.getItem('agentToken');
       const res = await fetch('/api/agent/deposit/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           agentId: agent.id,
           amount,
@@ -472,7 +472,7 @@ export default function AgentDashboardPage() {
           setDepositAmount('');
           setDepositPaymentMethod('');
           setPaymentMethods([]);
-          setTimeout(() => loadDashboard(agent.id), 3000);
+          setTimeout(() => loadDashboard(), 3000);
         }
       } else {
         await showError(t('common.error') + ': ' + data.error);
@@ -526,9 +526,10 @@ export default function AgentDashboardPage() {
       }
       setUploadingProof(false);
 
+      const token = localStorage.getItem('agentToken');
       const res = await fetch('/api/agent/deposit/manual-request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           agentId: agent.id,
           amount,
@@ -558,7 +559,7 @@ export default function AgentDashboardPage() {
       setProofFile(null);
       if (proofPreviewUrl) URL.revokeObjectURL(proofPreviewUrl);
       setProofPreviewUrl(null);
-      await loadDashboard(agent.id);
+      await loadDashboard();
     } catch (error: any) {
       await showError(error.message || 'Gagal membuat permintaan deposit manual');
     } finally {
@@ -613,7 +614,7 @@ export default function AgentDashboardPage() {
               {t('agent.portal.deposit')}
             </button>
             <button
-              onClick={() => agent && loadDashboard(agent.id)}
+              onClick={() => loadDashboard()}
               className="flex items-center justify-center px-3 py-2 bg-white hover:bg-white/90 text-[#bc13fe] rounded-xl transition shadow-lg hover:shadow-xl min-w-[40px]"
             >
               <RefreshCcw className="h-4 w-4" />

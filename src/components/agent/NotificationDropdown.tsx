@@ -84,9 +84,13 @@ export default function AgentNotificationDropdown({ agentId, enableToasts = true
 
   const loadNotifications = async (skipToasts = false) => {
     if (!agentId) return;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+    if (!token) return;
     
     try {
-      const res = await fetch(`/api/agent/notifications?limit=10&agentId=${agentId}`);
+      const res = await fetch('/api/agent/notifications?limit=10', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       if (data.success) {
         if (skipToasts || !enableToasts) {
@@ -136,10 +140,11 @@ export default function AgentNotificationDropdown({ agentId, enableToasts = true
 
   const markAsRead = async (notificationIds: string[]) => {
     try {
+      const token = localStorage.getItem('agentToken');
       await fetch('/api/agent/notifications', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationIds, agentId }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ notificationIds }),
       });
       loadNotifications();
     } catch (error) {
@@ -149,10 +154,11 @@ export default function AgentNotificationDropdown({ agentId, enableToasts = true
 
   const markAllAsRead = async () => {
     try {
+      const token = localStorage.getItem('agentToken');
       await fetch('/api/agent/notifications', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markAll: true, agentId }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ markAll: true }),
       });
       loadNotifications();
     } catch (error) {
@@ -162,8 +168,10 @@ export default function AgentNotificationDropdown({ agentId, enableToasts = true
 
   const deleteNotification = async (id: string) => {
     try {
+      const token = localStorage.getItem('agentToken');
       await fetch(`/api/agent/notifications?id=${id}`, {
         method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
       });
       loadNotifications();
     } catch (error) {

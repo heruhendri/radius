@@ -215,24 +215,30 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
       const agentDataStr = localStorage.getItem('agentData');
       if (agentDataStr) {
         const localAgent = JSON.parse(agentDataStr);
+        const token = localStorage.getItem('agentToken');
         setAgent(localAgent);
         // Fetch fresh balance from API
-        fetch(`/api/agent/dashboard?agentId=${localAgent.id}&limit=1`)
-          .then(res => res.ok ? res.json() : null)
-          .then(data => {
-            if (data?.agent) {
-              const updated = { ...localAgent, balance: data.agent.balance };
-              setAgent(updated);
-              localStorage.setItem('agentData', JSON.stringify(updated));
-            }
+        if (token) {
+          fetch('/api/agent/dashboard?limit=1', {
+            headers: { Authorization: `Bearer ${token}` },
           })
-          .catch(() => {});
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+              if (data?.agent) {
+                const updated = { ...localAgent, balance: data.agent.balance };
+                setAgent(updated);
+                localStorage.setItem('agentData', JSON.stringify(updated));
+              }
+            })
+            .catch(() => {});
+        }
       }
     }
   }, [isLoginPage, pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('agentData');
+    localStorage.removeItem('agentToken');
     router.push('/agent');
   };
 
