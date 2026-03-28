@@ -3,26 +3,22 @@ import { Prisma } from '@prisma/client';
 import { toWIB, nowWIB, WIB_TIMEZONE } from '@/lib/timezone';
 import { formatInTimeZone } from 'date-fns-tz';
 import { prisma } from '@/server/db/client';
+import { requireAgentAuth } from '@/server/middleware/agent-auth';
 
 // GET - Get agent dashboard data
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAgentAuth(request);
+    if (!auth.authorized) return auth.response;
+    const { agentId } = auth;
+
     const { searchParams } = new URL(request.url);
-    const agentId = searchParams.get('agentId');
-    
     // Pagination & filter params
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const status = searchParams.get('status') || '';
     const search = searchParams.get('search') || '';
     const profileId = searchParams.get('profileId') || '';
-
-    if (!agentId) {
-      return NextResponse.json(
-        { error: 'Agent ID is required' },
-        { status: 400 }
-      );
-    }
 
     // Get agent and update lastLogin
     const agent = await prisma.agent.update({

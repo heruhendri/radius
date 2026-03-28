@@ -5,6 +5,7 @@ import { logActivity } from '@/server/services/activity-log.service';
 import { nowWIB } from '@/lib/timezone';
 import { parseBody } from '@/lib/parse-body';
 import { generateVoucherSchema } from '@/features/agents/schemas';
+import { requireAgentAuth } from '@/server/middleware/agent-auth';
 
 // Code type definitions (same as admin)
 const CODE_TYPES: Record<string, { chars: string }> = {
@@ -17,9 +18,14 @@ const CODE_TYPES: Record<string, { chars: string }> = {
 // POST - Generate voucher by agent
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAgentAuth(request);
+    if (!auth.authorized) return auth.response;
+
     const parsed = await parseBody(request, generateVoucherSchema);
     if (parsed.error) return parsed.error;
-    const { agentId, profileId, quantity, codeLength, codeType, prefix } = parsed.data;
+    // Use agentId from JWT — ignore any agentId from request body
+    const agentId = auth.agentId;
+    const { profileId, quantity, codeLength, codeType, prefix } = parsed.data;
 
     // Verify agent and get router info
     const agent = await prisma.agent.findUnique({

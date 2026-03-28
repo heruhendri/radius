@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { rateLimit, RateLimitPresets } from '@/server/middleware/rate-limit';
+import { signAgentToken } from '@/server/auth/agent-jwt';
 
 // POST - Agent login with phone number
 export async function POST(request: NextRequest) {
@@ -45,9 +46,13 @@ export async function POST(request: NextRequest) {
       data: { lastLogin: new Date() },
     });
 
-    // Return agent data (in production, use JWT or session)
+    // Issue JWT token for the agent session
+    const token = await signAgentToken(agent.id, agent.phone);
+
     return NextResponse.json({
       success: true,
+      token,
+      expiresIn: '7d',
       agent: {
         id: agent.id,
         name: agent.name,

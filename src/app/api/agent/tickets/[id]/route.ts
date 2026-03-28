@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
+import { requireAgentAuth } from '@/server/middleware/agent-auth';
 
-/** GET /api/agent/tickets/[id]?agentId=... */
+/** GET /api/agent/tickets/[id] */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const agentId = searchParams.get('agentId');
+    const auth = await requireAgentAuth(request);
+    if (!auth.authorized) return auth.response;
+    const { agentId } = auth;
 
-    if (!agentId) {
-      return NextResponse.json({ error: 'agentId is required' }, { status: 400 });
-    }
+    const { id } = await params;
 
     const ticket = await prisma.ticket.findFirst({
       where: { id, customerEmail: `agent:${agentId}` },
@@ -34,12 +33,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 /** POST /api/agent/tickets/[id] - add reply message */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireAgentAuth(request);
+    if (!auth.authorized) return auth.response;
+    const { agentId } = auth;
+
     const { id } = await params;
     const body = await request.json();
-    const { agentId, message } = body;
+    const { message } = body;
 
-    if (!agentId || !message?.trim()) {
-      return NextResponse.json({ error: 'agentId and message are required' }, { status: 400 });
+    if (!message?.trim()) {
+      return NextResponse.json({ error: 'message is required' }, { status: 400 });
     }
 
     const ticket = await prisma.ticket.findFirst({

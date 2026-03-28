@@ -2,6 +2,7 @@
 import { prisma } from '@/server/db/client';
 import { getTimezoneOffsetMs } from '@/lib/timezone';
 import { fetchLiveHotspotTrafficMap } from '@/server/services/radius/live-hotspot-traffic';
+import { requireAgentAuth } from '@/server/middleware/agent-auth';
 
 
 function formatBytes(bytes: number): string {
@@ -49,12 +50,11 @@ async function getLatestMacByUsernames(usernames: string[]): Promise<Map<string,
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const agentId = searchParams.get('agentId');
+    const auth = await requireAgentAuth(request);
+    if (!auth.authorized) return auth.response;
+    const { agentId } = auth;
 
-    if (!agentId) {
-      return NextResponse.json({ error: 'Agent ID required' }, { status: 400 });
-    }
+    const { searchParams } = new URL(request.url);
 
     // Get all vouchers for this agent
     const vouchers = await prisma.hotspotVoucher.findMany({

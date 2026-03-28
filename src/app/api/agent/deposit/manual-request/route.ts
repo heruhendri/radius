@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { nowWIB } from '@/lib/timezone';
+import { requireAgentAuth } from '@/server/middleware/agent-auth';
 
 /**
  * POST /api/agent/deposit/manual-request
@@ -8,9 +9,12 @@ import { nowWIB } from '@/lib/timezone';
  */
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAgentAuth(request);
+    if (!auth.authorized) return auth.response;
+    const agentId = auth.agentId;
+
     const body = await request.json();
     const {
-      agentId,
       amount,
       note,
       targetBankName,
@@ -21,8 +25,8 @@ export async function POST(request: NextRequest) {
       receiptImage,
     } = body;
 
-    if (!agentId || !amount) {
-      return NextResponse.json({ error: 'Agent ID and amount are required' }, { status: 400 });
+    if (!amount) {
+      return NextResponse.json({ error: 'Amount is required' }, { status: 400 });
     }
 
     const parsedAmount = Number(amount);

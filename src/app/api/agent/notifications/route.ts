@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
+import { requireAgentAuth } from '@/server/middleware/agent-auth';
 
 /**
  * GET /api/agent/notifications
@@ -7,16 +8,12 @@ import { prisma } from '@/server/db/client';
  */
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAgentAuth(request);
+    if (!auth.authorized) return auth.response;
+    const { agentId } = auth;
+
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50');
-    const agentId = searchParams.get('agentId');
-
-    if (!agentId) {
-      return NextResponse.json(
-        { error: 'Agent ID is required' },
-        { status: 400 }
-      );
-    }
 
     // Get notifications for this agent
     const notifications = await prisma.agentNotification.findMany({
@@ -56,10 +53,14 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { notificationIds, markAll, agentId } = body;
+    const auth = await requireAgentAuth(request);
+    if (!auth.authorized) return auth.response;
+    const { agentId } = auth;
 
-    if (markAll && agentId) {
+    const body = await request.json();
+    const { notificationIds, markAll } = body;
+
+    if (markAll) {
       await prisma.agentNotification.updateMany({
         where: {
           agentId,
@@ -98,6 +99,10 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    const auth = await requireAgentAuth(request);
+    if (!auth.authorized) return auth.response;
+    const { agentId } = auth;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -106,6 +111,12 @@ export async function DELETE(request: NextRequest) {
         { error: 'Notification ID is required' },
         { status: 400 }
       );
+    }
+
+    // Verify ownership before deleting
+    const notification = await prisma.agentNotification.findUnique({ where: { id } });
+    if (!notification || notification.agentId !== agentId) {
+      return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
     }
 
     await prisma.agentNotification.delete({

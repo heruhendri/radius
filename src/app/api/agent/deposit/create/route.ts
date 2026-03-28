@@ -3,6 +3,7 @@ import { prisma } from '@/server/db/client';
 import { createMidtransPayment } from '@/server/services/payment/midtrans.service';
 import { parseBody } from '@/lib/parse-body';
 import { agentDepositCreateSchema } from '@/features/agents/schemas';
+import { requireAgentAuth } from '@/server/middleware/agent-auth';
 
 /**
  * POST /api/agent/deposit/create
@@ -10,9 +11,14 @@ import { agentDepositCreateSchema } from '@/features/agents/schemas';
  */
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAgentAuth(request);
+    if (!auth.authorized) return auth.response;
+
     const parsed = await parseBody(request, agentDepositCreateSchema);
     if (parsed.error) return parsed.error;
-    const { agentId, amount, gateway, paymentMethod: selectedPaymentMethod } = parsed.data;
+    // Use agentId from JWT — ignore any agentId from request body
+    const agentId = auth.agentId;
+    const { amount, gateway, paymentMethod: selectedPaymentMethod } = parsed.data;
 
     // Check agent exists
     const agent = await prisma.agent.findUnique({
