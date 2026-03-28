@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Wifi, Receipt, Loader2, ExternalLink, Edit2, X, Check, Package, Wallet, Zap, AlertCircle, Upload, CreditCard, FileText, MessageSquare, Gift, PauseCircle } from 'lucide-react';
+import { User, Wifi, Receipt, Loader2, ExternalLink, Edit2, X, Check, Package, Zap, FileText, MessageSquare, Gift, PauseCircle } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 
 // Force dynamic rendering
@@ -382,110 +382,6 @@ export default function CustomerDashboard() {
           </div>
         </CyberCard>
 
-        {/* Balance Card */}
-        {user.balance !== undefined && (
-          <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.15)]">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 bg-cyan-500/20 rounded-lg border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
-                <Wallet className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_5px_rgba(6,182,212,0.8)]" />
-              </div>
-              <h2 className="text-sm font-bold text-cyan-400 uppercase tracking-wider drop-shadow-[0_0_5px_rgba(6,182,212,0.5)]">{t('customer.depositBalance')}</h2>
-            </div>
-            
-            <div className="space-y-3">
-              {/* Current Balance */}
-              <div className="bg-cyan-500/10 rounded-lg p-3 border border-cyan-500/20">
-                <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-wide mb-1">{t('customer.currentBalance')}</p>
-                <p className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.6)]">
-                  {new Intl.NumberFormat('id-ID', {
-                    style: 'currency',
-                    currency: 'IDR',
-                    minimumFractionDigits: 0
-                  }).format(user.balance || 0)}
-                </p>
-                {user.profile.price && (
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    {t('customer.packagePrice')}: Rp {user.profile.price.toLocaleString('id-ID')}
-                  </p>
-                )}
-                {/* Low Balance Warning */}
-                {user.profile.price && user.balance && user.balance < user.profile.price && (
-                  <div className="mt-2 flex items-start gap-1 text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded p-1.5">
-                    <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                    <span>⚠️ {t('customer.lowBalanceWarning')}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Auto-Renewal Status */}
-              <div className="flex items-center justify-between p-2 bg-muted/50 rounded border border-border">
-                <div className="flex items-center gap-2">
-                  <Zap className={`w-4 h-4 ${user.autoRenewal ? 'text-cyan-400' : 'text-muted-foreground'}`} />
-                  <div>
-                    <p className="text-xs font-medium">{t('customer.autoRenewal')}</p>
-                    <p className="text-[9px] text-muted-foreground">
-                      {user.autoRenewal ? 'Aktif' : 'Nonaktif'}
-                    </p>
-                  </div>
-                </div>
-                <span className={`px-2 py-1 rounded text-[10px] font-bold ${
-                  user.autoRenewal 
-                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40' 
-                    : 'bg-muted text-muted-foreground'
-                }`}>
-                  {user.autoRenewal ? 'ON' : 'OFF'}
-                </span>
-              </div>
-
-              {/* Info Box */}
-              {user.autoRenewal && (
-                <div className="bg-info/10 border border-info/30 rounded p-1.5">
-                  <p className="text-[9px] text-info-foreground leading-tight">
-                    ℹ️ Perpanjang otomatis 3 hari sebelum expired
-                  </p>
-                </div>
-              )}
-
-              {/* Top-Up Buttons */}
-              <div className="space-y-2">
-                {/* Direct Top-Up Button */}
-                <CyberButton
-                  onClick={() => window.location.href = '/customer/topup-direct'}
-                  className="w-full"
-                  size="sm"
-                  variant="cyan"
-                >
-                  <CreditCard className="w-3.5 h-3.5" />
-                  Top-Up Langsung (Otomatis)
-                </CyberButton>
-                
-                {/* Manual Request & WhatsApp */}
-                <div className="flex gap-2">
-                  <CyberButton
-                    onClick={() => window.location.href = '/customer/topup-request'}
-                    className="flex-1"
-                    size="sm"
-                    variant="purple"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    Request Manual
-                  </CyberButton>
-                  <button
-                    onClick={async () => {
-                      const whatsappNumber = '6281234567890'; // Ganti dengan nomor admin
-                      const message = `Halo, saya ${user.name} (${user.username}) ingin melakukan top-up saldo. Saldo saat ini: Rp ${user.balance?.toLocaleString('id-ID')}`;
-                      window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors shadow-lg shadow-green-500/20"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    WA Admin
-                  </button>
-                </div>
-              </div>
-            </div>
-          </CyberCard>
-        )}
       </div>
 
       {/* Bottom row: ONT/WiFi + Invoices */}
@@ -693,7 +589,6 @@ export default function CustomerDashboard() {
             {([
               { name: 'Semua Tagihan',  href: '/customer/invoices',      icon: FileText,      bg: 'bg-success/10',   border: 'border-success/30',   text: 'text-success' },
               { name: 'Ganti Paket',   href: '/customer/upgrade',       icon: Package,       bg: 'bg-primary/10',   border: 'border-primary/30',   text: 'text-primary' },
-              { name: 'Top-Up Saldo',  href: '/customer/topup-direct',  icon: CreditCard,    bg: 'bg-cyan-500/10',  border: 'border-cyan-500/30',  text: 'text-cyan-400' },
               { name: 'Riwayat Bayar', href: '/customer/history',       icon: Receipt,       bg: 'bg-accent/10',    border: 'border-accent/30',    text: 'text-accent' },
               { name: 'WiFi',          href: '/customer/wifi',          icon: Wifi,          bg: 'bg-blue-500/10',  border: 'border-blue-500/30',  text: 'text-blue-400' },
               { name: 'Tiket Support', href: '/customer/tickets',       icon: MessageSquare, bg: 'bg-yellow-500/10',border: 'border-yellow-500/30',text: 'text-yellow-400' },

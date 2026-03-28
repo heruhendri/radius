@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Plus, Pencil, Trash2, Users, CheckCircle2, MapPin, Map, MoreVertical,
   Shield, ShieldOff, Ban, Download, Upload, Search, Filter, X, Eye, EyeOff, RefreshCcw, DollarSign, Loader2, Zap,
-  UserPlus, RefreshCw, Clock, Bell, Send, Mail, ArrowUpDown, Wallet,
+  UserPlus, RefreshCw, Clock, Bell, Send, Mail, ArrowUpDown,
   Calendar, CreditCard, Camera, Info, AlertTriangle, Wrench, CheckCircle, XCircle,
 } from 'lucide-react';
 import MapPicker from '@/components/MapPicker';
@@ -884,15 +884,10 @@ export default function PppoeUsersPage() {
                       <span className="text-muted-foreground">{t('pppoe.expired')}:</span>
                       <span className={user.expiredAt && isExpired(user.expiredAt) ? 'text-destructive font-medium' : ''}>{user.expiredAt ? formatWIB(user.expiredAt, 'dd/MM/yyyy') : '-'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t('pppoe.balanceLabel')}:</span>
-                      <span className="font-medium text-primary">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format((user as any).balance || 0)}</span>
-                    </div>
                   </div>
                   <div className="flex items-center gap-1 pt-1 border-t border-border/50 flex-wrap">
                     <button onClick={() => handleEdit(user)} className="p-1.5 text-muted-foreground hover:bg-muted rounded"><Pencil className="h-3.5 w-3.5" /></button>
                     <button onClick={() => setDeleteUserId(user.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => window.location.href = `/admin/pppoe/users/${user.id}/balance`} className="p-1.5 text-primary hover:bg-primary/10 rounded" title={t('pppoe.manageBalance')}><Wallet className="h-3.5 w-3.5" /></button>
                     {invoiceCounts[user.id] > 0 ? (
                       <button onClick={() => handleMarkAllPaid(user.id, user.name)} disabled={markingPaid === user.id} className="px-1.5 py-0.5 text-[10px] font-medium bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50 ml-auto">
                         {markingPaid === user.id ? <Loader2 className="h-3 w-3 animate-spin" /> : t('pppoe.markPaid')}

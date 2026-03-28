@@ -1490,6 +1490,34 @@ export async function generateInvoices(force = false): Promise<{ success: boolea
           continue;
         }
 
+        // Skip users who are still in their FIRST billing period.
+        // New customers should not receive a renewal invoice immediately on the same day
+        // they register or while they haven't completed their first paid period yet.
+        const userCreatedAt = new Date(user.createdAt);
+        if (user.subscriptionType === 'PREPAID' && user.expiredAt) {
+          // First period window: createdAt + 31 days (adds 1-day buffer for billing cycles)
+          const firstPeriodEnd = new Date(userCreatedAt.getTime() + 31 * 24 * 60 * 60 * 1000);
+          if (user.expiredAt <= firstPeriodEnd) {
+            skipped++;
+            console.log(`⏭️  Skipped ${user.username} - PREPAID first billing period (created: ${userCreatedAt.toISOString().slice(0, 10)}, expires: ${user.expiredAt.toISOString().slice(0, 10)})`);
+            continue;
+          }
+        }
+        if (user.subscriptionType === 'POSTPAID') {
+          // For POSTPAID: skip if user was created within the current billing period.
+          // Current billing period started on billingDay of last month.
+          const bd = user.billingDay ?? 1;
+          const prevYear = now.getUTCMonth() === 0 ? now.getUTCFullYear() - 1 : now.getUTCFullYear();
+          const prevMonth = now.getUTCMonth() === 0 ? 11 : now.getUTCMonth() - 1;
+          const lastDayOfPrevMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0)).getUTCDate();
+          const billingPeriodStart = new Date(Date.UTC(prevYear, prevMonth, Math.min(bd, lastDayOfPrevMonth)));
+          if (userCreatedAt >= billingPeriodStart) {
+            skipped++;
+            console.log(`⏭️  Skipped ${user.username} - POSTPAID first billing period (created: ${userCreatedAt.toISOString().slice(0, 10)}, period started: ${billingPeriodStart.toISOString().slice(0, 10)})`);
+            continue;
+          }
+        }
+
         const baseAmount = user.profile.price;
 
         // Calculate PPN if enabled on profile
