@@ -9,6 +9,29 @@ export async function GET(
 ) {
   try {
     const { filename } = await params;
+    // Reject path traversal and unexpected characters.
+    if (!filename || filename.includes('/') || filename.includes('\\') || filename.includes('..')) {
+      return new NextResponse('Invalid filename', { status: 400 });
+    }
+
+    // Restrict to expected filename pattern used by uploads.
+    if (!/^[a-zA-Z0-9._-]+$/.test(filename)) {
+      return new NextResponse('Invalid filename', { status: 400 });
+    }
+
+    const ext = path.extname(filename).toLowerCase();
+    const contentTypes: { [key: string]: string } = {
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.svg': 'image/svg+xml',
+      '.webp': 'image/webp',
+    };
+
+    if (!contentTypes[ext]) {
+      return new NextResponse('Unsupported file type', { status: 400 });
+    }
+
     const filepath = path.join(process.cwd(), 'public', 'uploads', 'logos', filename);
 
     // Check if file exists
@@ -19,17 +42,7 @@ export async function GET(
     // Read file
     const fileBuffer = await readFile(filepath);
 
-    // Determine content type based on extension
-    const ext = path.extname(filename).toLowerCase();
-    const contentTypes: { [key: string]: string } = {
-      '.png': 'image/png',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.svg': 'image/svg+xml',
-      '.webp': 'image/webp',
-    };
-
-    const contentType = contentTypes[ext] || 'application/octet-stream';
+    const contentType = contentTypes[ext];
 
     // Return file with proper headers
     return new NextResponse(fileBuffer, {

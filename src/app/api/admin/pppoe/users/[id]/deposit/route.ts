@@ -1,6 +1,8 @@
 ﻿import { prisma } from '@/server/db/client'
 import { NextRequest, NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/server/auth/config'
 
 /**
  * POST /api/admin/pppoe/users/[id]/deposit
@@ -11,6 +13,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { id } = await params
     const body = await request.json()
     const { amount, paymentMethod, note } = body

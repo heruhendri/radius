@@ -4,6 +4,8 @@ import { genCustomerId } from '@/lib/utils';
 import { sendRegistrationApproval } from '@/server/services/notifications/whatsapp-templates.service';
 import crypto from 'crypto';
 import { generateUniqueReferralCode } from '@/server/services/referral.service';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/server/auth/config';
 
 // Helper to generate username from name and phone
 function generateUsername(name: string, phone: string): string {
@@ -19,6 +21,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { id } = await params;
     const body = await request.json();
     const { installationFee = 0, subscriptionType = 'POSTPAID', billingDay = 1 } = body;

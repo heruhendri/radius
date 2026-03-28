@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, execFileSync } from 'child_process';
 import { openSync, closeSync, existsSync, readFileSync } from 'fs';
 import path from 'path';
 
@@ -31,7 +31,8 @@ function isUpdateRunning(): boolean {
   if (!existsSync(PID_FILE)) return false;
   try {
     const pid = parseInt(readFileSync(PID_FILE, 'utf-8').trim());
-    execSync(`kill -0 ${pid}`, { timeout: 2000 });
+    if (!Number.isInteger(pid) || pid <= 0) return false;
+    execFileSync('kill', ['-0', pid.toString()], { timeout: 2000 });
     return true;
   } catch {
     return false;
@@ -43,6 +44,9 @@ function isUpdateRunning(): boolean {
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (session.user.role !== 'SUPER_ADMIN') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
 
@@ -116,6 +120,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (session.user.role !== 'SUPER_ADMIN') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const appDir = getAppDir();
 
@@ -130,7 +137,7 @@ export async function POST(request: Request) {
 
       let changelog = '';
       if (local !== remote) {
-        changelog = execSync(`git log --oneline ${local}..${remote}`, { cwd: appDir }).toString().trim();
+        changelog = execFileSync('git', ['log', '--oneline', `${local}..${remote}`], { cwd: appDir }).toString().trim();
       }
 
       return NextResponse.json({

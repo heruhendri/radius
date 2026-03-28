@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { readFileSync, existsSync } from 'fs';
 import path from 'path';
 
@@ -35,6 +35,9 @@ function git(cmd: string, appDir: string): string {
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (session.user.role !== 'SUPER_ADMIN') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const appDir = getAppDir();
 
@@ -61,8 +64,12 @@ export async function GET() {
   if (pidExists) {
     try {
       const pid = parseInt(readFileSync('/tmp/salfanet-update.pid', 'utf-8').trim());
-      execSync(`kill -0 ${pid}`, { timeout: 2000 });
-      updateRunning = true;
+      if (Number.isInteger(pid) && pid > 0) {
+        execFileSync('kill', ['-0', pid.toString()], { timeout: 2000 });
+        updateRunning = true;
+      } else {
+        updateRunning = false;
+      }
     } catch { updateRunning = false; }
   }
 

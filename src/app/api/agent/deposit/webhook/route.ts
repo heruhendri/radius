@@ -2,6 +2,7 @@
 import { prisma } from '@/server/db/client';
 import { logActivity } from '@/server/services/activity-log.service';
 import { nowWIB } from '@/lib/timezone';
+import crypto from 'crypto';
 
 /**
  * POST /api/agent/deposit/webhook
@@ -34,6 +35,8 @@ export async function POST(request: NextRequest) {
     let transactionId: string | null = null;
     let gateway: string | null = null;
 
+    const signature = request.headers.get('x-callback-token') || request.headers.get('x-signature') || request.headers.get('x-callback-signature');
+
     // Midtrans webhook format
     if (payload.order_id && payload.transaction_status) {
       orderId = payload.order_id;
@@ -48,6 +51,24 @@ export async function POST(request: NextRequest) {
         status = 'PENDING';
       } else if (['deny', 'expire', 'cancel'].includes(txStatus)) {
         status = 'FAILED';
+      }
+
+      const gatewayConfig = await prisma.paymentGateway.findUnique({
+        where: { provider: 'midtrans' }
+      });
+
+      if (gatewayConfig?.midtransServerKey) {
+        const signatureKey = payload.signature_key;
+        const expectedSignature = crypto
+          .createHash('sha512')
+          .update(`${orderId}${payload.status_code}${payload.gross_amount}${gatewayConfig.midtransServerKey}`)
+          .digest('hex');
+
+        if (!signatureKey || signatureKey !== expectedSignature) {
+          return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        }
+      } else if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: 'Webhook misconfigured' }, { status: 500 });
       }
     }
     // Xendit webhook format
@@ -65,6 +86,18 @@ export async function POST(request: NextRequest) {
       } else if (['EXPIRED', 'FAILED'].includes(xenditStatus)) {
         status = 'FAILED';
       }
+
+      const gatewayConfig = await prisma.paymentGateway.findUnique({
+        where: { provider: 'xendit' }
+      });
+
+      if (gatewayConfig?.xenditWebhookToken && gatewayConfig.xenditWebhookToken.trim() !== '') {
+        if (!signature || signature !== gatewayConfig.xenditWebhookToken) {
+          return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+        }
+      } else if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: 'Webhook misconfigured' }, { status: 500 });
+      }
     }
     // Duitku webhook format
     else if (payload.merchantOrderId && payload.resultCode) {
@@ -77,6 +110,24 @@ export async function POST(request: NextRequest) {
         status = 'PAID';
       } else {
         status = 'FAILED';
+      }
+
+      const gatewayConfig = await prisma.paymentGateway.findUnique({
+        where: { provider: 'duitku' }
+      });
+
+      if (gatewayConfig?.duitkuApiKey) {
+        const receivedSignature = payload.signature;
+        const expectedSignature = crypto
+          .createHash('md5')
+          .update(`${gatewayConfig.duitkuMerchantCode}${payload.amount}${orderId}${gatewayConfig.duitkuApiKey}`)
+          .digest('hex');
+
+        if (!receivedSignature || receivedSignature !== expectedSignature) {
+          return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        }
+      } else if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: 'Webhook misconfigured' }, { status: 500 });
       }
     }
     // Tripay webhook format
@@ -96,6 +147,24 @@ export async function POST(request: NextRequest) {
         status = 'FAILED';
       } else if (tripayStatus === 'UNPAID') {
         status = 'PENDING';
+      }
+
+      const gatewayConfig = await prisma.paymentGateway.findUnique({
+        where: { provider: 'tripay' }
+      });
+
+      if (gatewayConfig?.tripayPrivateKey) {
+        const receivedSignature = request.headers.get('x-callback-signature');
+        const expectedSignature = crypto
+          .createHmac('sha256', gatewayConfig.tripayPrivateKey)
+          .update(rawBody)
+          .digest('hex');
+
+        if (!receivedSignature || receivedSignature !== expectedSignature) {
+          return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        }
+      } else if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: 'Webhook misconfigured' }, { status: 500 });
       }
       
       console.log('[Tripay] Webhook - Status:', tripayStatus, '-> Mapped:', status);
