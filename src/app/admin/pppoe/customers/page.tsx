@@ -340,6 +340,7 @@ export default function PppoeCustomersPage() {
             )}
           </div>
         ) : (
+          <>
           {/* Mobile Card View */}
           <div className="block md:hidden divide-y divide-border">
             {customers.map((c) => (
@@ -525,6 +526,7 @@ export default function PppoeCustomersPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
