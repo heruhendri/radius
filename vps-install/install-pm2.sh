@@ -194,8 +194,33 @@ except Exception as e:
         print_error ".next directory not created! Build may have failed."
         return 1
     fi
-    
+
     print_success ".next build directory verified"
+
+    # -----------------------------------------------------------------------
+    # REQUIRED for Next.js standalone mode: copy public/ and .next/static/
+    # into .next/standalone/ so the standalone server.js can serve them.
+    # Without this step, PWA manifests, sw.js, and all static assets 404.
+    # See: https://nextjs.org/docs/app/api-reference/next-config-js/output#automatically-copying-traced-files
+    # -----------------------------------------------------------------------
+    if [ -d ".next/standalone" ]; then
+        print_info "Copying public assets into standalone bundle..."
+
+        # public/ → .next/standalone/public/
+        if [ -d "public" ]; then
+            cp -r public .next/standalone/public/
+            print_success "public/ copied → .next/standalone/public/"
+        fi
+
+        # .next/static/ → .next/standalone/.next/static/
+        if [ -d ".next/static" ]; then
+            mkdir -p .next/standalone/.next
+            cp -r .next/static .next/standalone/.next/static/
+            print_success ".next/static/ copied → .next/standalone/.next/static/"
+        fi
+    else
+        print_warning ".next/standalone not found — skipping asset copy (non-standalone build?)"
+    fi
 }
 
 # ============================================================================
@@ -613,6 +638,17 @@ npx prisma db push --accept-data-loss
 # Build application
 echo "[>] Building application..."
 NODE_OPTIONS="--max-old-space-size=1536" npm run build
+
+# Copy public assets into standalone bundle (required for PWA manifests + sw.js)
+if [ -d ".next/standalone" ]; then
+    echo "[>] Copying public assets into standalone bundle..."
+    [ -d "public" ] && cp -r public .next/standalone/public/ || true
+    if [ -d ".next/static" ]; then
+        mkdir -p .next/standalone/.next
+        cp -r .next/static .next/standalone/.next/static/ || true
+    fi
+    echo "[OK] Standalone assets copied"
+fi
 
 # Fix ownership
 echo "[>] Fixing permissions..."

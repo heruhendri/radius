@@ -35,7 +35,8 @@ generate_selfsigned_cert() {
     print_success "Self-signed cert created: $CERT"
 }
 
-# Helper: common proxy location blocks (to avoid repetition inside heredocs)
+# Helper: common proxy location blocks (used for HTTP and IP-only HTTPS blocks)
+# Matches production-grade config: separate /api/ no-cache + manifest static serving
 _proxy_locations() {
     cat <<'LOCATIONS'
     client_max_body_size 100M;
@@ -66,11 +67,55 @@ _proxy_locations() {
         add_header Content-Disposition 'attachment';
     }
 
+    # PWA manifest files — serve directly from standalone public/ (survive Next.js restart)
+    location ~* ^/manifest(-admin|-agent|-customer|-technician)?\.json$ {
+        alias /var/www/salfanet-radius/.next/standalone/public/;
+        try_files $uri @nextjs;
+        expires 1d;
+        add_header Cache-Control "public, max-age=86400";
+        add_header Content-Type "application/manifest+json";
+    }
+
+    # Service worker — must be served from root, no cache
+    location = /sw.js {
+        alias /var/www/salfanet-radius/.next/standalone/public/sw.js;
+        try_files $uri @nextjs;
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+        add_header Content-Type "application/javascript";
+    }
+
     location /_next/static/ {
         alias /var/www/salfanet-radius/.next/static/;
         expires 365d;
         access_log off;
         add_header Cache-Control "public, immutable";
+    }
+
+    # API routes — no cache, return JSON not HTML on error
+    location /api/ {
+        proxy_pass         http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   CF-Connecting-IP $http_cf_connecting_ip;
+
+        add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0' always;
+        add_header Pragma 'no-cache' always;
+
+        proxy_hide_header X-Frame-Options;
+        proxy_hide_header X-XSS-Protection;
+        proxy_hide_header X-Content-Type-Options;
+    }
+
+    location @nextjs {
+        proxy_pass         http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
     }
 
     location / {
@@ -84,6 +129,12 @@ _proxy_locations() {
         proxy_set_header   X-Forwarded-Proto $scheme;
         proxy_set_header   CF-Connecting-IP $http_cf_connecting_ip;
         proxy_cache_bypass $http_upgrade;
+
+        add_header Cache-Control 'no-cache, must-revalidate' always;
+
+        proxy_hide_header X-Frame-Options;
+        proxy_hide_header X-XSS-Protection;
+        proxy_hide_header X-Content-Type-Options;
     }
 LOCATIONS
 }
@@ -131,6 +182,32 @@ _proxy_locations_https_domain() {
         expires 365d;
         access_log off;
         add_header Cache-Control "public, immutable";
+    }
+
+    # PWA manifest files — serve directly from standalone public/
+    location ~* ^/manifest(-admin|-agent|-customer|-technician)?\.json$ {
+        root /var/www/salfanet-radius/.next/standalone/public;
+        try_files $uri @nextjs_https_domain;
+        expires 1d;
+        add_header Cache-Control "public, max-age=86400";
+        add_header Content-Type "application/manifest+json";
+    }
+
+    # Service worker — no cache, served from root
+    location = /sw.js {
+        root /var/www/salfanet-radius/.next/standalone/public;
+        try_files $uri @nextjs_https_domain;
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+        add_header Content-Type "application/javascript";
+    }
+
+    location @nextjs_https_domain {
+        proxy_pass         http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
     }
 
     # API routes - NO cache, bypass Cloudflare CDN
