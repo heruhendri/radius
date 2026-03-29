@@ -206,9 +206,10 @@ except Exception as e:
     if [ -d ".next/standalone" ]; then
         print_info "Copying public assets into standalone bundle..."
 
-        # public/ → .next/standalone/public/
+        # public/ → .next/standalone/public/  (use public/. to copy contents, not dir)
         if [ -d "public" ]; then
-            cp -r public .next/standalone/public/
+            mkdir -p .next/standalone/public
+            cp -r public/. .next/standalone/public/
             print_success "public/ copied → .next/standalone/public/"
         fi
 
@@ -642,7 +643,7 @@ NODE_OPTIONS="--max-old-space-size=1536" npm run build
 # Copy public assets into standalone bundle (required for PWA manifests + sw.js)
 if [ -d ".next/standalone" ]; then
     echo "[>] Copying public assets into standalone bundle..."
-    [ -d "public" ] && cp -r public .next/standalone/public/ || true
+    [ -d "public" ] && { mkdir -p .next/standalone/public; cp -r public/. .next/standalone/public/; } || true
     if [ -d ".next/static" ]; then
         mkdir -p .next/standalone/.next
         cp -r .next/static .next/standalone/.next/static/ || true

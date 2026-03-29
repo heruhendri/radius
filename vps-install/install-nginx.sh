@@ -67,21 +67,28 @@ _proxy_locations() {
         add_header Content-Disposition 'attachment';
     }
 
-    # PWA manifest files — serve directly from standalone public/ (survive Next.js restart)
-    location ~* ^/manifest(-admin|-agent|-customer|-technician)?\.json$ {
-        alias /var/www/salfanet-radius/.next/standalone/public/;
-        try_files $uri @nextjs;
+    # PWA manifest files — serve directly from public/ (no Node.js needed)
+    location ~ ^/manifest(-[a-z]+)?\.json$ {
+        root /var/www/salfanet-radius/public;
         expires 1d;
         add_header Cache-Control "public, max-age=86400";
         add_header Content-Type "application/manifest+json";
     }
 
-    # Service worker — must be served from root, no cache
+    # Service worker — no cache
     location = /sw.js {
-        alias /var/www/salfanet-radius/.next/standalone/public/sw.js;
-        try_files $uri @nextjs;
-        add_header Cache-Control "no-store, no-cache, must-revalidate";
-        add_header Content-Type "application/javascript";
+        root /var/www/salfanet-radius/public;
+        expires off;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Service-Worker-Allowed "/";
+    }
+
+    # PWA icons and assets
+    location /pwa/ {
+        root /var/www/salfanet-radius/public;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+        access_log off;
     }
 
     location /_next/static/ {
@@ -107,15 +114,6 @@ _proxy_locations() {
         proxy_hide_header X-Frame-Options;
         proxy_hide_header X-XSS-Protection;
         proxy_hide_header X-Content-Type-Options;
-    }
-
-    location @nextjs {
-        proxy_pass         http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto $scheme;
     }
 
     location / {
@@ -184,30 +182,28 @@ _proxy_locations_https_domain() {
         add_header Cache-Control "public, immutable";
     }
 
-    # PWA manifest files — serve directly from standalone public/
-    location ~* ^/manifest(-admin|-agent|-customer|-technician)?\.json$ {
-        root /var/www/salfanet-radius/.next/standalone/public;
-        try_files $uri @nextjs_https_domain;
+    # PWA manifest files — serve directly from public/ (no Node.js needed)
+    location ~ ^/manifest(-[a-z]+)?\.json$ {
+        root /var/www/salfanet-radius/public;
         expires 1d;
         add_header Cache-Control "public, max-age=86400";
         add_header Content-Type "application/manifest+json";
     }
 
-    # Service worker — no cache, served from root
+    # Service worker — no cache
     location = /sw.js {
-        root /var/www/salfanet-radius/.next/standalone/public;
-        try_files $uri @nextjs_https_domain;
-        add_header Cache-Control "no-store, no-cache, must-revalidate";
-        add_header Content-Type "application/javascript";
+        root /var/www/salfanet-radius/public;
+        expires off;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Service-Worker-Allowed "/";
     }
 
-    location @nextjs_https_domain {
-        proxy_pass         http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto $scheme;
+    # PWA icons and assets
+    location /pwa/ {
+        root /var/www/salfanet-radius/public;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+        access_log off;
     }
 
     # API routes - NO cache, bypass Cloudflare CDN
