@@ -74,6 +74,8 @@ export default function PPPoEProfilesPage() {
   const [syncLocalAddress, setSyncLocalAddress] = useState('');
   const [syncPoolRanges, setSyncPoolRanges] = useState('');
   const [syncLockedRouter, setSyncLockedRouter] = useState(false);
+  const [isSyncAllMode, setIsSyncAllMode] = useState(false);
+  const [syncingAll, setSyncingAll] = useState(false);
 
   // Import state
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -134,6 +136,7 @@ export default function PPPoEProfilesPage() {
 
   const closeSyncMikrotikModal = () => {
     setSyncMikrotikTarget(null);
+    setIsSyncAllMode(false);
     setSelectedRouterIds([]);
     setSyncIpPoolName('');
     setSyncLocalAddress('');
@@ -247,6 +250,7 @@ export default function PPPoEProfilesPage() {
   };
 
   const handleSyncMikrotik = (profile: PPPoEProfile) => {
+    setIsSyncAllMode(false);
     setSyncMikrotikTarget(profile);
     // Pre-select all active routers by default
     setSelectedRouterIds(routers.map(r => r.id));
@@ -256,8 +260,51 @@ export default function PPPoEProfilesPage() {
     setSyncLockedRouter(false);
   };
 
+  const handleSyncAllMikrotik = () => {
+    setIsSyncAllMode(true);
+    setSyncMikrotikTarget(null);
+    setSelectedRouterIds(routers.map(r => r.id));
+    setSyncIpPoolName('');
+    setSyncLocalAddress('');
+    setSyncPoolRanges('');
+    setSyncLockedRouter(false);
+  };
+
   const handleConfirmSyncMikrotik = async () => {
-    if (!syncMikrotikTarget || selectedRouterIds.length === 0) return;
+    if (selectedRouterIds.length === 0) return;
+
+    // ── Sync ALL profiles mode ─────────────────────────────────────────────
+    if (isSyncAllMode) {
+      setSyncingAll(true);
+      let successCount = 0;
+      let failCount = 0;
+      try {
+        for (const profile of profiles) {
+          try {
+            const res = await fetch('/api/pppoe/profiles/sync-mikrotik', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: profile.id, routerIds: selectedRouterIds }),
+            });
+            const result = await res.json();
+            if (result.success) successCount++;
+            else failCount++;
+          } catch { failCount++; }
+        }
+        loadProfiles();
+        closeSyncMikrotikModal();
+        if (failCount === 0) {
+          await showSuccess(`Berhasil sync ${successCount} paket ke ${selectedRouterIds.length} router`);
+        } else {
+          await showError(`${successCount} paket berhasil, ${failCount} paket gagal disync`);
+        }
+      } catch { await showError('Gagal sync ke MikroTik'); }
+      finally { setSyncingAll(false); }
+      return;
+    }
+
+    // ── Single profile mode ────────────────────────────────────────────────
+    if (!syncMikrotikTarget) return;
     const target = syncMikrotikTarget;
     setSyncingMikrotikId(target.id);
     try {
@@ -418,6 +465,13 @@ export default function PPPoEProfilesPage() {
             <button onClick={handleExport} disabled={profiles.length === 0} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded hover:bg-muted text-muted-foreground transition-colors disabled:opacity-40">
               <Download className="h-3 w-3" />Export
             </button>
+            <button
+              onClick={handleSyncAllMikrotik}
+              disabled={profiles.length === 0 || routers.length === 0}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-purple-500/30 rounded hover:bg-purple-500/10 text-purple-400 transition-colors disabled:opacity-40"
+            >
+              <Wifi className="h-3 w-3" />Sync Semua ke MikroTik
+            </button>
             <button onClick={() => { resetForm(); setEditingProfile(null); setIsDialogOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary hover:bg-primary/90 text-white rounded transition-colors">
               <Plus className="h-3 w-3" />{t('pppoe.addProfile')}
             </button>
@@ -495,14 +549,13 @@ export default function PPPoEProfilesPage() {
                   <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pelanggan</th>
                   <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                   <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RADIUS</th>
-                  <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">MikroTik</th>
                   <th className="px-3 py-2.5 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {profiles.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-3 py-12 text-center">
+                    <td colSpan={8} className="px-3 py-12 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <FileText className="h-8 w-8 opacity-30" />
                         <p className="text-xs">Belum ada paket PPPoE</p>
@@ -579,19 +632,6 @@ export default function PPPoEProfilesPage() {
                         ) : (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"><XCircle className="h-2.5 w-2.5 mr-1" />Pending</span>
                         )}
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        <button
-                          title="Sync ke MikroTik"
-                          onClick={() => handleSyncMikrotik(profile)}
-                          disabled={syncingMikrotikId === profile.id}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors disabled:opacity-40"
-                        >
-                          {syncingMikrotikId === profile.id
-                            ? <RefreshCw className="h-2.5 w-2.5 animate-spin" />
-                            : <Wifi className="h-2.5 w-2.5" />}
-                          Sync MK
-                        </button>
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <div className="flex justify-end items-center gap-0.5">
@@ -1039,11 +1079,16 @@ export default function PPPoEProfilesPage() {
           )}
         </SimpleModal>
 
-        <SimpleModal isOpen={!!syncMikrotikTarget} onClose={closeSyncMikrotikModal} size="md">
+        <SimpleModal isOpen={!!syncMikrotikTarget || isSyncAllMode} onClose={closeSyncMikrotikModal} size="md">
           <ModalHeader>
-            <h2 className="text-base font-bold text-foreground">Sync ke MikroTik</h2>
+            <h2 className="text-base font-bold text-foreground">
+              {isSyncAllMode ? 'Sync Semua Paket ke MikroTik' : 'Sync ke MikroTik'}
+            </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Sync paket <span className="font-semibold text-purple-400">{syncMikrotikTarget?.name}</span> · Group RADIUS: <span className="font-mono">{syncMikrotikTarget?.groupName}</span> · Akan disync ke semua router yang dipilih
+              {isSyncAllMode
+                ? <span>Sync <span className="font-semibold text-purple-400">{profiles.length} paket</span> ke semua router yang dipilih · Setiap paket menggunakan pengaturan pool-nya masing-masing</span>
+                : <span>Sync paket <span className="font-semibold text-purple-400">{syncMikrotikTarget?.name}</span> · Group RADIUS: <span className="font-mono">{syncMikrotikTarget?.groupName}</span> · Akan disync ke semua router yang dipilih</span>
+              }
             </p>
           </ModalHeader>
           <ModalBody>
@@ -1096,63 +1141,74 @@ export default function PPPoEProfilesPage() {
               )
             }
 
-            <div className="grid grid-cols-1 gap-3 mt-4 border-t border-border pt-4">
-              <div>
-                <ModalLabel>Nama Pool</ModalLabel>
-                <ModalInput
-                  type="text"
-                  value={syncIpPoolName}
-                  onChange={(e) => setSyncIpPoolName(e.target.value)}
-                  placeholder="contoh: pppoe-pool"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Nama IP pool di MikroTik (<code>/ip pool</code>). Jika belum ada, isi juga kolom IP Range di bawah.
+            {!isSyncAllMode && (
+              <div className="grid grid-cols-1 gap-3 mt-4 border-t border-border pt-4">
+                <div>
+                  <ModalLabel>Nama Pool</ModalLabel>
+                  <ModalInput
+                    type="text"
+                    value={syncIpPoolName}
+                    onChange={(e) => setSyncIpPoolName(e.target.value)}
+                    placeholder="contoh: pppoe-pool"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Nama IP pool di MikroTik (<code>/ip pool</code>). Jika belum ada, isi juga kolom IP Range di bawah.
+                  </p>
+                </div>
+                <div>
+                  <ModalLabel>IP Range Pool (jika pool belum ada di MikroTik)</ModalLabel>
+                  <ModalInput
+                    type="text"
+                    value={syncPoolRanges}
+                    onChange={(e) => setSyncPoolRanges(e.target.value)}
+                    placeholder="contoh: 192.168.10.100-192.168.10.200"
+                    disabled={!syncIpPoolName.trim()}
+                  />
+                  <p className="text-xs text-[#ffd84d] mt-1">
+                    Kosongkan jika pool sudah ada. Diisi → pool akan dibuat otomatis sebelum PPP profile.
+                  </p>
+                </div>
+                <div>
+                  <ModalLabel>IP Lokal PPP (opsional)</ModalLabel>
+                  <ModalInput
+                    type="text"
+                    value={syncLocalAddress}
+                    onChange={(e) => setSyncLocalAddress(e.target.value)}
+                    placeholder="contoh: 10.10.10.1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Jika diisi akan diset sebagai `local-address` pada PPP profile.
+                  </p>
+                </div>
+              </div>
+            )}
+            {isSyncAllMode && (
+              <div className="mt-4 p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                <p className="text-xs text-purple-300">
+                  Setiap paket akan disync menggunakan pengaturan <span className="font-semibold">Nama Pool</span> dan <span className="font-semibold">IP Lokal</span> yang sudah tersimpan di masing-masing paket. Untuk mengubah pengaturan pool individual, gunakan tombol sync dari detail paket.
                 </p>
               </div>
-              <div>
-                <ModalLabel>IP Range Pool (jika pool belum ada di MikroTik)</ModalLabel>
-                <ModalInput
-                  type="text"
-                  value={syncPoolRanges}
-                  onChange={(e) => setSyncPoolRanges(e.target.value)}
-                  placeholder="contoh: 192.168.10.100-192.168.10.200"
-                  disabled={!syncIpPoolName.trim()}
-                />
-                <p className="text-xs text-[#ffd84d] mt-1">
-                  Kosongkan jika pool sudah ada. Diisi → pool akan dibuat otomatis sebelum PPP profile.
-                </p>
-              </div>
-              <div>
-                <ModalLabel>IP Lokal PPP (opsional)</ModalLabel>
-                <ModalInput
-                  type="text"
-                  value={syncLocalAddress}
-                  onChange={(e) => setSyncLocalAddress(e.target.value)}
-                  placeholder="contoh: 10.10.10.1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Jika diisi akan diset sebagai `local-address` pada PPP profile.
-                </p>
-              </div>
-            </div>
+            )}
           </ModalBody>
           <ModalFooter>
             <ModalButton variant="secondary" onClick={closeSyncMikrotikModal}>Tutup</ModalButton>
-            <ModalButton
-              variant="secondary"
-              onClick={handleTestConnection}
-              disabled={selectedRouterIds.length === 0 || testingConnection}
-            >
-              <RefreshCw className={`h-3.5 w-3.5 mr-1.5${testingConnection ? ' animate-spin' : ''}`} />Test Koneksi
-            </ModalButton>
+            {!isSyncAllMode && (
+              <ModalButton
+                variant="secondary"
+                onClick={handleTestConnection}
+                disabled={selectedRouterIds.length === 0 || testingConnection}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 mr-1.5${testingConnection ? ' animate-spin' : ''}`} />Test Koneksi
+              </ModalButton>
+            )}
             <ModalButton
               variant="primary"
               onClick={handleConfirmSyncMikrotik}
-              disabled={selectedRouterIds.length === 0 || syncingMikrotikId === syncMikrotikTarget?.id}
+              disabled={selectedRouterIds.length === 0 || (isSyncAllMode ? syncingAll : syncingMikrotikId === syncMikrotikTarget?.id)}
             >
-              {syncingMikrotikId === syncMikrotikTarget?.id
+              {(isSyncAllMode ? syncingAll : syncingMikrotikId === syncMikrotikTarget?.id)
                 ? <><RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />Menyinkronkan...</>
-                : <><Wifi className="h-3.5 w-3.5 mr-1.5" />Sync ke {selectedRouterIds.length} Router</>
+                : <><Wifi className="h-3.5 w-3.5 mr-1.5" />{isSyncAllMode ? `Sync ${profiles.length} Paket ke ${selectedRouterIds.length} Router` : `Sync ke ${selectedRouterIds.length} Router`}</>
               }
             </ModalButton>
           </ModalFooter>
