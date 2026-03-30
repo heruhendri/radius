@@ -94,21 +94,6 @@ export async function logActivity(params: LogActivityParams) {
       }
     }
 
-    // Create notification for user status changes
-    if (module === 'pppoe' && action === 'status_change' && metadata?.oldStatus && metadata?.newStatus) {
-      try {
-        const { NotificationService } = await import('@/server/services/notifications/dispatcher.service')
-        await NotificationService.notifyUserStatusChange({
-          username,
-          name: metadata?.name,
-          oldStatus: metadata.oldStatus,
-          newStatus: metadata.newStatus
-        })
-      } catch (notifError) {
-        console.error('[Status Change Notification Error]', notifError);
-      }
-    }
-
     // Create notification for suspicious activities
     if (status === 'warning' && module === 'auth' && 
         ['failed_login_attempts', 'concurrent_sessions', 'unusual_location'].includes(action)) {
