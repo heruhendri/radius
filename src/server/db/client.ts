@@ -14,6 +14,7 @@ import { PrismaClient } from '@prisma/client'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
+  processGuardsRegistered: boolean | undefined
 }
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
@@ -21,3 +22,17 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
 })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
+// Register once to prevent process crash loops from external connector exceptions
+// (e.g., intermittent MikroTik API socket errors from background jobs).
+if (!globalForPrisma.processGuardsRegistered) {
+  process.on('uncaughtException', (error) => {
+    console.error('[Process] uncaughtException:', error)
+  })
+
+  process.on('unhandledRejection', (reason) => {
+    console.error('[Process] unhandledRejection:', reason)
+  })
+
+  globalForPrisma.processGuardsRegistered = true
+}

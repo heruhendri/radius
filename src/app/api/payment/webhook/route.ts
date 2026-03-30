@@ -293,10 +293,22 @@ export async function POST(request: Request) {
     // Idempotency guard for successful callbacks.
     // Prevent duplicate webhook replays from re-running payment side-effects.
     if (status === 'settlement' || status === 'capture') {
+      // Only treat already-successful PAID callbacks as duplicates.
+      // Do NOT let an older UNPAID/PENDING callback block a later PAID callback.
       const duplicateWebhook = await prisma.webhookLog.findFirst({
         where: transactionId
-          ? { gateway, transactionId, success: true }
-          : { gateway, orderId, status, success: true },
+          ? {
+              gateway,
+              transactionId,
+              success: true,
+              status: { in: ['settlement', 'capture'] }
+            }
+          : {
+              gateway,
+              orderId,
+              success: true,
+              status: { in: ['settlement', 'capture'] }
+            },
         orderBy: { createdAt: 'desc' }
       });
 
