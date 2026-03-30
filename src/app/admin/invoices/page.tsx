@@ -436,11 +436,15 @@ export default function InvoicesPage() {
       <style>
         @media print {
           @page { size: A4; margin: 10mm; }
-          html, body { width: 210mm; }
-          body { padding: 0 !important; background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          html, body { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+          body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
-          .sheet { border: none !important; border-radius: 0 !important; box-shadow: none !important; overflow: visible !important; }
-          .content { padding: 8mm !important; }
+          .topbar { display: none !important; }
+          .sheet { border: none !important; border-radius: 0 !important; box-shadow: none !important; overflow: visible !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
+          .content { padding: 6mm 8mm !important; }
+          .header-right { padding-top: 0 !important; overflow: visible !important; }
+          .inv-title { overflow: visible !important; padding-top: 0 !important; line-height: 1.3 !important; }
+          .inv-number { overflow: visible !important; line-height: 1.4 !important; }
           .meta-card, .payment-card, .paid-stamp { break-inside: avoid; page-break-inside: avoid; }
           table { table-layout: fixed; }
           th, td { word-break: break-word; }
