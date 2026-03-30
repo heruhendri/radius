@@ -284,7 +284,14 @@ export default function PPPoEProfilesPage() {
             const res = await fetch('/api/pppoe/profiles/sync-mikrotik', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: profile.id, routerIds: selectedRouterIds }),
+              // Jika user isi field pool di modal → override per-profile; jika kosong → API pakai setting masing-masing profile
+              body: JSON.stringify({
+                id: profile.id,
+                routerIds: selectedRouterIds,
+                ...(syncIpPoolName.trim() ? { ipPoolName: syncIpPoolName.trim() } : {}),
+                ...(syncLocalAddress.trim() ? { localAddress: syncLocalAddress.trim() } : {}),
+                ...(syncPoolRanges.trim() ? { poolRanges: syncPoolRanges.trim() } : {}),
+              }),
             });
             const result = await res.json();
             if (result.success) successCount++;
@@ -1141,54 +1148,52 @@ export default function PPPoEProfilesPage() {
               )
             }
 
-            {!isSyncAllMode && (
-              <div className="grid grid-cols-1 gap-3 mt-4 border-t border-border pt-4">
-                <div>
-                  <ModalLabel>Nama Pool</ModalLabel>
-                  <ModalInput
-                    type="text"
-                    value={syncIpPoolName}
-                    onChange={(e) => setSyncIpPoolName(e.target.value)}
-                    placeholder="contoh: pppoe-pool"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Nama IP pool di MikroTik (<code>/ip pool</code>). Jika belum ada, isi juga kolom IP Range di bawah.
+            <div className="grid grid-cols-1 gap-3 mt-4 border-t border-border pt-4">
+              {isSyncAllMode && (
+                <div className="p-2.5 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                  <p className="text-xs text-purple-300">
+                    <span className="font-semibold">Mode Sync Semua:</span> Kosongkan field di bawah agar setiap paket menggunakan pengaturan pool-nya masing-masing. Isi jika ingin override ke semua paket.
                   </p>
                 </div>
-                <div>
-                  <ModalLabel>IP Range Pool (jika pool belum ada di MikroTik)</ModalLabel>
-                  <ModalInput
-                    type="text"
-                    value={syncPoolRanges}
-                    onChange={(e) => setSyncPoolRanges(e.target.value)}
-                    placeholder="contoh: 192.168.10.100-192.168.10.200"
-                    disabled={!syncIpPoolName.trim()}
-                  />
-                  <p className="text-xs text-[#ffd84d] mt-1">
-                    Kosongkan jika pool sudah ada. Diisi → pool akan dibuat otomatis sebelum PPP profile.
-                  </p>
-                </div>
-                <div>
-                  <ModalLabel>IP Lokal PPP (opsional)</ModalLabel>
-                  <ModalInput
-                    type="text"
-                    value={syncLocalAddress}
-                    onChange={(e) => setSyncLocalAddress(e.target.value)}
-                    placeholder="contoh: 10.10.10.1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Jika diisi akan diset sebagai `local-address` pada PPP profile.
-                  </p>
-                </div>
-              </div>
-            )}
-            {isSyncAllMode && (
-              <div className="mt-4 p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
-                <p className="text-xs text-purple-300">
-                  Setiap paket akan disync menggunakan pengaturan <span className="font-semibold">Nama Pool</span> dan <span className="font-semibold">IP Lokal</span> yang sudah tersimpan di masing-masing paket. Untuk mengubah pengaturan pool individual, gunakan tombol sync dari detail paket.
+              )}
+              <div>
+                <ModalLabel>Nama Pool</ModalLabel>
+                <ModalInput
+                  type="text"
+                  value={syncIpPoolName}
+                  onChange={(e) => setSyncIpPoolName(e.target.value)}
+                  placeholder="contoh: pppoe-pool"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Nama IP pool di MikroTik (<code>/ip pool</code>). Jika belum ada, isi juga kolom IP Range di bawah.
                 </p>
               </div>
-            )}
+              <div>
+                <ModalLabel>IP Range Pool (jika pool belum ada di MikroTik)</ModalLabel>
+                <ModalInput
+                  type="text"
+                  value={syncPoolRanges}
+                  onChange={(e) => setSyncPoolRanges(e.target.value)}
+                  placeholder="contoh: 192.168.10.100-192.168.10.200"
+                  disabled={!syncIpPoolName.trim()}
+                />
+                <p className="text-xs text-[#ffd84d] mt-1">
+                  Kosongkan jika pool sudah ada. Diisi → pool akan dibuat otomatis sebelum PPP profile.
+                </p>
+              </div>
+              <div>
+                <ModalLabel>IP Lokal PPP (opsional)</ModalLabel>
+                <ModalInput
+                  type="text"
+                  value={syncLocalAddress}
+                  onChange={(e) => setSyncLocalAddress(e.target.value)}
+                  placeholder="contoh: 10.10.10.1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Jika diisi akan diset sebagai `local-address` pada PPP profile.
+                </p>
+              </div>
+            </div>
           </ModalBody>
           <ModalFooter>
             <ModalButton variant="secondary" onClick={closeSyncMikrotikModal}>Tutup</ModalButton>
