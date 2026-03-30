@@ -40,6 +40,7 @@ import {
   GitBranch,
   Mail,
   MessageCircle,
+  Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -98,6 +99,12 @@ const menuGroups: MenuGroup[] = [
         titleKey: 'nav.email',
         icon: <Mail className="w-4 h-4" />,
         href: '/admin/settings/email',
+        requiredPermission: 'settings.view',
+      },
+      {
+        titleKey: 'nav.telegram',
+        icon: <Send className="w-4 h-4" />,
+        href: '/admin/settings/telegram',
         requiredPermission: 'settings.view',
       },
       {

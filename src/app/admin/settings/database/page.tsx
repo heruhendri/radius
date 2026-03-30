@@ -6,7 +6,6 @@ import {
   Download,
   Upload,
   RefreshCw,
-  Send,
   Trash2,
   Activity,
   Clock,
@@ -40,40 +39,17 @@ interface DatabaseHealth {
   uptime: string;
 }
 
-interface TelegramSettings {
-  enabled: boolean;
-  botToken: string;
-  chatId: string;
-  backupTopicId: string;
-  healthTopicId: string;
-  schedule: string;
-  scheduleTime: string;
-  keepLastN: number;
-}
+
 
 export default function DatabaseSettingsPage() {
   const { hasPermission, loading: permLoading } = usePermissions();
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'backup' | 'telegram'>('backup');
   const [loading, setLoading] = useState(true);
   const [backing, setBacking] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  const [testing, setTesting] = useState(false);
-  
   const [backupHistory, setBackupHistory] = useState<BackupHistory[]>([]);
   const [dbHealth, setDbHealth] = useState<DatabaseHealth | null>(null);
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
-  
-  const [telegramSettings, setTelegramSettings] = useState<TelegramSettings>({
-    enabled: false,
-    botToken: '',
-    chatId: '',
-    backupTopicId: '',
-    healthTopicId: '',
-    schedule: 'daily',
-    scheduleTime: '02:00',
-    keepLastN: 7,
-  });
 
   useEffect(() => {
     if (hasPermission('settings.view')) {
@@ -98,10 +74,7 @@ export default function DatabaseSettingsPage() {
         setDbHealth(healthData.health);
       }
 
-      // Load Telegram settings
-      const settingsRes = await fetch('/api/telegram/settings');
-      const settingsData = await settingsRes.json();
-      setTelegramSettings(settingsData);
+
     } catch (error) {
       console.error('Load data error:', error);
     } finally {
@@ -197,68 +170,6 @@ export default function DatabaseSettingsPage() {
       }
     } catch (error) {
       await showError(t('settings.deleteBackupFailed') + ': ' + error);
-    }
-  };
-
-  const handleSaveTelegramSettings = async () => {
-    try {
-      const res = await fetch('/api/telegram/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(telegramSettings),
-      });
-      
-      const data = await res.json();
-      
-      if (data.success) {
-        // Restart cron jobs to apply new settings
-        await fetch('/api/cron/telegram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'restart', job: 'all' }),
-        });
-        
-        await showSuccess(t('settings.telegramTestSuccess'));
-        loadData();
-      } else {
-        await showError(data.error || t('common.saveFailed'));
-      }
-    } catch (error) {
-      await showError(t('common.failedSave') + ': ' + error);
-    }
-  };
-
-  const handleTestTelegram = async () => {
-    if (!telegramSettings.botToken || !telegramSettings.chatId) {
-      await showError(t('settings.enterTokenChatIdFirst'));
-      return;
-    }
-
-    setTesting(true);
-    try {
-      const res = await fetch('/api/telegram/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          botToken: telegramSettings.botToken,
-          chatId: telegramSettings.chatId,
-          backupTopicId: telegramSettings.backupTopicId || undefined,
-          healthTopicId: telegramSettings.healthTopicId || undefined,
-        }),
-      });
-      
-      const data = await res.json();
-      
-      if (data.success) {
-        const count = data.results?.length || 0;
-        await showSuccess(t('settings.telegramTestSuccess'));
-      } else {
-        await showError(data.error || t('settings.telegramTestFailed'));
-      }
-    } catch (error) {
-      await showError(t('settings.failedTest') + ': ' + error);
-    } finally {
-      setTesting(false);
     }
   };
 
@@ -381,41 +292,8 @@ export default function DatabaseSettingsPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="border-b border-border">
-        <div className="flex gap-4">
-          <button
-            onClick={() => setActiveTab('backup')}
-            className={`px-4 py-2 border-b-2 transition ${
-              activeTab === 'backup'
-                ? 'border-primary text-primary dark:text-violet-200 font-semibold'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Database className="w-4 h-4" />
-              Backup & Restore
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('telegram')}
-            className={`px-4 py-2 border-b-2 transition ${
-              activeTab === 'telegram'
-                ? 'border-primary text-primary dark:text-violet-200 font-semibold'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Send className="w-4 h-4" />
-              Telegram Auto-Backup
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Backup Tab */}
-      {activeTab === 'backup' && (
-        <div className="space-y-6">
+      {/* Backup & Restore */}
+      <div className="space-y-6">
           {/* Manual Backup/Restore */}
           <div className="grid md:grid-cols-2 gap-6">
             {/* Backup Card */}
@@ -664,226 +542,6 @@ export default function DatabaseSettingsPage() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Telegram Tab */}
-      {activeTab === 'telegram' && (
-        <div className="space-y-6">
-          <div className="bg-card rounded-lg border border-border shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Send className="w-5 h-5" />
-              Telegram Auto-Backup Configuration
-            </h3>
-
-            <div className="space-y-4">
-              {/* Enable Toggle */}
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <div>
-                  <label className="font-medium text-foreground">{t('settings.enableAutoBackup')}</label>
-                  <p className="text-sm text-muted-foreground">{t('settings.autoBackupDesc')}</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={telegramSettings.enabled}
-                    onChange={(e) =>
-                      setTelegramSettings({ ...telegramSettings, enabled: e.target.checked })
-                    }
-                    className="sr-only peer"
-                    disabled={!canEdit}
-                  />
-                  <div className="w-11 h-6 bg-gray-300 peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                </label>
-              </div>
-
-              {/* Bot Token */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Telegram Bot Token
-                </label>
-                <input
-                  type="text"
-                  value={telegramSettings.botToken || ''}
-                  onChange={(e) =>
-                    setTelegramSettings({ ...telegramSettings, botToken: e.target.value })
-                  }
-                  placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                  disabled={!canEdit}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Get token from @BotFather on Telegram
-                </p>
-              </div>
-
-              {/* Chat ID */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Chat ID (Group)
-                </label>
-                <input
-                  type="text"
-                  value={telegramSettings.chatId || ''}
-                  onChange={(e) =>
-                    setTelegramSettings({ ...telegramSettings, chatId: e.target.value })
-                  }
-                  placeholder="-1001234567890"
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                  disabled={!canEdit}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Get Chat ID from @userinfobot or your group
-                </p>
-              </div>
-
-              {/* Backup Topic ID */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Backup Topic ID
-                </label>
-                <input
-                  type="text"
-                  value={telegramSettings.backupTopicId || ''}
-                  onChange={(e) =>
-                    setTelegramSettings({ ...telegramSettings, backupTopicId: e.target.value })
-                  }
-                  placeholder="123"
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                  disabled={!canEdit}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Topic ID for backup messages (right-click topic → Copy Link → extract ID)
-                </p>
-              </div>
-
-              {/* Health Topic ID */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Health Topic ID (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={telegramSettings.healthTopicId || ''}
-                  onChange={(e) =>
-                    setTelegramSettings({ ...telegramSettings, healthTopicId: e.target.value })
-                  }
-                  placeholder="456"
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                  disabled={!canEdit}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Topic ID for health check reports
-                </p>
-              </div>
-
-              {/* Schedule */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Schedule
-                  </label>
-                  <select
-                    value={telegramSettings.schedule || 'daily'}
-                    onChange={(e) =>
-                      setTelegramSettings({ ...telegramSettings, schedule: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                    disabled={!canEdit}
-                  >
-                    <option value="daily">{t('settings.dailyOption')}</option>
-                    <option value="12h">{t('settings.every12Hours')}</option>
-                    <option value="6h">{t('settings.every6Hours')}</option>
-                    <option value="weekly">{t('settings.weeklySunday')}</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Time (WIB)
-                  </label>
-                  <input
-                    type="time"
-                    value={telegramSettings.scheduleTime || '00:00'}
-                    onChange={(e) =>
-                      setTelegramSettings({ ...telegramSettings, scheduleTime: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                    disabled={!canEdit}
-                  />
-                </div>
-              </div>
-
-              {/* Keep Last N */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Keep Last Backups
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="30"
-                  value={telegramSettings.keepLastN || 7}
-                  onChange={(e) =>
-                    setTelegramSettings({ ...telegramSettings, keepLastN: parseInt(e.target.value) || 7 })
-                  }
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                  disabled={!canEdit}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Automatically delete old backups, keep only last N files
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              {canEdit && (
-                <div className="grid grid-cols-2 gap-3 pt-4">
-                  <button
-                    onClick={handleTestTelegram}
-                    disabled={testing}
-                    className="px-4 py-2 border border-primary text-primary dark:text-violet-200 hover:bg-primary/10 dark:hover:bg-primary/20 rounded-lg transition flex items-center justify-center gap-2"
-                  >
-                    {testing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Testing...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        Test Connection
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleSaveTelegramSettings}
-                    className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-white rounded-lg transition"
-                  >
-                    Save Settings
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Info Card */}
-          <div className="bg-primary/10 dark:bg-primary/20 border border-primary/30 dark:border-primary/40 rounded-lg p-4">
-            <h4 className="font-medium text-foreground dark:text-violet-200 mb-2">
-              📘 How to Setup Telegram Backup
-            </h4>
-            <ol className="text-sm text-foreground dark:text-violet-100 space-y-1 list-decimal list-inside">
-              <li>Create a bot via @BotFather on Telegram and get the Bot Token</li>
-              <li>Create a group, add your bot as admin</li>
-              <li>Enable Topics in group settings</li>
-              <li>Create topics: "Backup" and "Health"</li>
-              <li>Get Chat ID from @getidsbot in your group</li>
-              <li>Right-click each topic → Copy Link → extract topic ID from URL</li>
-              <li>Enter all credentials above and click "Test"</li>
-              <li>Click "Test Backup" to send actual backup file</li>
-              <li>Enable auto-backup and save settings</li>
-            </ol>
-          </div>
-        </div>
-      )}
     </div>
   </div>
   );

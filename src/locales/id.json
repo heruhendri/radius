@@ -410,6 +410,7 @@
     "mikrotikSetup": "Setup MikroTik",
     "email": "Email",
     "emailHistory": "Riwayat Email",
+    "telegram": "Telegram Auto-Backup",
     "database": "Database",
     "cronJobs": "Cron Jobs",
     "freeradius": "FreeRADIUS",
