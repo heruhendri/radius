@@ -541,7 +541,18 @@ export default function UserDetailModal({
                     </label>
                     <select
                       value={formData.billingDay}
-                      onChange={(e) => setFormData({ ...formData, billingDay: parseInt(e.target.value) })}
+                      onChange={(e) => {
+                        const bd = Math.min(Math.max(parseInt(e.target.value), 1), 28);
+                        const now = new Date();
+                        const next = new Date(now);
+                        next.setMonth(next.getMonth() + 1);
+                        const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+                        next.setDate(Math.min(bd, lastDay));
+                        const yyyy = next.getFullYear();
+                        const mm = String(next.getMonth() + 1).padStart(2, '0');
+                        const dd = String(next.getDate()).padStart(2, '0');
+                        setFormData({ ...formData, billingDay: bd, expiredAt: `${yyyy}-${mm}-${dd}` });
+                      }}
                       className={selectCls}
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
@@ -551,7 +562,7 @@ export default function UserDetailModal({
                       ))}
                     </select>
                     <p className="text-xs text-muted-foreground dark:text-[#e0d0ff]/50 mt-1">
-                      Tanggal jatuh tempo bulanan. expiredAt auto-calculated.
+                      Tanggal jatuh tempo bulanan. Ubah tanggal → otomatis update expired ke bulan depan.
                     </p>
                   </div>
                 )}

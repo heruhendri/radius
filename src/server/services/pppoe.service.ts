@@ -400,23 +400,18 @@ export async function updatePppoeUser(
       ...(data.status && { status: data.status }),
       ...(data.subscriptionType && { subscriptionType: data.subscriptionType }),
       ...(data.billingDay !== undefined && { billingDay: Math.min(Math.max(parseInt(String(data.billingDay)), 1), 28) }),
-      ...(() => {
-        const effectiveSubType = data.subscriptionType || currentUser.subscriptionType;
-        if (effectiveSubType === 'POSTPAID' && data.billingDay !== undefined) {
-          const bd = Math.min(Math.max(parseInt(String(data.billingDay)), 1), 28);
-          const now = new Date();
-          const next = new Date(now);
-          next.setMonth(next.getMonth() + 1);
-          const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
-          next.setDate(Math.min(bd, lastDay));
-          next.setHours(23, 59, 59, 999);
-          return { expiredAt: next };
+      // expiredAt: if explicitly provided, save it directly with correct timezone handling.
+      // Date-only string (YYYY-MM-DD) → end of day WIB (23:59:59 WIB = 16:59:59 UTC).
+      // No longer auto-recalculate expiredAt from billingDay on every edit —
+      // that was the bug causing expiredAt to silently reset to "next month" on any save.
+      ...(data.expiredAt && (() => {
+        const expStr = String(data.expiredAt);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(expStr)) {
+          const [y, m, d] = expStr.split('-').map(Number);
+          return { expiredAt: new Date(Date.UTC(y, m - 1, d, 16, 59, 59, 999)) };
         }
-        if (effectiveSubType === 'PREPAID' && data.expiredAt) {
-          return { expiredAt: new Date(data.expiredAt) };
-        }
-        return {};
-      })(),
+        return { expiredAt: new Date(expStr) };
+      })()),
       ...(data.autoRenewal !== undefined && { autoRenewal: data.autoRenewal }),
       ...(data.idCardNumber !== undefined && { idCardNumber: data.idCardNumber }),
       ...(data.idCardPhoto !== undefined && { idCardPhoto: data.idCardPhoto }),

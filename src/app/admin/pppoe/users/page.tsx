@@ -373,7 +373,7 @@ export default function PppoeUsersPage() {
     try {
       const res = await fetch('/api/pppoe/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       const result = await res.json();
-      if (res.ok) { loadData(); await showSuccess(t('management.userUpdated')); }
+      if (res.ok) { await loadData(); await showSuccess(t('management.userUpdated')); }
       else { await showError(result.error || t('common.failed')); throw new Error(result.error); }
     } catch (error) { console.error('Save user error:', error); await showError(t('management.failedSaveUser')); throw error; }
   };

@@ -88,6 +88,7 @@ export default function InvoicesPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sendingWA, setSendingWA] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [printDialogInvoice, setPrintDialogInvoice] = useState<Invoice | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [broadcasting, setBroadcasting] = useState(false);
@@ -422,6 +423,171 @@ export default function InvoicesPage() {
     } catch (error) { console.error('Print error:', error); await showError(t('invoices.failedPrintInvoice')); }
   };
 
+  const handlePrintStandard = async (invoice: Invoice) => {
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/pdf`);
+      const data = await res.json();
+      if (!data.success || !data.data) { await showError(t('invoices.failedGetInvoiceData')); return; }
+      const inv = data.data;
+      const fmtCurr = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+      const win = window.open('', '_blank', 'width=850,height=1100');
+      if (!win) return;
+      win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoice ${inv.invoice.number}</title>
+      <style>
+        @media print { @page { margin: 15mm; } .no-print { display: none !important; } }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 11px; color: #222; margin: 0; padding: 24px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+        .company-name { font-size: 20px; font-weight: bold; color: #0d9488; }
+        .company-sub { color: #555; margin-top: 3px; font-size: 10px; line-height: 1.6; }
+        .inv-title { font-size: 26px; font-weight: bold; color: #111; letter-spacing: 2px; }
+        .inv-number { font-size: 13px; font-weight: bold; color: #0d9488; margin: 4px 0; }
+        .status-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        .paid-badge { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .pending-badge { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+        .divider { border: none; border-top: 2px solid #0d9488; margin: 14px 0; }
+        .thin-divider { border: none; border-top: 1px solid #e5e7eb; margin: 12px 0; }
+        .section-title { font-weight: bold; font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+        .bill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 18px; }
+        .info-row { margin-bottom: 3px; }
+        .info-label { color: #555; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+        th { background: #0d9488; color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; }
+        td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; font-size: 11px; }
+        .td-right { text-align: right; }
+        .total-row td { font-weight: bold; font-size: 13px; background: #f0fdfa; border-top: 2px solid #0d9488; }
+        .paid-stamp { display: block; margin: 20px auto; padding: 12px 28px; border: 4px solid #10b981; border-radius: 10px; text-align: center; width: fit-content; }
+        .paid-stamp-text { font-size: 24px; font-weight: bold; color: #10b981; letter-spacing: 6px; }
+        .paid-stamp-sub { font-size: 11px; color: #555; margin-top: 2px; }
+        .footer { margin-top: 28px; text-align: center; color: #aaa; font-size: 10px; border-top: 1px solid #e5e7eb; padding-top: 12px; }
+        .print-btn { position: fixed; bottom: 20px; right: 20px; padding: 10px 22px; background: #0d9488; color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+      </style></head><body>
+      <div class="header">
+        <div>
+          <div class="company-name">${inv.company.name}</div>
+          <div class="company-sub">
+            ${inv.company.address ? `${inv.company.address}<br>` : ''}
+            ${inv.company.phone ? `Telp: ${inv.company.phone}<br>` : ''}
+            ${inv.company.email ? `${inv.company.email}` : ''}
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="inv-title">INVOICE</div>
+          <div class="inv-number">${inv.invoice.number}</div>
+          <div>${inv.invoice.status === 'PAID' ? '<span class="status-badge paid-badge">&#10003; SUDAH BAYAR</span>' : '<span class="status-badge pending-badge">BELUM BAYAR</span>'}</div>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="bill-grid">
+        <div>
+          <div class="section-title">Dari</div>
+          <div class="info-row"><strong>${inv.company.name}</strong></div>
+          ${inv.company.address ? `<div class="info-row">${inv.company.address}</div>` : ''}
+          ${inv.company.phone ? `<div class="info-row">Telp: ${inv.company.phone}</div>` : ''}
+        </div>
+        <div>
+          <div class="section-title">Kepada</div>
+          <div class="info-row"><strong>${inv.customer.name}</strong></div>
+          ${invoice.user?.customerId ? `<div class="info-row"><span class="info-label">ID Pelanggan: </span>${invoice.user.customerId}</div>` : ''}
+          ${inv.customer.phone ? `<div class="info-row"><span class="info-label">Telp: </span>${inv.customer.phone}</div>` : ''}
+          ${inv.customer.username ? `<div class="info-row"><span class="info-label">Username: </span>${inv.customer.username}</div>` : ''}
+          ${invoice.user?.area?.name ? `<div class="info-row"><span class="info-label">Area: </span>${invoice.user.area.name}</div>` : ''}
+        </div>
+      </div>
+      <div class="bill-grid">
+        <div>
+          <div class="section-title">Detail Invoice</div>
+          <div class="info-row"><span class="info-label">No Invoice: </span><strong>${inv.invoice.number}</strong></div>
+          <div class="info-row"><span class="info-label">Tanggal: </span>${inv.invoice.date}</div>
+          <div class="info-row"><span class="info-label">Jatuh Tempo: </span>${inv.invoice.dueDate}</div>
+          ${inv.invoice.paidAt ? `<div class="info-row"><span class="info-label">Tgl Bayar: </span>${inv.invoice.paidAt}</div>` : ''}
+        </div>
+        <div>
+          <div class="section-title">Pembayaran</div>
+          <div class="info-row"><span class="info-label">Metode: </span>${inv.paymentLink ? 'Payment Gateway' : 'Manual'}</div>
+          <div class="info-row"><span class="info-label">Status: </span>${inv.invoice.status}</div>
+        </div>
+      </div>
+      <div class="section-title">Rincian Layanan</div>
+      <table>
+        <thead><tr><th>Deskripsi</th><th style="width:60px;text-align:center">Qty</th><th style="width:130px;text-align:right">Harga</th><th style="width:130px;text-align:right">Total</th></tr></thead>
+        <tbody>
+          ${inv.items.map((item: { description: string; quantity: number; price: number; total: number }) => `
+            <tr><td>${item.description}</td><td style="text-align:center">${item.quantity}</td><td class="td-right">${fmtCurr(item.price)}</td><td class="td-right">${fmtCurr(item.total)}</td></tr>
+          `).join('')}
+          <tr class="total-row"><td colspan="3" class="td-right">TOTAL</td><td class="td-right">${inv.amountFormatted}</td></tr>
+        </tbody>
+      </table>
+      ${inv.invoice.paidAt ? `<div class="paid-stamp"><div class="paid-stamp-text">LUNAS</div><div class="paid-stamp-sub">Dibayar pada ${inv.invoice.paidAt}</div></div>` : ''}
+      <div class="footer">Terima kasih atas kepercayaan Anda &mdash; ${inv.company.name}</div>
+      <button class="print-btn no-print" onclick="window.print()">&#128438; Cetak</button>
+      <script>window.onload = function() { window.print(); }</script>
+      </body></html>`);
+      win.document.close();
+    } catch (error) { console.error('Print standard error:', error); await showError(t('invoices.failedPrintInvoice')); }
+  };
+
+  const handlePrintThermal = async (invoice: Invoice) => {
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/pdf`);
+      const data = await res.json();
+      if (!data.success || !data.data) { await showError(t('invoices.failedGetInvoiceData')); return; }
+      const inv = data.data;
+      const fmtCurr = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+      const win = window.open('', '_blank', 'width=400,height=650');
+      if (!win) return;
+      win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Struk ${inv.invoice.number}</title>
+      <style>
+        @media print { @page { margin: 0; width: 80mm; } .no-print { display: none !important; } }
+        * { box-sizing: border-box; }
+        body { font-family: 'Courier New', Courier, monospace; font-size: 11px; width: 80mm; padding: 5mm 4mm; margin: 0 auto; color: #000; background: #fff; }
+        .center { text-align: center; }
+        .bold { font-weight: bold; }
+        .big { font-size: 14px; }
+        .dashed { border-top: 1px dashed #000; margin: 5px 0; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+        .row span:first-child { color: #444; flex-shrink: 0; margin-right: 8px; }
+        .row span:last-child { text-align: right; }
+        .total-row { font-weight: bold; font-size: 13px; }
+        .lunas-stamp { display: block; text-align: center; font-size: 17px; font-weight: bold; border: 3px double #000; padding: 4px 14px; margin: 8px auto; width: fit-content; letter-spacing: 3px; }
+        .sm { font-size: 10px; color: #555; }
+        .print-btn { display: block; margin: 10px auto; padding: 6px 18px; background: #0d9488; color: #fff; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
+      </style></head><body>
+      <div class="center bold big">${inv.company.name}</div>
+      ${inv.company.address ? `<div class="center sm">${inv.company.address}</div>` : ''}
+      ${inv.company.phone ? `<div class="center sm">Telp: ${inv.company.phone}</div>` : ''}
+      <div class="dashed"></div>
+      <div class="row"><span>No</span><span>${inv.invoice.number}</span></div>
+      <div class="row"><span>Tgl</span><span>${inv.invoice.date}</span></div>
+      <div class="row"><span>Kasir</span><span>Administrator</span></div>
+      <div class="dashed"></div>
+      <div class="row"><span>Pelanggan</span><span>${inv.customer.name}</span></div>
+      ${invoice.user?.customerId ? `<div class="row"><span>ID</span><span>${invoice.user.customerId}</span></div>` : ''}
+      ${inv.customer.phone ? `<div class="row"><span>Telp</span><span>${inv.customer.phone}</span></div>` : ''}
+      ${invoice.user?.area?.name ? `<div class="row"><span>Area</span><span>${invoice.user.area.name}</span></div>` : ''}
+      <div class="dashed"></div>
+      ${inv.items.map((item: { description: string; quantity: number; price: number }) => `
+        <div style="margin-bottom:3px">${item.description}</div>
+        <div class="row"><span>&nbsp;&nbsp;${item.quantity} x</span><span>${fmtCurr(item.price)}</span></div>
+      `).join('')}
+      <div class="dashed"></div>
+      <div class="row total-row"><span>TOTAL</span><span>${inv.amountFormatted}</span></div>
+      <div class="dashed"></div>
+      <div class="row"><span>Jatuh Tempo</span><span>${inv.invoice.dueDate}</span></div>
+      ${inv.invoice.paidAt ? `
+        <div class="dashed"></div>
+        <div class="row"><span>Tgl Bayar</span><span>${inv.invoice.paidAt}</span></div>
+        <div class="lunas-stamp">** LUNAS **</div>
+      ` : `<div class="center sm" style="margin:6px 0">Harap bayar sebelum jatuh tempo</div>`}
+      <div class="dashed"></div>
+      <div class="center sm" style="margin-top:4px">Terima kasih</div>
+      <button class="print-btn no-print" onclick="window.print()">&#128438; Cetak</button>
+      <script>window.onload = function() { window.print(); }</script>
+      </body></html>`);
+      win.document.close();
+    } catch (error) { console.error('Print thermal error:', error); await showError(t('invoices.failedPrintInvoice')); }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   };
@@ -692,7 +858,7 @@ export default function InvoicesPage() {
                               {copiedId === invoice.id ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
                             </button>
                           )}
-                          <button onClick={() => handlePrintInvoice(invoice)} className="p-1 hover:bg-muted rounded" title="Print PDF">
+                          <button onClick={() => setPrintDialogInvoice(invoice)} className="p-1 hover:bg-muted rounded" title="Print">
                             <Printer className="h-3 w-3 text-muted-foreground" />
                           </button>
                           <button onClick={() => handleViewDetail(invoice)} className="p-1 hover:bg-muted rounded" title="View">
@@ -785,7 +951,7 @@ export default function InvoicesPage() {
                         {copiedId === invoice.id ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
                       </button>
                     )}
-                    <button onClick={() => handlePrintInvoice(invoice)} className="p-1.5 hover:bg-muted rounded" title="Print PDF">
+                    <button onClick={() => setPrintDialogInvoice(invoice)} className="p-1.5 hover:bg-muted rounded" title="Print">
                       <Printer className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
                     <button onClick={() => handleViewDetail(invoice)} className="p-1.5 hover:bg-muted rounded" title="View">
@@ -889,6 +1055,59 @@ export default function InvoicesPage() {
             <DialogFooter>
               <Button onClick={() => setIsDetailDialogOpen(false)} size="sm" className="h-8 text-xs">{t('common.close')}</Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Print Dialog */}
+        <Dialog open={printDialogInvoice !== null} onOpenChange={(open) => { if (!open) setPrintDialogInvoice(null); }}>
+          <DialogContent className="max-w-xs p-0 overflow-hidden gap-0">
+            <div className="h-1 w-full bg-gradient-to-r from-primary to-blue-400" />
+            <div className="p-5">
+              <DialogHeader className="mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-full bg-primary/15 border border-primary/30">
+                    <Printer className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-sm font-bold">Pilih Jenis Printer</DialogTitle>
+                    <DialogDescription className="text-[11px] font-mono mt-0.5">
+                      {printDialogInvoice?.invoiceNumber}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => { if (printDialogInvoice) { setPrintDialogInvoice(null); handlePrintStandard(printDialogInvoice); } }}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                >
+                  <FileText className="w-5 h-5 flex-shrink-0" />
+                  <div className="text-left">
+                    <div className="text-sm font-bold">Standar Printer</div>
+                    <div className="text-[11px] opacity-80">A4 / Letter &mdash; invoice lengkap</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { if (printDialogInvoice) { setPrintDialogInvoice(null); handlePrintThermal(printDialogInvoice); } }}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                >
+                  <Printer className="w-5 h-5 flex-shrink-0" />
+                  <div className="text-left">
+                    <div className="text-sm font-bold">Thermal Printer</div>
+                    <div className="text-[11px] opacity-80">58mm / 80mm &mdash; struk kasir</div>
+                  </div>
+                </button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPrintDialogInvoice(null)}
+                  size="sm"
+                  className="h-8 text-xs"
+                >
+                  {t('common.cancel')}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
 
