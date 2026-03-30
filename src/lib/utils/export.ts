@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatWIB } from '@/lib/timezone';
+import { formatInTimeZone } from 'date-fns-tz';
 
 // PDF Export Utils for server-side (Node.js)
 export interface ExportOptions {
@@ -64,13 +65,15 @@ export function formatDateExport(date: Date | string, format: 'short' | 'long' =
     return d.toLocaleDateString('id-ID', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'Asia/Jakarta',
     });
   }
   return d.toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
-    year: 'numeric'
+    year: 'numeric',
+    timeZone: 'Asia/Jakarta',
   });
 }
 
@@ -140,7 +143,7 @@ export function preparePDFData(
     dateRange: options.dateRange 
       ? `${formatDateExport(options.dateRange.start)} - ${formatDateExport(options.dateRange.end)}`
       : undefined,
-    generatedAt: formatWIB(new Date()),
+    generatedAt: formatInTimeZone(new Date(), 'Asia/Jakarta', 'dd MMM yyyy HH:mm'),
     headers,
     rows,
     summary
@@ -196,7 +199,7 @@ export function generatePDFBuffer(
   // Generated date
   doc.setFontSize(9);
   doc.setTextColor(120, 120, 120);
-  const generatedAt = `Generated: ${formatWIB(new Date())}`;
+  const generatedAt = `Generated: ${formatInTimeZone(new Date(), 'Asia/Jakarta', 'dd MMM yyyy HH:mm')}`;
   doc.text(generatedAt, margin, yPos);
   yPos += 8;
 

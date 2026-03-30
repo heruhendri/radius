@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { prisma } from '@/server/db/client';
 import { formatWIB } from '@/lib/timezone';
+import { formatInTimeZone } from 'date-fns-tz';
 
 // Generate secure random token for payment link
 function generatePaymentToken(): string {
@@ -127,9 +128,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Invoice Generate] Total ${users.length} users to process`);
 
-    // Get current month/year for invoice numbering
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
+    // Get current month/year for invoice numbering (WIB timezone)
+    const year = formatInTimeZone(now, 'Asia/Jakarta', 'yyyy');
+    const month = formatInTimeZone(now, 'Asia/Jakarta', 'MM');
 
     // Get existing invoice count for this month
     let invoiceCount = await prisma.invoice.count({
@@ -263,7 +264,7 @@ export async function POST(request: NextRequest) {
     // Log activity
     try {
       const session = await getServerSession(authOptions);
-      const month = now.toLocaleString('id-ID', { year: 'numeric', month: 'long' });
+      const month = formatInTimeZone(now, 'Asia/Jakarta', 'MMMM yyyy');
       await logActivity({
         userId: (session?.user as any)?.id,
         username: (session?.user as any)?.username || 'System',

@@ -3,6 +3,7 @@ import { prisma } from '@/server/db/client';
 import { generateExcelBuffer, formatCurrencyExport, formatDateExport, generatePDFBuffer, generateInvoicePDF } from '@/lib/utils/export';
 import { checkAuth } from '@/server/middleware/api-auth';
 import { startOfDayWIBtoUTC, endOfDayWIBtoUTC, formatWIB } from '@/lib/timezone';
+import { formatInTimeZone } from 'date-fns-tz';
 
 export async function GET(req: NextRequest) {
   const auth = await checkAuth();
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest) {
           headers,
           rows,
           summary,
-          generatedAt: formatWIB(new Date())
+          generatedAt: formatInTimeZone(new Date(), 'Asia/Jakarta', 'dd MMM yyyy HH:mm')
         }
       });
     }

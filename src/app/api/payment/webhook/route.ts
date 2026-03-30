@@ -4,6 +4,7 @@ import { syncVoucherToRadius } from '@/server/services/radius/hotspot-sync.servi
 import { sendPaymentSuccess, sendVoucherPurchaseSuccess } from '@/server/services/notifications/whatsapp-templates.service';
 import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
 import { formatWIB } from '@/lib/timezone';
+import { formatInTimeZone } from 'date-fns-tz';
 import { logActivity } from '@/server/services/activity-log.service';
 import { disconnectPPPoEUser } from '@/server/services/radius/coa-handler.service';
 import crypto from 'crypto';
@@ -637,7 +638,7 @@ async function handleVoucherOrder(
                 quantity: order.quantity.toString(),
                 totalAmount: `Rp ${order.totalAmount.toLocaleString('id-ID')}`,
                 voucherCodes: vouchers.map(v => v.code).join(', '),
-                purchaseDate: formatWIB(new Date(), 'dd MMMM yyyy'),
+                purchaseDate: formatInTimeZone(new Date(), 'Asia/Jakarta', 'dd MMMM yyyy'),
                 expiryDate: '-',
                 companyName: company?.name || 'ISP',
                 companyPhone: company?.phone || '-',
