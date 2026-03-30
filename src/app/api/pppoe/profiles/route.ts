@@ -110,76 +110,39 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Sync to FreeRADIUS radgroupreply
-    try {
-      // Use full rateLimit if provided, otherwise format as downloadM/uploadM
-      const finalRateLimit = rateLimit || `${downloadSpeed}M/${uploadSpeed}M`;
-
-      // Check if radgroupreply already exists for this groupName
-      const existingGroup = await prisma.radgroupreply.findFirst({
-        where: { groupname: finalGroupName, attribute: 'Mikrotik-Group' },
-      });
-
-      // Only create radgroupreply if not exists (allow multiple profiles with same group)
-      if (!existingGroup) {
-        // Create Mikrotik-Group attribute (maps to MikroTik PPP profile)
-        await prisma.radgroupreply.create({
-          data: {
-            groupname: finalGroupName,
-            attribute: 'Mikrotik-Group',
-            op: ':=',
-            value: finalMikrotikProfileName,
-          },
+    // Sync to FreeRADIUS in background — don't block the HTTP response
+    void (async () => {
+      try {
+        const finalRateLimit = rateLimit || `${downloadSpeed}M/${uploadSpeed}M`;
+        const existingGroup = await prisma.radgroupreply.findFirst({
+          where: { groupname: finalGroupName, attribute: 'Mikrotik-Group' },
         });
-
-        // Create Mikrotik-Rate-Limit attribute (bandwidth limitation)
-        await prisma.radgroupreply.create({
-          data: {
-            groupname: finalGroupName,
-            attribute: 'Mikrotik-Rate-Limit',
-            op: ':=',
-            value: finalRateLimit,
-          },
-        });
-
-        // Create Simultaneous-Use attribute if sharedUser is true (only one device)
-        if (sharedUser !== false) {
-          await prisma.radgroupcheck.create({
-            data: {
-              groupname: finalGroupName,
-              attribute: 'Simultaneous-Use',
-              op: ':=',
-              value: '1', // Only 1 concurrent session
-            },
+        if (!existingGroup) {
+          await prisma.radgroupreply.createMany({
+            data: [
+              { groupname: finalGroupName, attribute: 'Mikrotik-Group', op: ':=', value: finalMikrotikProfileName },
+              { groupname: finalGroupName, attribute: 'Mikrotik-Rate-Limit', op: ':=', value: finalRateLimit },
+            ],
           });
+          if (sharedUser !== false) {
+            await prisma.radgroupcheck.create({
+              data: { groupname: finalGroupName, attribute: 'Simultaneous-Use', op: ':=', value: '1' },
+            });
+          }
         }
+        await prisma.pppoeProfile.update({
+          where: { id: profile.id },
+          data: { syncedToRadius: true, lastSyncAt: new Date() },
+        });
+      } catch (e) {
+        console.error('[BG] RADIUS sync error (create):', e);
       }
+    })();
 
-      // Mark as synced
-      await prisma.pppoeProfile.update({
-        where: { id: profile.id },
-        data: {
-          syncedToRadius: true,
-          lastSyncAt: new Date(),
-        },
-      });
-
-      return NextResponse.json({
-        success: true,
-        profile: {
-          ...profile,
-          syncedToRadius: true,
-        },
-      }, { status: 201 });
-    } catch (syncError: any) {
-      console.error('RADIUS sync error:', syncError);
-      // Profile created but sync failed
-      return NextResponse.json({
-        success: true,
-        profile,
-        warning: 'Profile created but RADIUS sync failed',
-      }, { status: 201 });
-    }
+    return NextResponse.json({
+      success: true,
+      profile: { ...profile, syncedToRadius: true },
+    }, { status: 201 });
   } catch (error) {
     console.error('Create PPPoE profile error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -286,145 +249,74 @@ export async function PUT(request: NextRequest) {
       data: updateData,
     });
 
-    // Re-sync to RADIUS if groupName or speeds or sharedUser changed
+    // Return immediately — RADIUS re-sync + MikroTik CoA run in background
     if (normalizedGroupName || normalizedMikrotikProfileName !== undefined || parsedFromRateLimit || bodyRateLimit || sharedUser !== undefined) {
-      try {
-        const oldGroupName = currentProfile.groupName;
-        const newGroupName = normalizedGroupName || currentProfile.groupName;
-        const newMikrotikProfileName = newGroupName;
-        const newDownload = downloadSpeed !== undefined ? downloadSpeed : currentProfile.downloadSpeed;
-        const newUpload = uploadSpeed !== undefined ? uploadSpeed : currentProfile.uploadSpeed;
-        // Use full rateLimit if provided, otherwise simple format
-        const rateLimit = bodyRateLimit || `${newDownload}M/${newUpload}M`;
+      void (async () => {
+        try {
+          const oldGroupName = currentProfile.groupName;
+          const newGroupName = normalizedGroupName || currentProfile.groupName;
+          const newMikrotikProfileName = newGroupName;
+          const newDownload = downloadSpeed !== undefined ? downloadSpeed : currentProfile.downloadSpeed;
+          const newUpload = uploadSpeed !== undefined ? uploadSpeed : currentProfile.uploadSpeed;
+          const rateLimit = bodyRateLimit || `${newDownload}M/${newUpload}M`;
 
-        // Delete old RADIUS entries
-        await prisma.radgroupreply.deleteMany({
-          where: { groupname: oldGroupName },
-        });
-
-        // Delete old Simultaneous-Use check entry
-        await prisma.radgroupcheck.deleteMany({
-          where: {
-            groupname: oldGroupName,
-            attribute: 'Simultaneous-Use'
-          },
-        });
-
-        // Create new RADIUS entries
-        await prisma.radgroupreply.createMany({
-          data: [
-            {
-              groupname: newGroupName,
-              attribute: 'Mikrotik-Group',
-              op: ':=',
-              value: newMikrotikProfileName,
-            },
-            {
-              groupname: newGroupName,
-              attribute: 'Mikrotik-Rate-Limit',
-              op: ':=',
-              value: rateLimit,
-            },
-          ],
-        });
-
-        // Handle Simultaneous-Use attribute for shared user feature
-        const finalSharedUser = sharedUser !== undefined ? sharedUser : currentProfile.sharedUser;
-        if (finalSharedUser) {
-          await prisma.radgroupcheck.create({
-            data: {
-              groupname: newGroupName,
-              attribute: 'Simultaneous-Use',
-              op: ':=',
-              value: '1',
-            },
+          await prisma.radgroupreply.deleteMany({ where: { groupname: oldGroupName } });
+          await prisma.radgroupcheck.deleteMany({ where: { groupname: oldGroupName, attribute: 'Simultaneous-Use' } });
+          await prisma.radgroupreply.createMany({
+            data: [
+              { groupname: newGroupName, attribute: 'Mikrotik-Group', op: ':=', value: newMikrotikProfileName },
+              { groupname: newGroupName, attribute: 'Mikrotik-Rate-Limit', op: ':=', value: rateLimit },
+            ],
           });
-        }
-
-        // Mark as synced
-        await prisma.pppoeProfile.update({
-          where: { id },
-          data: {
-            syncedToRadius: true,
-            lastSyncAt: new Date(),
-          },
-        });
-
-        // If speed changed, apply rate limit change to all active sessions using this profile
-        if (parsedFromRateLimit || bodyRateLimit) {
-          console.log(`[Profile Update] Speed changed for profile ${newGroupName}, applying rate limit to active sessions...`);
-
-          // Find all users using this profile
-          const usersWithProfile = await prisma.pppoeUser.findMany({
-            where: { profileId: id },
-            select: { username: true },
-          });
-
-          // For each user, find active session and apply new rate limit
-          const coaResults: any[] = [];
-          for (const user of usersWithProfile) {
-            const activeSession = await prisma.radacct.findFirst({
-              where: { username: user.username, acctstoptime: null },
-              select: { acctsessionid: true, nasipaddress: true, framedipaddress: true },
+          const finalSharedUser = sharedUser !== undefined ? sharedUser : currentProfile.sharedUser;
+          if (finalSharedUser) {
+            await prisma.radgroupcheck.create({
+              data: { groupname: newGroupName, attribute: 'Simultaneous-Use', op: ':=', value: '1' },
             });
+          }
+          await prisma.pppoeProfile.update({
+            where: { id },
+            data: { syncedToRadius: true, lastSyncAt: new Date() },
+          });
 
-            if (activeSession) {
-              // Get router config — prefer match by nasname/ipAddress from radacct
-              const routerRow = await prisma.router.findFirst({
-                where: {
-                  OR: [
-                    { nasname: activeSession.nasipaddress ?? '' },
-                    { ipAddress: activeSession.nasipaddress ?? '' },
-                  ],
-                },
-                select: { ipAddress: true, nasname: true, port: true, username: true, password: true, secret: true },
-              }) || await prisma.router.findFirst({
-                where: { isActive: true },
-                select: { ipAddress: true, nasname: true, port: true, username: true, password: true, secret: true },
-              });
-
-              if (routerRow) {
-                const effectiveRateLimit = rateLimit; // Already the new rateLimit
-                const result = await changePPPoERateLimit(
-                  {
-                    ipAddress: routerRow.ipAddress,
-                    nasname: routerRow.nasname,
-                    port: routerRow.port,
-                    username: routerRow.username,
-                    password: routerRow.password,
-                    secret: routerRow.secret,
-                  },
-                  user.username,
-                  effectiveRateLimit,
-                  {
-                    acctSessionId: activeSession.acctsessionid || undefined,
-                    nasIpAddress: routerRow.ipAddress,
-                    framedIpAddress: activeSession.framedipaddress || undefined,
-                  },
-                  { allowDisconnect: true }
-                );
-
-                coaResults.push({ username: user.username, ...result });
+          // Apply rate limit change to active sessions
+          if (parsedFromRateLimit || bodyRateLimit) {
+            const usersWithProfile = await prisma.pppoeUser.findMany({
+              where: { profileId: id },
+              select: { username: true },
+            });
+            for (const user of usersWithProfile) {
+              try {
+                const activeSession = await prisma.radacct.findFirst({
+                  where: { username: user.username, acctstoptime: null },
+                  select: { acctsessionid: true, nasipaddress: true, framedipaddress: true },
+                });
+                if (!activeSession) continue;
+                const routerRow = await prisma.router.findFirst({
+                  where: { OR: [{ nasname: activeSession.nasipaddress ?? '' }, { ipAddress: activeSession.nasipaddress ?? '' }] },
+                  select: { ipAddress: true, nasname: true, port: true, username: true, password: true, secret: true },
+                }) || await prisma.router.findFirst({
+                  where: { isActive: true },
+                  select: { ipAddress: true, nasname: true, port: true, username: true, password: true, secret: true },
+                });
+                if (routerRow) {
+                  await changePPPoERateLimit(
+                    { ipAddress: routerRow.ipAddress, nasname: routerRow.nasname, port: routerRow.port, username: routerRow.username, password: routerRow.password, secret: routerRow.secret },
+                    user.username,
+                    rateLimit,
+                    { acctSessionId: activeSession.acctsessionid || undefined, nasIpAddress: routerRow.ipAddress, framedIpAddress: activeSession.framedipaddress || undefined },
+                    { allowDisconnect: true }
+                  );
+                }
+              } catch (coaErr) {
+                console.error(`[BG] CoA error for user ${user.username}:`, coaErr);
               }
             }
           }
-
-          console.log(`[Profile Update] Rate limit applied to ${coaResults.filter(r => r.success).length}/${coaResults.length} active sessions`);
-
-          return NextResponse.json({
-            success: true,
-            profile,
-            coaApplied: coaResults.some(r => r.success),
-            coaResults: coaResults.map(r => ({
-              username: r.username,
-              success: r.success,
-              method: r.method,
-            })),
-          });
+        } catch (syncError) {
+          console.error('[BG] RADIUS re-sync error (update):', syncError);
         }
-      } catch (syncError) {
-        console.error('RADIUS re-sync error:', syncError);
-      }
+      })();
     }
 
     return NextResponse.json({ success: true, profile });

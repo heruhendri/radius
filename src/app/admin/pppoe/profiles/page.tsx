@@ -65,6 +65,7 @@ export default function PPPoEProfilesPage() {
   // Sync state
   const [syncingRadiusId, setSyncingRadiusId] = useState<string | null>(null);
   const [syncingMikrotikId, setSyncingMikrotikId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Router picker state
   const [syncMikrotikTarget, setSyncMikrotikTarget] = useState<PPPoEProfile | null>(null);
@@ -146,6 +147,7 @@ export default function PPPoEProfilesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       const method = editingProfile ? 'PUT' : 'POST';
       const generatedGroupName = formData.groupName.trim() || getAutoGroupName(formData.name);
@@ -182,6 +184,7 @@ export default function PPPoEProfilesPage() {
         await showError(`Error: ${result.error || t('common.failed')}${missing.length ? `\nMissing: ${missing.join(', ')}` : ''}`);
       }
     } catch (e) { console.error('Submit error:', e); await showError(t('common.failed')); }
+    finally { setIsSaving(false); }
   };
 
   const handleEdit = (profile: PPPoEProfile) => {
@@ -889,7 +892,9 @@ export default function PPPoEProfilesPage() {
             </ModalBody>
             <ModalFooter>
               <ModalButton type="button" variant="secondary" onClick={() => { setIsDialogOpen(false); setEditingProfile(null); resetForm(); }}>{t('common.cancel')}</ModalButton>
-              <ModalButton type="submit" variant="primary">{editingProfile ? 'Simpan Perubahan' : 'Simpan Paket'}</ModalButton>
+              <ModalButton type="submit" variant="primary" disabled={isSaving}>
+                {isSaving ? <><RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />{editingProfile ? 'Menyimpan...' : 'Menyimpan...'}</> : (editingProfile ? 'Simpan Perubahan' : 'Simpan Paket')}
+              </ModalButton>
             </ModalFooter>
           </form>
         </SimpleModal>
