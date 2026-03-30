@@ -74,7 +74,7 @@ function DaftarPageInner() {
     try {
       const res = await fetch('/api/public/profiles');
       const data = await res.json();
-      setProfiles(data.profiles.filter((p: any) => p.isActive) || []);
+      setProfiles(data.profiles || []);
     } catch (error) { console.error('Failed to load profiles:', error); }
     finally { setLoading(false); }
   };
