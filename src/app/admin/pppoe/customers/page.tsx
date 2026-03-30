@@ -8,7 +8,7 @@ import { formatWIB } from '@/lib/timezone';
 import {
   Plus, Pencil, Trash2, Search, X, Eye, Users, Phone, Mail, MapPin,
   User, CreditCard, CheckCircle2, XCircle, UserPlus, Loader2, Download, Upload,
-  Calendar, RefreshCw,
+  Calendar, RefreshCw, Ban,
 } from 'lucide-react';
 import {
   SimpleModal, ModalHeader, ModalTitle, ModalDescription, ModalBody,
@@ -192,6 +192,32 @@ export default function PppoeCustomersPage() {
       setSelectedCustomer(data.customer || c);
     } catch { setSelectedCustomer(c); }
     setIsDetailOpen(true);
+  };
+
+  const handleStopSubscriptions = async (c: Customer) => {
+    const count = c._count?.pppoeUsers ?? 0;
+    if (count === 0) { await showError('Customer ini tidak memiliki langganan PPPoE aktif'); return; }
+    const confirmed = await showConfirm(
+      `Hentikan semua langganan PPPoE untuk customer "${c.name}"?\n${count} langganan akan dihentikan dan terputus dari jaringan.`,
+      'Stop Langganan'
+    );
+    if (!confirmed) return;
+    try {
+      const detailRes = await fetch(`/api/pppoe/customers?id=${c.id}`);
+      const detailData = await detailRes.json();
+      const activeUsers = (detailData.customer?.pppoeUsers ?? []).filter((u: any) => u.status === 'active' || u.status === 'isolated');
+      if (activeUsers.length === 0) { await showError('Tidak ada langganan PPPoE yang aktif'); return; }
+      const res = await fetch('/api/pppoe/users/bulk-status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds: activeUsers.map((u: any) => u.id), status: 'stop' }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        await showSuccess(`${result.updated ?? activeUsers.length} langganan berhasil dihentikan`);
+        loadCustomers();
+      } else { await showError(result.error || 'Gagal menghentikan langganan'); }
+    } catch { await showError('Gagal menghentikan langganan'); }
   };
 
   const handleDelete = async (c: Customer) => {
@@ -517,6 +543,15 @@ export default function PppoeCustomersPage() {
                         >
                           <UserPlus className="h-3.5 w-3.5" />
                         </button>
+                        {canCreate && (c._count?.pppoeUsers ?? 0) > 0 && (
+                          <button
+                            onClick={() => handleStopSubscriptions(c)}
+                            title="Stop semua langganan PPPoE"
+                            className="p-1.5 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded"
+                          >
+                            <Ban className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                         {canDelete && (
                           <button
                             onClick={() => handleDelete(c)}
