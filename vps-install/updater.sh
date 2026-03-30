@@ -106,9 +106,27 @@ if [ -n "$USE_BRANCH" ]; then
         print_success "Backup saved to $BACKUP_DIR"
     fi
 
+    # ─── Preserve user-uploaded files (logos, KTP, payment proofs, dll) ───
+    # git reset --hard + git clean -fd akan menghapus file yang tidak di-track git.
+    # Meski public/uploads/ ada di .gitignore, kita tetap backup manual agar aman.
+    UPLOADS_GIT_TMP=""
+    if [ -d "$APP_DIR/public/uploads" ]; then
+        UPLOADS_GIT_TMP=$(mktemp -d)
+        cp -r "$APP_DIR/public/uploads/." "$UPLOADS_GIT_TMP/"
+        print_info "uploads/ saved — will be restored after git sync"
+    fi
+
     git fetch origin
     git reset --hard "origin/$USE_BRANCH"
     git clean -fd
+
+    # Restore uploads (logos, foto KTP pelanggan, bukti bayar, dll)
+    if [ -n "$UPLOADS_GIT_TMP" ]; then
+        mkdir -p "$APP_DIR/public/uploads"
+        cp -r "$UPLOADS_GIT_TMP/." "$APP_DIR/public/uploads/"
+        rm -rf "$UPLOADS_GIT_TMP"
+        print_success "uploads/ restored (logos, foto KTP, bukti bayar aman)"
+    fi
 
     print_step "Installing dependencies"
     npm ci --omit=dev

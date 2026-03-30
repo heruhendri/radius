@@ -30,6 +30,9 @@ lerna-debug.log*
 .env
 .env*.local
 
+# Runtime user-uploaded files — jangan di-commit, JANGAN dihapus saat update
+public/uploads/
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
