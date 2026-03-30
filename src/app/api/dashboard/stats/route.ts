@@ -319,7 +319,9 @@ export async function GET(request: NextRequest) {
     let unpaidInvoicesCount = 0;
     let totalAllTimeRevenue = 0;
     try {
-      const startOfToday = startOfDayWIBtoUTC(now);
+      // Use local Date constructor so mysql2 sends WIB midnight string to MySQL
+      // (now.getUTCDate/Month/FullYear are WIB calendar values since now=nowWIB())
+      const startOfToday = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0);
 
       const [todayAgg, monthAgg, monthCount, unpaidCount, allTimeAgg] = await Promise.all([
         prisma.invoice.aggregate({
