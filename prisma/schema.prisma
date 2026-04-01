@@ -99,6 +99,7 @@ model company {
   footerAdmin          String?  @db.Text // Footer for admin login page
   footerCustomer       String?  @db.Text // Footer for customer login page
   footerTechnician     String?  @db.Text // Footer for technician login page
+  footerAgent          String?  @db.Text // Footer for agent login page
   
   invoiceGenerateDays  Int?     @default(7) // Days before expiry to generate invoice
   gracePeriodDays      Int?     @default(0) // Grace period days after expiry user can still online

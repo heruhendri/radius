@@ -24,8 +24,12 @@ export default function AgentLoginPage() {
       .then(data => {
         if (data.success && data.company) {
           if (data.company.logo) setCompanyLogo(data.company.logo);
-          if (data.company.name) { setCompanyName(data.company.name); setPoweredBy(data.company.name); }
-          if (data.company.poweredBy) setPoweredBy(data.company.poweredBy);
+          if (data.company.name) setCompanyName(data.company.name);
+          if (data.company.footerAgent) {
+            setPoweredBy(data.company.footerAgent);
+          } else if (data.company.poweredBy) {
+            setPoweredBy(`Powered by ${data.company.poweredBy}`);
+          }
           if (data.company.phone) {
             let formattedPhone = data.company.phone.replace(/[^0-9]/g, '');
             if (formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
@@ -168,7 +172,7 @@ export default function AgentLoginPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-[#e0d0ff]/50 mt-6">
-          {poweredBy && <>Powered by <span className="text-[#00f7ff]">{poweredBy}</span></>}
+          {poweredBy && <span className="text-[#00f7ff]">{poweredBy}</span>}
         </p>
       </div>
     </div>

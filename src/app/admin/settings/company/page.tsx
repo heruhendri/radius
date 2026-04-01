@@ -26,6 +26,7 @@ interface CompanySettings {
   footerAdmin: string;
   footerCustomer: string;
   footerTechnician: string;
+  footerAgent: string;
   invoiceGenerateDays: number;
   logo?: string;
 }
@@ -43,9 +44,10 @@ export default function CompanySettingsPage() {
     timezone: 'Asia/Jakarta',
     bankAccounts: [],
     poweredBy: 'SALFANET RADIUS',
-    footerAdmin: 'Powered by SALFANET RADIUS',
-    footerCustomer: 'Powered by SALFANET RADIUS',
-    footerTechnician: 'Powered by SALFANET RADIUS',
+    footerAdmin: '',
+    footerCustomer: '',
+    footerTechnician: '',
+    footerAgent: '',
     invoiceGenerateDays: 7,
     logo: '',
   });
@@ -75,9 +77,10 @@ export default function CompanySettingsPage() {
             timezone: data.timezone || 'Asia/Jakarta',
             bankAccounts: data.bankAccounts || [],
             poweredBy: data.poweredBy || 'SALFANET RADIUS',
-            footerAdmin: data.footerAdmin || 'Powered by SALFANET RADIUS',
-            footerCustomer: data.footerCustomer || 'Powered by SALFANET RADIUS',
-            footerTechnician: data.footerTechnician || 'Powered by SALFANET RADIUS',
+            footerAdmin: data.footerAdmin || '',
+            footerCustomer: data.footerCustomer || '',
+            footerTechnician: data.footerTechnician || '',
+            footerAgent: data.footerAgent || '',
             invoiceGenerateDays: data.invoiceGenerateDays || 7,
             logo: data.logo || '',
           });
@@ -433,60 +436,7 @@ export default function CompanySettingsPage() {
                 <p className="mt-1 text-[10px] text-muted-foreground">{t('settings.poweredByHelp')}</p>
               </div>
 
-              {/* Footer Settings Section */}
-              <div className="col-span-2 border-t border-border pt-4 mt-2">
-                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <span className="text-lg">📄</span>
-                  Pengaturan Footer
-                </h3>
-                <p className="text-[10px] text-muted-foreground mb-4">
-                  Atur teks footer yang ditampilkan di halaman login untuk setiap portal
-                </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Admin Footer */}
-                  <div>
-                    <label className="flex items-center gap-1.5 text-[11px] font-medium text-foreground mb-1">
-                      🔒 Footer Admin
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.footerAdmin}
-                      onChange={(e) => setSettings({ ...settings, footerAdmin: e.target.value })}
-                      className="w-full px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card focus:ring-1 focus:ring-ring focus:border-primary"
-                      placeholder="Powered by SALFANET RADIUS"
-                    />
-                  </div>
-
-                  {/* Customer Footer */}
-                  <div>
-                    <label className="flex items-center gap-1.5 text-[11px] font-medium text-foreground mb-1">
-                      👤 Footer Customer
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.footerCustomer}
-                      onChange={(e) => setSettings({ ...settings, footerCustomer: e.target.value })}
-                      className="w-full px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card focus:ring-1 focus:ring-ring focus:border-primary"
-                      placeholder="Powered by SALFANET RADIUS"
-                    />
-                  </div>
-
-                  {/* Technician Footer */}
-                  <div>
-                    <label className="flex items-center gap-1.5 text-[11px] font-medium text-foreground mb-1">
-                      🔧 Footer Teknisi
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.footerTechnician}
-                      onChange={(e) => setSettings({ ...settings, footerTechnician: e.target.value })}
-                      className="w-full px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card focus:ring-1 focus:ring-ring focus:border-primary"
-                      placeholder="Powered by SALFANET RADIUS"
-                    />
-                  </div>
-                </div>
-              </div>
 
               {/* Timezone */}
               <div>

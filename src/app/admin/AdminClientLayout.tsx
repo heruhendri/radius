@@ -329,6 +329,7 @@ const menuGroups: MenuGroup[] = [
         requiredPermission: 'settings.view',
         children: [
           { titleKey: 'nav.company', href: '/admin/settings/company', requiredPermission: 'settings.company' },
+          { titleKey: 'nav.footerSettings', href: '/admin/settings/footer', requiredPermission: 'settings.company' },
           { titleKey: 'nav.database', href: '/admin/settings/database', requiredPermission: 'settings.view' },
           { titleKey: 'nav.cronJobs', href: '/admin/settings/cron', requiredPermission: 'settings.cron' },
           { titleKey: 'nav.genieacs', href: '/admin/settings/genieacs', requiredPermission: 'settings.genieacs' },

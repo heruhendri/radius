@@ -27,6 +27,7 @@ export async function GET() {
         footerAdmin: 'Powered by SALFANET RADIUS',
         footerCustomer: 'Powered by SALFANET RADIUS',
         footerTechnician: 'Powered by SALFANET RADIUS',
+        footerAgent: 'Powered by SALFANET RADIUS',
       });
     }
 
@@ -97,6 +98,7 @@ export async function POST(request: Request) {
           footerAdmin: data.footerAdmin || 'Powered by SALFANET RADIUS',
           footerCustomer: data.footerCustomer || 'Powered by SALFANET RADIUS',
           footerTechnician: data.footerTechnician || 'Powered by SALFANET RADIUS',
+          footerAgent: data.footerAgent || 'Powered by SALFANET RADIUS',
           bankAccounts: bankAccounts,
           invoiceGenerateDays: data.invoiceGenerateDays ? parseInt(data.invoiceGenerateDays) : 7,
         },
