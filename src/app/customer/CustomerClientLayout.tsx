@@ -48,6 +48,8 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
   const [bellOpen, setBellOpen] = useState(false);
   const { isDark, toggleTheme } = useTheme();
   const [unreadCount, setUnreadCount] = useState(0);
+  // null = not yet checked (SSR), true/false after client mounts
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [notifHistory, setNotifHistory] = useState<NotifEvent[]>([]);
   // Default: look back 24h so events that happened before page load are caught
   const lastCheckedRef = useRef<string>(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
@@ -141,8 +143,9 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       if (cachedName) setCompanyName(cachedName);
     } catch { /* ignore */ }
     loadCompanyInfo();
-    const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
-    handleResize();
+    const token = localStorage.getItem('customer_token');
+    const handleResize = () => { if (localStorage.getItem('customer_token')) setSidebarOpen(window.innerWidth >= 1024); };
+    if (token) handleResize();
     window.addEventListener('resize', handleResize);
     // Poll immediately on mount so notifications show without waiting 30s
     poll();
@@ -181,6 +184,11 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
     router.push('/customer/login');
   };
 
+  // Re-check auth token whenever pathname changes (e.g. after login/logout)
+  useEffect(() => {
+    setAuthenticated(!!localStorage.getItem('customer_token'));
+  }, [pathname]);
+
   const isActive = (href: string) => {
     if (href === '/customer') return pathname === '/customer';
     return pathname.startsWith(href);
@@ -188,6 +196,12 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
 
   // Skip portal UI on login page — render children directly
   if (pathname === '/customer/login') {
+    return <>{children}</>;
+  }
+
+  // Not yet authenticated (or not checked yet) — render children only so the
+  // page component can run its own useEffect redirect to /customer/login
+  if (!authenticated) {
     return <>{children}</>;
   }
 
