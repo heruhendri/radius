@@ -100,20 +100,21 @@ jobs:
       # ─── 8. Prepare installer & updater scripts ──────────────────────────────
       - name: Prepare installer and updater scripts
         run: |
-          # Installer = full VPS setup from scratch
-          cp vps-install/vps-installer.sh installer-linux-amd64
-          chmod +x installer-linux-amd64
+          # Build self-contained installer (embeds all component scripts via base64)
+          # The resulting file is a single standalone script — no extra downloads needed.
+          python3 vps-install/build-standalone.py installer-linux-amd64
           cp installer-linux-amd64 installer-linux-arm64
 
           # Updater = update existing installation
-          cp vps-install/updater.sh updater-linux-amd64 2>/dev/null || \
-            cp scripts/run-deploy.js /dev/null && \
+          if [ -f vps-install/updater.sh ]; then
+            cp vps-install/updater.sh updater-linux-amd64
+          else
             cat > updater-linux-amd64 << 'UPDATER_EOF'
-          #!/bin/bash
-          # Auto-generated fallback updater — use vps-install/updater.sh from repo
-          echo "Please run: bash <(curl -sSL https://raw.githubusercontent.com/s4lfanet/salfanet-radius/master/vps-install/updater.sh)"
-          UPDATER_EOF
-
+#!/bin/bash
+# Fallback updater — use vps-install/updater.sh from repo
+echo "Please run: bash <(curl -sSL https://raw.githubusercontent.com/s4lfanet/salfanet-radius/master/vps-install/updater.sh)"
+UPDATER_EOF
+          fi
           chmod +x updater-linux-amd64
           cp updater-linux-amd64 updater-linux-arm64
 
