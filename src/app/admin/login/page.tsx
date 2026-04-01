@@ -224,7 +224,7 @@ function LoginForm() {
               </h1>
           </div>
           <p className="text-sm text-[#00f7ff] font-mono uppercase tracking-widest">
-            {step === 'twoFactor' ? '2-Factor Authentication' : t('auth.adminControlPanel')}
+            {step === 'twoFactor' ? 'Autentikasi 2 Faktor' : t('auth.adminControlPanel')}
           </p>
         </div>
 
@@ -320,9 +320,9 @@ function LoginForm() {
                 <div className="flex items-start gap-3">
                   <Smartphone className="w-5 h-5 text-[#00f7ff] flex-shrink-0 mt-0.5 drop-shadow-[0_0_8px_rgba(0,247,255,0.8)]" />
                   <div>
-                    <p className="text-sm font-bold text-[#00f7ff]">Authenticator Code Required</p>
+                    <p className="text-sm font-bold text-[#00f7ff]">Kode Autentikator Diperlukan</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Open your authenticator app (Google Authenticator, Authy, etc.) and enter the 6-digit code.
+                      Buka aplikasi autentikator Anda (Google Authenticator, Authy, dll.) dan masukkan kode 6 digit.
                     </p>
                   </div>
                 </div>
@@ -331,7 +331,7 @@ function LoginForm() {
               <div>
                 <label className="flex items-center gap-2 text-sm font-bold text-[#00f7ff] mb-3 uppercase tracking-wider">
                   <KeyRound className="w-4 h-4" />
-                  Authenticator Code
+                  Kode Autentikator
                 </label>
                 <input
                   ref={tfaInputRef}
@@ -346,7 +346,7 @@ function LoginForm() {
                   disabled={loading}
                   maxLength={7}
                 />
-                <p className="text-xs text-muted-foreground text-center mt-2">This session expires in 10 minutes</p>
+                <p className="text-xs text-muted-foreground text-center mt-2">Sesi ini berakhir dalam 10 menit</p>
               </div>
 
               <button
@@ -355,9 +355,9 @@ function LoginForm() {
                 className="w-full py-4 bg-gradient-to-r from-[#00f7ff] to-[#00d4e6] hover:shadow-[0_0_40px_rgba(0,247,255,0.5)] disabled:opacity-50 disabled:shadow-none text-black text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-3"
               >
                 {loading ? (
-                  <><Loader2 className="w-5 h-5 animate-spin" />Verifying...</>
+                  <><Loader2 className="w-5 h-5 animate-spin" />Memverifikasi...</>
                 ) : (
-                  <><KeyRound className="w-5 h-5" />Verify Code</>
+                  <><KeyRound className="w-5 h-5" />Verifikasi Kode</>
                 )}
               </button>
 
@@ -368,7 +368,7 @@ function LoginForm() {
                 className="w-full text-sm text-muted-foreground hover:text-[#00f7ff] transition-colors flex items-center justify-center gap-2 pt-1"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Login
+                Kembali ke Login
               </button>
             </form>
           )}

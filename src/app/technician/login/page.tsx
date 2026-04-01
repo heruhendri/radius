@@ -107,7 +107,7 @@ export default function TechnicianLoginPage() {
             {/* Username */}
             <div className="mb-5">
               <label className="block text-sm font-bold text-[#00f7ff] mb-3 uppercase tracking-wider">
-                Username
+                Nama Pengguna
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2 p-1.5 bg-[#bc13fe]/20 rounded-lg">
@@ -128,7 +128,7 @@ export default function TechnicianLoginPage() {
             {/* Password */}
             <div className="mb-6">
               <label className="block text-sm font-bold text-[#00f7ff] mb-3 uppercase tracking-wider">
-                Password
+                Kata Sandi
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2 p-1.5 bg-[#bc13fe]/20 rounded-lg">

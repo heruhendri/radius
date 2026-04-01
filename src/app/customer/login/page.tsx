@@ -207,7 +207,7 @@ export default function CustomerLoginPage() {
           <p className={`text-sm tracking-[0.3em] uppercase font-medium ${
             isDark ? 'text-[#e0d0ff]/80' : 'text-slate-500'
           }`}>
-            Secure Access Terminal
+            Portal Pelanggan
           </p>
         </div>
 
@@ -239,7 +239,7 @@ export default function CustomerLoginPage() {
                   isDark ? 'text-[#00f7ff] drop-shadow-[0_0_8px_rgba(0,247,255,0.6)]' : 'text-purple-700'
                 }`}>
                   <Smartphone className="w-4 h-4" />
-                  Identity / Phone
+                  Nomor HP / ID Pelanggan
                 </label>
                 <div className="relative group">
                   <input
@@ -252,13 +252,13 @@ export default function CustomerLoginPage() {
                         ? 'bg-[#1f1040]/80 border-[#bc13fe]/30 text-white placeholder:text-[#e0d0ff]/50 focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/30 focus:shadow-[0_0_25px_rgba(188,19,254,0.4)]'
                         : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-200'
                     }`}
-                    placeholder="08123456789 or ID"
+                    placeholder="08123456789 atau ID Pelanggan"
                     disabled={loading}
                   />
                   {isDark && <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#bc13fe]/10 to-[#ff44cc]/10 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300" />}
                 </div>
                 <p className={`text-xs ${ isDark ? 'text-[#e0d0ff]/60' : 'text-slate-500' }`}>
-                  Enter registered WhatsApp number or 8-digit Customer ID
+                  Masukkan nomor WhatsApp terdaftar atau ID Pelanggan 8 digit
                 </p>
               </div>
 
@@ -270,11 +270,11 @@ export default function CustomerLoginPage() {
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing...
+                    Memproses...
                   </>
                 ) : (
                   <>
-                    Initialize Login
+                    Masuk
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -309,7 +309,7 @@ export default function CustomerLoginPage() {
                   }}
                   className="w-full mt-4"
                 >
-                  Emergency Bypass (No OTP)
+                  Emergency Bypass (Tanpa OTP)
                 </CyberButton>
               )}
             </form>
@@ -320,7 +320,7 @@ export default function CustomerLoginPage() {
                   isDark ? 'text-[#00f7ff] drop-shadow-[0_0_8px_rgba(0,247,255,0.6)]' : 'text-purple-700'
                 }`}>
                   <Lock className="w-4 h-4" />
-                  Security Code
+                  Kode Keamanan
                 </label>
                 <input
                   type="text"
@@ -338,9 +338,9 @@ export default function CustomerLoginPage() {
                   autoFocus
                 />
                 <p className={`text-xs text-center ${ isDark ? 'text-[#e0d0ff]/60' : 'text-slate-500' }`}>
-                  Code sent to <strong className={isDark ? 'text-[#00f7ff]' : 'text-purple-600'}>{identifier}</strong>
+                  Kode dikirim ke <strong className={isDark ? 'text-[#00f7ff]' : 'text-purple-600'}>{identifier}</strong>
                   <br />
-                  Expires in {expiresIn} minutes
+                  Berlaku {expiresIn} menit
                 </p>
               </div>
 
@@ -353,7 +353,7 @@ export default function CustomerLoginPage() {
                   className="flex-1"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  Back
+                  Kembali
                 </CyberButton>
                 <CyberButton
                   type="submit"
@@ -363,10 +363,10 @@ export default function CustomerLoginPage() {
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Verifying...
+                      Memverifikasi...
                     </>
                   ) : (
-                    'Authenticate'
+                    'Verifikasi'
                   )}
                 </CyberButton>
               </div>
@@ -381,7 +381,7 @@ export default function CustomerLoginPage() {
                 disabled={loading}
                 className="w-full text-xs text-[#bc13fe]/70 hover:text-[#ff44cc] hover:underline transition-all"
               >
-                Resend Authentication Code
+                Kirim Ulang Kode
               </button>
             </form>
           )}
@@ -392,7 +392,7 @@ export default function CustomerLoginPage() {
               <p className={`text-xs mb-4 text-center uppercase tracking-[0.2em] font-medium ${
                 isDark ? 'text-[#e0d0ff]/60' : 'text-slate-500'
               }`}>
-                New Connection Request
+                Pendaftaran Baru
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <CyberButton
@@ -400,14 +400,14 @@ export default function CustomerLoginPage() {
                   onClick={() => router.push('/daftar')}
                   className="text-xs px-2"
                 >
-                  Register User
+                  Daftar Pelanggan
                 </CyberButton>
                 <CyberButton
                   variant="outline"
                   onClick={() => router.push('/agent')}
                   className="text-xs px-2"
                 >
-                  Register Agent
+                  Daftar Agen
                 </CyberButton>
               </div>
             </div>
@@ -422,7 +422,7 @@ export default function CustomerLoginPage() {
                 className="w-full text-xs"
               >
                 <Wifi className="w-4 h-4" />
-                Purchase WiFi Access
+                Beli Voucher WiFi
               </CyberButton>
             </div>
           )}
@@ -442,7 +442,7 @@ export default function CustomerLoginPage() {
               isDark ? 'text-[#e0d0ff]/30 hover:text-[#00f7ff]/70' : 'text-slate-400 hover:text-purple-600'
             }`}
           >
-            Admin? Login here →
+            Admin? Masuk di sini →
           </a>
         </p>
       </div>
