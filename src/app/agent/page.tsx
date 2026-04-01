@@ -12,7 +12,7 @@ export default function AgentLoginPage() {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [companyPhone, setCompanyPhone] = useState('6281234567890');
+  const [companyPhone, setCompanyPhone] = useState('');
   const [poweredBy, setPoweredBy] = useState('');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState('');
@@ -150,7 +150,7 @@ export default function AgentLoginPage() {
           </div>
 
           {/* Contact Admin */}
-          <div className="text-center">
+          {companyPhone && <div className="text-center">
             <p className="text-xs text-[#e0d0ff]/70 mb-2">
               {t('agent.portal.notRegistered')}
             </p>
@@ -163,12 +163,12 @@ export default function AgentLoginPage() {
               <MessageCircle className="w-4 h-4" />
               {t('agent.portal.contactAdmin')}
             </a>
-          </div>
+          </div>}
         </div>
 
         {/* Footer */}
         <p className="text-center text-xs text-[#e0d0ff]/50 mt-6">
-          <>Powered by <span className="text-[#00f7ff]">{poweredBy}</span></>
+          {poweredBy && <>Powered by <span className="text-[#00f7ff]">{poweredBy}</span></>}
         </p>
       </div>
     </div>
