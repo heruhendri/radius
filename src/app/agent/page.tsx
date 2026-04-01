@@ -27,8 +27,6 @@ export default function AgentLoginPage() {
           if (data.company.name) setCompanyName(data.company.name);
           if (data.company.footerAgent) {
             setPoweredBy(data.company.footerAgent);
-          } else if (data.company.poweredBy) {
-            setPoweredBy(`Powered by ${data.company.poweredBy}`);
           }
           if (data.company.phone) {
             let formattedPhone = data.company.phone.replace(/[^0-9]/g, '');
