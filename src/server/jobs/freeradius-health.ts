@@ -393,7 +393,8 @@ export async function freeradiusHealthCheck(autoRestart = true): Promise<{
                 select: { isolationRateLimit: true }
             });
             const rateLimit = company?.isolationRateLimit ?? '64k/64k';
-            // Upsert rate-limit: delete old value and re-insert so admin changes propagate
+            // Upsert all three isolir attributes: DELETE+INSERT to prevent duplicates.
+            // radgroupreply has no UNIQUE constraint, so INSERT IGNORE would keep adding rows.
             await prisma.$executeRaw`
                 DELETE FROM radgroupreply
                 WHERE groupname = 'isolir' AND attribute = 'Mikrotik-Rate-Limit'
@@ -403,11 +404,19 @@ export async function freeradiusHealthCheck(autoRestart = true): Promise<{
                 VALUES ('isolir', 'Mikrotik-Rate-Limit', ':=', ${rateLimit})
             `;
             await prisma.$executeRaw`
-                INSERT IGNORE INTO radgroupreply (groupname, attribute, op, value)
+                DELETE FROM radgroupreply
+                WHERE groupname = 'isolir' AND attribute = 'Mikrotik-Group'
+            `;
+            await prisma.$executeRaw`
+                INSERT INTO radgroupreply (groupname, attribute, op, value)
                 VALUES ('isolir', 'Mikrotik-Group', ':=', 'isolir')
             `;
             await prisma.$executeRaw`
-                INSERT IGNORE INTO radgroupreply (groupname, attribute, op, value)
+                DELETE FROM radgroupreply
+                WHERE groupname = 'isolir' AND attribute = 'Framed-Pool'
+            `;
+            await prisma.$executeRaw`
+                INSERT INTO radgroupreply (groupname, attribute, op, value)
                 VALUES ('isolir', 'Framed-Pool', ':=', 'pool-isolir')
             `;
         } catch (isolirErr: any) {

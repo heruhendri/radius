@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { RouterOSAPI } from 'node-routeros';
 import { prisma } from '@/server/db/client';
+import { getCidrRange } from '@/server/services/isolation.service';
 
 export async function POST(
   request: NextRequest,
@@ -50,10 +51,18 @@ export async function POST(
 
     const comment = 'SALFANET RADIUS - Dont Delete';
 
+    // Read isolation settings from company config
+    const company = await prisma.company.findFirst({
+      select: { isolationIpPool: true, isolationRateLimit: true },
+    });
+    const isolationCidr = company?.isolationIpPool || '192.168.200.0/24';
+    const rateLimit = company?.isolationRateLimit || '64k/64k';
+    const { startIp, endIp, gateway } = getCidrRange(isolationCidr);
+    const poolRange = `${startIp}-${endIp}`;
+
     try {
       // 1. Create IP Pool for isolir
       const poolName = 'pool-isolir';
-      const poolRange = '10.255.255.2-10.255.255.254';
       const allPools = await conn.write('/ip/pool/print');
       const existingPool = allPools.filter((p: any) => p.name === poolName);
       const poolExists = existingPool.length > 0;
@@ -82,7 +91,6 @@ export async function POST(
 
       // 2. Create PPP Profile 'isolir'
       const profileName = 'isolir';
-      const rateLimit = '64k/64k';
       const allProfiles = await conn.write('/ppp/profile/print');
       const existingProfile = allProfiles.filter((p: any) => p.name === profileName);
       const profileExists = existingProfile.length > 0;
@@ -90,7 +98,7 @@ export async function POST(
       if (!profileExists) {
         await conn.write('/ppp/profile/add', [
           `=name=${profileName}`,
-          '=local-address=10.255.255.1',
+          `=local-address=${gateway}`,
           `=remote-address=${poolName}`,
           `=rate-limit=${rateLimit}`,
           '=only-one=yes',
@@ -101,7 +109,7 @@ export async function POST(
         const profileId = existingProfile[0]['.id'];
         await conn.write('/ppp/profile/set', [
           `=.id=${profileId}`,
-          '=local-address=10.255.255.1',
+          `=local-address=${gateway}`,
           `=remote-address=${poolName}`,
           `=rate-limit=${rateLimit}`,
           '=only-one=yes',
@@ -118,6 +126,8 @@ export async function POST(
           profile: profileName,
           rateLimit: rateLimit,
           poolRange: poolRange,
+          gateway: gateway,
+          cidr: isolationCidr,
         },
       });
     } catch (apiError) {
