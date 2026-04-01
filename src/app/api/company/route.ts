@@ -77,6 +77,7 @@ export async function POST(request: Request) {
           footerAdmin: data.footerAdmin,
           footerCustomer: data.footerCustomer,
           footerTechnician: data.footerTechnician,
+          footerAgent: data.footerAgent,
           bankAccounts: bankAccounts,
           invoiceGenerateDays: data.invoiceGenerateDays ? parseInt(data.invoiceGenerateDays) : undefined,
         },
