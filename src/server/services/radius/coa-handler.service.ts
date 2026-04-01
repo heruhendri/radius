@@ -126,7 +126,7 @@ export async function sendCoADisconnect(
     // Send CoA Disconnect-Request using radclient
     // Port 3799 is CoA/DM port (RFC 5176)
     // -t 2 = timeout 2 seconds, -r 1 = retry 1 time (faster, we have DB fallback)
-    const command = `radclient -t 2 -r 1 -x ${nasIpAddress}:3799 disconnect ${nasSecret} < ${tmpFile} 2>&1`
+    const command = `radclient -d /usr/share/freeradius -t 2 -r 1 -x ${nasIpAddress}:3799 disconnect ${nasSecret} < ${tmpFile} 2>&1`
     
     console.log(`[CoA] Sending to ${nasIpAddress}:3799...`)
     

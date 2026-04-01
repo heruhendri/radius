@@ -436,21 +436,40 @@ export async function updatePppoeUser(
         router = await prisma.router.findUnique({ where: { id: finalRouterId }, select: { id: true, nasname: true } });
       }
 
-      await prisma.radcheck.create({
-        data: { username: newUsername, attribute: 'Cleartext-Password', op: ':=', value: data.password || currentUser.password },
-      });
+      // Determine effective status after this update (new status if being changed, otherwise current)
+      const effectiveStatus = data.status || currentUser.status;
 
-      // NOTE: NAS-IP-Address NOT stored in radcheck (breaks auth in VPN/NAT setups)
-
-      await prisma.radusergroup.create({
-        data: { username: newUsername, groupname: newProfile.groupName, priority: 0 },
-      });
-
-      const finalIp = data.ipAddress !== undefined ? data.ipAddress : currentUser.ipAddress;
-      if (finalIp) {
-        await prisma.radreply.create({
-          data: { username: newUsername, attribute: 'Framed-IP-Address', op: ':=', value: finalIp },
+      // RADIUS re-sync must respect the user's effective status:
+      // - active: full sync (password, profile group, static IP)
+      // - isolated: allow auth but use isolir group, no static IP
+      // - blocked/stop: keep RADIUS tables empty — user must remain unreachable
+      if (effectiveStatus === 'blocked' || effectiveStatus === 'stop') {
+        // Tables already cleared by deleteMany above — do NOT re-add any entries
+      } else if (effectiveStatus === 'isolated') {
+        // Keep login allowed but restrict to isolir group
+        await prisma.radcheck.create({
+          data: { username: newUsername, attribute: 'Cleartext-Password', op: ':=', value: data.password || currentUser.password },
         });
+        // NOTE: NAS-IP-Address NOT stored in radcheck (breaks auth in VPN/NAT setups)
+        await prisma.radusergroup.create({
+          data: { username: newUsername, groupname: 'isolir', priority: 1 },
+        });
+        // No Framed-IP-Address — isolated users get IP from pool-isolir
+      } else {
+        // active (default): full sync
+        await prisma.radcheck.create({
+          data: { username: newUsername, attribute: 'Cleartext-Password', op: ':=', value: data.password || currentUser.password },
+        });
+        // NOTE: NAS-IP-Address NOT stored in radcheck (breaks auth in VPN/NAT setups)
+        await prisma.radusergroup.create({
+          data: { username: newUsername, groupname: newProfile.groupName, priority: 0 },
+        });
+        const finalIp = data.ipAddress !== undefined ? data.ipAddress : currentUser.ipAddress;
+        if (finalIp) {
+          await prisma.radreply.create({
+            data: { username: newUsername, attribute: 'Framed-IP-Address', op: ':=', value: finalIp },
+          });
+        }
       }
 
       await prisma.pppoeUser.update({
