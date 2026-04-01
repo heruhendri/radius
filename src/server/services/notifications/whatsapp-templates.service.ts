@@ -49,7 +49,7 @@ export async function sendRegistrationApproval(data: {
 }) {
   try {
     const company = await prisma.company.findFirst();
-    const companyName = company?.name || 'AI-BILL RADIUS';
+    const companyName = company?.name || 'SALFANET RADIUS';
     const companyPhone = company?.phone || '';
 
     // Get template from database
@@ -100,7 +100,7 @@ export async function sendInstallationInvoice(data: {
 }) {
   try {
     const company = await prisma.company.findFirst();
-    const companyName = company?.name || 'AI-BILL RADIUS';
+    const companyName = company?.name || 'SALFANET RADIUS';
     const companyPhone = company?.phone || '';
 
     const dueDateStr = data.dueDate.toLocaleDateString('id-ID', {
@@ -158,7 +158,7 @@ export async function sendAdminCreateUser(data: {
 }) {
   try {
     const company = await prisma.company.findFirst();
-    const companyName = company?.name || 'AI-BILL RADIUS';
+    const companyName = company?.name || 'SALFANET RADIUS';
     const companyPhone = company?.phone || '';
 
     // Get template from database
@@ -300,7 +300,7 @@ export async function sendPaymentSuccess(data: {
 }) {
   try {
     const company = await prisma.company.findFirst();
-    const companyName = company?.name || 'AI-BILL RADIUS';
+    const companyName = company?.name || 'SALFANET RADIUS';
     const companyPhone = company?.phone || '';
 
     // Get template from database
@@ -363,7 +363,7 @@ export async function sendVoucherPurchaseSuccess(data: {
 }) {
   try {
     const company = await prisma.company.findFirst();
-    const companyName = company?.name || 'AI-BILL RADIUS';
+    const companyName = company?.name || 'SALFANET RADIUS';
     const companyPhone = company?.phone || '';
 
     // Get template from database
@@ -421,7 +421,7 @@ export async function sendAutoRenewalSuccess(data: {
 }) {
   try {
     const company = await prisma.company.findFirst();
-    const companyName = company?.name || 'AI-BILL RADIUS';
+    const companyName = company?.name || 'SALFANET RADIUS';
     const companyPhone = company?.phone || '';
 
     const expiredDateStr = data.expiredDate.toLocaleDateString('id-ID', {

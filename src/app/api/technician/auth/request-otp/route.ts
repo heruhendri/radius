@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
 
@@ -93,18 +93,18 @@ export async function POST(req: NextRequest) {
     try {
       // Get company name
       const company = await prisma.company.findFirst();
-      const companyName = company?.name || 'AI-BILL RADIUS';
+      const companyName = company?.name || 'SALFANET RADIUS';
       
-      const message = `🔐 *Kode OTP Teknisi*\n\nKode OTP Anda: *${otpCode}*\n\nKode ini berlaku selama *5 menit*.\nJangan bagikan kode ini kepada siapa pun.\n\n_Pesan otomatis dari sistem ${companyName}_`;
+      const message = `?? *Kode OTP Teknisi*\n\nKode OTP Anda: *${otpCode}*\n\nKode ini berlaku selama *5 menit*.\nJangan bagikan kode ini kepada siapa pun.\n\n_Pesan otomatis dari sistem ${companyName}_`;
 
       await WhatsAppService.sendMessage({
         phone: formattedPhone,
         message: message,
       });
 
-      console.log(`✅ OTP sent via WhatsApp to ${formattedPhone}: ${otpCode}`);
+      console.log(`? OTP sent via WhatsApp to ${formattedPhone}: ${otpCode}`);
     } catch (error) {
-      console.error('❌ Failed to send WhatsApp OTP:', error);
+      console.error('? Failed to send WhatsApp OTP:', error);
       // Continue even if WhatsApp fails - OTP is still created
       // User can check console for OTP in development
     }

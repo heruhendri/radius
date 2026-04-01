@@ -12,8 +12,8 @@ export default function TechnicianLoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [companyName, setCompanyName] = useState('AI-BILL RADIUS');
-  const [footerText, setFooterText] = useState('Powered by AI-BILL RADIUS');
+  const [companyName, setCompanyName] = useState('SALFANET RADIUS');
+  const [footerText, setFooterText] = useState('Powered by SALFANET RADIUS');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
 
   // Fetch company name on mount

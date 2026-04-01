@@ -34,9 +34,9 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [idleLogout, setIdleLogout] = useState(false);
-  const [companyName, setCompanyName] = useState('AI-BILL RADIUS');
+  const [companyName, setCompanyName] = useState('SALFANET RADIUS');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  const [footerText, setFooterText] = useState('Powered by AI-BILL RADIUS');
+  const [footerText, setFooterText] = useState('Powered by SALFANET RADIUS');
 
   // ── Form data ─────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({ username: '', password: '' });

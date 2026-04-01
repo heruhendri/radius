@@ -1180,7 +1180,7 @@ export async function sendAutoRenewalEmail(data: {
 }) {
   try {
     const company = await prisma.company.findFirst();
-    const companyName = company?.name || 'AI-BILL RADIUS';
+    const companyName = company?.name || 'SALFANET RADIUS';
     const companyPhone = company?.phone || '';
 
     // Get template from database
