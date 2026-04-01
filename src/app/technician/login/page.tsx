@@ -12,30 +12,29 @@ export default function TechnicianLoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [companyName, setCompanyName] = useState('SALFANET RADIUS');
-  const [footerText, setFooterText] = useState('Powered by SALFANET RADIUS');
+  const [companyName, setCompanyName] = useState('');
+  const [footerText, setFooterText] = useState('');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [brandLoaded, setBrandLoaded] = useState(false);
 
-  // Fetch company name on mount
   useEffect(() => {
-    fetch('/api/settings/company')
+    fetch('/api/public/company')
       .then(res => res.json())
       .then(data => {
-        if (data.company?.name) {
+        if (data.success && data.company.name) {
           setCompanyName(data.company.name);
         }
-        if (data.company?.logo) {
+        if (data.success && data.company.logo) {
           setCompanyLogo(data.company.logo);
         }
-        if (data.company?.footerTechnician) {
+        if (data.success && data.company.footerTechnician) {
           setFooterText(data.company.footerTechnician);
-        } else if (data.company?.poweredBy) {
+        } else if (data.success && data.company.poweredBy) {
           setFooterText(`Powered by ${data.company.poweredBy}`);
         }
       })
-      .catch(() => {
-        // Silent fail - use defaults
-      });
+      .catch(() => {})
+      .finally(() => setBrandLoaded(true));
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -89,9 +88,13 @@ export default function TechnicianLoginPage() {
                 <Wrench className="h-6 w-6 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
               </div>
             )}
-            <h1 className="text-xl sm:text-2xl font-bold leading-tight text-left text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] drop-shadow-[0_0_20px_rgba(0,247,255,0.5)] max-w-[200px]">
-              Portal Teknisi
-            </h1>
+            {companyName ? (
+              <h1 className="text-xl sm:text-2xl font-bold leading-tight text-left text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] drop-shadow-[0_0_20px_rgba(0,247,255,0.5)] max-w-[200px] animate-[fadeIn_0.3s_ease-in]">
+                {companyName}
+              </h1>
+            ) : (
+              <div className="w-32 h-7 rounded-lg bg-gradient-to-r from-[#bc13fe]/20 via-[#bc13fe]/40 to-[#bc13fe]/20 animate-pulse" />
+            )}
           </div>
           <p className="text-sm text-[#e0d0ff]/70">
             Masuk dengan username dan password Anda
@@ -170,7 +173,9 @@ export default function TechnicianLoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-[#e0d0ff]/30 mt-6">{footerText}</p>
+        <p className="text-center text-xs text-[#e0d0ff]/30 mt-6">
+          {footerText || <span className="inline-block w-32 h-3 rounded bg-[#bc13fe]/20 animate-pulse" />}
+        </p>
       </div>
     </div>
   );

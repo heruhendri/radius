@@ -17,9 +17,10 @@ export default function CustomerLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expiresIn, setExpiresIn] = useState(5);
-  const [companyName, setCompanyName] = useState('SALFANET RADIUS');
+  const [companyName, setCompanyName] = useState('');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  const [footerText, setFooterText] = useState('Powered by SALFANET RADIUS');
+  const [footerText, setFooterText] = useState('');
+  const [brandLoaded, setBrandLoaded] = useState(false);
   const [otpSendFailed, setOtpSendFailed] = useState(false);
   const [userDataForBypass, setUserDataForBypass] = useState<any>(null);
 
@@ -46,7 +47,8 @@ export default function CustomerLoginPage() {
           setFooterText(`Powered by ${data.company.poweredBy}`);
         }
       })
-      .catch(err => console.error('Load company name error:', err));
+      .catch(err => console.error('Load company name error:', err))
+      .finally(() => setBrandLoaded(true));
   }, [router]);
 
   const handleSendOTP = async (e: React.FormEvent) => {
@@ -195,13 +197,17 @@ export default function CustomerLoginPage() {
                 <Shield className="w-6 h-6 text-[#bc13fe] group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_15px_rgba(188,19,254,0.9)]" />
               </div>
             )}
-            <h1 className={`text-xl sm:text-2xl font-bold leading-tight text-left max-w-[200px] ${
-              isDark
-                ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] drop-shadow-[0_0_25px_rgba(188,19,254,0.6)]'
-                : 'text-slate-800'
-            }`}>
-              {companyName}
-            </h1>
+            {companyName ? (
+              <h1 className={`text-xl sm:text-2xl font-bold leading-tight text-left max-w-[200px] animate-[fadeIn_0.3s_ease-in] ${
+                isDark
+                  ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] drop-shadow-[0_0_25px_rgba(188,19,254,0.6)]'
+                  : 'text-slate-800'
+              }`}>
+                {companyName}
+              </h1>
+            ) : (
+              <div className="w-32 h-7 rounded-lg bg-gradient-to-r from-[#bc13fe]/20 via-[#bc13fe]/40 to-[#bc13fe]/20 animate-pulse" />
+            )}
           </div>
           <p className={`text-sm tracking-[0.3em] uppercase font-medium ${
             isDark ? 'text-[#e0d0ff]/80' : 'text-slate-500'
@@ -433,7 +439,7 @@ export default function CustomerLoginPage() {
         <p className={`text-center text-xs mt-8 font-mono tracking-wider ${
           isDark ? 'text-[#bc13fe]/40' : 'text-slate-400'
         }`}>
-          {footerText}
+          {footerText || <span className="inline-block w-32 h-3 rounded bg-[#bc13fe]/20 animate-pulse" />}
         </p>
         {/* Admin access link */}
         <p className="text-center mt-3">

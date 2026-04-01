@@ -13,17 +13,19 @@ export default function AgentLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [companyPhone, setCompanyPhone] = useState('6281234567890');
-  const [poweredBy, setPoweredBy] = useState('SALFANET RADIUS');
+  const [poweredBy, setPoweredBy] = useState('');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState('Portal Agen');
+  const [companyName, setCompanyName] = useState('');
+  const [brandLoaded, setBrandLoaded] = useState(false);
 
   useEffect(() => {
-    fetch('/api/settings/company')
+    fetch('/api/public/company')
       .then(res => res.json())
       .then(data => {
-        if (data.company) {
+        if (data.success && data.company) {
           if (data.company.logo) setCompanyLogo(data.company.logo);
           if (data.company.name) { setCompanyName(data.company.name); setPoweredBy(data.company.name); }
+          if (data.company.poweredBy) setPoweredBy(data.company.poweredBy);
           if (data.company.phone) {
             let formattedPhone = data.company.phone.replace(/[^0-9]/g, '');
             if (formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
@@ -32,7 +34,8 @@ export default function AgentLoginPage() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setBrandLoaded(true));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -161,7 +164,11 @@ export default function AgentLoginPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-[#e0d0ff]/50 mt-6">
-          Powered by <span className="text-[#00f7ff]">{poweredBy}</span>
+          {poweredBy ? (
+            <>Powered by <span className="text-[#00f7ff]">{poweredBy}</span></>
+          ) : (
+            <span className="inline-block w-32 h-3 rounded bg-[#bc13fe]/20 animate-pulse" />
+          )}
         </p>
       </div>
     </div>

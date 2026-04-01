@@ -34,9 +34,10 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [idleLogout, setIdleLogout] = useState(false);
-  const [companyName, setCompanyName] = useState('SALFANET RADIUS');
+  const [companyName, setCompanyName] = useState('');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  const [footerText, setFooterText] = useState('Powered by SALFANET RADIUS');
+  const [footerText, setFooterText] = useState('');
+  const [brandLoaded, setBrandLoaded] = useState(false);
 
   // ── Form data ─────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({ username: '', password: '' });
@@ -68,7 +69,8 @@ function LoginForm() {
           setFooterText(`Powered by ${data.company.poweredBy}`);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setBrandLoaded(true));
   }, []);
 
   // Redirect if already authenticated
@@ -213,9 +215,13 @@ function LoginForm() {
                 }
               </div>
             )}
-            <h1 className="text-xl sm:text-2xl font-bold leading-tight text-left text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] drop-shadow-[0_0_20px_rgba(0,247,255,0.5)] max-w-[200px]">
-              {companyName}
-            </h1>
+            {companyName ? (
+              <h1 className="text-xl sm:text-2xl font-bold leading-tight text-left text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] drop-shadow-[0_0_20px_rgba(0,247,255,0.5)] max-w-[200px] animate-[fadeIn_0.3s_ease-in]">
+                {companyName}
+              </h1>
+            ) : (
+              <div className="w-32 h-7 rounded-lg bg-gradient-to-r from-[#bc13fe]/20 via-[#bc13fe]/40 to-[#bc13fe]/20 animate-pulse" />
+            )}
           </div>
           <p className="text-sm text-[#00f7ff] font-mono uppercase tracking-widest">
             {step === 'twoFactor' ? '2-Factor Authentication' : t('auth.adminControlPanel')}
@@ -370,7 +376,7 @@ function LoginForm() {
 
         {/* Footer */}
         <p className="text-center text-xs text-[#e0d0ff]/40 mt-8 font-mono uppercase tracking-widest">
-          {footerText}
+          {footerText || <span className="inline-block w-32 h-3 rounded bg-[#bc13fe]/20 animate-pulse" />}
         </p>
       </div>
     </div>
