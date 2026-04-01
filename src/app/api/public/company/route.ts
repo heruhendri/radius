@@ -1,6 +1,9 @@
 ﻿import { NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 
+// Always fetch fresh company data from DB (not cached at build time)
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const company = await prisma.company.findFirst({
