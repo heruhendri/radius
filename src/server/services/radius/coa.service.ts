@@ -69,7 +69,9 @@ async function executeRadclient(
     await writeFile(tmpFile, attributes + '\n');
 
     // Build radclient command - send directly to NAS (MikroTik)
-    const command = `radclient -x -t 3 -r 1 ${host}:${port} ${type} ${secret} < ${tmpFile}`;
+    // -d /usr/share/freeradius is required to load vendor dictionaries (e.g. MikroTik)
+    // Without it, Mikrotik-Rate-Limit is sent as unknown attribute and MikroTik rejects it
+    const command = `radclient -x -d /usr/share/freeradius -t 3 -r 1 ${host}:${port} ${type} ${secret} < ${tmpFile}`;
     
     console.log(`[CoA] Sending ${type} to NAS ${host}:${port}`);
     
