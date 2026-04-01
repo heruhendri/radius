@@ -109,11 +109,7 @@ jobs:
           if [ -f vps-install/updater.sh ]; then
             cp vps-install/updater.sh updater-linux-amd64
           else
-            cat > updater-linux-amd64 << 'UPDATER_EOF'
-#!/bin/bash
-# Fallback updater — use vps-install/updater.sh from repo
-echo "Please run: bash <(curl -sSL https://raw.githubusercontent.com/s4lfanet/salfanet-radius/master/vps-install/updater.sh)"
-UPDATER_EOF
+            printf '#!/bin/bash\n# Fallback updater\necho "Please run: bash <(curl -sSL https://raw.githubusercontent.com/s4lfanet/salfanet-radius/master/vps-install/updater.sh)"\n' > updater-linux-amd64
           fi
           chmod +x updater-linux-amd64
           cp updater-linux-amd64 updater-linux-arm64
