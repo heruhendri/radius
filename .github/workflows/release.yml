@@ -28,6 +28,8 @@ jobs:
       # ─── 3. Install dependencies ────────────────────────────────────────────
       - name: Install dependencies
         run: npm install --legacy-peer-deps
+        env:
+          NGROK_SKIP_INSTALL: "true"
 
       # ─── 4. Generate Prisma client ──────────────────────────────────────────
       # prisma generate does NOT connect to a real DB — schema only
