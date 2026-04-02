@@ -502,7 +502,37 @@ Language switcher sudah dihapus dari semua portal (Admin, Agent, Customer, Techn
 
 ---
 
-## 🗺️ Network/Fiber Management Routes
+## � Recent Changes (April 2026)
+
+### Customer Invoice Print Dialog (commit `32a01d9`, `2218fe6`)
+- **New file**: `src/lib/invoice-print.ts` — shared print helper with `printInvoiceStandard(invoiceId, toast)` and `printInvoiceThermal(invoiceId, toast)`; both call `/api/invoices/${invoiceId}/pdf`
+- **`src/app/customer/history/page.tsx`** — added print dialog via `SimpleModal`:
+  - State: `const [printDialogPayment, setPrintDialogPayment] = useState<PaymentHistory | null>(null)`
+  - Print button now opens modal instead of calling API directly
+  - Dialog buttons: "Cetak Standard A4" (Standard A4) and "Cetak Thermal 58/80mm"
+  - Imports added: `SimpleModal, ModalHeader, ModalTitle, ModalDescription, ModalBody, ModalFooter, ModalButton` from `@/components/cyberpunk`; `printInvoiceStandard, printInvoiceThermal` from `@/lib/invoice-print`
+  - Full restore from `d875dcc` required (earlier patch had corrupted file — merged `handleSubmitOfflinePayment` body into `handlePrintThermal`, eating 13 state declarations and 7 handler functions)
+- **`src/app/customer/invoices/page.tsx`** — same print dialog pattern
+
+### Customer WiFi / GenieACS TR-069 Fixes (commit `ffd53d7`)
+- **`src/app/api/customer/wifi/route.ts`** — 4 bugs fixed:
+  1. **Missing SSIDs**: Only WLANs with non-empty SSID names were included — ONTs with blank SSID but active devices were silently excluded. Fix: `include if hasValidSsid || assocCount > 0`
+  2. **Band detection**: Was using unreliable `index >= 5` heuristic. Fix: Channel > 14 is authoritative 5GHz indicator; also checks `'n5'`/`'5ghz'` standard strings
+  3. **assocCount accuracy**: Was using TR-069 `TotalAssociations` field (unreliable). Fix: count actual `AssociatedDevice` child entries; use `Math.max(TotalAssociations, actualCount)`
+  4. **`associatedDevice` field**: Was storing SSID name string (could duplicate across SSIDs). Fix: now stores `String(wlan.index)` — WLAN index — enables reliable per-SSID device grouping on frontend
+- **`src/app/customer/wifi/page.tsx`** — removed standalone flat "Connected Devices" section at page bottom; each WLAN card now shows its own devices inline, filtered by `h.associatedDevice === String(wlan.index)`
+
+### Customer Dashboard WiFi Multi-SSID (commit `073f372`)
+- **`src/app/customer/page.tsx`** — WiFi section rewritten:
+  - `editingWifi: boolean` → `editingWifi: number | null` (stores WLAN index being edited, null = not editing)
+  - Was showing only `wlanConfigs?.[0]` with hardcoded `wlanIndex: 1`; now iterates all `wlanConfigs`
+  - Each SSID renders its own card with SSID name + band badge (2.4GHz / 5GHz)
+  - Each SSID has its own Edit button → sets `editingWifi = wlan.index`; form sends `wlanIndex: editingWifi ?? 1`
+  - Connected devices grouped per SSID: `connectedDevices.filter(d => d.associatedDevice === String(wlan.index))`
+
+---
+
+## �🗺️ Network/Fiber Management Routes
 
 | Route | Description |
 |-------|-------------|

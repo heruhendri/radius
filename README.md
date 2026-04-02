@@ -2,7 +2,7 @@
 
 Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with FreeRADIUS integration supporting PPPoE and Hotspot authentication.
 
-> **Latest:** v2.12.4 — Installer via git clone, timezone fixes, PPPoE print, dashboard stats (Apr 1, 2026)
+> **Latest:** v2.12.0 — WiFi multi-SSID display, per-SSID device grouping, invoice print dialog (Apr 2026)
 
 ---
 
