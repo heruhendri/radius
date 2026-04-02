@@ -104,12 +104,140 @@ export default function PaymentHistoryPage() {
 
   // Payment method choice modal
   const [paymentChoiceVisible, setPaymentChoiceVisible] = useState(false);
-  const handlePrintStandard = async (payment: PaymentHistory) => {
-    await printInvoiceStandard(payment.id, toast);
+  const [selectedPaymentInvoice, setSelectedPaymentInvoice] = useState<PaymentHistory | null>(null);
+
+  // Online gateway dialog
+  const [gatewayDialogVisible, setGatewayDialogVisible] = useState(false);
+  const [selectedGateway, setSelectedGateway] = useState('');
+  const [processingGateway, setProcessingGateway] = useState(false);
+
+  // Offline / manual payment dialog
+  const [offlineDialogVisible, setOfflineDialogVisible] = useState(false);
+  const [bankName, setBankName] = useState('');
+  const [customBank, setCustomBank] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreviewUrl, setProofPreviewUrl] = useState<string | null>(null);
+  const [submittingOffline, setSubmittingOffline] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('customer_token');
+    if (!token) { router.push('/customer/login'); return; }
+    loadPaymentHistory();
+    loadPaymentGateways();
+
+    // Auto-refresh when admin confirms or rejects a payment
+    const handleAdminUpdate = () => loadPaymentHistory();
+    window.addEventListener('customer-data-refresh', handleAdminUpdate);
+
+    // Also refresh on tab focus and every 60s (catches deletions too)
+    const handleVisible = () => { if (!document.hidden) loadPaymentHistory(); };
+    document.addEventListener('visibilitychange', handleVisible);
+    const interval = setInterval(loadPaymentHistory, 60_000);
+
+    return () => {
+      window.removeEventListener('customer-data-refresh', handleAdminUpdate);
+      document.removeEventListener('visibilitychange', handleVisible);
+      clearInterval(interval);
+    };
+  }, [router]);
+
+  const loadPaymentHistory = async () => {
+    const token = localStorage.getItem('customer_token');
+    if (!token) return;
+    try {
+      const res = await fetch('/api/customer/payment-history', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setPayments(data.payments || []);
+    } catch (error) {
+      console.error('Load payment history error:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
-  const handlePrintThermal = async (payment: PaymentHistory) => {
-    await printInvoiceThermal(payment.id, toast);
+  const loadPaymentGateways = async () => {
+    try {
+      const res = await fetch('/api/public/payment-gateways');
+      const data = await res.json();
+      if (data.success) {
+        const gateways = data.gateways || [];
+        setPaymentGateways(gateways);
+        if (gateways.length > 0) setSelectedGateway(gateways[0].provider);
+      }
+    } catch { /* ignore */ }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadPaymentHistory();
+    loadPaymentGateways();
+  };
+
+  const handlePayInvoice = (payment: PaymentHistory) => {
+    setSelectedPaymentInvoice(payment);
+    setPaymentChoiceVisible(true);
+  };
+
+  const handleChooseOnline = () => {
+    setPaymentChoiceVisible(false);
+    if (paymentGateways.length === 0) {
+      toast('error', 'Gateway Tidak Tersedia', 'Payment gateway tidak tersedia. Hubungi admin.');
+      return;
+    }
+    setGatewayDialogVisible(true);
+  };
+
+  const handleChooseOffline = () => {
+    setPaymentChoiceVisible(false);
+    setBankName('');
+    setCustomBank('');
+    setAccountNumber('');
+    setAccountName('');
+    setPaymentNotes('');
+    setProofFile(null);
+    setProofPreviewUrl(null);
+    setOfflineDialogVisible(true);
+  };
+
+  const handleConfirmGateway = async () => {
+    if (!selectedPaymentInvoice || !selectedGateway) return;
+    setProcessingGateway(true);
+    setGatewayDialogVisible(false);
+    const token = localStorage.getItem('customer_token');
+    try {
+      const res = await fetch('/api/customer/invoice/regenerate-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ invoiceId: selectedPaymentInvoice.id, gateway: selectedGateway })
+      });
+      const data = await res.json();
+      if (data.success && data.paymentUrl) {
+        window.open(data.paymentUrl, '_blank', 'noopener,noreferrer');
+        setTimeout(() => loadPaymentHistory(), 2000);
+      } else {
+        toast('error', 'Gagal Membuat Pembayaran', data.error || 'Gagal membuat link pembayaran');
+      }
+    } catch {
+      toast('error', 'Gagal', 'Terjadi kesalahan saat membuat pembayaran');
+    } finally {
+      setProcessingGateway(false);
+      setSelectedPaymentInvoice(null);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (proofPreviewUrl) URL.revokeObjectURL(proofPreviewUrl);
+    setProofFile(file);
+    setProofPreviewUrl(URL.createObjectURL(file));
   };
 
   const handleSubmitOfflinePayment = async () => {
@@ -173,6 +301,16 @@ export default function PaymentHistoryPage() {
     } else if (payment.paymentToken) {
       window.open(`/pay/${payment.paymentToken}`, '_blank');
     }
+  };
+
+  const handlePrintStandard = async (payment: PaymentHistory) => {
+    setPrintDialogPayment(null);
+    await printInvoiceStandard(payment.id, toast);
+  };
+
+  const handlePrintThermal = async (payment: PaymentHistory) => {
+    setPrintDialogPayment(null);
+    await printInvoiceThermal(payment.id, toast);
   };
 
   const handlePrintInvoice = async (payment: PaymentHistory) => {
@@ -618,7 +756,7 @@ export default function PaymentHistoryPage() {
                       <button
                         onClick={() => setPrintDialogPayment(payment)}
                         className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted/20 hover:bg-muted/40 border border-border/50 rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground transition-colors"
-                        title="Pilih Jenis Print"
+                        title="Cetak Nota"
                       >
                         <Printer className="w-3.5 h-3.5" />
                       </button>
@@ -630,6 +768,39 @@ export default function PaymentHistoryPage() {
           </div>
         )}
       </div>
+
+      {/* -- PRINT DIALOG ------------------------------------------------- */}
+      {printDialogPayment && (
+        <SimpleModal isOpen={true} onClose={() => setPrintDialogPayment(null)} size="sm">
+          <ModalHeader>
+            <ModalTitle>Pilih Format Cetak</ModalTitle>
+            <ModalDescription>Pilih format cetak untuk nota tagihan</ModalDescription>
+          </ModalHeader>
+          <ModalBody>
+            <div className="flex flex-col gap-3">
+              <ModalButton
+                variant="primary"
+                onClick={() => handlePrintStandard(printDialogPayment)}
+                className="w-full"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Standar A4
+              </ModalButton>
+              <ModalButton
+                variant="success"
+                onClick={() => handlePrintThermal(printDialogPayment)}
+                className="w-full"
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Thermal 58/80mm
+              </ModalButton>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <ModalButton variant="secondary" onClick={() => setPrintDialogPayment(null)}>Batal</ModalButton>
+          </ModalFooter>
+        </SimpleModal>
+      )}
 
       {/* -- PAYMENT METHOD CHOICE MODAL ---------------------------------- */}
       {paymentChoiceVisible && selectedPaymentInvoice && (
@@ -858,55 +1029,6 @@ export default function PaymentHistoryPage() {
           </div>
         </>
       )}
-
-      <SimpleModal isOpen={printDialogPayment !== null} onClose={() => setPrintDialogPayment(null)} size="sm">
-        <ModalHeader>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-full bg-primary/15 border border-primary/30">
-              <Printer className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <ModalTitle>Pilih Jenis Printer</ModalTitle>
-              <ModalDescription className="font-mono">{printDialogPayment?.invoiceNumber}</ModalDescription>
-            </div>
-          </div>
-        </ModalHeader>
-        <ModalBody className="space-y-2 pb-2">
-          <button
-            onClick={() => {
-              if (!printDialogPayment) return;
-              const payment = printDialogPayment;
-              setPrintDialogPayment(null);
-              void handlePrintStandard(payment);
-            }}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-          >
-            <FileText className="w-5 h-5 flex-shrink-0" />
-            <div className="text-left">
-              <div className="text-sm font-bold">Standar Printer</div>
-              <div className="text-[11px] opacity-80">A4 / Letter - invoice lengkap</div>
-            </div>
-          </button>
-          <button
-            onClick={() => {
-              if (!printDialogPayment) return;
-              const payment = printDialogPayment;
-              setPrintDialogPayment(null);
-              void handlePrintThermal(payment);
-            }}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
-          >
-            <Printer className="w-5 h-5 flex-shrink-0" />
-            <div className="text-left">
-              <div className="text-sm font-bold">Thermal Printer</div>
-              <div className="text-[11px] opacity-80">58mm / 80mm - struk kasir</div>
-            </div>
-          </button>
-        </ModalBody>
-        <ModalFooter>
-          <ModalButton variant="secondary" onClick={() => setPrintDialogPayment(null)}>Batal</ModalButton>
-        </ModalFooter>
-      </SimpleModal>
 
       {/* -- DETAIL MODAL ------------------------------------------------- */}
       {selectedDetail && (
