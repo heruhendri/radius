@@ -285,7 +285,7 @@ export default function PppoeUsersPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pppoeCustomerIdFilter = searchParams.get('pppoeCustomerId') || '';
+
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<PppoeUser[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -795,6 +795,15 @@ export default function PppoeUsersPage() {
   const toggleSelectUser = (userId: string) => { const n = new Set(selectedUsers); n.has(userId) ? n.delete(userId) : n.add(userId); setSelectedUsers(n); };
   const toggleSelectAll = () => { selectedUsers.size === filteredUsers.length && filteredUsers.length > 0 ? setSelectedUsers(new Set()) : setSelectedUsers(new Set(filteredUsers.map(u => u.id))); };
 
+  const handleStopSubscription = async (user: PppoeUser) => {
+    const confirmed = await showConfirm(
+      `Stop langganan untuk ${user.name} (${user.username})?\nUser akan dipindahkan ke daftar berhenti berlangganan.`,
+      t('pppoe.stop')
+    );
+    if (!confirmed) return;
+    await handleStatusChange(user.id, 'stop');
+  };
+
   const handleBulkDelete = async () => {
     if (selectedUsers.size === 0) return;
     const confirmed = await showConfirm(t('pppoe.deleteConfirmUsers').replace('{count}', String(selectedUsers.size)));
@@ -1062,9 +1071,8 @@ export default function PppoeUsersPage() {
     const matchesProfile = filterProfile === '' || user.profile.id === filterProfile;
     const matchesRouter = filterRouter === '' || (filterRouter === 'global' ? !user.routerId : user.routerId === filterRouter);
     const matchesStatus = filterStatus === '' || user.status === filterStatus;
-    const matchesCustomer = pppoeCustomerIdFilter === '' || (user as any).pppoeCustomerId === pppoeCustomerIdFilter;
     const matchesSession = filterSession === '' || (filterSession === 'online' ? user.isOnline === true : user.isOnline !== true);
-    return matchesSearch && matchesProfile && matchesRouter && matchesStatus && matchesCustomer && matchesSession;
+    return matchesSearch && matchesProfile && matchesRouter && matchesStatus && matchesSession;
   }).sort((a, b) => {
     let aVal: any, bVal: any;
 
@@ -1312,7 +1320,7 @@ export default function PppoeUsersPage() {
                           )}
                         </div>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {user.pppoeCustomer ? user.pppoeCustomer.name : user.name}
+                          {user.name}
                         </p>
                       </div>
                     </div>
@@ -1337,7 +1345,7 @@ export default function PppoeUsersPage() {
                     </div>
                     <div className="flex justify-between gap-1">
                       <span className="text-muted-foreground">HP:</span>
-                      <span className="truncate">{user.pppoeCustomer?.phone || user.phone}</span>
+                      <span className="truncate">{user.phone}</span>
                     </div>
                     <div className="flex justify-between gap-1">
                       <span className="text-muted-foreground">{t('pppoe.profile')}:</span>
@@ -1385,6 +1393,7 @@ export default function PppoeUsersPage() {
                     >
                       <Shield className="h-3.5 w-3.5" />
                     </button>
+                    <button onClick={() => handleStopSubscription(user)} className="p-1.5 text-destructive/70 hover:bg-destructive/10 rounded" title="Stop Langganan"><Ban className="h-3.5 w-3.5" /></button>
                     <button onClick={() => setDeleteUserId(user.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded" title="Hapus"><Trash2 className="h-3.5 w-3.5" /></button>
                     <button onClick={() => setPrintDialogUser(user)} className="p-1.5 text-purple-500 hover:bg-purple-500/10 rounded" title="Cetak Invoice"><Printer className="h-3.5 w-3.5" /></button>
                     {invoiceCounts[user.id] > 0 ? (
@@ -1445,23 +1454,11 @@ export default function PppoeUsersPage() {
                         <div className="flex items-center gap-2">
                           <Users className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                           <div>
-                            {user.pppoeCustomer ? (
-                              <>
-                                <p className="text-xs font-semibold">{user.pppoeCustomer.name}</p>
-                                <p className="text-[10px] text-muted-foreground">{user.pppoeCustomer.phone}</p>
-                                {user.pppoeCustomer.email && <p className="text-[10px] text-[#00f7ff] truncate max-w-[140px]">{user.pppoeCustomer.email}</p>}
-                                <button
-                                  onClick={() => router.push(`/admin/pppoe/users?pppoeCustomerId=${user.pppoeCustomer!.id}`)}
-                                  className="text-[9px] font-mono text-[#00f7ff]/60 hover:text-[#00f7ff] hover:underline cursor-pointer"
-                                >{user.pppoeCustomer.customerId}</button>
-                              </>
-                            ) : (
-                              <>
-                                <p className="text-xs font-semibold">{user.name}</p>
-                                <p className="text-[10px] text-muted-foreground">{user.phone}</p>
-                                {user.email && <p className="text-[10px] text-[#00f7ff] truncate max-w-[140px]">{user.email}</p>}
-                              </>
-                            )}
+                            <>
+                              <p className="text-xs font-semibold">{user.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{user.phone}</p>
+                              {user.email && <p className="text-[10px] text-[#00f7ff] truncate max-w-[140px]">{user.email}</p>}
+                            </>
                             {user.area && (
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 mt-0.5">
                                 <MapPin className="h-2 w-2 mr-0.5" />{user.area.name}
@@ -1561,6 +1558,14 @@ export default function PppoeUsersPage() {
                             title={user.status === 'isolated' ? 'Aktifkan' : 'Isolir'}
                           >
                             <Shield className="h-3.5 w-3.5" />
+                          </button>
+                          {/* Stop Langganan */}
+                          <button
+                            onClick={() => handleStopSubscription(user)}
+                            className="p-1.5 text-destructive/70 hover:bg-destructive/10 rounded"
+                            title="Stop Langganan"
+                          >
+                            <Ban className="h-3.5 w-3.5" />
                           </button>
                           {/* Hapus */}
                           <button
