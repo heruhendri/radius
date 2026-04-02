@@ -231,27 +231,10 @@ export async function POST(
       },
     });
 
-    // Mark as synced
+    // Mark as synced and keep active (matches tambah pelanggan flow)
     await prisma.pppoeUser.update({
       where: { id: pppoeUser.id },
       data: { syncedToRadius: true },
-    });
-
-    // Now set to isolated
-    await prisma.pppoeUser.update({
-      where: { id: pppoeUser.id },
-      data: { status: 'isolated' },
-    });
-
-    // Add isolated attribute to RADIUS (limit speed or access)
-    // This can be customized based on your RADIUS setup
-    await prisma.radreply.create({
-      data: {
-        username,
-        attribute: 'Reply-Message',
-        op: ':=',
-        value: 'Account pending payment. Please pay installation invoice.',
-      },
     });
 
     // Generate invoice number: INV-YYYYMM-XXXX

@@ -743,6 +743,8 @@
     "manageBalance": "Kelola Saldo",
     "markPaid": "Lunas",
     "subscriptionType": "Tipe Berlangganan",
+    "monthlyBillingDesc": "Tagihan tetap setiap bulan pada tanggal yang ditentukan",
+    "prepaidValidityDesc": "Masa aktif sesuai validity paket, bayar di awal",
     "postpaid": "Postpaid",
     "prepaid": "Prepaid",
     "fixedDueDate": "Jatuh tempo tetap",
