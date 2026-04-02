@@ -589,7 +589,7 @@ export default function PppoeCustomersPage() {
                         </span>
                       )}
                     </td>
-                    {/* Status */
+                    {/* Status */}
                     <td className="px-3 py-2">
                       <span
                         onClick={() => handleToggleStatus(c)}
