@@ -20,7 +20,6 @@ import {
   ChevronUp,
   FileText,
   Settings as SettingsIcon,
-  Clock,
   Calendar,
   X
 } from 'lucide-react';
@@ -210,7 +209,7 @@ const templateTypes = Object.keys(templateConfig) as (keyof typeof templateConfi
 export default function EmailSettingsPage() {
   const { t } = useTranslation();
   const { addToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'settings' | 'templates' | 'reminders' | 'history'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'templates' | 'history'>('settings');
 
   const [settings, setSettings] = useState<EmailSettings>({
     enabled: false,
@@ -447,16 +446,6 @@ export default function EmailSettingsPage() {
             >
               <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
               {t('emailSettings.tabs.templates')}
-            </button>
-            <button
-              onClick={() => setActiveTab('reminders')}
-              className={`pb-2 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-colors ${activeTab === 'reminders'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-            >
-              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
-              {t('emailSettings.tabs.reminders')}
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -845,13 +834,6 @@ export default function EmailSettingsPage() {
             setActiveTemplateTab={setActiveTemplateTab}
             handleUpdateTemplate={handleUpdateTemplate}
           />
-        ) : activeTab === 'reminders' ? (
-          <RemindersTab
-            settings={settings}
-            setSettings={setSettings}
-            saving={saving}
-            handleSave={handleSave}
-          />
         ) : (
           <HistoryTab />
         )}
@@ -1214,195 +1196,6 @@ function TemplateEditor({ type, template, config, savingTemplate, handleUpdateTe
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-// Reminders Tab Component
-function RemindersTab({
-  settings,
-  setSettings,
-  saving,
-  handleSave,
-}: any) {
-  const { t } = useTranslation();
-  const [reminderDaysArray, setReminderDaysArray] = useState<string[]>(
-    settings.reminderDays ? settings.reminderDays.split(',') : ['7', '3', '1']
-  );
-
-  const handleDaysChange = (index: number, value: string) => {
-    const newDays = [...reminderDaysArray];
-    newDays[index] = value;
-    setReminderDaysArray(newDays);
-    setSettings({
-      ...settings,
-      reminderDays: newDays.filter(d => d.trim()).join(','),
-    });
-  };
-
-  const addDay = () => {
-    const newDays = [...reminderDaysArray, ''];
-    setReminderDaysArray(newDays);
-  };
-
-  const removeDay = (index: number) => {
-    const newDays = reminderDaysArray.filter((_, i) => i !== index);
-    setReminderDaysArray(newDays);
-    setSettings({
-      ...settings,
-      reminderDays: newDays.filter(d => d.trim()).join(','),
-    });
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Info Banner */}
-      <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
-        <div className="flex gap-3">
-          <Info className="w-5 h-5 text-primary dark:text-primary flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-900 dark:text-blue-100">
-            <p className="font-medium mb-1">{t('settings.invoiceReminderSettings')}</p>
-            <p className="text-xs text-blue-700 dark:text-blue-300">
-              Sistem akan mengirim email reminder otomatis ke customer berdasarkan jadwal yang ditentukan sebelum invoice jatuh tempo.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Reminder Settings Form */}
-      <div className="bg-card rounded-lg border border-border p-6 space-y-6">
-        {/* Enable Reminder */}
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Aktifkan Invoice Reminder
-            </label>
-            <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-              Kirim email pengingat otomatis sebelum invoice jatuh tempo
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer ml-4">
-            <input
-              type="checkbox"
-              checked={settings.reminderEnabled}
-              onChange={(e) => setSettings({ ...settings, reminderEnabled: e.target.checked })}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-inputpeer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-          </label>
-        </div>
-
-        {/* Reminder Time */}
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
-            <Clock className="w-4 h-4 inline mr-1.5" />
-            Jam Pengiriman
-          </label>
-          <input
-            type="time"
-            value={settings.reminderTime}
-            onChange={(e) => setSettings({ ...settings, reminderTime: e.target.value })}
-            disabled={!settings.reminderEnabled}
-            className="w-full sm:w-48 px-3 py-2 text-sm bg-card border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-50 disabled:text-muted-foreground disabled:cursor-not-allowed"
-          />
-          <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
-            Waktu pengiriman email reminder setiap hari (format 24 jam)
-          </p>
-        </div>
-
-        {/* Reminder Days */}
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
-            <Calendar className="w-4 h-4 inline mr-1.5" />
-            Jadwal Reminder (Hari Sebelum Jatuh Tempo)
-          </label>
-
-          <div className="space-y-2">
-            {reminderDaysArray.map((day, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="1"
-                  max="90"
-                  value={day}
-                  onChange={(e) => handleDaysChange(index, e.target.value)}
-                  disabled={!settings.reminderEnabled}
-                  className="w-24 px-3 py-2 text-sm bg-card border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-50 disabled:text-muted-foreground disabled:cursor-not-allowed"
-                  placeholder="Hari"
-                />
-                <span className="text-sm text-muted-foreground dark:text-muted-foreground">{t('settings.daysBeforeDue')}</span>
-                {reminderDaysArray.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeDay(index)}
-                    disabled={!settings.reminderEnabled}
-                    className="p-1.5 text-destructive hover:bg-destructive/10 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <XCircle className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={addDay}
-            disabled={!settings.reminderEnabled}
-            className="mt-3 px-3 py-1.5 text-sm text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Tambah Jadwal
-          </button>
-
-          <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
-            Contoh: 7, 3, 1 berarti reminder akan dikirim 7 hari, 3 hari, dan 1 hari sebelum jatuh tempo
-          </p>
-        </div>
-
-        {/* Example Schedule */}
-        {settings.reminderEnabled && reminderDaysArray.filter(d => d.trim()).length > 0 && (
-          <div className="bg-background rounded-lg p-4">
-            <p className="text-xs font-medium text-foreground mb-2">
-              📅 Contoh Jadwal:
-            </p>
-            <div className="space-y-1">
-              {reminderDaysArray
-                .filter(d => d.trim() && !isNaN(Number(d)))
-                .sort((a, b) => Number(b) - Number(a))
-                .map((day, index) => (
-                  <p key={index} className="text-xs text-muted-foreground dark:text-muted-foreground">
-                    • Reminder {index + 1}: {day} hari sebelum jatuh tempo pada pukul {settings.reminderTime}
-                  </p>
-                ))}
-            </div>
-          </div>
-        )}
-
-        {/* Save Button */}
-        <div className="flex justify-end pt-4 border-t border-border">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${saving
-              ? 'bg-gray-100 text-muted-foreground dark:bg-inputdark:text-muted-foreground cursor-not-allowed'
-              : 'bg-primary hover:bg-primary-dark text-white shadow-sm hover:shadow'
-              }`}
-          >
-            {saving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Menyimpan...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Simpan Pengaturan
-              </>
-            )}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

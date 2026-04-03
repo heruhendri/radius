@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Building2, Mail, Phone, MapPin, Globe, Save, Loader2, RotateCcw, Zap, Upload, ImageIcon, X as XIcon } from 'lucide-react';
+import { Building2, Mail, Phone, MapPin, Globe, Save, Loader2, RotateCcw, Upload, ImageIcon, X as XIcon } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useAppStore } from '@/lib/store';
 import { setCurrentTimezone } from '@/lib/timezone';
@@ -419,24 +419,6 @@ export default function CompanySettingsPage() {
                 />
                 <p className="mt-1 text-[10px] text-muted-foreground">{t('settings.invoiceGenerateDaysHelp')}</p>
               </div>
-
-              {/* Powered By */}
-              <div>
-                <label className="flex items-center gap-1.5 text-[11px] font-medium text-foreground mb-1">
-                  <Zap className="w-3 h-3" />
-                  {t('settings.poweredBy')}
-                </label>
-                <input
-                  type="text"
-                  value={settings.poweredBy}
-                  onChange={(e) => setSettings({ ...settings, poweredBy: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card focus:ring-1 focus:ring-ring focus:border-primary"
-                  placeholder="SALFANET RADIUS"
-                />
-                <p className="mt-1 text-[10px] text-muted-foreground">{t('settings.poweredByHelp')}</p>
-              </div>
-
-
 
               {/* Timezone */}
               <div>
