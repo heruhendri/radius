@@ -59,6 +59,27 @@ export default function WhatsAppProvidersPage() {
     description: ''
   });
 
+  // Default base URLs for cloud/well-known providers.
+  // Self-hosted types (mpwa, waha, gowa, wablast) intentionally have no default.
+  const DEFAULT_URLS: Record<string, string> = {
+    fonnte: 'https://api.fonnte.com/send',
+    wablas: 'https://wa.wablas.com',
+    kirimi: 'https://api.kirimi.id',
+  };
+
+  const handleTypeChange = (newType: string) => {
+    const newDefault = DEFAULT_URLS[newType] || '';
+    // Auto-fill URL when: field is empty, OR the current value is already a known default URL
+    const isCurrentlyDefault =
+      formData.apiUrl === '' ||
+      Object.values(DEFAULT_URLS).includes(formData.apiUrl);
+    setFormData({
+      ...formData,
+      type: newType,
+      apiUrl: isCurrentlyDefault ? newDefault : formData.apiUrl,
+    });
+  };
+
   useEffect(() => {
     fetchProviders();
     const interval = setInterval(() => {
@@ -525,7 +546,7 @@ export default function WhatsAppProvidersPage() {
                 </div>
                 <div>
                   <ModalLabel>{t('whatsapp.providerType')}</ModalLabel>
-                  <ModalSelect value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}>
+                  <ModalSelect value={formData.type} onChange={(e) => handleTypeChange(e.target.value)}>
                     <option value="mpwa" className="bg-[#0a0520]">MPWA</option>
                     <option value="waha" className="bg-[#0a0520]">WAHA</option>
                     <option value="gowa" className="bg-[#0a0520]">GOWA</option>
@@ -538,8 +559,34 @@ export default function WhatsAppProvidersPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <ModalLabel required>{t('whatsapp.baseUrl')}</ModalLabel>
-                  <ModalInput type="text" value={formData.apiUrl} onChange={(e) => setFormData({ ...formData, apiUrl: e.target.value })} placeholder="http://10.100.0.245:2451" required />
+                  <div className="flex items-center justify-between mb-0.5">
+                    <ModalLabel required>{t('whatsapp.baseUrl')}</ModalLabel>
+                    {DEFAULT_URLS[formData.type] && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, apiUrl: DEFAULT_URLS[formData.type] })}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30"
+                      >
+                        ↺ reset default
+                      </button>
+                    )}
+                  </div>
+                  <ModalInput
+                    type="text"
+                    value={formData.apiUrl}
+                    onChange={(e) => setFormData({ ...formData, apiUrl: e.target.value })}
+                    placeholder={DEFAULT_URLS[formData.type] || 'http://10.100.0.245:2451'}
+                    required
+                  />
+                  {DEFAULT_URLS[formData.type] && formData.apiUrl === DEFAULT_URLS[formData.type] && (
+                    <p className="text-[9px] text-primary/70 mt-0.5">✓ URL default {formData.type} — bisa diubah manual</p>
+                  )}
+                  {DEFAULT_URLS[formData.type] && formData.apiUrl !== DEFAULT_URLS[formData.type] && formData.apiUrl && (
+                    <p className="text-[9px] text-amber-500 mt-0.5">⚠ URL custom — berbeda dari default</p>
+                  )}
+                  {!DEFAULT_URLS[formData.type] && (
+                    <p className="text-[9px] text-muted-foreground mt-0.5">Self-hosted — isi URL server {formData.type.toUpperCase()} Anda</p>
+                  )}
                 </div>
                 <div>
                   <ModalLabel required={(formData.type === 'mpwa' || formData.type === 'gowa' || formData.type === 'kirimi')}>{t('whatsapp.apiKey')}</ModalLabel>
