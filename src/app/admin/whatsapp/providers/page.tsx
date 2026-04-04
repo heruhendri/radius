@@ -69,7 +69,7 @@ export default function WhatsAppProvidersPage() {
 
   // Known Wablas server hostnames — user picks one which sets apiUrl
   const WABLAS_SERVERS = [
-    'wa', 'pati', 'deu', 'kudus', 'solo', 'bogor', 'jogja', 'bandung',
+    'wa', 'jakarta', 'pati', 'deu', 'kudus', 'solo', 'bogor', 'jogja', 'bandung',
   ];
 
   const handleTypeChange = (newType: string) => {
