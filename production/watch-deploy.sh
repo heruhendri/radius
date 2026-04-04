@@ -23,10 +23,10 @@ while true; do
     cd "$APP_DIR"
     
     # Fetch latest
-    git fetch origin main --quiet
+    git fetch origin master --quiet
     
     # Get current remote commit
-    current_commit=$(git rev-parse origin/main)
+    current_commit=$(git rev-parse origin/master)
     
     if [ "$last_commit" != "$current_commit" ] && [ -n "$last_commit" ]; then
         echo ""

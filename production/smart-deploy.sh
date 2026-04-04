@@ -74,10 +74,10 @@ detect_changes() {
     local changes=()
     
     # Fetch latest
-    git fetch origin main --quiet
+    git fetch origin master --quiet
     
     # Get changed files
-    local changed_files=$(git diff --name-only HEAD origin/main 2>/dev/null || echo "")
+    local changed_files=$(git diff --name-only HEAD origin/master 2>/dev/null || echo "")
     
     if [ -z "$changed_files" ]; then
         echo "none"
@@ -267,8 +267,8 @@ deploy_full() {
     create_backup
     
     cd "$APP_DIR"
-    git fetch origin main
-    git reset --hard origin/main
+    git fetch origin master
+    git reset --hard origin/master
     
     update_dependencies
     generate_prisma
@@ -301,8 +301,8 @@ deploy_incremental() {
     create_backup
     
     cd "$APP_DIR"
-    git fetch origin main
-    git reset --hard origin/main
+    git fetch origin master
+    git reset --hard origin/master
     
     local needs_restart=false
     local needs_build=false
@@ -348,8 +348,8 @@ deploy_quick() {
     log_info "Quick restart (no rebuild)..."
     
     cd "$APP_DIR"
-    git fetch origin main
-    git reset --hard origin/main
+    git fetch origin master
+    git reset --hard origin/master
     
     restart_pm2
     
