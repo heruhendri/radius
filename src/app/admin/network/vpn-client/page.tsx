@@ -79,7 +79,7 @@ export default function VpnClientPage() {
         setApplyRoutingForm(prev => ({ ...prev, ...parsed }));
       }
     } catch { /* ignore */ }
-  }, [];
+  }, []);
 
   const toggleRoutingPanel = (clientId: string) => {
     setExpandedRoutingPanels(prev => {
