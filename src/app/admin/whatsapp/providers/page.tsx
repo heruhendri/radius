@@ -67,6 +67,11 @@ export default function WhatsAppProvidersPage() {
     kirimi: 'https://api.kirimi.id',
   };
 
+  // Known Wablas server hostnames — user picks one which sets apiUrl
+  const WABLAS_SERVERS = [
+    'wa', 'pati', 'deu', 'kudus', 'solo', 'bogor', 'jogja', 'bandung',
+  ];
+
   const handleTypeChange = (newType: string) => {
     const newDefault = DEFAULT_URLS[newType] || '';
     // Auto-fill URL when: field is empty, OR the current value is already a known default URL
@@ -578,10 +583,36 @@ export default function WhatsAppProvidersPage() {
                     placeholder={DEFAULT_URLS[formData.type] || 'http://10.100.0.245:2451'}
                     required
                   />
-                  {DEFAULT_URLS[formData.type] && formData.apiUrl === DEFAULT_URLS[formData.type] && (
+                  {formData.type === 'wablas' && (
+                    <div className="mt-1">
+                      <p className="text-[9px] text-muted-foreground mb-1">Pilih server Wablas Anda:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {WABLAS_SERVERS.map(srv => {
+                          const url = `https://${srv}.wablas.com`;
+                          const active = formData.apiUrl === url;
+                          return (
+                            <button
+                              key={srv}
+                              type="button"
+                              onClick={() => setFormData({ ...formData, apiUrl: url })}
+                              className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
+                                active
+                                  ? 'bg-primary text-background border-primary'
+                                  : 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20'
+                              }`}
+                            >
+                              {srv}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[9px] text-muted-foreground/60 mt-0.5">Server sesuai akun Wablas Anda — lihat di dashboard Wablas</p>
+                    </div>
+                  )}
+                  {formData.type !== 'wablas' && DEFAULT_URLS[formData.type] && formData.apiUrl === DEFAULT_URLS[formData.type] && (
                     <p className="text-[9px] text-primary/70 mt-0.5">✓ URL default {formData.type} — bisa diubah manual</p>
                   )}
-                  {DEFAULT_URLS[formData.type] && formData.apiUrl !== DEFAULT_URLS[formData.type] && formData.apiUrl && (
+                  {formData.type !== 'wablas' && DEFAULT_URLS[formData.type] && formData.apiUrl !== DEFAULT_URLS[formData.type] && formData.apiUrl && (
                     <p className="text-[9px] text-amber-500 mt-0.5">⚠ URL custom — berbeda dari default</p>
                   )}
                   {!DEFAULT_URLS[formData.type] && (
@@ -593,6 +624,7 @@ export default function WhatsAppProvidersPage() {
                   <ModalInput type="text" value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} placeholder={formData.type === 'gowa' ? 'username:password' : formData.type === 'kirimi' ? 'user_code:secret' : 'API Key or Token'} required={(formData.type === 'mpwa' || formData.type === 'gowa' || formData.type === 'kirimi')} />
                   {formData.type === 'gowa' && <p className="text-[9px] text-muted-foreground mt-0.5">Format: username:password</p>}
                   {formData.type === 'kirimi' && <p className="text-[9px] text-muted-foreground mt-0.5">Format: user_code:secret (dari dashboard kirimi.id)</p>}
+                  {formData.type === 'wablas' && <p className="text-[9px] text-muted-foreground mt-0.5">Token dari menu Device → Settings. Opsional: token.secret_key</p>}
                 </div>
               </div>
               {formData.type === 'mpwa' && (

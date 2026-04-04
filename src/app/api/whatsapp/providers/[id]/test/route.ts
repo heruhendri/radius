@@ -102,22 +102,28 @@ If you receive this message, the provider is working correctly! ✅`;
           success = mpwaRes.data.status === 'success';
           break;
 
-        case 'wablas':
+        case 'wablas': {
+          // Wablas V1 uses form-urlencoded (per official docs)
+          const wablasParams = new URLSearchParams();
+          wablasParams.append('phone', phone);
+          wablasParams.append('message', testMessage);
           const wablasRes = await axios.post(
             `${provider.apiUrl}/api/send-message`,
-            {
-              phone,
-              message: testMessage,
-            },
+            wablasParams.toString(),
             {
               headers: {
                 Authorization: provider.apiKey,
+                'Content-Type': 'application/x-www-form-urlencoded',
               },
             }
           );
           responseData = wablasRes.data;
           success = wablasRes.data.status === true;
+          if (!success) {
+            errorMessage = wablasRes.data.message || 'Wablas: failed to send';
+          }
           break;
+        }
 
         default:
           errorMessage = `Unknown provider type: ${provider.type}`;
