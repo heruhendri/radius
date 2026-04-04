@@ -295,10 +295,15 @@ export async function POST(request: NextRequest) {
       messages.push(`Email: ${results.email.sent} sent, ${results.email.failed} failed, ${results.email.skipped} skipped`);
     }
 
+    const successCount = results.whatsapp.sent + results.email.sent;
+    const failCount = results.whatsapp.failed + results.email.failed;
+
     return NextResponse.json({
       success: true,
       message: messages.join(' | '),
       total: users.length,
+      successCount,
+      failCount,
       results: {
         whatsapp: channel === 'email' ? undefined : results.whatsapp,
         email: channel === 'whatsapp' ? undefined : results.email,

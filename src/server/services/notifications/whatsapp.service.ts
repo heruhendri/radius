@@ -166,6 +166,17 @@ export class WhatsAppService {
     const provider = providers[0];
 
     if (provider.type === 'kirimi') {
+      // For a single recipient use the single-send endpoint — Kirimi.id
+      // /v1/broadcast-message requires 2+ numbers in the queue.
+      if (messages.length === 1) {
+        const msg = messages[0];
+        try {
+          await this.sendViaKirimi(provider, msg.phone, msg.message);
+          return { sent: 1, failed: 0, results: [{ phone: msg.phone, success: true }] };
+        } catch (e: any) {
+          return { sent: 0, failed: 1, results: [{ phone: msg.phone, success: false, error: e.message }] };
+        }
+      }
       return await this.sendBroadcastViaKirimi(provider, messages);
     }
 
