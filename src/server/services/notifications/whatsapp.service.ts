@@ -455,7 +455,7 @@ export class WhatsAppService {
     }
 
     const baseUrl = provider.apiUrl.replace(/\/+$/, ''); // strip trailing slash
-    const response = await fetch(`${baseUrl}/send-message`, {
+    const response = await fetch(`${baseUrl}/v1/send-message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -464,7 +464,7 @@ export class WhatsAppService {
         user_code: userCode,
         secret: secret,
         device_id: deviceId,
-        number: phone,
+        receiver: phone,   // Kirimi.id uses 'receiver', not 'number'
         message: message,
       }),
     });

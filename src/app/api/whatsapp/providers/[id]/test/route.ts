@@ -149,13 +149,14 @@ If you receive this message, the provider is working correctly! ✅`;
             errorMessage = 'Kirimi.id API Key harus format "user_code:secret"';
             break;
           }
+          const kirimBaseUrl = (provider.apiUrl || '').replace(/\/+$/, '');
           const kirimRes = await axios.post(
-            `${provider.apiUrl}/send-message`,
+            `${kirimBaseUrl}/v1/send-message`,
             {
               user_code: kiriminUserCode,
               secret: kiriminSecret,
               device_id: provider.senderNumber || '',
-              number: phone,
+              receiver: phone,   // Kirimi.id uses 'receiver', not 'number'
               message: testMessage,
             },
             { headers: { 'Content-Type': 'application/json' } }
