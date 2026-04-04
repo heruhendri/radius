@@ -4,6 +4,53 @@ All notable changes to SALFANET RADIUS will be documented in this file.
 
 ---
 
+## [2.13.0] - 2026-04-05 (Kirimi.id Broadcast, Webhook Pesan Masuk, Error Detail)
+
+### ✅ Fitur: WhatsApp Webhook Endpoint
+
+- Tambah endpoint `POST /api/whatsapp/webhook` untuk menerima pesan masuk dari Kirimi.id, Wablas, Fonnte, dan WAHA.
+- Pesan masuk dicatat ke tabel `whatsapp_history` dengan `status: incoming`.
+- Mendukung `GET` untuk verifikasi challenge (dibutuhkan beberapa provider saat setup webhook).
+- Tambah panel "Webhook URL" dengan tombol copy di halaman **Admin → WhatsApp → Providers**.
+
+### ✅ Fitur: Kirimi.id Native Broadcast API
+
+- Broadcast ke banyak penerima kini menggunakan endpoint `/v1/broadcast-message` Kirimi.id secara langsung.
+- Pesan dengan konten identik dikelompokkan dalam satu API call untuk efisiensi.
+- 1 penerima: otomatis fallback ke `/v1/send-message` (Kirimi.id tidak mendukung broadcast untuk 1 nomor).
+- Delay antar pesan: **30 detik** (rekomendasi resmi Kirimi.id untuk menghindari blokir WhatsApp).
+
+### ✅ Fitur: Per-Provider Error Detail
+
+- Saat semua provider WhatsApp gagal, response API menyertakan detail kegagalan per provider: nama, tipe, dan pesan error.
+- Toast di UI sekarang menampilkan error spesifik (mis. `Kirimi.id: 401 - Invalid credentials`) agar lebih mudah diagnosa.
+
+### ✅ Fix: Kirimi.id Endpoint dan Field Salah
+
+- **Endpoint**: `/send-message` → `/v1/send-message` (sesuai Kirimi.id API v2.0 docs resmi).
+- **Field penerima**: `number` → `receiver` (sesuai Kirimi.id API v2.0 docs resmi).
+- **Trailing slash**: `provider.apiUrl` di-strip trailing slash sebelum disambung path (konsisten dengan provider lain).
+
+### ✅ Fix: Broadcast Response Format
+
+- Route `POST /api/whatsapp/broadcast` sekarang return `successCount` dan `failCount` di top-level response.
+- Sebelumnya toast di halaman Send Message menampilkan `✅ undefined | ❌ undefined`.
+
+### ✅ Fix: HTTP Status 502 → 500
+
+- Error provider WhatsApp sebelumnya di-wrap sebagai 502 (Bad Gateway) yang secara semantik berarti upstream proxy error.
+- Diganti ke 500 (Internal Server Error) yang lebih tepat untuk kegagalan provider pihak ketiga.
+
+### Files Changed
+- `src/server/services/notifications/whatsapp.service.ts` — endpoint `/v1/send-message`, field `receiver`, `sendBroadcast()`, `sendBroadcastViaKirimi()`, `cleanPhone()`, trailing slash strip
+- `src/app/api/whatsapp/send/route.ts` — per-provider error detail, status 500, `sendMessage` return instead of throw
+- `src/app/api/whatsapp/broadcast/route.ts` — pakai `sendBroadcast()`, tambah `successCount`/`failCount` di response
+- `src/app/api/whatsapp/providers/[id]/test/route.ts` — endpoint `/v1/send-message`, field `receiver`, strip trailing slash
+- `src/app/api/whatsapp/webhook/route.ts` — **file baru** webhook endpoint
+- `src/app/admin/whatsapp/providers/page.tsx` — tampilkan webhook URL dengan tombol copy
+
+---
+
 ## [2.12.4] - 2026-04-01 (Installer via Git Clone, Timezone Fixes, PPPoE Print, Dashboard Stats)
 
 ### ✅ Chore: Hapus GitHub Releases Workflow — Installer via Git Clone

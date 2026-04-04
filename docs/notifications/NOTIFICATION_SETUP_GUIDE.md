@@ -1,7 +1,7 @@
 # 📬 Notification System Setup Guide
 
-**Document Version:** 1.0  
-**Last Updated:** February 17, 2026  
+**Document Version:** 2.0  
+**Last Updated:** April 5, 2026  
 **Status:** ✅ Production Ready
 
 ---
@@ -22,14 +22,27 @@ The system is **already implemented** and just needs configuration through the a
 ## 🎯 What's Already Implemented
 
 ### ✅ WhatsApp Service
-**File:** `src/lib/whatsapp.ts`
+**File:** `src/server/services/notifications/whatsapp.service.ts`
+
+**Providers Supported:**
+| Provider | Type | Notes |
+|----------|------|-------|
+| **Fonnte** | `fonnte` | Recommended — simplest setup |
+| **WAHA** | `waha` | Self-hosted, free |
+| **MPWA** | `mpwa` | Multi-device |
+| **Wablas** | `wablas` | V2 API (`/api/v2/send-message`), auth `token.secret_key` |
+| **GOWA** | `gowa` | Self-hosted gateway |
+| **WABlast** | `wablast` | Self-hosted gateway |
+| **Kirimi.id** | `kirimi` | ✅ Fully supported — API Key = `user_code:secret`, Sender Number = Device ID |
 
 **Features:**
 - Multi-provider failover (automatic retry with next provider)
-- Supported providers: Fonnte, WAHA, MPWA, Wablas, GOWA
 - Phone number auto-formatting (62xxx)
 - Message delivery tracking
 - Provider priority system
+- Per-provider error detail saat gagal
+- Native broadcast API (Kirimi.id: `/v1/broadcast-message` dengan grouping, delay 30s)
+- Incoming message webhook (`POST /api/whatsapp/webhook`)
 
 **Integration Points:**
 - Invoice reminders
@@ -113,8 +126,27 @@ Login with SUPER_ADMIN account
    - **Priority:** 1
    - **Status:** Active ✅
 
-**Option C: MPWA/Wablas/GOWA**
+**Option C: Kirimi.id (Cloud-Based, Recommended for Broadcast)**
+
+1. Daftar di [kirimi.id](https://kirimi.id) dan sambungkan WA device
+2. Catat **User Code**, **Secret Key**, dan **Device ID** dari dashboard
+3. Di admin panel: `/admin/whatsapp/providers`
+4. Tambah provider:
+   - **Name:** Kirimi Primary
+   - **Type:** `kirimi`
+   - **API URL:** `https://api.kirimi.id`
+   - **API Key:** `USER_CODE:SECRET_KEY` (format gabung dengan `:`)
+   - **Sender Number (Device ID):** `D-XXXXX` (dari dashboard Kirimi.id)
+   - **Priority:** 1
+   - **Status:** Active ✅
+5. Klik "Save" lalu "Test Connection"
+
+> **Broadcast Kirimi.id**: Menggunakan endpoint native `/v1/broadcast-message` dengan delay 30 detik antar pesan (rekomendasi resmi). Status "menunggu" di dashboard Kirimi.id adalah normal — pesan sedang dalam antrian.
+
+**Option D: MPWA/Wablas/GOWA**
 Similar process - choose provider type and enter credentials.
+
+**Wablas — format API Key:** `token.secret_key` (gabungkan token dengan titik)
 
 ### Step 3: Configure Email (SMTP)
 

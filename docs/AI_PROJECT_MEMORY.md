@@ -9,14 +9,54 @@
 
 **Salfanet Radius** adalah sistem billing ISP/RTRW.NET berbasis web dengan integrasi FreeRADIUS penuh. Mendukung PPPoE dan Hotspot, cocok untuk ISP kecil-menengah di Indonesia.
 
-- **Version**: 2.12.0
+- **Version**: 2.13.0
 - **Status**: Production-ready, deployed di VPS
-- **Last Updated**: April 2, 2026
+- **Last Updated**: April 5, 2026
 - **Latest Commit**: See GitHub
 - **GitHub**: https://github.com/s4lfanet/salfanet-radius (public)
 - **Live URL**: https://radius.yourdomain.com
 
-### Recent Patch Log (April 2026)
+### Recent Patch Log (April 2026 — WhatsApp Kirimi.id & Broadcast)
+
+- **Fix + Feat: Kirimi.id provider sepenuhnya berfungsi** (`11bc666`, `b7e0544`, April 5, 2026)
+  - **Root cause**: Endpoint salah `/send-message` → harusnya `/v1/send-message`. Field penerima salah `number` → harusnya `receiver`. Kedua bug didapat dari screenshot docs resmi Kirimi.id v2.0.
+  - **Fix**: Endpoint `/v1/send-message`, field `receiver`, strip trailing slash di `provider.apiUrl`.
+  - **Files**: `whatsapp.service.ts`, `providers/[id]/test/route.ts`
+
+- **Feat: Kirimi.id native broadcast** (`fa136f1`, `f4b3d4c`, April 5, 2026)
+  - `sendBroadcast()` ditambahkan ke `WhatsAppService` — untuk Kirimi.id pakai `/v1/broadcast-message`, provider lain loop satu-per-satu.
+  - 1 penerima otomatis fallback ke `/v1/send-message` (Kirimi.id tidak menerima broadcast 1 nomor).
+  - Pesan dengan konten identik dikelompokkan dalam 1 API call. Delay 30 detik (rekomendasi resmi).
+  - **Files**: `whatsapp.service.ts`, `broadcast/route.ts`
+
+- **Fix: Per-provider error detail & HTTP status** (`b7e0544`, April 5, 2026)
+  - `sendMessage()` tidak lagi throw saat semua provider gagal — return `{success:false, error, attempts}` agar detail per provider bisa sampai ke UI.
+  - HTTP status catch block diubah 502 → 500.
+  - Toast di halaman Send sekarang menampilkan error spesifik per provider.
+  - **Files**: `whatsapp.service.ts`, `send/route.ts`
+
+- **Fix: Broadcast response format** (`f4b3d4c`, April 5, 2026)
+  - Route `POST /api/whatsapp/broadcast` sekarang return `successCount` dan `failCount` di top-level.
+  - Sebelumnya frontend toast menampilkan `✅ undefined | ❌ undefined`.
+
+- **Feat: Webhook endpoint pesan masuk** (`d2ff368`, `48a213d`, April 4, 2026)
+  - Buat `src/app/api/whatsapp/webhook/route.ts` untuk terima pesan masuk dari Kirimi.id, Wablas, Fonnte, WAHA.
+  - Pesan dicatat ke `whatsapp_history` dengan `status: incoming`.
+  - Panel webhook URL + tombol copy di halaman providers.
+
+### WhatsApp Kirimi.id — Setup & Known Facts
+
+- **Base URL**: `https://api.kirimi.id`
+- **API Key format**: `user_code:secret` (pisah dengan titik dua)
+- **Sender Number field** = **Device ID** (format `D-XXXXX`)
+- **Send endpoint**: `POST https://api.kirimi.id/v1/send-message`
+  - Body: `{user_code, secret, device_id, receiver, message}`
+- **Broadcast endpoint**: `POST https://api.kirimi.id/v1/broadcast-message`
+  - Body: `{user_code, secret, device_id, label, numbers: [...], message, delay: 30}`
+  - Minimal 2 nomor. 1 nomor → pakai send endpoint.
+- **Status "menunggu"** di dashboard = normal, pesan dalam antrian.
+
+### Recent Patch Log (April 2026 — Isolasi, CoA, PPPoE)
 
 - **Fix: Isolasi manual PPPoE — radusergroup dioverwrite saat edit user** (`958fc3a`, April 2, 2026)
   - **Root cause**: `updatePppoeUser` di `pppoe.service.ts` selalu menjalankan RADIUS re-sync saat ada edit data user (username/password/profile/ip/router), dan **selalu** menulis ulang `radusergroup = profile.groupName` tanpa memeriksa status user. Jika user diisolir lalu admin membuka form edit dan save (tanpa mengubah status), `radusergroup` dikembalikan ke profile aslinya (`paket 5mbps` dll), sehingga user lolos isolir.

@@ -1,6 +1,8 @@
 # Broadcast Notification System
 
-Sistem untuk mengirim notifikasi massal ke multiple user melalui WhatsApp dan Email dengan 3 jenis notifikasi.
+Sistem untuk mengirim notifikasi massal ke multiple user melalui WhatsApp dan Email.
+
+> **Last Updated:** April 5, 2026 — Kirimi.id native broadcast API, webhook pesan masuk, per-provider error detail.
 
 ## Overview
 
@@ -8,6 +10,34 @@ Sistem ini memungkinkan admin untuk mengirim notifikasi ke banyak user sekaligus
 1. **Notifikasi Gangguan** - Informasi maintenance/gangguan jaringan
 2. **Kirim Invoice** - Reminder invoice yang belum dibayar
 3. **Bukti Pembayaran** - Konfirmasi pembayaran sudah diterima
+
+## Broadcast via WhatsApp Send Page
+
+Selain notifikasi terstruktur di atas, admin dapat mengirim pesan bebas via **Admin → WhatsApp → Send Message** (tab Broadcast):
+
+1. Pilih user dari tabel (multi-select, select all, filter ODP)
+2. Ketik pesan (atau pilih template)
+3. Klik "Broadcast" → konfirmasi jumlah user
+4. Lihat hasil: `✅ Berhasil: N | ❌ Gagal: M`
+
+### Cara Kerja per Provider
+
+| Provider | Mekanisme Broadcast |
+|----------|----------------------|
+| **Kirimi.id** | Native `/v1/broadcast-message` — 1 API call per grup pesan identik. 1 penerima otomatis pakai `/v1/send-message`. Delay **30 detik** antar pesan. |
+| Fonnte | Loop satu-per-satu dengan rate limiter |
+| Wablas | Loop satu-per-satu dengan rate limiter |
+| WAHA / MPWA / GOWA / WABlast | Loop satu-per-satu dengan rate limiter |
+
+### Catatan Status Kirimi.id
+
+Status **"menunggu"** di dashboard Kirimi.id adalah **normal** — artinya pesan sudah diterima sistem Kirimi.id dan sedang dalam antrian untuk dikirim satu per satu dengan delay 30 detik. Estimasi:
+
+| Jumlah Penerima | Estimasi Selesai |
+|-----------------|-----------------|
+| 10 user | ~5 menit |
+| 50 user | ~25 menit |
+| 100 user | ~50 menit |
 
 ## Features
 

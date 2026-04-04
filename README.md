@@ -2,7 +2,7 @@
 
 Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with FreeRADIUS integration supporting PPPoE and Hotspot authentication.
 
-> **Latest:** v2.12.0 — WiFi multi-SSID display, per-SSID device grouping, invoice print dialog (Apr 2026)
+> **Latest:** v2.13.0 — Kirimi.id broadcast native API, webhook pesan masuk, fix endpoint/field Kirimi.id, per-provider error detail (Apr 2026)
 
 ---
 
@@ -21,7 +21,7 @@ Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with Free
 | **Hotspot Voucher** | 8 code types, batch up to 25,000, agent distribution, auto-sync with RADIUS, print templates |
 | **Billing** | Postpaid/prepaid invoices, auto-generation, payment reminders, balance/deposit, auto-renewal |
 | **Payment** | Manual upload (bukti transfer), Midtrans/Xendit/Duitku gateway, approval workflow, 0–5 bank accounts |
-| **Notifications** | WhatsApp (Fonnte/WAHA/GOWA/MPWA/Wablas), Email SMTP, broadcast (outage/invoice/payment) |
+| **Notifications** | WhatsApp (Fonnte/WAHA/GOWA/MPWA/Wablas/WABlast/**Kirimi.id**), Email SMTP, broadcast (outage/invoice/payment), webhook pesan masuk |
 | **Agent/Reseller** | Balance-based voucher generation, commission tracking, sales stats |
 | **Financial** | Income/expense tracking with categories, keuangan reconciliation |
 | **Network (FTTH)** | OLT/ODC/ODP management, customer port assignment, network map, distance calculation |
