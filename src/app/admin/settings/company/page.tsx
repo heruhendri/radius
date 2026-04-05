@@ -439,6 +439,22 @@ export default function CompanySettingsPage() {
                 <p className="mt-1 text-[10px] text-muted-foreground">Awalan yang ditambahkan di depan ID pelanggan baru. Kosongkan untuk tanpa prefix. Contoh prefix "SF-" → ID menjadi SF-12345678</p>
               </div>
 
+              {/* Powered By / Support by Invoice */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[11px] font-medium text-foreground mb-1">
+                  ⚡ Powered By (Footer Invoice)
+                </label>
+                <input
+                  type="text"
+                  value={settings.poweredBy}
+                  onChange={(e) => setSettings({ ...settings, poweredBy: e.target.value })}
+                  className="w-full px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card focus:ring-1 focus:ring-ring focus:border-primary"
+                  placeholder="Contoh: Salfa Net atau nama vendor"
+                  maxLength={100}
+                />
+                <p className="mt-1 text-[10px] text-muted-foreground">Teks ini akan ditampilkan di footer invoice sebagai "Support by ..." . Kosongkan jika tidak ingin ditampilkan.</p>
+              </div>
+
               {/* Timezone */}
               <div>
                 <label className="flex items-center gap-1.5 text-[11px] font-medium text-foreground mb-1">
