@@ -51,10 +51,17 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
   // null = not yet checked (SSR), true/false after client mounts
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [notifHistory, setNotifHistory] = useState<NotifEvent[]>([]);
+  const [now, setNow] = useState<Date | null>(null);
   // Default: look back 24h so events that happened before page load are caught
   const lastCheckedRef = useRef<string>(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { addToast } = useToast();
+
+  useEffect(() => {
+    setNow(new Date());
+    const tick = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(tick);
+  }, []);
 
   // â”€â”€ Persist notifications to localStorage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
@@ -321,7 +328,9 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3">
             <Clock className="w-4 h-4 text-cyan-400/50" />
             <span className="text-xs text-muted-foreground">
-              {formatInTimeZone(new Date(), 'Asia/Jakarta', 'EEEE, d MMMM yyyy', { locale: localeId })}
+              {now
+                ? formatInTimeZone(now, 'Asia/Jakarta', 'EEEE, d MMMM yyyy  HH:mm:ss', { locale: localeId })
+                : ''}
             </span>
             {/* Bell */}
             <div className="relative">
