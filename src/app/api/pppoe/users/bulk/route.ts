@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
       // Sample template rows
       const sampleData = [
         {
+          customerId: '',
           username: 'user001',
           password: 'pass123',
           name: 'Budi Santoso',
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
           autoIsolationEnabled: 'true',
         },
         {
+          customerId: '',
           username: 'user002',
           password: 'pass456',
           name: 'Siti Rahayu',
@@ -61,6 +63,7 @@ export async function GET(request: NextRequest) {
 
       if (format === 'xlsx') {
         const columns = [
+          { key: 'customerId', header: 'ID Pelanggan (kosongkan = auto)', width: 28 },
           { key: 'username', header: 'Username *', width: 20 },
           { key: 'password', header: 'Password *', width: 18 },
           { key: 'name', header: 'Nama Lengkap *', width: 24 },
@@ -86,9 +89,9 @@ export async function GET(request: NextRequest) {
       }
 
       // CSV fallback
-      const template = `Username *,Password *,Nama Lengkap *,No. Telepon *,Email,Alamat,Area/Wilayah,IP Address,Tipe Langganan (POSTPAID/PREPAID),Tanggal Expired (YYYY-MM-DD),Hari Tagihan (1-31),Latitude,Longitude
-user001,pass123,Budi Santoso,08123456789,budi@example.com,Jl. Merdeka No. 10,Cluster A,10.10.10.2,POSTPAID,,1,-6.200000,106.816666
-user002,pass456,Siti Rahayu,08987654321,siti@example.com,Jl. Sudirman No. 5,,, PREPAID,2026-12-31,,,`;
+      const template = `ID Pelanggan (kosongkan = auto),Username *,Password *,Nama Lengkap *,No. Telepon *,Email,Alamat,Area/Wilayah,IP Address,Tipe Langganan (POSTPAID/PREPAID),Tanggal Expired (YYYY-MM-DD),Hari Tagihan (1-31),Latitude,Longitude
+,user001,pass123,Budi Santoso,08123456789,budi@example.com,Jl. Merdeka No. 10,Cluster A,10.10.10.2,POSTPAID,,1,-6.200000,106.816666
+,user002,pass456,Siti Rahayu,08987654321,siti@example.com,Jl. Sudirman No. 5,,, PREPAID,2026-12-31,,,`;
 
       return new NextResponse(template, {
         headers: {

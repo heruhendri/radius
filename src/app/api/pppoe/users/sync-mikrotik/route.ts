@@ -5,6 +5,14 @@ import { prisma } from '@/server/db/client';
 import { RouterOSAPI } from 'node-routeros';
 import { generateUniqueReferralCode } from '@/server/services/referral.service';
 
+async function generateCustomerId(): Promise<string> {
+  while (true) {
+    const candidate = (Math.floor(10000000 + Math.random() * 90000000)).toString();
+    const exists = await prisma.pppoeUser.findUnique({ where: { customerId: candidate } });
+    if (!exists) return candidate;
+  }
+}
+
 interface MikrotikPPPoESecret {
   '.id': string;
   name: string;
@@ -267,12 +275,14 @@ export async function POST(request: NextRequest) {
         // Create user in database
         const userId = crypto.randomUUID();
         const expiredAt = calculateExpiry();
+        const customerId = await generateCustomerId();
 
         await prisma.pppoeUser.create({
           data: {
             id: userId,
             username: secret.name,
             password: secret.password,
+            customerId,
             profileId: profileId,
             routerId: routerId,
             name: secret.comment || secret.name,
