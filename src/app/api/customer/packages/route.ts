@@ -47,23 +47,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all active internet profiles/packages
-    const packages = await prisma.pppoeProfile.findMany({
-      where: {
-        isActive: true
-      },
-      select: {
-        id: true,
-        name: true,
-        downloadSpeed: true,
-        uploadSpeed: true,
-        price: true,
-        description: true
-      },
-      orderBy: {
-        price: 'asc'
-      }
-    });
+    // For customer renewal flow, only expose the customer's current active package.
+    // This prevents selecting other packages from the renewal page.
+    const packages = user.profile
+      ? [{
+          id: user.profile.id,
+          name: user.profile.name,
+          downloadSpeed: user.profile.downloadSpeed,
+          uploadSpeed: user.profile.uploadSpeed,
+          price: user.profile.price,
+          description: user.profile.description,
+        }]
+      : [];
 
     return NextResponse.json({
       success: true,
