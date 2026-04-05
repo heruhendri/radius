@@ -362,6 +362,23 @@ Dashboard · PPPoE · Hotspot · Agent · Invoice · Payment · Keuangan · Sess
 
 ## 📝 Changelog
 
+### v2.13.1 — April 5, 2026
+- **Fix: Wablas send gagal** — ganti dari `POST /api/v2/send-message` ke `GET /api/send-message?token=...` (v1 simple endpoint, kompatibel semua server Wablas). API key format: `token.secret_key`
+- **Clarify: Hint form Wablas** diperjelas format API key `token.secret_key`
+
+### v2.13.0 — April 5, 2026
+- **Feat: Kirimi.id native broadcast** — broadcast menggunakan `/v1/broadcast-message`, 1 penerima otomatis pakai `/v1/send-message`. Delay 30 detik (rekomendasi resmi)
+- **Feat: WhatsApp webhook endpoint** — `POST /api/whatsapp/webhook` menerima pesan masuk, dicatat ke `whatsapp_history`. Panel webhook URL + tombol copy di halaman Providers
+- **Feat: Per-provider error detail** — saat semua provider gagal, response menyertakan detail error per provider
+- **Fix: Kirimi.id endpoint** — `/send-message` → `/v1/send-message`, field `number` → `receiver`
+- **Fix: Broadcast response** — tambah `successCount`/`failCount` di top-level response agar toast UI tidak menampilkan `undefined`
+- **Fix: HTTP status** — catch block WhatsApp send 502 → 500
+
+### v2.12.0 — April 2, 2026
+- Fix: PPPoE isolasi manual — `radusergroup` tidak lagi dioverwrite saat edit user tanpa ubah status isolir
+- Fix: CoA/disconnect MikroTik — tambah `-d /usr/share/freeradius` ke perintah `radclient disconnect`
+- Fix: `setup-isolir` hardcoded IP pool → baca dari DB company settings
+
 ### v2.11.7 — March 29, 2026
 - **Fix: PWA manifest 404 pada fresh install** — nginx `alias` + regex + `try_files` diganti `root /var/www/salfanet-radius/public` (sesuai VPS production)
 - **Fix: `cp -r public` nesting bug** — `cp -r public .next/standalone/public/` → `cp -r public/. .next/standalone/public/` (hindari nested `public/public/`)
