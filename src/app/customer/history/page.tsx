@@ -305,17 +305,22 @@ export default function PaymentHistoryPage() {
 
   const handlePrintStandard = async (payment: PaymentHistory) => {
     setPrintDialogPayment(null);
-    await printInvoiceStandard(payment.id, toast);
+    const token = localStorage.getItem('customer_token');
+    await printInvoiceStandard(payment.id, toast, token);
   };
 
   const handlePrintThermal = async (payment: PaymentHistory) => {
     setPrintDialogPayment(null);
-    await printInvoiceThermal(payment.id, toast);
+    const token = localStorage.getItem('customer_token');
+    await printInvoiceThermal(payment.id, toast, token);
   };
 
   const handlePrintInvoice = async (payment: PaymentHistory) => {
     try {
-      const res = await fetch(`/api/invoices/${payment.id}/pdf`);
+      const token = localStorage.getItem('customer_token');
+      const res = await fetch(`/api/invoices/${payment.id}/pdf`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       const data = await res.json();
       if (!data.success || !data.data) { toast('error', 'Gagal', 'Gagal mengambil data tagihan'); return; }
       const inv = data.data;

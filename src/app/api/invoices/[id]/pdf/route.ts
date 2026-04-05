@@ -8,9 +8,26 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Accept both admin (NextAuth session) and customer (Bearer token) auth
   const auth = await checkAuth();
+  let customerId: string | null = null;
+
   if (!auth.authorized) {
-    return auth.response;
+    // Try customer Bearer token as fallback
+    const bearerToken = req.headers.get('authorization')?.replace('Bearer ', '');
+    if (bearerToken) {
+      const { prisma: db } = await import('@/server/db/client');
+      const customerSession = await db.customerSession.findFirst({
+        where: { token: bearerToken, verified: true, expiresAt: { gte: new Date() } },
+        select: { userId: true },
+      });
+      if (!customerSession) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      }
+      customerId = customerSession.userId;
+    } else {
+      return auth.response;
+    }
   }
 
   try {
@@ -37,7 +54,12 @@ export async function GET(
     });
 
     if (!invoice) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Invoice not found' }, { status: 404 });
+    }
+
+    // If authenticated as a customer, verify the invoice belongs to them
+    if (customerId && invoice.userId !== customerId) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
     // Get company info

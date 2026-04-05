@@ -47,9 +47,11 @@ interface InvoicePrintData {
   paymentLink?: string | null;
 }
 
-async function loadInvoicePrintData(invoiceId: string, toast: ToastError): Promise<InvoicePrintData | null> {
+async function loadInvoicePrintData(invoiceId: string, toast: ToastError, token?: string | null): Promise<InvoicePrintData | null> {
   try {
-    const res = await fetch(`/api/invoices/${invoiceId}/pdf`);
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`/api/invoices/${invoiceId}/pdf`, { headers });
     const data = await res.json();
 
     if (!data.success || !data.data) {
@@ -72,8 +74,8 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
-export async function printInvoiceStandard(invoiceId: string, toast: ToastError) {
-  const inv = await loadInvoicePrintData(invoiceId, toast);
+export async function printInvoiceStandard(invoiceId: string, toast: ToastError, token?: string | null) {
+  const inv = await loadInvoicePrintData(invoiceId, toast, token);
   if (!inv) return;
 
   const win = window.open('', '_blank', 'width=850,height=1100');
@@ -264,8 +266,8 @@ export async function printInvoiceStandard(invoiceId: string, toast: ToastError)
   win.document.close();
 }
 
-export async function printInvoiceThermal(invoiceId: string, toast: ToastError) {
-  const inv = await loadInvoicePrintData(invoiceId, toast);
+export async function printInvoiceThermal(invoiceId: string, toast: ToastError, token?: string | null) {
+  const inv = await loadInvoicePrintData(invoiceId, toast, token);
   if (!inv) return;
 
   const win = window.open('', '_blank', 'width=400,height=650');
