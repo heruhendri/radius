@@ -861,11 +861,12 @@ function AdminLayoutContent({
 
       {/* Sidebar - optimized for mobile */}
       <aside 
+        data-sidebar="sidebar"
         className={cn(
           'fixed top-0 left-0 z-50 h-dvh w-[280px] sm:w-64 transition-transform duration-300 ease-out',
-          'bg-background/95 backdrop-blur-xl',
-          'border-r border-cyan-500/20',
-          'shadow-[5px_0_30px_rgba(6,182,212,0.1),inset_-1px_0_0_rgba(255,255,255,0.05)]',
+          'bg-sidebar/95 backdrop-blur-xl',
+          'border-r border-sidebar-border',
+          'shadow-[5px_0_30px_rgba(0,0,0,0.15)]',
           'safe-area-inset-left',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
@@ -875,7 +876,7 @@ function AdminLayoutContent({
 
         <div className="flex flex-col h-full">
           {/* Logo - compact on mobile with safe area */}
-          <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-cyan-500/20 bg-gradient-to-r from-cyan-500/5 via-transparent to-blue-500/5">
+          <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-sidebar-border bg-sidebar-accent/50">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-400 flex items-center justify-center border border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.4),inset_0_1px_0_rgba(255,255,255,0.2)] animate-[neonPulse_3s_ease-in-out_infinite]">
                 <span className="text-black font-black text-xs sm:text-sm">{company.name.charAt(0)}</span>
@@ -928,7 +929,7 @@ function AdminLayoutContent({
           </div>
 
           {/* User - fixed at bottom */}
-          <div className="flex-shrink-0 px-2.5 py-2 border-t border-cyan-500/20 bg-gradient-to-r from-cyan-500/5 via-transparent to-blue-500/5">
+          <div className="flex-shrink-0 px-2.5 py-2 border-t border-sidebar-border bg-sidebar-accent/50">
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
@@ -949,9 +950,9 @@ function AdminLayoutContent({
               </button>
 
               {showUserMenu && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-background/95 backdrop-blur-xl rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5),0_0_10px_rgba(0,255,255,0.1)] border border-cyan-500/20 overflow-hidden animate-in slide-in-from-bottom-2 duration-200">
-                  <div className="absolute top-0 left-2 right-2 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
-                  <div className="p-3 border-b border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 via-transparent to-blue-500/10">
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-sidebar/95 backdrop-blur-xl rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.4)] border border-sidebar-border overflow-hidden animate-in slide-in-from-bottom-2 duration-200">
+                  <div className="absolute top-0 left-2 right-2 h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+                  <div className="p-3 border-b border-sidebar-border bg-sidebar-accent/50">
                     <p className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] font-medium">{t('auth.signedInAs')}</p>
                     <p className="text-xs font-bold text-cyan-400 truncate mt-1">
                       {(session?.user as any)?.username}
