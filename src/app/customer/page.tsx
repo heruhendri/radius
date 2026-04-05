@@ -396,6 +396,10 @@ export default function CustomerDashboard() {
             <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('common.status')}</span>
               {isExpired ? <span className="px-2 py-0.5 bg-destructive/20 text-destructive text-[10px] font-bold rounded border border-destructive/40 shadow-[0_0_5px_rgba(255,51,102,0.3)]">{t('customer.expired')}</span>
               : user.status === 'active' ? <span className="px-2 py-0.5 bg-success/20 text-success text-[10px] font-bold rounded border border-success/40 shadow-[0_0_5px_rgba(0,255,136,0.3)]">{t('customer.active')}</span>
+              : user.status === 'isolated' ? <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded border border-orange-500/40">Terisolir</span>
+              : user.status === 'suspended' ? <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-[10px] font-bold rounded border border-yellow-500/40">Ditangguhkan</span>
+              : user.status === 'blocked' ? <span className="px-2 py-0.5 bg-destructive/20 text-destructive text-[10px] font-bold rounded border border-destructive/40">Diblokir</span>
+              : user.status === 'stop' ? <span className="px-2 py-0.5 bg-destructive/20 text-destructive text-[10px] font-bold rounded border border-destructive/40">Dihentikan</span>
               : <span className="px-2 py-0.5 bg-muted text-white text-[10px] font-bold rounded">{user.status}</span>}
             </div>
             <div className="col-span-2"><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.expiredDate')}</span>
