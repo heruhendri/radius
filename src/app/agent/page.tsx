@@ -70,48 +70,39 @@ export default function AgentLoginPage() {
   };
 
   if (!brandLoaded) {
-    return <div className="min-h-screen bg-[#1a0f35]" />;
+    return <div className="min-h-screen bg-slate-50 dark:bg-slate-950" />;
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0f35] relative overflow-hidden flex items-center justify-center p-4">
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-700"></div>
-        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        {/* Grid Pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-100/50 dark:bg-blue-950/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-100/50 dark:bg-indigo-950/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-sm w-full relative z-10">
         {/* Header */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           {companyLogo ? (
-            <div className="inline-flex items-center justify-center rounded-2xl p-0.5 mb-4 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] shadow-[0_0_40px_rgba(188,19,254,0.5)]">
-              <div className="rounded-[14px] bg-white px-4 py-2">
-                <img src={companyLogo} alt={companyName} className="max-h-12 max-w-[120px] w-auto h-auto object-contain" />
-              </div>
+            <div className="inline-flex items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 shadow-sm mb-4">
+              <img src={companyLogo} alt={companyName} className="max-h-12 max-w-[120px] w-auto h-auto object-contain" />
             </div>
           ) : (
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-2xl shadow-[0_0_40px_rgba(188,19,254,0.5)] mb-4">
-              <Ticket className="w-8 h-8 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/25 mb-4">
+              <Ticket className="w-7 h-7 text-white" />
             </div>
           )}
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
             {t('agent.portal.title')}
           </h1>
-          <p className="text-sm text-[#e0d0ff]/80 mt-1">{t('agent.portal.loginSubtitle')}</p>
-          
-
+          <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mt-1">{t('agent.portal.loginSubtitle')}</p>
         </div>
 
         {/* Login Form Card */}
-        <div className="bg-[#1a0f35]/80 backdrop-blur-xl rounded-2xl border-2 border-[#bc13fe]/30 p-6 shadow-[0_0_50px_rgba(188,19,254,0.2)]">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="flex items-center gap-1.5 text-xs font-medium text-[#e0d0ff] mb-2">
-                <Phone className="w-3.5 h-3.5 text-[#00f7ff]" />
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                <Phone className="w-4 h-4" />
                 {t('agent.portal.phoneNumber')}
               </label>
               <input
@@ -120,21 +111,22 @@ export default function AgentLoginPage() {
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="08123456789"
                 required
-                className="w-full px-4 py-3 text-sm bg-[#0a0520] border-2 border-[#bc13fe]/30 rounded-xl text-white placeholder-[#e0d0ff]/40 focus:border-[#00f7ff] focus:ring-1 focus:ring-[#00f7ff]/50 focus:shadow-[0_0_20px_rgba(0,247,255,0.3)] transition-all outline-none"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all text-sm"
               />
             </div>
 
             {error && (
-              <div className="bg-[#ff4466]/10 border border-[#ff4466]/30 text-[#ff6b8a] px-3 py-2.5 rounded-xl text-xs flex items-center gap-2">
-                <Shield className="w-4 h-4 flex-shrink-0" />
-                {error}
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-xl">
+                <p className="text-sm text-red-600 dark:text-red-400 font-medium flex items-center gap-2">
+                  <Shield className="w-4 h-4 flex-shrink-0" />{error}
+                </p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#bc13fe] to-[#00f7ff] hover:from-[#a010e0] hover:to-[#00d4dd] disabled:from-gray-600 disabled:to-gray-600 text-white text-sm font-bold rounded-xl transition-all duration-300 shadow-[0_0_25px_rgba(188,19,254,0.4)] hover:shadow-[0_0_35px_rgba(188,19,254,0.6)] disabled:shadow-none"
+              className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow-indigo-500/20 hover:shadow-md flex items-center justify-center gap-2 mt-2"
             >
               {loading ? (
                 <><Loader2 className="w-4 h-4 animate-spin" />{t('agent.portal.loggingIn')}...</>
@@ -145,32 +137,33 @@ export default function AgentLoginPage() {
           </form>
 
           {/* Divider */}
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent to-[#bc13fe]/30"></div>
-            <span className="text-[10px] text-[#e0d0ff]/50 uppercase tracking-wider">{t('agent.portal.or')}</span>
-            <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-[#bc13fe]/30"></div>
-          </div>
+          {companyPhone && (
+            <>
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                <span className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider">{t('agent.portal.or')}</span>
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              </div>
 
-          {/* Contact Admin */}
-          {companyPhone && <div className="text-center">
-            <p className="text-xs text-[#e0d0ff]/70 mb-2">
-              {t('agent.portal.notRegistered')}
-            </p>
-            <a
-              href={`https://wa.me/${companyPhone}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-[#00ff88] hover:text-[#00f7ff] font-medium transition-colors"
-            >
-              <MessageCircle className="w-4 h-4" />
-              {t('agent.portal.contactAdmin')}
-            </a>
-          </div>}
+              <div className="text-center">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{t('agent.portal.notRegistered')}</p>
+                <a
+                  href={`https://wa.me/${companyPhone}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  {t('agent.portal.contactAdmin')}
+                </a>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-[#e0d0ff]/50 mt-6">
-          {poweredBy && <span className="text-[#00f7ff]">{poweredBy}</span>}
+        <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-8">
+          {poweredBy}
         </p>
       </div>
     </div>

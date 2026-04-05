@@ -49,15 +49,15 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   
-  /* Modern Blue-Cyan Colors - Professional Palette */
-  --neon-cyan: #06b6d4;
-  --neon-blue: #3b82f6;
-  --neon-violet: #8b5cf6;
-  --neon-sky: #0ea5e9;
-  --neon-green: #10b981;
-  --neon-orange: #f59e0b;
-  --neon-red: #ef4444;
-  --neon-emerald: #34d399;
+  /* Modern Blue/Indigo Accent Palette */
+  --blue-primary: #3b82f6;
+  --indigo-accent: #6366f1;
+  --violet-soft: #8b5cf6;
+  --sky-light: #0ea5e9;
+  --emerald-ok: #10b981;
+  --amber-warn: #f59e0b;
+  --red-err: #ef4444;
+  --slate-mid: #94a3b8;
 }
 
 /* Disable transitions/animations during theme toggle */
@@ -67,90 +67,79 @@
 }
 
 /* ===========================================
-   NEON CYBERPUNK THEME - Dark Only
-   Premium Futuristic Neon Purple/Cyan Design
+   MODERN CLEAN THEME — Blue/Indigo Professional
+   Dark: Slate-950 base + Blue-500 accent
+   Light: White base + Blue-600 accent
    =========================================== */
 
 :root {
-  /* Default to Dark Neon Theme - No Light Mode */
-  --radius: 0.75rem;
-  
-  /* Modern Background - Deep Navy */
-  --background: #0a0e1a;
-  --foreground: #ffffff;
-  
-  /* Card Colors - Brighter */
-  --card: rgba(30, 41, 59, 0.9);
-  --card-foreground: #ffffff;
+  --radius: 0.625rem;
+
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
   --popover: #1e293b;
-  --popover-foreground: #ffffff;
-  
-  /* Primary - Modern Cyan */
-  --primary: #06b6d4;
+  --popover-foreground: #f1f5f9;
+
+  --primary: #3b82f6;
   --primary-foreground: #ffffff;
-  
-  /* Secondary */
+
   --secondary: #334155;
-  --secondary-foreground: #ffffff;
-  
-  /* Muted - Brighter */
+  --secondary-foreground: #f1f5f9;
+
   --muted: #334155;
-  --muted-foreground: #cbd5e1;
-  
-  /* Accent - Professional Blue */
-  --accent: #3b82f6;
+  --muted-foreground: #94a3b8;
+
+  --accent: #6366f1;
   --accent-foreground: #ffffff;
-  
-  /* Status Colors - Modern Style */
+
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   --success: #10b981;
   --success-foreground: #ffffff;
   --warning: #f59e0b;
   --warning-foreground: #ffffff;
-  --info: #06b6d4;
+  --info: #3b82f6;
   --info-foreground: #ffffff;
-  
-  /* Borders & Inputs - Modern */
-  --border: rgba(6, 182, 212, 0.3);
+
+  --border: #334155;
   --input: #1e293b;
-  --ring: #06b6d4;
-  
-  /* Charts - Modern Palette */
-  --chart-1: #06b6d4;
-  --chart-2: #3b82f6;
+  --ring: #3b82f6;
+
+  --chart-1: #3b82f6;
+  --chart-2: #6366f1;
   --chart-3: #8b5cf6;
   --chart-4: #10b981;
   --chart-5: #f59e0b;
-  
-  /* Sidebar - Deep Navy */
-  --sidebar: #0b1120;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #06b6d4;
+
+  --sidebar: #0f172a;
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-primary: #3b82f6;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(6, 182, 212, 0.3);
-  --sidebar-ring: #06b6d4;
-  
+  --sidebar-accent-foreground: #f1f5f9;
+  --sidebar-border: #334155;
+  --sidebar-ring: #3b82f6;
+
   color-scheme: dark;
 }
 
-/* Force dark class to have same values */
 .dark {
-  --background: #0a0e1a;
-  --foreground: #ffffff;
-  --card: rgba(30, 41, 59, 0.9);
-  --card-foreground: #ffffff;
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
   --popover: #1e293b;
-  --popover-foreground: #ffffff;
-  --primary: #06b6d4;
+  --popover-foreground: #f1f5f9;
+  --primary: #3b82f6;
   --primary-foreground: #ffffff;
   --secondary: #334155;
-  --secondary-foreground: #ffffff;
+  --secondary-foreground: #f1f5f9;
   --muted: #334155;
-  --muted-foreground: #cbd5e1;
-  --accent: #3b82f6;
+  --muted-foreground: #94a3b8;
+  --accent: #6366f1;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
@@ -158,51 +147,50 @@
   --success-foreground: #ffffff;
   --warning: #f59e0b;
   --warning-foreground: #ffffff;
-  --info: #06b6d4;
+  --info: #3b82f6;
   --info-foreground: #ffffff;
-  --border: rgba(6, 182, 212, 0.3);
+  --border: #334155;
   --input: #1e293b;
-  --ring: #06b6d4;
-  --chart-1: #06b6d4;
-  --chart-2: #3b82f6;
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #6366f1;
   --chart-3: #8b5cf6;
   --chart-4: #10b981;
   --chart-5: #f59e0b;
-  --sidebar: #0b1120;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #06b6d4;
+  --sidebar: #0f172a;
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-primary: #3b82f6;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(6, 182, 212, 0.3);
-  --sidebar-ring: #06b6d4;
+  --sidebar-accent-foreground: #f1f5f9;
+  --sidebar-border: #334155;
+  --sidebar-ring: #3b82f6;
   color-scheme: dark;
 }
 
 /* ===========================================
-   LIGHT MODE — Professional Clean Theme
-   Neon accents preserved on white/slate base
+   LIGHT MODE — Modern Clean Professional
+   White base + Blue-600/Indigo accents
    =========================================== */
 :root:not(.dark) {
   --background: #ffffff;
-  --foreground: #111827;
+  --foreground: #0f172a;
 
   --card: #ffffff;
-  --card-foreground: #111827;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #111827;
+  --popover-foreground: #0f172a;
 
-  /* Keep cyan primary for brand consistency */
-  --primary: #0891b2;
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
 
   --secondary: #f1f5f9;
-  --secondary-foreground: #111827;
+  --secondary-foreground: #0f172a;
 
   --muted: #f1f5f9;
-  --muted-foreground: #374151;
+  --muted-foreground: #64748b;
 
-  --accent: #0ea5e9;
+  --accent: #4f46e5;
   --accent-foreground: #ffffff;
 
   --destructive: #dc2626;
@@ -211,28 +199,27 @@
   --success-foreground: #ffffff;
   --warning: #d97706;
   --warning-foreground: #ffffff;
-  --info: #0891b2;
+  --info: #2563eb;
   --info-foreground: #ffffff;
 
-  --border: #e5e7eb;
-  --input: #f9fafb;
-  --ring: #06b6d4;
+  --border: #e2e8f0;
+  --input: #f8fafc;
+  --ring: #3b82f6;
 
-  --chart-1: #0891b2;
-  --chart-2: #3b82f6;
+  --chart-1: #2563eb;
+  --chart-2: #4f46e5;
   --chart-3: #7c3aed;
   --chart-4: #059669;
   --chart-5: #d97706;
 
-  /* Sidebar — LIGHT theme to match */
   --sidebar: #ffffff;
-  --sidebar-foreground: #111827;
-  --sidebar-primary: #0891b2;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #2563eb;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f3f4f6;
-  --sidebar-accent-foreground: #111827;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #06b6d4;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #3b82f6;
 
   color-scheme: light;
 }
@@ -399,7 +386,7 @@ html.theme-transitioning *::after {
   color: var(--muted-foreground) !important;
 }
 
-/* --- 6. NEON CYAN TEXT (#00f7ff) → branded primary --- */
+/* --- 6. PRIMARY TEXT (#00f7ff neon cyan) → blue primary --- */
 :root:not(.dark) [class*="text-[#00f7ff]"] {
   color: var(--primary) !important;
 }
@@ -409,7 +396,7 @@ html.theme-transitioning *::after {
   color: #059669 !important;
 }
 :root:not(.dark) [class*="text-[#bc13fe]"] {
-  color: #7c3aed !important;
+  color: #4f46e5 !important;
 }
 :root:not(.dark) [class*="text-[#ff6b8a]"],
 :root:not(.dark) [class*="text-[#ff4466]"],
@@ -417,7 +404,7 @@ html.theme-transitioning *::after {
   color: #dc2626 !important;
 }
 :root:not(.dark) [class*="text-[#ff44cc]"] {
-  color: #db2777 !important;
+  color: #7c3aed !important;
 }
 :root:not(.dark) [class*="text-[#ff8c00]"] {
   color: #d97706 !important;
@@ -984,6 +971,87 @@ html.theme-transitioning *::after {
 :root:not(.dark) .text-teal-200 { color: #0d9488 !important; }
 :root:not(.dark) .text-indigo-200 { color: #4f46e5 !important; }
 
+/* =====================================================
+   DARK MODE — Remap legacy cyberpunk neon → Modern Blue
+   Prevents jarring neon purple/cyan in dark mode.
+   ===================================================== */
+
+/* Neon text colors → blue/indigo tones */
+.dark [class*="text-[#00f7ff]"] { color: #60a5fa !important; }
+.dark [class*="text-[#bc13fe]"] { color: #a5b4fc !important; }
+.dark [class*="text-[#ff44cc]"] { color: #a78bfa !important; }
+.dark [class*="text-[#e0d0ff]"] { color: #94a3b8 !important; }
+.dark [class*="text-[#00ff88]"] { color: #34d399 !important; }
+.dark [class*="text-[#ff4466]"],
+.dark [class*="text-[#ff3366]"] { color: #f87171 !important; }
+
+/* Neon border colors → slate borders */
+.dark [class*="border-[#bc13fe]"] { border-color: #334155 !important; }
+.dark [class*="border-[#00f7ff]"] { border-color: #334155 !important; }
+.dark [class*="border-[#ff44cc]"] { border-color: #334155 !important; }
+
+/* Neon background colors → slate/blue tints */
+.dark [class*="bg-[#1a0f35]"] { background-color: #0f172a !important; }
+.dark [class*="bg-[#1e1b2e]"] { background-color: #1e293b !important; }
+.dark [class*="bg-[#0f0a1e]"] { background-color: #0f172a !important; }
+.dark [class*="bg-[#0a0520]"] { background-color: #1e293b !important; }
+.dark [class*="bg-[#281441]"] { background-color: #1e293b !important; }
+.dark [class*="bg-[#1f1040]"] { background-color: #1e293b !important; }
+
+/* Neon BG opacity variants → blue/indigo tints */
+.dark [class*="bg-[#bc13fe]\/"] { background-color: rgba(99, 102, 241, 0.12) !important; }
+.dark [class*="bg-[#00f7ff]\/"] { background-color: rgba(59, 130, 246, 0.12) !important; }
+.dark [class*="bg-[#ff44cc]\/"] { background-color: rgba(99, 102, 241, 0.10) !important; }
+.dark [class*="bg-[#ff4466]\/"] { background-color: rgba(239, 68, 68, 0.10) !important; }
+.dark [class*="bg-[#00ff88]\/"] { background-color: rgba(16, 185, 129, 0.10) !important; }
+
+/* Neon ring/focus → blue */
+.dark [class*="ring-[#00f7ff]"],
+.dark [class*="ring-[#bc13fe]"] { --tw-ring-color: #3b82f6 !important; }
+
+/* Neon glow shadows → subtle blue shadows */
+.dark [class*="shadow-[0_0_"] { box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; }
+.dark [class*="drop-shadow-[0_0_"] { filter: none !important; }
+
+/* Hide neon glow blobs in dark mode */
+.dark .rounded-full.blur-3xl,
+.dark .rounded-full[class*="blur-"] {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Hide neon grid scan patterns */
+.dark [class*="bg-[linear-gradient(rgba(188,19,254"],
+.dark [class*="bg-[linear-gradient(rgba(0,255,255"],
+.dark [class*="bg-[repeating-linear-gradient"] { opacity: 0 !important; }
+
+/* Gradient backgrounds: from neon purple/dark → slate */
+.dark [class*="from-[#1a0f35]"],
+.dark [class*="from-[#0a0520]"] { --tw-gradient-from: #0f172a !important; }
+.dark [class*="via-[#1a0f35]"] { --tw-gradient-via: #1e293b !important; }
+.dark [class*="to-[#1a0f35]"],
+.dark [class*="to-[#0a0520]"] { --tw-gradient-to: #1e293b !important; }
+
+/* Sidebar neon top line → subtle */
+.dark .via-cyan-400 { --tw-gradient-via: #334155 !important; }
+.dark [class*="border-cyan-400"] { border-color: #334155 !important; }
+.dark [class*="border-cyan-500"] { border-color: #334155 !important; }
+.dark .text-cyan-400 { color: #60a5fa !important; }
+.dark .text-cyan-400\/45 { color: rgba(96, 165, 250, 0.45) !important; }
+.dark .text-cyan-400\/60 { color: rgba(96, 165, 250, 0.60) !important; }
+.dark .text-cyan-400\/70 { color: rgba(96, 165, 250, 0.70) !important; }
+.dark .text-cyan-400\/80 { color: rgba(96, 165, 250, 0.80) !important; }
+
+/* Sidebar active bg */
+.dark .bg-cyan-500\/10 { background-color: rgba(59, 130, 246, 0.12) !important; }
+
+/* Gradient text: from-[#00f7ff] via-white to-[#ff44cc] → blue-indigo */
+.dark .bg-clip-text[class*="from-[#00f7ff]"],
+.dark .bg-clip-text[class*="from-[#bc13fe]"] {
+  background-image: linear-gradient(to right, #60a5fa, #a5b4fc) !important;
+}
+
 /* --- 60. BG with low opacity → slightly visible on white --- */
 :root:not(.dark) [class*="bg-green-500/10"],
 :root:not(.dark) [class*="bg-green-500/20"] {
@@ -1122,26 +1190,24 @@ div[style*="z-index: 9999"].fixed.inset-0 {
     }
   }
   
-  /* Cyberpunk Neon Scrollbar */
+  /* Scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   
   ::-webkit-scrollbar-track {
-    background: #0a0e1a;
+    background: #1e293b;
     border-radius: 4px;
   }
   
   ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #06b6d4 0%, #3b82f6 100%);
+    background: linear-gradient(180deg, #3b82f6 0%, #6366f1 100%);
     border-radius: 4px;
-    box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #06b6d4 0%, #3b82f6 50%, #06b6d4 100%);
-    box-shadow: 0 0 20px rgba(6, 182, 212, 0.8);
+    background: linear-gradient(180deg, #60a5fa 0%, #818cf8 100%);
   }
   
   /* Light mode scrollbar */
@@ -1150,11 +1216,11 @@ div[style*="z-index: 9999"].fixed.inset-0 {
   }
   
   :root:not(.dark) ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #06b6d4 0%, #3b82f6 100%);
+    background: linear-gradient(180deg, #3b82f6 0%, #6366f1 100%);
     box-shadow: none;
   }
   
-  /* Cyber scrollbar class */
+  /* Scrollbar class */
   .cyber-scrollbar::-webkit-scrollbar {
     width: 6px;
   }
@@ -1164,11 +1230,11 @@ div[style*="z-index: 9999"].fixed.inset-0 {
   }
   
   .cyber-scrollbar::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, rgba(6, 182, 212, 0.5), rgba(59, 130, 246, 0.5));
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.5), rgba(99, 102, 241, 0.5));
     border-radius: 3px;
   }
   
-  /* Typography - Cyberpunk style */
+  /* Typography */
   h1 { @apply text-lg sm:text-xl font-bold tracking-wide; }
   h2 { @apply text-base sm:text-lg font-bold tracking-wide; }
   h3 { @apply text-sm sm:text-base font-semibold; }

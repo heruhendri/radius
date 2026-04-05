@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Smartphone, Lock, ArrowRight, Loader2, ChevronLeft, Wifi, Sun, Moon } from 'lucide-react';
-import { CyberCard } from '@/components/cyberpunk';
-import { CyberButton } from '@/components/cyberpunk';
 import { useTheme } from '@/hooks/useTheme';
 
 export default function CustomerLoginPage() {
@@ -141,150 +139,89 @@ export default function CustomerLoginPage() {
   };
 
   if (!brandLoaded) {
-    return <div className={`min-h-screen ${isDark ? 'bg-[#1a0f35]' : 'bg-slate-100'}`} />;
+    return <div className="min-h-screen bg-slate-50 dark:bg-slate-950" />;
   }
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300 ${
-      isDark ? 'bg-[#1a0f35]' : 'bg-slate-100'
-    }`}>
-      {/* Cyberpunk Background Effects */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        {isDark && (
-          <>
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#bc13fe]/35 rounded-full blur-[100px]" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#ff44cc]/25 rounded-full blur-[100px]" />
-            <div className="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] w-[60%] h-[60%] bg-[#00f7ff]/15 rounded-full blur-[150px]" />
-          </>
-        )}
-        {/* Grid pattern */}
-        <div className={`absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.1)_1px,transparent_1px)] bg-[size:50px_50px] ${
-          isDark ? 'opacity-100' : 'opacity-20'
-        }`} />
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300">
+      {/* Decorative blobs */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-100/50 dark:bg-blue-950/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-100/50 dark:bg-indigo-950/20 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Theme toggle button */}
+      {/* Theme toggle */}
       <button
         onClick={toggleTheme}
-        className={`absolute top-4 right-4 z-20 p-2 rounded-xl border transition-all ${
-          isDark
-            ? 'border-[#bc13fe]/30 bg-[#bc13fe]/10 hover:bg-[#bc13fe]/20 text-[#bc13fe]'
-            : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-600'
-        }`}
+        className="absolute top-4 right-4 z-20 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all shadow-sm"
         title={isDark ? 'Mode Terang' : 'Mode Gelap'}
       >
-        {isDark
-          ? <Sun className="w-4 h-4 text-yellow-400" />
-          : <Moon className="w-4 h-4 text-slate-500" />
-        }
+        {isDark ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-slate-500" />}
       </button>
 
-      <div className="w-full max-w-md relative z-10">
+      <div className="w-full max-w-sm relative z-10">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-3">
+          <div className="flex items-center justify-center gap-3 mb-4">
             {companyLogo ? (
-              <div className={`inline-flex items-center justify-center bg-white p-2 border-2 rounded-xl shadow-[0_0_30px_rgba(188,19,254,0.5)] px-3 py-2 flex-shrink-0 ${
-                isDark ? 'border-[#bc13fe]/50' : 'border-purple-300'
-              }`}>
+              <div className="inline-flex items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 shadow-sm flex-shrink-0">
                 <img src={companyLogo} alt={companyName} className="max-h-10 max-w-[100px] w-auto h-auto object-contain" />
               </div>
             ) : (
-              <div className={`inline-flex items-center justify-center w-12 h-12 bg-white p-2 border-2 rounded-xl shadow-[0_0_30px_rgba(188,19,254,0.5)] flex-shrink-0 group ${
-                isDark ? 'border-[#bc13fe]/50' : 'border-purple-300'
-              }`}>
-                <Shield className="w-6 h-6 text-[#bc13fe] group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_15px_rgba(188,19,254,0.9)]" />
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-600 rounded-2xl shadow-lg shadow-blue-500/25 flex-shrink-0">
+                <Shield className="w-6 h-6 text-white" />
               </div>
             )}
-            <h1 className={`text-xl sm:text-2xl font-bold leading-tight text-left max-w-[200px] ${
-              isDark
-                ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] drop-shadow-[0_0_25px_rgba(188,19,254,0.6)]'
-                : 'text-slate-800'
-            }`}>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 leading-tight text-left max-w-[200px]">
               {companyName}
             </h1>
           </div>
-          <p className={`text-sm tracking-[0.3em] uppercase font-medium ${
-            isDark ? 'text-[#e0d0ff]/80' : 'text-slate-500'
-          }`}>
-            Portal Pelanggan
-          </p>
+          <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold">Portal Pelanggan</p>
         </div>
 
-        {/* Login Form */}
-        <CyberCard className={`p-8 backdrop-blur-xl border-2 shadow-[0_0_50px_rgba(188,19,254,0.2)] ${
-          isDark ? 'bg-[#281441]/90 border-[#bc13fe]/30' : 'bg-white border-purple-200'
-        }`}>
+        {/* Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 p-8">
+
           {error && (
-            <div className={`mb-6 p-4 rounded-lg ${
-              isDark
-                ? 'bg-[#ff3366]/10 border border-[#ff3366]/50 shadow-[0_0_20px_rgba(255,51,102,0.3)]'
-                : 'bg-red-50 border border-red-200'
-            }`}>
-              <p className={`text-sm font-medium flex items-center gap-2 ${
-                isDark ? 'text-[#ff3366]' : 'text-red-600'
-              }`}>
-                <span className={`w-2 h-2 rounded-full animate-pulse ${
-                  isDark ? 'bg-[#ff3366]' : 'bg-red-500'
-                }`} />
-                {error}
-              </p>
+            <div className="mb-5 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-xl">
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
             </div>
           )}
 
           {step === 'phone' ? (
-            <form onSubmit={handleSendOTP} className="space-y-6">
-              <div className="space-y-2">
-                <label className={`flex items-center gap-2 text-sm font-bold mb-2 uppercase tracking-wider ${
-                  isDark ? 'text-[#00f7ff] drop-shadow-[0_0_8px_rgba(0,247,255,0.6)]' : 'text-purple-700'
-                }`}>
+            <form onSubmit={handleSendOTP} className="space-y-5">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   <Smartphone className="w-4 h-4" />
                   Nomor HP / ID Pelanggan
                 </label>
-                <div className="relative group">
-                  <input
-                    type="text"
-                    required
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    className={`w-full px-4 py-3 text-sm border-2 rounded-lg transition-all duration-300 outline-none ${
-                      isDark
-                        ? 'bg-[#1f1040]/80 border-[#bc13fe]/30 text-white placeholder:text-[#e0d0ff]/50 focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/30 focus:shadow-[0_0_25px_rgba(188,19,254,0.4)]'
-                        : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-200'
-                    }`}
-                    placeholder="08123456789 atau ID Pelanggan"
-                    disabled={loading}
-                  />
-                  {isDark && <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#bc13fe]/10 to-[#ff44cc]/10 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300" />}
-                </div>
-                <p className={`text-xs ${ isDark ? 'text-[#e0d0ff]/60' : 'text-slate-500' }`}>
-                  Masukkan nomor WhatsApp terdaftar atau ID Pelanggan 8 digit
+                <input
+                  type="text"
+                  required
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:focus:border-blue-400 transition-all text-sm"
+                  placeholder="08123456789 atau ID Pelanggan"
+                  disabled={loading}
+                />
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                  Nomor WhatsApp terdaftar atau ID Pelanggan 8 digit
                 </p>
               </div>
 
-              <CyberButton
+              <button
                 type="submit"
                 disabled={loading}
-                className="w-full"
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow-blue-500/20 hover:shadow-md flex items-center justify-center gap-2 mt-2"
               >
                 {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Memproses...
-                  </>
+                  <><Loader2 className="w-4 h-4 animate-spin" />Memproses...</>
                 ) : (
-                  <>
-                    Masuk
-                    <ArrowRight className="w-4 h-4" />
-                  </>
+                  <>Masuk<ArrowRight className="w-4 h-4" /></>
                 )}
-              </CyberButton>
+              </button>
 
-              {/* Bypass login if OTP send failed */}
               {otpSendFailed && userDataForBypass && (
-                <CyberButton
+                <button
                   type="button"
-                  variant="destructive"
                   onClick={async () => {
                     setLoading(true);
                     try {
@@ -301,24 +238,23 @@ export default function CustomerLoginPage() {
                       } else {
                         setError(bypassData.error || 'Login gagal');
                       }
-                    } catch (err) {
+                    } catch {
                       setError('Terjadi kesalahan saat login');
                     } finally {
                       setLoading(false);
                     }
                   }}
-                  className="w-full mt-4"
+                  disabled={loading}
+                  className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
                 >
                   Emergency Bypass (Tanpa OTP)
-                </CyberButton>
+                </button>
               )}
             </form>
           ) : (
-            <form onSubmit={handleVerifyOTP} className="space-y-6">
-              <div className="space-y-2">
-                <label className={`flex items-center gap-2 text-sm font-bold mb-2 uppercase tracking-wider ${
-                  isDark ? 'text-[#00f7ff] drop-shadow-[0_0_8px_rgba(0,247,255,0.6)]' : 'text-purple-700'
-                }`}>
+            <form onSubmit={handleVerifyOTP} className="space-y-5">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   <Lock className="w-4 h-4" />
                   Kode Keamanan
                 </label>
@@ -327,59 +263,41 @@ export default function CustomerLoginPage() {
                   required
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').substring(0, 6))}
-                  className={`w-full px-4 py-3 text-2xl text-center font-mono tracking-[0.5em] border-2 rounded-lg transition-all duration-300 outline-none ${
-                    isDark
-                      ? 'bg-[#1f1040]/80 border-[#bc13fe]/30 text-[#00f7ff] focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/30 focus:shadow-[0_0_30px_rgba(188,19,254,0.5)]'
-                      : 'bg-slate-50 border-slate-200 text-purple-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-200'
-                  }`}
+                  className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:focus:border-blue-400 transition-all"
                   placeholder="000000"
                   maxLength={6}
                   disabled={loading}
                   autoFocus
                 />
-                <p className={`text-xs text-center ${ isDark ? 'text-[#e0d0ff]/60' : 'text-slate-500' }`}>
-                  Kode dikirim ke <strong className={isDark ? 'text-[#00f7ff]' : 'text-purple-600'}>{identifier}</strong>
-                  <br />
-                  Berlaku {expiresIn} menit
+                <p className="text-xs text-center text-slate-400 dark:text-slate-500 mt-2">
+                  Kode dikirim ke <strong className="text-blue-600 dark:text-blue-400">{identifier}</strong>
+                  <br />Berlaku {expiresIn} menit
                 </p>
               </div>
 
               <div className="flex gap-3">
-                <CyberButton
+                <button
                   type="button"
-                  variant="ghost"
                   onClick={handleBack}
                   disabled={loading}
-                  className="flex-1"
+                  className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
                 >
-                  <ChevronLeft className="w-4 h-4" />
-                  Kembali
-                </CyberButton>
-                <CyberButton
+                  <ChevronLeft className="w-4 h-4" />Kembali
+                </button>
+                <button
                   type="submit"
                   disabled={loading || otp.length !== 6}
-                  className="flex-[2]"
+                  className="flex-[2] py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Memverifikasi...
-                    </>
-                  ) : (
-                    'Verifikasi'
-                  )}
-                </CyberButton>
+                  {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Memverifikasi...</> : 'Verifikasi'}
+                </button>
               </div>
 
               <button
                 type="button"
-                onClick={() => {
-                  setStep('phone');
-                  setOtp('');
-                  setError('');
-                }}
+                onClick={() => { setStep('phone'); setOtp(''); setError(''); }}
                 disabled={loading}
-                className="w-full text-xs text-[#bc13fe]/70 hover:text-[#ff44cc] hover:underline transition-all"
+                className="w-full text-xs text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
                 Kirim Ulang Kode
               </button>
@@ -388,59 +306,47 @@ export default function CustomerLoginPage() {
 
           {/* Register Buttons */}
           {step === 'phone' && (
-            <div className={`mt-8 pt-6 border-t ${ isDark ? 'border-[#bc13fe]/20' : 'border-slate-200' }`}>
-              <p className={`text-xs mb-4 text-center uppercase tracking-[0.2em] font-medium ${
-                isDark ? 'text-[#e0d0ff]/60' : 'text-slate-500'
-              }`}>
-                Pendaftaran Baru
-              </p>
+            <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-700">
+              <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-3 uppercase tracking-wider font-medium">Pendaftaran Baru</p>
               <div className="grid grid-cols-2 gap-3">
-                <CyberButton
-                  variant="outline"
+                <button
+                  type="button"
                   onClick={() => router.push('/daftar')}
-                  className="text-xs px-2"
+                  className="py-2.5 px-3 bg-slate-50 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-xl transition-all"
                 >
                   Daftar Pelanggan
-                </CyberButton>
-                <CyberButton
-                  variant="outline"
+                </button>
+                <button
+                  type="button"
                   onClick={() => router.push('/agent')}
-                  className="text-xs px-2"
+                  className="py-2.5 px-3 bg-slate-50 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-xl transition-all"
                 >
                   Daftar Agen
-                </CyberButton>
+                </button>
               </div>
             </div>
           )}
 
-          {/* Buy Voucher Button */}
           {step === 'phone' && (
-            <div className="mt-4">
-              <CyberButton
-                variant="glass"
+            <div className="mt-3">
+              <button
+                type="button"
                 onClick={() => router.push('/evoucher')}
-                className="w-full text-xs"
+                className="w-full py-2.5 bg-slate-50 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-xl transition-all flex items-center justify-center gap-2"
               >
                 <Wifi className="w-4 h-4" />
                 Beli Voucher WiFi
-              </CyberButton>
+              </button>
             </div>
           )}
-        </CyberCard>
+        </div>
 
         {/* Footer */}
-        <p className={`text-center text-xs mt-8 font-mono tracking-wider ${
-          isDark ? 'text-[#bc13fe]/40' : 'text-slate-400'
-        }`}>
-          {footerText}
-        </p>
-        {/* Admin access link */}
+        <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-8">{footerText}</p>
         <p className="text-center mt-3">
           <a
             href="/admin/login"
-            className={`text-xs transition-colors font-mono tracking-wider ${
-              isDark ? 'text-[#e0d0ff]/30 hover:text-[#00f7ff]/70' : 'text-slate-400 hover:text-purple-600'
-            }`}
+            className="text-xs text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             Admin? Masuk di sini →
           </a>

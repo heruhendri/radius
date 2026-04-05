@@ -8,11 +8,9 @@ import { useTranslation } from '@/hooks/useTranslation';
 
 type Step = 'credentials' | 'twoFactor';
 
-// Set default theme on login page
 if (typeof window !== 'undefined') {
   const savedTheme = localStorage.getItem('theme');
   if (!savedTheme) {
-    // Default to dark mode for cyberpunk theme
     document.documentElement.classList.add('dark');
     localStorage.setItem('theme', 'dark');
   } else if (savedTheme === 'dark') {
@@ -186,59 +184,55 @@ function LoginForm() {
   };
 
   if (!brandLoaded) {
-    return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-[#1a0f35] to-slate-900" />;
+    return <div className="min-h-screen bg-slate-50 dark:bg-slate-950" />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-[#1a0f35] to-slate-900 relative overflow-hidden flex items-center justify-center p-4">
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#bc13fe]/20 rounded-full blur-[120px] animate-pulse"></div>
-        <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-[#00f7ff]/20 rounded-full blur-[100px] animate-pulse delay-700"></div>
-        <div className="absolute bottom-0 left-1/2 w-[600px] h-[400px] bg-[#ff44cc]/15 rounded-full blur-[150px] animate-pulse delay-1000"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-100/50 dark:bg-blue-950/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-100/50 dark:bg-indigo-950/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-sm relative z-10">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-3">
+          <div className="flex items-center justify-center gap-3 mb-4">
             {companyLogo ? (
-              <div className="inline-flex items-center justify-center rounded-xl border-2 border-white/20 bg-white p-2 backdrop-blur-md shadow-[0_0_40px_rgba(188,19,254,0.4)] px-3 py-2 flex-shrink-0">
+              <div className="inline-flex items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 shadow-sm flex-shrink-0">
                 <img src={companyLogo} alt={companyName} className="max-h-10 max-w-[100px] w-auto h-auto object-contain" />
               </div>
             ) : (
-              <div className={`inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br rounded-xl border-2 transition-all duration-500 flex-shrink-0 ${
+              <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl flex-shrink-0 transition-all duration-300 ${
                 step === 'twoFactor'
-                  ? 'from-[#00f7ff] to-[#bc13fe] shadow-[0_0_40px_rgba(0,247,255,0.5)] border-[#00f7ff]/40'
-                  : 'from-[#bc13fe] to-[#00f7ff] shadow-[0_0_40px_rgba(188,19,254,0.5)] border-[#bc13fe]/40'
+                  ? 'bg-indigo-600 shadow-lg shadow-indigo-500/25'
+                  : 'bg-blue-600 shadow-lg shadow-blue-500/25'
               }`}>
                 {step === 'twoFactor'
-                  ? <Smartphone className="w-6 h-6 text-foreground" />
-                  : <Shield className="w-6 h-6 text-foreground" />
+                  ? <Smartphone className="w-6 h-6 text-white" />
+                  : <Shield className="w-6 h-6 text-white" />
                 }
               </div>
             )}
-              <h1 className="text-xl sm:text-2xl font-bold leading-tight text-left text-transparent bg-clip-text bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] drop-shadow-[0_0_20px_rgba(0,247,255,0.5)] max-w-[200px]">
-                {companyName}
-              </h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 leading-tight text-left max-w-[200px]">
+              {companyName}
+            </h1>
           </div>
-          <p className="text-sm text-[#00f7ff] font-mono uppercase tracking-widest">
+          <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold">
             {step === 'twoFactor' ? 'Autentikasi 2 Faktor' : t('auth.adminControlPanel')}
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-3xl border-2 border-[#bc13fe]/30 shadow-[0_0_50px_rgba(188,19,254,0.2)] p-8">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 p-8">
 
           {/* Idle Logout Notice */}
           {idleLogout && step === 'credentials' && (
-            <div className="mb-5 p-4 bg-amber-500/10 border-2 border-amber-500/40 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+            <div className="mb-5 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl">
               <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-amber-400 flex-shrink-0 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+                <Clock className="w-5 h-5 text-amber-500 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-bold text-amber-400">{t('auth.sessionExpired')}</p>
-                  <p className="text-xs text-amber-300/80 mt-0.5">{t('auth.sessionExpiredDesc')}</p>
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">{t('auth.sessionExpired')}</p>
+                  <p className="text-xs text-amber-600/80 dark:text-amber-500/80 mt-0.5">{t('auth.sessionExpiredDesc')}</p>
                 </div>
               </div>
             </div>
@@ -246,8 +240,8 @@ function LoginForm() {
 
           {/* Error */}
           {error && (
-            <div className="mb-5 p-4 bg-red-500/10 border-2 border-red-500/40 rounded-xl">
-              <p className="text-sm text-red-400 font-medium">{error}</p>
+            <div className="mb-5 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-xl">
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
             </div>
           )}
 
@@ -255,7 +249,7 @@ function LoginForm() {
           {step === 'credentials' && (
             <form onSubmit={handleCredentialsSubmit} className="space-y-5">
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-[#00f7ff] mb-3 uppercase tracking-wider">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   <User className="w-4 h-4" />
                   {t('auth.username')}
                 </label>
@@ -265,14 +259,14 @@ function LoginForm() {
                   autoComplete="username"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-4 py-3.5 bg-slate-900/80 border-2 border-[#bc13fe]/40 rounded-xl text-white placeholder-[#e0d0ff]/40 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 focus:shadow-[0_0_20px_rgba(0,247,255,0.2)] transition-all text-sm"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:focus:border-blue-400 transition-all text-sm"
                   placeholder={t('auth.enterUsername')}
                   disabled={loading}
                 />
               </div>
 
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-[#00f7ff] mb-3 uppercase tracking-wider">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   <Lock className="w-4 h-4" />
                   {t('auth.password')}
                 </label>
@@ -283,14 +277,14 @@ function LoginForm() {
                     autoComplete="current-password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-4 py-3.5 bg-slate-900/80 border-2 border-[#bc13fe]/40 rounded-xl text-white placeholder-[#e0d0ff]/40 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 focus:shadow-[0_0_20px_rgba(0,247,255,0.2)] transition-all pr-12 text-sm"
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:focus:border-blue-400 transition-all pr-12 text-sm"
                     placeholder={t('auth.enterPassword')}
                     disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-[#00f7ff] transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                     disabled={loading}
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -301,7 +295,7 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-gradient-to-r from-[#00f7ff] to-[#00d4e6] hover:shadow-[0_0_40px_rgba(0,247,255,0.5)] disabled:opacity-50 disabled:shadow-none text-black text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-3 mt-6"
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow-blue-500/20 hover:shadow-md flex items-center justify-center gap-2 mt-2"
               >
                 {loading ? (
                   <><Loader2 className="w-5 h-5 animate-spin" />{t('auth.signingIn')}</>
@@ -316,12 +310,12 @@ function LoginForm() {
           {step === 'twoFactor' && (
             <form onSubmit={handleTwoFactorSubmit} className="space-y-5">
               {/* Info banner */}
-              <div className="p-4 bg-[#00f7ff]/10 border-2 border-[#00f7ff]/30 rounded-xl">
+              <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700/50 rounded-xl">
                 <div className="flex items-start gap-3">
-                  <Smartphone className="w-5 h-5 text-[#00f7ff] flex-shrink-0 mt-0.5 drop-shadow-[0_0_8px_rgba(0,247,255,0.8)]" />
+                  <Smartphone className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-bold text-[#00f7ff]">Kode Autentikator Diperlukan</p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">Kode Autentikator Diperlukan</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                       Buka aplikasi autentikator Anda (Google Authenticator, Authy, dll.) dan masukkan kode 6 digit.
                     </p>
                   </div>
@@ -329,7 +323,7 @@ function LoginForm() {
               </div>
 
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-[#00f7ff] mb-3 uppercase tracking-wider">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   <KeyRound className="w-4 h-4" />
                   Kode Autentikator
                 </label>
@@ -341,18 +335,18 @@ function LoginForm() {
                   required
                   value={tfaCode}
                   onChange={(e) => handleTfaCodeChange(e.target.value)}
-                  className="login-input-2fa w-full px-4 py-4 bg-slate-900/80 border-2 border-[#00f7ff]/40 rounded-xl text-white text-center text-2xl font-mono tracking-[0.5em] placeholder-[#e0d0ff]/30 focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 focus:shadow-[0_0_20px_rgba(0,247,255,0.2)] transition-all"
+                  className="login-input-2fa w-full px-4 py-4 bg-slate-900 border-2 border-indigo-500/40 rounded-xl text-white text-center text-2xl font-mono tracking-[0.5em] placeholder:text-slate-600 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
                   placeholder="000 000"
                   disabled={loading}
                   maxLength={7}
                 />
-                <p className="text-xs text-muted-foreground text-center mt-2">Sesi ini berakhir dalam 10 menit</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-2">Sesi ini berakhir dalam 10 menit</p>
               </div>
 
               <button
                 type="submit"
                 disabled={loading || tfaCode.replace(/\s/g, '').length < 6}
-                className="w-full py-4 bg-gradient-to-r from-[#00f7ff] to-[#00d4e6] hover:shadow-[0_0_40px_rgba(0,247,255,0.5)] disabled:opacity-50 disabled:shadow-none text-black text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-3"
+                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow-indigo-500/20 hover:shadow-md flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <><Loader2 className="w-5 h-5 animate-spin" />Memverifikasi...</>
@@ -365,7 +359,7 @@ function LoginForm() {
                 type="button"
                 onClick={handleBackToCredentials}
                 disabled={loading}
-                className="w-full text-sm text-muted-foreground hover:text-[#00f7ff] transition-colors flex items-center justify-center gap-2 pt-1"
+                className="w-full text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-center gap-2 pt-1"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Kembali ke Login
@@ -375,7 +369,7 @@ function LoginForm() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-[#e0d0ff]/40 mt-8 font-mono uppercase tracking-widest">
+        <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-8">
           {footerText}
         </p>
       </div>
@@ -386,8 +380,8 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-[#1a0f35] to-slate-900 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
       </div>
     }>
       <LoginForm />
