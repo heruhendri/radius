@@ -652,7 +652,7 @@ export default function ParameterConfigPage() {
                             parameterPaths: newPaths.filter(p => p !== '' || newPaths.length === 1)
                           });
                         }}
-                        className="flex-1 px-3 py-2 border-2 border-[#bc13fe]/30 rounded-lg focus:ring-1 focus:ring-[#00f7ff]/50 focus:border-[#00f7ff] bg-[#0a0520] text-white font-mono text-sm outline-none transition-all"
+                        className="flex-1 px-3 py-2 border-2 border-[#bc13fe]/30 rounded-lg focus:ring-1 focus:ring-[#00f7ff]/50 focus:border-[#00f7ff] bg-background dark:bg-[#0a0520] text-foreground font-mono text-sm outline-none transition-all"
                       />
                       {(editingConfig.parameterPaths || []).length > 1 && (
                         <button
@@ -711,7 +711,7 @@ export default function ParameterConfigPage() {
                         e.target.value = '';
                       }
                     }}
-                    className="w-full px-3 py-2 border-2 border-[#bc13fe]/30 rounded-lg focus:ring-1 focus:ring-[#00f7ff]/50 focus:border-[#00f7ff] bg-[#0a0520] text-white text-sm outline-none transition-all appearance-none cursor-pointer"
+                    className="w-full px-3 py-2 border-2 border-[#bc13fe]/30 rounded-lg focus:ring-1 focus:ring-[#00f7ff]/50 focus:border-[#00f7ff] bg-background dark:bg-[#0a0520] text-foreground text-sm outline-none transition-all appearance-none cursor-pointer"
                   >
                     <option value="" className="bg-[#0a0520]">{t('genieacs.selectToAdd')}</option>
                     {virtualParameters.map((vp) => (

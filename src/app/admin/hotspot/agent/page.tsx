@@ -735,7 +735,7 @@ export default function AgentPage() {
               <ModalTextarea value={balanceNote} onChange={(e) => setBalanceNote(e.target.value)} placeholder={t('common.optional')} rows={2} />
             </div>
             {balanceAmount && selectedAgentForBalance && !isNaN(parseInt(balanceAmount)) && (
-              <div className="bg-[#0a0520] rounded-lg p-2 text-xs border border-[#bc13fe]/30">
+              <div className="bg-muted/50 dark:bg-[#0a0520] rounded-lg p-2 text-xs border border-[#bc13fe]/30">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('agent.newBalance')}:</span>
                   <span className="font-bold text-[#00f7ff]">{formatCurrency(balanceType === 'add' ? selectedAgentForBalance.balance + parseInt(balanceAmount) : selectedAgentForBalance.balance - parseInt(balanceAmount))}</span>

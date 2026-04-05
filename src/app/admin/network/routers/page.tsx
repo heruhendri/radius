@@ -642,9 +642,9 @@ export default function RouterPage() {
                     className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
                     required
                   >
-                    <option value="mikrotik" className="bg-slate-800">{t('network.mikrotikRouter')}</option>
-                    <option value="gateway" className="bg-slate-800">{t('network.gatewayVps')}</option>
-                    <option value="other" className="bg-slate-800">{t('network.other')}</option>
+                    <option value="mikrotik" className="bg-background dark:bg-slate-800">{t('network.mikrotikRouter')}</option>
+                    <option value="gateway" className="bg-background dark:bg-slate-800">{t('network.gatewayVps')}</option>
+                    <option value="other" className="bg-background dark:bg-slate-800">{t('network.other')}</option>
                   </select>
                 </div>
 
@@ -658,7 +658,7 @@ export default function RouterPage() {
                         setUseVpnClient(e.target.checked)
                         if (!e.target.checked) setFormData({ ...formData, vpnClientId: '' })
                       }}
-                      className="w-5 h-5 rounded border-[#bc13fe]/50 bg-slate-900 text-[#00f7ff]"
+                      className="w-5 h-5 rounded border-[#bc13fe]/50 bg-background dark:bg-slate-900 text-[#00f7ff]"
                     />
                     <div>
                       <span className="text-sm font-medium text-foreground">{t('network.connectViaVpn')}</span>
@@ -677,9 +677,9 @@ export default function RouterPage() {
                       className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
                       required={useVpnClient}
                     >
-                      <option value="" className="bg-slate-800">{t('network.selectVpnClient')}</option>
+                      <option value="" className="bg-background dark:bg-slate-800">{t('network.selectVpnClient')}</option>
                       {vpnClients.map((vpn) => (
-                        <option key={vpn.id} value={vpn.id} className="bg-slate-800">
+                        <option key={vpn.id} value={vpn.id} className="bg-background dark:bg-slate-800">
                           {vpn.name} ({vpn.vpnIp}) {vpn.isRadiusServer ? '★' : ''}
                         </option>
                       ))}

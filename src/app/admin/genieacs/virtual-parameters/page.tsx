@@ -473,7 +473,7 @@ export default function VirtualParametersPage() {
                   <p className="text-[11px] text-muted-foreground">{t('genieacs.expressionHint')}</p>
                   <details className="text-[11px] text-muted-foreground">
                     <summary className="cursor-pointer text-[#00f7ff] hover:underline">{t('genieacs.viewExpressionExamples')}</summary>
-                    <div className="mt-2 p-2 bg-[#0a0520]/50 rounded border border-[#bc13fe]/20 space-y-2">
+                    <div className="mt-2 p-2 bg-muted/50 dark:bg-[#0a0520]/50 rounded border border-[#bc13fe]/20 space-y-2">
                       <div>
                         <p className="font-semibold text-foreground">1. Uptime (detik):</p>
                         <pre className="text-[10px] overflow-x-auto text-[#00f7ff]/80">{`let uptime = declare("Device.DeviceInfo.UpTime", {value: Date.now()}).value[0];
@@ -510,7 +510,7 @@ return user || "N/A";`}</pre>
                       type="checkbox"
                       checked={form.isActive}
                       onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                      className="rounded border-[#bc13fe]/40 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]/50"
+                      className="rounded border-[#bc13fe]/40 bg-background dark:bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]/50"
                     />
                     {t('genieacs.activateThisParam')}
                   </label>
@@ -612,7 +612,7 @@ return user || "N/A";`}</pre>
                       type="checkbox"
                       checked={form.showInSummary}
                       onChange={(e) => setForm({ ...form, showInSummary: e.target.checked })}
-                      className="rounded border-[#bc13fe]/40 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]/50"
+                      className="rounded border-[#bc13fe]/40 bg-background dark:bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]/50"
                     />
                     {t('genieacs.showInSummary')}
                   </label>

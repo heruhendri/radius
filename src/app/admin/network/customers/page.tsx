@@ -577,10 +577,10 @@ export default function CustomerAssignmentPage() {
                   </div>
                 ) : (
                   <div className="relative">
-                    <input type="text" value={customerSearch} onChange={(e) => { setCustomerSearch(e.target.value); searchCustomers(e.target.value); }} placeholder={t('network.searchCustomerPlaceholder')} className="w-full px-3 py-2 text-xs bg-[#0a0520] border border-[#bc13fe]/40 rounded-lg text-foreground placeholder-[#e0d0ff]/40 focus:border-[#00f7ff] focus:ring-1 focus:ring-[#00f7ff]/30 transition-all" />
+                    <input type="text" value={customerSearch} onChange={(e) => { setCustomerSearch(e.target.value); searchCustomers(e.target.value); }} placeholder={t('network.searchCustomerPlaceholder')} className="w-full px-3 py-2 text-xs bg-background dark:bg-[#0a0520] border border-[#bc13fe]/40 rounded-lg text-foreground placeholder-[#e0d0ff]/40 focus:border-[#00f7ff] focus:ring-1 focus:ring-[#00f7ff]/30 transition-all" />
                     {isSearching && (<RefreshCcw className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-[#00f7ff]" />)}
                     {searchResults.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-[#0a0520] border border-[#bc13fe]/50 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      <div className="absolute z-10 w-full mt-1 bg-popover dark:bg-[#0a0520] border border-[#bc13fe]/50 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                         {searchResults.map(customer => (
                           <button key={customer.id} type="button" onClick={() => handleCustomerSelect(customer)} className="w-full px-3 py-2 text-left hover:bg-[#bc13fe]/20 transition-colors">
                             <div className="text-xs font-medium text-foreground">{customer.name}</div>
@@ -598,13 +598,13 @@ export default function CustomerAssignmentPage() {
                 <div>
                   <ModalLabel required>{t('network.selectOdp')} {loadingNearestOdps && (<RefreshCcw className="inline h-2.5 w-2.5 ml-1 animate-spin text-[#00f7ff]" />)}</ModalLabel>
                   {nearestOdps.length === 0 && !loadingNearestOdps ? (
-                    <div className="p-3 bg-[#0a0520]/50 border border-[#bc13fe]/30 rounded-lg text-xs text-muted-foreground text-center">
+                    <div className="p-3 bg-muted/50 dark:bg-[#0a0520]/50 border border-[#bc13fe]/30 rounded-lg text-xs text-muted-foreground text-center">
                       {selectedCustomer.latitude && selectedCustomer.longitude ? t('network.noOdpsFoundOrAvailable') : t('network.customerNoGpsShowingAll')}
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                       {nearestOdps.map(odp => (
-                        <button key={odp.id} type="button" onClick={() => handleOdpSelect(odp)} disabled={(odp.availablePorts?.length || 0) === 0} className={`p-2 text-left rounded-lg border transition-all ${selectedOdpId === odp.id ? 'bg-[#00f7ff]/20 border-[#00f7ff] shadow-[0_0_10px_rgba(0,247,255,0.3)]' : (odp.availablePorts?.length || 0) === 0 ? 'bg-[#0a0520]/50 border-[#bc13fe]/20 opacity-50 cursor-not-allowed' : 'border-[#bc13fe]/30 hover:border-[#00f7ff]/50'}`}>
+                        <button key={odp.id} type="button" onClick={() => handleOdpSelect(odp)} disabled={(odp.availablePorts?.length || 0) === 0} className={`p-2 text-left rounded-lg border transition-all ${selectedOdpId === odp.id ? 'bg-[#00f7ff]/20 border-[#00f7ff] shadow-[0_0_10px_rgba(0,247,255,0.3)]' : (odp.availablePorts?.length || 0) === 0 ? 'bg-muted/50 dark:bg-[#0a0520]/50 border-[#bc13fe]/20 opacity-50 cursor-not-allowed' : 'border-[#bc13fe]/30 hover:border-[#00f7ff]/50'}`}>
                           <div className="flex items-center gap-1">
                             <Box className="h-3 w-3 text-[#00f7ff]" />
                             <span className="text-xs font-medium text-foreground">{odp.name}</span>

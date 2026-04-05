@@ -144,10 +144,10 @@ export default function SecuritySettingsPage() {
 
       {/* ────────── STATUS PHASE ────────── */}
       {phase === 'status' && (
-        <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-[#bc13fe]/30 rounded-2xl p-6">
+        <div className="bg-card/80 dark:bg-gradient-to-br dark:from-slate-800/60 dark:to-slate-900/60 border border-[#bc13fe]/30 rounded-2xl p-6">
           <div className="flex items-start gap-4">
-            <div className={`p-3 rounded-xl ${enabled ? 'bg-green-500/20 border border-green-500/30' : 'bg-slate-700/50 border border-slate-600/50'}`}>
-              <Shield className={`w-7 h-7 ${enabled ? 'text-green-400' : 'text-slate-400'}`} />
+            <div className={`p-3 rounded-xl ${enabled ? 'bg-green-500/20 border border-green-500/30' : 'bg-muted dark:bg-slate-700/50 border border-border dark:border-slate-600/50'}`}>
+              <Shield className={`w-7 h-7 ${enabled ? 'text-green-400' : 'text-muted-foreground dark:text-slate-400'}`} />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">

@@ -242,13 +242,13 @@ export default function AgentVouchersPage() {
                 value={searchCode}
                 onChange={(e) => setSearchCode(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
-                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-white focus:border-[#00f7ff] outline-none"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-foreground dark:text-white focus:border-[#00f7ff] outline-none"
               />
             </div>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-white min-w-[100px] outline-none"
+              className="px-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-foreground dark:text-white min-w-[100px] outline-none"
             >
               <option value="">{t('agent.portal.allStatus')}</option>
               <option value="WAITING">{t('agent.portal.waiting')}</option>
@@ -258,7 +258,7 @@ export default function AgentVouchersPage() {
             <select
               value={filterProfile}
               onChange={(e) => setFilterProfile(e.target.value)}
-              className="px-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-white min-w-[120px] outline-none"
+              className="px-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-foreground dark:text-white min-w-[120px] outline-none"
             >
               <option value="">{t('agent.portal.allPackages')}</option>
               {profiles.map((p) => (
@@ -285,7 +285,7 @@ export default function AgentVouchersPage() {
               <select
                 value={perPage}
                 onChange={(e) => handlePerPageChange(parseInt(e.target.value))}
-                className="px-2 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-white outline-none"
+                className="px-2 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-foreground dark:text-white outline-none"
               >
                 <option value={20}>20</option>
                 <option value={50}>50</option>
@@ -314,7 +314,7 @@ export default function AgentVouchersPage() {
                         type="checkbox"
                         checked={selectedVouchers.includes(voucher.id)}
                         onChange={() => handleSelectVoucher(voucher.id)}
-                        className="rounded border-purple-400 dark:border-[#bc13fe]/50 bg-[#0a0520] flex-shrink-0 mt-0.5"
+                        className="rounded border-purple-400 dark:border-[#bc13fe]/50 bg-background dark:bg-[#0a0520] flex-shrink-0 mt-0.5"
                       />
                     )}
                     <div className="min-w-0">
@@ -336,7 +336,7 @@ export default function AgentVouchersPage() {
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
                   <div className="flex justify-between">
                     <span className="text-slate-400 dark:text-[#e0d0ff]/40">Paket:</span>
-                    <span className="text-white font-medium truncate ml-1">{voucher.profileName}</span>
+                    <span className="text-foreground dark:text-white font-medium truncate ml-1">{voucher.profileName}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400 dark:text-[#e0d0ff]/40">Router:</span>
@@ -368,7 +368,7 @@ export default function AgentVouchersPage() {
                     type="checkbox"
                     checked={selectedVouchers.length > 0 && selectedVouchers.length === vouchers.filter(v => v.status === 'WAITING').length}
                     onChange={handleSelectAll}
-                    className="rounded border-purple-400 dark:border-[#bc13fe]/50 bg-[#0a0520]"
+                    className="rounded border-purple-400 dark:border-[#bc13fe]/50 bg-background dark:bg-[#0a0520]"
                   />
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-cyan-600 dark:text-[#00f7ff] uppercase tracking-wider">{t('agent.portal.voucherCode')}</th>
@@ -397,13 +397,13 @@ export default function AgentVouchersPage() {
                           type="checkbox"
                           checked={selectedVouchers.includes(voucher.id)}
                           onChange={() => handleSelectVoucher(voucher.id)}
-                          className="rounded border-purple-400 dark:border-[#bc13fe]/50 bg-[#0a0520]"
+                          className="rounded border-purple-400 dark:border-[#bc13fe]/50 bg-background dark:bg-[#0a0520]"
                         />
                       )}
                     </td>
                     <td className="px-4 py-3 font-mono font-bold text-sm text-slate-900 dark:text-white">{voucher.code}</td>
                     <td className="px-4 py-3 text-xs text-slate-500 dark:text-[#e0d0ff]/60">{voucher.batchCode || '-'}</td>
-                    <td className="px-4 py-3 text-xs text-white">{voucher.profileName}</td>
+                    <td className="px-4 py-3 text-xs text-foreground dark:text-white">{voucher.profileName}</td>
                     <td className="px-4 py-3 text-xs text-slate-500 dark:text-[#e0d0ff]/60">{voucher.routerName || '-'}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold ${voucher.status === 'ACTIVE'

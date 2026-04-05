@@ -276,7 +276,7 @@ export default function AgentTicketsPage() {
                 className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-[#0d0a1e] border border-slate-200 dark:border-[#bc13fe]/30 text-slate-800 dark:text-white focus:outline-none focus:border-[#bc13fe]/60 transition appearance-none cursor-pointer"
               >
                 {Object.entries(priorityLabel).map(([val, label]) => (
-                  <option key={val} value={val} className="bg-[#0d0a1e] text-white">{label}</option>
+                  <option key={val} value={val} className="bg-background dark:bg-[#0d0a1e] text-foreground dark:text-white">{label}</option>
                 ))}
               </select>
             </div>
@@ -289,9 +289,9 @@ export default function AgentTicketsPage() {
                 onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
                 className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-[#0d0a1e] border border-slate-200 dark:border-[#bc13fe]/30 text-slate-800 dark:text-white focus:outline-none focus:border-[#bc13fe]/60 transition appearance-none cursor-pointer"
               >
-                <option value="" className="bg-[#0d0a1e] text-slate-400">-- Pilih Kategori --</option>
+                <option value="" className="bg-background dark:bg-[#0d0a1e] text-slate-400">-- Pilih Kategori --</option>
                 {categories.map(c => (
-                  <option key={c.id} value={c.id} className="bg-[#0d0a1e] text-white">{c.name}</option>
+                  <option key={c.id} value={c.id} className="bg-background dark:bg-[#0d0a1e] text-foreground dark:text-white">{c.name}</option>
                 ))}
               </select>
             </div>

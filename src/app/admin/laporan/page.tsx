@@ -208,10 +208,10 @@ export default function LaporanPage() {
       </div>
 
       {/* ── Filter Card ── */}
-      <div className="bg-slate-800/60 backdrop-blur border border-[#bc13fe]/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(188,19,254,0.1)]">
+      <div className="bg-card/80 dark:bg-slate-800/60 backdrop-blur border border-[#bc13fe]/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(188,19,254,0.1)]">
         <div className="flex items-center gap-2 mb-5">
           <Filter className="w-4 h-4 text-[#bc13fe]" />
-          <span className="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('laporan.filterTitle')}</span>
+          <span className="text-sm font-semibold text-foreground dark:text-slate-300 uppercase tracking-wider">{t('laporan.filterTitle')}</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -226,7 +226,7 @@ export default function LaporanPage() {
                   className={`px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
                     reportType === t
                       ? 'bg-[#bc13fe] border-[#bc13fe] text-white shadow-[0_0_15px_rgba(188,19,254,0.5)]'
-                      : 'bg-slate-900/80 border-slate-600 text-slate-400 hover:border-[#bc13fe]/50'
+                      : 'bg-muted/80 dark:bg-slate-900/80 border-border dark:border-slate-600 text-muted-foreground dark:text-slate-400 hover:border-[#bc13fe]/50'
                   }`}
                 >
                   {t === 'invoice' && <FileText className="w-3.5 h-3.5 inline mr-1" />}
@@ -359,9 +359,9 @@ export default function LaporanPage() {
 
       {/* ── Data Preview Table ── */}
       {loaded && rows.length > 0 && (
-        <div className="bg-slate-800/60 backdrop-blur border border-slate-700/50 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-700/50 flex items-center justify-between">
-            <span className="text-sm font-semibold text-slate-300">
+        <div className="bg-card/80 dark:bg-slate-800/60 backdrop-blur border border-border/50 dark:border-slate-700/50 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border/50 dark:border-slate-700/50 flex items-center justify-between">
+            <span className="text-sm font-semibold text-foreground dark:text-slate-300">
               {t('laporan.previewData', { count: String(Math.min(rows.length, 100)), total: String(rows.length) })}
             </span>
             <span className="text-xs text-slate-500">{t('laporan.exportHint')}</span>
@@ -369,7 +369,7 @@ export default function LaporanPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-900/60">
+                <tr className="bg-muted/50 dark:bg-slate-900/60">
                   {previewColumns.map((col) => (
                     <th key={col} className="px-4 py-3 text-left text-xs font-bold text-[#00f7ff] uppercase tracking-wider whitespace-nowrap border-b border-slate-700/50">
                       {col}
@@ -379,9 +379,9 @@ export default function LaporanPage() {
               </thead>
               <tbody>
                 {rows.slice(0, 100).map((row, i) => (
-                  <tr key={i} className={`border-b border-slate-700/30 hover:bg-slate-700/30 transition-colors ${i % 2 === 0 ? 'bg-transparent' : 'bg-slate-900/20'}`}>
+                  <tr key={i} className={`border-b border-border/30 dark:border-slate-700/30 hover:bg-muted/30 dark:hover:bg-slate-700/30 transition-colors ${i % 2 === 0 ? 'bg-transparent' : 'bg-muted/20 dark:bg-slate-900/20'}`}>
                     {previewColumns.map((col) => (
-                      <td key={col} className={`px-4 py-2.5 text-slate-300 ${
+                      <td key={col} className={`px-4 py-2.5 text-foreground dark:text-slate-300 ${
                         col === 'Catatan' ? 'max-w-[200px] truncate' : 'whitespace-nowrap'
                       } ${col === 'Status' ? getStatusClass(String(row[col])) : ''}`}
                         title={col === 'Catatan' ? String(row[col] ?? '') : undefined}
@@ -429,7 +429,7 @@ function SummaryCard({ label, value, icon, color }: { label: string; value: any;
     red:    'text-rose-400 border-rose-500/30',
   };
   return (
-    <div className={`bg-slate-800/60 backdrop-blur border rounded-xl p-4 ${colorMap[color] || colorMap.cyan}`}>
+    <div className={`bg-card/80 dark:bg-slate-800/60 backdrop-blur border rounded-xl p-4 ${colorMap[color] || colorMap.cyan}`}>
       <div className={`flex items-center gap-2 mb-2 ${colorMap[color]?.split(' ')[0]}`}>
         {icon}
         <span className="text-xs font-bold uppercase tracking-wider opacity-80">{label}</span>
@@ -457,5 +457,5 @@ function getStatusBadge(s: string): string {
     SUCCESS: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
     FAILED:  'bg-red-500/20 text-red-400 border border-red-500/30',
   };
-  return map[s] || 'bg-slate-600/30 text-slate-300 border border-slate-500/30';
+  return map[s] || 'bg-muted/30 dark:bg-slate-600/30 text-muted-foreground dark:text-slate-300 border border-border/30 dark:border-slate-500/30';
 }

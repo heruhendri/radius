@@ -616,7 +616,7 @@ ${radiusSection}`.trim()
                               type="checkbox"
                               checked={client.isRadiusServer || false}
                               onChange={(e) => handleToggleRadiusServer(client.id, e.target.checked)}
-                              className="w-5 h-5 rounded border-[#bc13fe]/50 bg-slate-900 text-[#00f7ff] focus:ring-[#00f7ff]/50 focus:ring-offset-0"
+              className="w-5 h-5 rounded border-[#bc13fe]/50 bg-background dark:bg-slate-900 text-[#00f7ff] focus:ring-[#00f7ff]/50 focus:ring-offset-0"
                             />
                             <span className="text-xs sm:text-sm text-muted-foreground">
                               {client.isRadiusServer ? t('network.defaultRadiusServer') : t('network.setAsRadiusServer')}
@@ -668,7 +668,7 @@ ${radiusSection}`.trim()
                                   </button>
                                 </div>
                                 {/* Script content */}
-                                <pre className="p-4 bg-slate-950 text-green-400 text-xs font-mono overflow-x-auto overflow-y-auto max-h-72 whitespace-pre leading-relaxed">
+                                <pre className="p-4 bg-gray-100 dark:bg-slate-950 text-green-700 dark:text-green-400 text-xs font-mono overflow-x-auto overflow-y-auto max-h-72 whitespace-pre leading-relaxed">
                                   {generateVpsRoutingScript(client)}
                                 </pre>
                                 {/* Notes */}
@@ -753,7 +753,7 @@ ${radiusSection}`.trim()
                         onClick={() => setFormData({ ...formData, vpnType: type })}
                         className={`px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${formData.vpnType === type
                           ? 'bg-gradient-to-r from-[#00f7ff] to-[#00d4e6] text-black shadow-[0_0_15px_rgba(0,247,255,0.4)]'
-                          : 'bg-slate-800/60 border border-[#bc13fe]/30 text-foreground hover:bg-[#bc13fe]/20'
+                          : 'bg-muted/60 dark:bg-slate-800/60 border border-[#bc13fe]/30 text-foreground hover:bg-[#bc13fe]/20'
                         }`}
                       >
                         {type === 'l2tp' ? 'L2TP/IPSec' : type.toUpperCase()}
@@ -887,7 +887,7 @@ ${radiusSection}`.trim()
                         onClick={() => setSelectedVpnType(type)}
                         className={`flex-1 min-w-[80px] px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${selectedVpnType === type
                           ? 'bg-gradient-to-r from-[#00f7ff] to-[#00d4e6] text-black shadow-[0_0_20px_rgba(0,247,255,0.4)]'
-                          : 'bg-slate-800/60 border border-[#bc13fe]/30 text-foreground hover:bg-[#bc13fe]/20'
+                          : 'bg-muted/60 dark:bg-slate-800/60 border border-[#bc13fe]/30 text-foreground hover:bg-[#bc13fe]/20'
                           }`}
                       >
                         {type === 'l2tp' ? 'L2TP/IPSec' : type.toUpperCase()}
@@ -910,7 +910,7 @@ ${radiusSection}`.trim()
                       {t('network.copyScript')}
                     </button>
                   </div>
-                  <pre className="p-5 bg-slate-950 text-green-400 border border-[#bc13fe]/30 rounded-xl text-xs overflow-auto max-h-80 whitespace-pre font-mono">
+                  <pre className="p-5 bg-gray-100 dark:bg-slate-950 text-green-700 dark:text-green-400 border border-[#bc13fe]/30 rounded-xl text-xs overflow-auto max-h-80 whitespace-pre font-mono">
                     {generateMikroTikScript()}
                   </pre>
                 </div>
@@ -931,7 +931,7 @@ ${radiusSection}`.trim()
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-                      <span><strong className="text-amber-300">{t('network.remoteAccess')}:</strong> {t('network.useWinboxVia')} <code className="px-1.5 py-0.5 bg-slate-800 border border-[#00f7ff]/30 rounded text-[#00f7ff]">{credentials.winboxRemote}</code></span>
+              <span><strong className="text-amber-300 dark:text-amber-300 text-amber-600">{t('network.remoteAccess')}:</strong> {t('network.useWinboxVia')} <code className="px-1.5 py-0.5 bg-muted dark:bg-slate-800 border border-[#00f7ff]/30 rounded text-[#00f7ff]">{credentials.winboxRemote}</code></span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
@@ -970,7 +970,7 @@ ${radiusSection}`.trim()
                 Terapkan routing script ke VPS: <span className="text-[#00f7ff] font-medium">{applyRoutingClient.name}</span>
               </p>
 
-              <div className="p-4 rounded-xl border border-[#00f7ff]/30 bg-slate-900/60 mb-4">
+              <div className="p-4 rounded-xl border border-[#00f7ff]/30 bg-muted/50 dark:bg-slate-900/60 mb-4">
                 <p className="text-xs font-bold text-[#00f7ff] mb-3">🔑 SSH Credentials VPS RADIUS</p>
                 <input
                     className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm mb-2"
@@ -1003,7 +1003,7 @@ ${radiusSection}`.trim()
               </div>
 
               {applyRoutingOutput && (
-                <div className="mb-4 p-3 bg-slate-950 rounded-xl border border-[#00f7ff]/20 max-h-52 overflow-y-auto">
+                <div className="mb-4 p-3 bg-gray-100 dark:bg-slate-950 rounded-xl border border-[#00f7ff]/20 max-h-52 overflow-y-auto">
                   <p className="text-[#00f7ff] text-xs uppercase mb-1 font-bold">Output:</p>
                   <pre className="text-xs text-green-300 font-mono whitespace-pre-wrap">{applyRoutingOutput}</pre>
                 </div>

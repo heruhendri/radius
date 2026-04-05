@@ -613,14 +613,14 @@ export default function ManagementPage() {
               </div>
               <div>
                 <ModalLabel>{t('management.permissions')}</ModalLabel>
-                <div className="border border-[#bc13fe]/30 rounded-lg p-2 max-h-48 overflow-y-auto space-y-2 bg-[#0a0520]/50">
+                <div className="border border-[#bc13fe]/30 rounded-lg p-2 max-h-48 overflow-y-auto space-y-2 bg-muted/50 dark:bg-[#0a0520]/50">
                   {Object.entries(permissionsByCategory).map(([category, perms]) => (
                     <div key={category}>
                       <p className="text-[10px] font-semibold text-[#00f7ff] mb-1 uppercase tracking-wider">{category}</p>
                       <div className="grid grid-cols-2 gap-1">
                         {perms.map((perm) => (
                           <label key={perm.id} className="flex items-center gap-1.5 cursor-pointer p-1 hover:bg-[#bc13fe]/10 rounded transition-colors">
-                            <input type="checkbox" checked={formData.permissions.includes(perm.key)} onChange={() => togglePermission(perm.key)} className="w-3 h-3 rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]" />
+                            <input type="checkbox" checked={formData.permissions.includes(perm.key)} onChange={() => togglePermission(perm.key)} className="w-3 h-3 rounded border-[#bc13fe]/50 bg-background dark:bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]" />
                             <span className="text-[10px] text-foreground">{perm.name}</span>
                           </label>
                         ))}

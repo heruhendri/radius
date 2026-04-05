@@ -690,12 +690,12 @@ export default function VpnServerPage() {
                 <button id="vpnbtn-ros6" className="px-3 py-1.5 bg-orange-500/30 border border-orange-500/50 text-orange-300 rounded-lg text-xs font-bold" onClick={() => { document.getElementById('vpnscript-ros6')?.classList.remove('hidden'); document.getElementById('vpnscript-ros7')?.classList.add('hidden'); }}>RouterOS 6</button>
               </div>
               <div id="vpnscript-ros7">
-                <div className="flex justify-between items-center mb-1"><span className="text-xs text-teal-400 font-bold">RouterOS 7</span><button className="text-xs text-[#00f7ff] bg-slate-800 px-2 py-1 rounded" onClick={() => { navigator.clipboard.writeText(vpnScriptData.ros7); addToast({ type: 'success', title: 'Script ROS7 disalin!' }); }}>Copy</button></div>
-                <pre className="bg-slate-900 text-green-300 p-3 rounded-lg text-xs overflow-auto max-h-64 whitespace-pre font-mono border border-teal-500/20">{vpnScriptData.ros7}</pre>
+                <div className="flex justify-between items-center mb-1"><span className="text-xs text-teal-400 font-bold">RouterOS 7</span><button className="text-xs text-[#00f7ff] bg-muted dark:bg-slate-800 px-2 py-1 rounded" onClick={() => { navigator.clipboard.writeText(vpnScriptData.ros7); addToast({ type: 'success', title: 'Script ROS7 disalin!' }); }}>Copy</button></div>
+                <pre className="bg-gray-100 dark:bg-slate-900 text-green-700 dark:text-green-300 p-3 rounded-lg text-xs overflow-auto max-h-64 whitespace-pre font-mono border border-teal-500/20">{vpnScriptData.ros7}</pre>
               </div>
               <div id="vpnscript-ros6" className="hidden">
-                <div className="flex justify-between items-center mb-1"><span className="text-xs text-orange-400 font-bold">RouterOS 6</span><button className="text-xs text-[#00f7ff] bg-slate-800 px-2 py-1 rounded" onClick={() => { navigator.clipboard.writeText(vpnScriptData.ros6); addToast({ type: 'success', title: 'Script ROS6 disalin!' }); }}>Copy</button></div>
-                <pre className="bg-slate-900 text-yellow-300 p-3 rounded-lg text-xs overflow-auto max-h-64 whitespace-pre font-mono border border-orange-500/20">{vpnScriptData.ros6}</pre>
+                <div className="flex justify-between items-center mb-1"><span className="text-xs text-orange-400 font-bold">RouterOS 6</span><button className="text-xs text-[#00f7ff] bg-muted dark:bg-slate-800 px-2 py-1 rounded" onClick={() => { navigator.clipboard.writeText(vpnScriptData.ros6); addToast({ type: 'success', title: 'Script ROS6 disalin!' }); }}>Copy</button></div>
+                <pre className="bg-gray-100 dark:bg-slate-900 text-yellow-700 dark:text-yellow-300 p-3 rounded-lg text-xs overflow-auto max-h-64 whitespace-pre font-mono border border-orange-500/20">{vpnScriptData.ros6}</pre>
               </div>
             </div>
             <div className="p-4 border-t border-[#bc13fe]/20">
@@ -1053,7 +1053,7 @@ export default function VpnServerPage() {
                         { key: 'sstpEnabled', label: 'SSTP (port 992)', color: 'cyan' },
                         { key: 'pptpEnabled', label: 'PPTP', color: 'purple' },
                       ].map(({ key, label, color }) => (
-                        <label key={key} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${(formData as any)[key] ? `bg-${color}-500/20 border-${color}-500/40` : 'bg-slate-900/50 border-slate-700/50 hover:border-slate-600'}`}>
+                        <label key={key} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${(formData as any)[key] ? `bg-${color}-500/20 border-${color}-500/40` : 'bg-muted/50 dark:bg-slate-900/50 border-border/50 dark:border-slate-700/50 hover:border-slate-600'}`}>
                           <input
                             type="checkbox"
                             checked={(formData as any)[key]}
@@ -1132,7 +1132,7 @@ export default function VpnServerPage() {
 
               {/* Inline SSH + L2TP Credentials */}
               {!savedSshCredentials ? (
-                <div className="mb-6 p-4 rounded-xl border border-[#bc13fe]/30 bg-slate-900/60">
+                <div className="mb-6 p-4 rounded-xl border border-[#bc13fe]/30 bg-muted/50 dark:bg-slate-900/60">
                   <p className="text-xs font-bold text-[#00f7ff] mb-1">🔑 SSH Connection — VPS RADIUS Server</p>
                   <p className="text-xs text-muted-foreground mb-3">Target: <span className="text-[#bc13fe] font-medium">{editingServer.name}</span> ({editingServer.host})</p>
                   <input className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm mb-2" placeholder="VPS IP/Hostname" value={l2tpSshForm.host} onChange={(e) => setL2tpSshForm(p => ({...p, host: e.target.value}))} />
@@ -1191,14 +1191,14 @@ export default function VpnServerPage() {
               ) : (
                 <div className="mb-4 flex items-center justify-between p-3 rounded-xl bg-green-500/10 border border-green-500/30">
                   <p className="text-sm text-green-400">✅ SSH: <span className="font-mono text-foreground">{savedSshCredentials.username}@{savedSshCredentials.host}</span></p>
-                  <button onClick={() => { setSavedSshCredentials(null); setL2tpStatus(null); setL2tpLogs([]); try { localStorage.removeItem('l2tp_ssh_credentials'); localStorage.removeItem('l2tp_config'); } catch {} }} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 bg-slate-700 rounded-lg transition-colors">Ubah</button>
+                  <button onClick={() => { setSavedSshCredentials(null); setL2tpStatus(null); setL2tpLogs([]); try { localStorage.removeItem('l2tp_ssh_credentials'); localStorage.removeItem('l2tp_config'); } catch {} }} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 bg-muted dark:bg-slate-700 rounded-lg transition-colors">Ubah</button>
                 </div>
               )}
 
               {/* VPN Connection Status */}
               {l2tpStatus && (
                 <div className="mb-6">
-                  <div className={`p-4 rounded-xl border ${l2tpStatus.connected ? 'bg-green-500/10 border-green-500/40' : 'bg-slate-900/80 border-slate-600/40'}`}>
+                  <div className={`p-4 rounded-xl border ${l2tpStatus.connected ? 'bg-green-500/10 border-green-500/40' : 'bg-muted/80 dark:bg-slate-900/80 border-border/40 dark:border-slate-600/40'}`}>
                     <div className="flex items-center gap-3">
                       {l2tpStatus.connected ? <CheckCircle className="w-6 h-6 text-green-400" /> : <XCircle className="w-6 h-6 text-red-400" />}
                       <div>
@@ -1210,15 +1210,15 @@ export default function VpnServerPage() {
                     </div>
                     {l2tpStatus.connected && (
                       <div className="mt-3 grid grid-cols-3 gap-3">
-                        <div className="bg-slate-900/60 rounded-lg p-2">
+                        <div className="bg-muted/50 dark:bg-slate-900/60 rounded-lg p-2">
                           <p className="text-[10px] text-gray-500 uppercase mb-0.5">VPN IP (VPS)</p>
                           <p className="text-sm font-mono text-foreground">{l2tpStatus.vpnIp ?? '-'}</p>
                         </div>
-                        <div className="bg-slate-900/60 rounded-lg p-2">
+                        <div className="bg-muted/50 dark:bg-slate-900/60 rounded-lg p-2">
                           <p className="text-[10px] text-gray-500 uppercase mb-0.5">Remote (CHR)</p>
                           <p className="text-sm font-mono text-foreground">{l2tpStatus.vpnPeer ?? '-'}</p>
                         </div>
-                        <div className="bg-slate-900/60 rounded-lg p-2">
+                        <div className="bg-muted/50 dark:bg-slate-900/60 rounded-lg p-2">
                           <p className="text-[10px] text-gray-500 uppercase mb-0.5">Interface</p>
                           <p className="text-sm font-mono text-foreground">{l2tpStatus.pppIface ?? '-'}</p>
                         </div>
