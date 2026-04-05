@@ -61,7 +61,6 @@ export default function VpnClientPage() {
   const [applyRoutingForm, setApplyRoutingForm] = useState({ host: '', port: '22', username: 'root', password: '' });
   const [applyRoutingOutput, setApplyRoutingOutput] = useState('');
   const [applyRoutingRunning, setApplyRoutingRunning] = useState(false);
-  const [applyRoutingIpLoading, setApplyRoutingIpLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -94,21 +93,6 @@ export default function VpnClientPage() {
     setApplyRoutingClient(client);
     setApplyRoutingOutput('');
     setShowApplyRoutingModal(true);
-    // If no host yet, try to auto-fill from API
-    setApplyRoutingForm(prev => {
-      if (prev.host) return prev;
-      setApplyRoutingIpLoading(true);
-      fetch('/api/network/vps-info')
-        .then(r => r.json())
-        .then(data => {
-          if (data.vpsIp) {
-            setApplyRoutingForm(p => ({ ...p, host: data.vpsIp }));
-          }
-        })
-        .catch(() => { /* ignore */ })
-        .finally(() => setApplyRoutingIpLoading(false));
-      return prev;
-    });
   };
 
   const executeApplyRouting = async () => {
@@ -988,17 +972,12 @@ ${radiusSection}`.trim()
 
               <div className="p-4 rounded-xl border border-[#00f7ff]/30 bg-slate-900/60 mb-4">
                 <p className="text-xs font-bold text-[#00f7ff] mb-3">🔑 SSH Credentials VPS RADIUS</p>
-                <div className="relative mb-2">
-                  <input
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm pr-8"
-                    placeholder={applyRoutingIpLoading ? 'Mendeteksi IP VPS...' : 'VPS IP/Hostname'}
+                <input
+                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm mb-2"
+                    placeholder="IP VPS RADIUS (contoh: 103.151.140.110)"
                     value={applyRoutingForm.host}
                     onChange={(e) => setApplyRoutingForm(p => ({...p, host: e.target.value}))}
                   />
-                  {applyRoutingIpLoading && (
-                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#00f7ff] animate-spin text-xs">⟳</span>
-                  )}
-                </div>
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <input
                     className="px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
