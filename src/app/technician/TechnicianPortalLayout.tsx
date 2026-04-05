@@ -195,7 +195,7 @@ function TechSidebar({
         <div className="p-4 border-b border-slate-200 dark:border-cyan-500/20 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.5)]">
+              <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.5)] flex items-center justify-center">
                 <Wrench className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -219,7 +219,7 @@ function TechSidebar({
           <div className="p-4 flex-shrink-0">
             <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 dark:from-cyan-500/20 dark:to-blue-500/20 rounded-xl p-3 border border-cyan-200 dark:border-cyan-500/30">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex-shrink-0">
+                <div className="p-1.5 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex-shrink-0 flex items-center justify-center">
                   <User className="w-3 h-3 text-white" />
                 </div>
                 <div className="min-w-0">
@@ -252,7 +252,7 @@ function TechSidebar({
               >
                 <span
                   className={cn(
-                    'p-1.5 rounded-lg transition-all duration-300 flex-shrink-0',
+                    'p-1.5 rounded-lg transition-all duration-300 flex-shrink-0 flex items-center justify-center',
                     isActive
                       ? 'text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
                       : 'text-slate-400 dark:text-slate-400 group-hover:text-cyan-500',
@@ -352,7 +352,7 @@ function TechnicianPortalInner({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-gradient-to-br dark:from-slate-900 dark:via-[#0a0e1a] dark:to-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.5)]">
+          <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.5)] flex items-center justify-center">
             <Wrench className="w-8 h-8 text-white" />
           </div>
           <Loader2 className="w-6 h-6 animate-spin text-cyan-500 drop-shadow-[0_0_10px_rgba(6,182,212,0.6)]" />
@@ -426,14 +426,14 @@ function TechnicianPortalInner({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleTheme}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition border border-white/20"
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition border border-white/20 flex items-center justify-center"
               >
                 {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-white" />}
               </button>
               <NotificationBell />
               <button
                 onClick={handleLogout}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition border border-white/20"
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition border border-white/20 flex items-center justify-center"
               >
                 <LogOut className="w-4 h-4 text-white" />
               </button>

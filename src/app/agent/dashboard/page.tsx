@@ -686,7 +686,7 @@ export default function AgentDashboardPage() {
       {/* Quick Generate */}
       <div className="bg-white/80 dark:bg-[#0a0520]/80 backdrop-blur-xl rounded-2xl border-2 border-purple-300 dark:border-[#bc13fe]/30 p-4 lg:p-5 shadow-[0_0_30px_rgba(188,19,254,0.15)]">
           <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-[#ff44cc]/20 rounded-lg border border-pink-200 dark:border-[#ff44cc]/30">
+            <div className="p-2 bg-[#ff44cc]/20 rounded-lg border border-pink-200 dark:border-[#ff44cc]/30 flex items-center justify-center">
               <Zap className="h-5 w-5 text-[#ff44cc] drop-shadow-[0_0_10px_rgba(255,68,204,0.6)]" />
             </div>
             <h2 className="text-base font-bold text-slate-900 dark:text-white">{t('agent.portal.generateVoucher')}</h2>

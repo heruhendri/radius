@@ -347,7 +347,7 @@ export default function PushNotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/20">
+          <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/20 flex items-center justify-center">
             <Bell className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -370,7 +370,7 @@ export default function PushNotificationsPage() {
         <Card className="border-blue-200/50 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
+              <div className="p-2 bg-blue-500/10 rounded-lg flex items-center justify-center">
                 <Users className="w-5 h-5 text-blue-600" />
               </div>
               <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">total</span>
@@ -383,7 +383,7 @@ export default function PushNotificationsPage() {
         <Card className="border-emerald-200/50 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/20 dark:to-background">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-emerald-500/10 rounded-lg">
+              <div className="p-2 bg-emerald-500/10 rounded-lg flex items-center justify-center">
                 <Smartphone className="w-5 h-5 text-emerald-600" />
               </div>
               <span className="text-xs font-medium text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">push</span>
@@ -396,7 +396,7 @@ export default function PushNotificationsPage() {
         <Card className="border-orange-200/50 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-orange-500/10 rounded-lg">
+              <div className="p-2 bg-orange-500/10 rounded-lg flex items-center justify-center">
                 <RadioTower className="w-5 h-5 text-orange-600" />
               </div>
               <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">sent</span>
@@ -409,7 +409,7 @@ export default function PushNotificationsPage() {
         <Card className="border-purple-200/50 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-purple-500/10 rounded-lg">
+              <div className="p-2 bg-purple-500/10 rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-purple-600" />
               </div>
             </div>

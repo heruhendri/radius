@@ -245,7 +245,7 @@ export default function TopUpDirectPage() {
       <div className="flex items-center gap-3 mb-2">
         <button
           onClick={() => router.push('/customer')}
-          className="p-2 bg-card/60 border border-[#bc13fe]/40 text-[#00f7ff] rounded-xl hover:bg-[#bc13fe]/20 transition-all"
+          className="p-2 bg-card/60 border border-[#bc13fe]/40 text-[#00f7ff] rounded-xl hover:bg-[#bc13fe]/20 transition-all flex items-center justify-center"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -258,7 +258,7 @@ export default function TopUpDirectPage() {
         {user && (
           <CyberCard className="p-5 bg-card/80 backdrop-blur-xl border-2 border-[#00f7ff]/30 shadow-[0_0_30px_rgba(0,247,255,0.15)]">
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-[#00f7ff]/20 rounded-lg border border-[#00f7ff]/30 shadow-[0_0_10px_rgba(0,247,255,0.3)]">
+              <div className="p-2 bg-[#00f7ff]/20 rounded-lg border border-[#00f7ff]/30 shadow-[0_0_10px_rgba(0,247,255,0.3)] flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-[#00f7ff] drop-shadow-[0_0_5px_rgba(0,247,255,0.8)]" />
               </div>
               <span className="text-sm text-[#e0d0ff]/70 uppercase tracking-wider">{t('customer.currentBalance')}</span>
@@ -280,7 +280,7 @@ export default function TopUpDirectPage() {
         {/* Amount Selection */}
         <CyberCard className="p-5 bg-card/80 backdrop-blur-xl border-2 border-[#bc13fe]/30">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-[#bc13fe]/20 rounded-lg border border-[#bc13fe]/30">
+            <div className="p-2 bg-[#bc13fe]/20 rounded-lg border border-[#bc13fe]/30 flex items-center justify-center">
               <Zap className="w-5 h-5 text-[#bc13fe]" />
             </div>
             <h2 className="text-sm font-bold text-[#bc13fe] uppercase tracking-wider">{t('customer.selectTopupAmount')}</h2>
@@ -327,7 +327,7 @@ export default function TopUpDirectPage() {
         {/* Payment Gateway Selection */}
         <CyberCard className="p-5 bg-card/80 backdrop-blur-xl border-2 border-[#ff44cc]/30">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-[#ff44cc]/20 rounded-lg border border-[#ff44cc]/30">
+              <div className="p-2 bg-[#ff44cc]/20 rounded-lg border border-[#ff44cc]/30 flex items-center justify-center">
                 <CreditCard className="w-5 h-5 text-[#ff44cc]" />
               </div>
               <h2 className="text-sm font-bold text-[#ff44cc] uppercase tracking-wider">{t('customer.paymentMethod')}</h2>
@@ -435,7 +435,7 @@ export default function TopUpDirectPage() {
                             {ch.iconUrl ? (
                               <img src={ch.iconUrl} alt={ch.name} className="w-10 h-10 object-contain rounded-lg bg-white p-1" />
                             ) : (
-                              <div className="p-2 bg-slate-800/80 border border-[#bc13fe]/30 rounded-lg">
+                              <div className="p-2 bg-slate-800/80 border border-[#bc13fe]/30 rounded-lg flex items-center justify-center">
                                 <CreditCard className="w-5 h-5 text-[#00f7ff]" />
                               </div>
                             )}

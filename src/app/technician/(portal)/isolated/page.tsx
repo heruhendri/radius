@@ -85,7 +85,7 @@ export default function TechnicianIsolatedPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-orange-500/10 dark:bg-orange-500/20 rounded-xl">
+          <div className="p-2 bg-orange-500/10 dark:bg-orange-500/20 rounded-xl flex items-center justify-center">
             <Shield className="w-5 h-5 text-orange-500" />
           </div>
           <div>

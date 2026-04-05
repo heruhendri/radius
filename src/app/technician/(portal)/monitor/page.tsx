@@ -353,7 +353,7 @@ export default function TechnicianMonitorPage() {
                   className="bg-white dark:bg-slate-800/60 rounded-2xl border border-red-200 dark:border-red-500/20 p-4"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="p-2 bg-red-50 dark:bg-red-500/10 rounded-xl border border-red-200 dark:border-red-500/20 flex-shrink-0">
+                    <div className="p-2 bg-red-50 dark:bg-red-500/10 rounded-xl border border-red-200 dark:border-red-500/20 flex-shrink-0 flex items-center justify-center">
                       <WifiOff className="w-4 h-4 text-red-500" />
                     </div>
                     <div className="flex-1 min-w-0">

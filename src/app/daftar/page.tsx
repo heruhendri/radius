@@ -203,7 +203,7 @@ function DaftarPageInner() {
         {/* Form Card */}
         <div className="bg-[#1a0f35]/80 backdrop-blur-xl rounded-2xl border-2 border-[#bc13fe]/30 p-5 shadow-[0_0_50px_rgba(188,19,254,0.2)]">
           <div className="flex items-center gap-2 mb-5">
-            <div className="p-2 bg-[#bc13fe]/20 rounded-lg border border-[#bc13fe]/30">
+            <div className="p-2 bg-[#bc13fe]/20 rounded-lg border border-[#bc13fe]/30 flex items-center justify-center">
               <UserPlus className="w-5 h-5 text-[#bc13fe] drop-shadow-[0_0_10px_rgba(188,19,254,0.6)]" />
             </div>
             <h2 className="text-base font-bold text-white">Formulir Pendaftaran</h2>

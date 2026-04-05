@@ -52,7 +52,7 @@ export default function TechnicianOfflinePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-red-500/10 dark:bg-red-500/20 rounded-xl">
+          <div className="p-2 bg-red-500/10 dark:bg-red-500/20 rounded-xl flex items-center justify-center">
             <WifiOff className="w-5 h-5 text-red-500" />
           </div>
           <div>

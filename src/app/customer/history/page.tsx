@@ -545,7 +545,7 @@ export default function PaymentHistoryPage() {
       {pendingPayments.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-warning/20 rounded-lg border border-warning/30"><Clock className="w-4 h-4 text-warning" /></div>
+            <div className="p-1.5 bg-warning/20 rounded-lg border border-warning/30 flex items-center justify-center"><Clock className="w-4 h-4 text-warning" /></div>
             <h2 className="text-sm font-bold text-warning drop-shadow-[0_0_5px_rgba(255,170,0,0.5)]">
               Belum Bayar
               <span className="ml-2 px-2 py-0.5 bg-warning/20 text-warning text-[10px] rounded-full border border-warning/30">{pendingPayments.length}</span>
@@ -671,7 +671,7 @@ export default function PaymentHistoryPage() {
       {/* Paid Section */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-success/20 rounded-lg border border-success/30"><CheckCircle className="w-4 h-4 text-success" /></div>
+          <div className="p-1.5 bg-success/20 rounded-lg border border-success/30 flex items-center justify-center"><CheckCircle className="w-4 h-4 text-success" /></div>
           <h2 className="text-sm font-bold text-success drop-shadow-[0_0_5px_rgba(0,255,136,0.5)]">
             Lunas
             <span className="ml-2 px-2 py-0.5 bg-success/20 text-success text-[10px] rounded-full border border-success/30">{paidPayments.length}</span>
@@ -829,7 +829,7 @@ export default function PaymentHistoryPage() {
                       onClick={handleChooseOnline}
                       className="w-full flex items-center gap-3 p-4 bg-cyan-500/10 hover:bg-cyan-500/20 border-2 border-cyan-500/40 rounded-xl transition-all text-left"
                     >
-                      <div className="p-2 bg-cyan-500/20 rounded-lg border border-cyan-500/30"><CreditCard className="w-5 h-5 text-cyan-400" /></div>
+                      <div className="p-2 bg-cyan-500/20 rounded-lg border border-cyan-500/30 flex items-center justify-center"><CreditCard className="w-5 h-5 text-cyan-400" /></div>
                       <div className="flex-1">
                         <p className="text-sm font-bold text-white">Bayar Online</p>
                         <p className="text-[10px] text-muted-foreground">Payment Gateway (Midtrans, Xendit, dll)</p>
@@ -840,7 +840,7 @@ export default function PaymentHistoryPage() {
                       onClick={handleChooseOffline}
                       className="w-full flex items-center gap-3 p-4 bg-purple-500/10 hover:bg-purple-500/20 border-2 border-purple-500/40 rounded-xl transition-all text-left"
                     >
-                      <div className="p-2 bg-purple-500/20 rounded-lg border border-purple-500/30"><Building2 className="w-5 h-5 text-purple-400" /></div>
+                      <div className="p-2 bg-purple-500/20 rounded-lg border border-purple-500/30 flex items-center justify-center"><Building2 className="w-5 h-5 text-purple-400" /></div>
                       <div className="flex-1">
                         <p className="text-sm font-bold text-white">Transfer Manual</p>
                         <p className="text-[10px] text-muted-foreground">Upload bukti transfer, tunggu konfirmasi admin</p>
@@ -881,7 +881,7 @@ export default function PaymentHistoryPage() {
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="p-1.5 bg-slate-800 rounded-lg border border-border/30"><CreditCard className="w-4 h-4 text-cyan-400" /></div>
+                          <div className="p-1.5 bg-slate-800 rounded-lg border border-border/30 flex items-center justify-center"><CreditCard className="w-4 h-4 text-cyan-400" /></div>
                           <div className="text-left">
                             <p className="text-sm font-bold text-white">{gw.name}</p>
                             <p className="text-[10px] text-muted-foreground capitalize">{gw.provider}</p>
@@ -1077,7 +1077,7 @@ export default function PaymentHistoryPage() {
                   <div className="space-y-2.5">
                     {/* Invoice number */}
                     <div className="flex items-center gap-3 p-3 bg-muted/10 rounded-xl border border-border/40">
-                      <div className="p-1.5 bg-primary/20 rounded-lg border border-primary/30 flex-shrink-0"><Hash className="w-3.5 h-3.5 text-primary" /></div>
+                      <div className="p-1.5 bg-primary/20 rounded-lg border border-primary/30 flex-shrink-0 flex items-center justify-center"><Hash className="w-3.5 h-3.5 text-primary" /></div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] text-muted-foreground">No. Invoice</p>
                         <p className="text-xs font-mono font-bold text-white truncate">{selectedDetail.invoiceNumber}</p>
@@ -1087,7 +1087,7 @@ export default function PaymentHistoryPage() {
 
                     {/* Amount */}
                     <div className="flex items-center gap-3 p-3 bg-muted/10 rounded-xl border border-border/40">
-                      <div className="p-1.5 bg-accent/20 rounded-lg border border-accent/30 flex-shrink-0"><Wallet className="w-3.5 h-3.5 text-accent" /></div>
+                      <div className="p-1.5 bg-accent/20 rounded-lg border border-accent/30 flex-shrink-0 flex items-center justify-center"><Wallet className="w-3.5 h-3.5 text-accent" /></div>
                       <div>
                         <p className="text-[10px] text-muted-foreground">Jumlah Tagihan</p>
                         <p className="text-base font-bold text-white">{formatCurrency(selectedDetail.amount)}</p>
@@ -1097,7 +1097,7 @@ export default function PaymentHistoryPage() {
                     {/* Package change description */}
                     {selectedDetail.isPackageChange && selectedDetail.packageChangeDescription && (
                       <div className="flex items-center gap-3 p-3 bg-purple-500/5 rounded-xl border border-purple-500/20">
-                        <div className="p-1.5 bg-purple-500/20 rounded-lg border border-purple-500/30 flex-shrink-0"><Package className="w-3.5 h-3.5 text-purple-400" /></div>
+                        <div className="p-1.5 bg-purple-500/20 rounded-lg border border-purple-500/30 flex-shrink-0 flex items-center justify-center"><Package className="w-3.5 h-3.5 text-purple-400" /></div>
                         <div>
                           <p className="text-[10px] text-muted-foreground">Permintaan</p>
                           <p className="text-xs font-semibold text-purple-300">{selectedDetail.packageChangeDescription}</p>
@@ -1120,7 +1120,7 @@ export default function PaymentHistoryPage() {
                     {/* Paid At */}
                     {selectedDetail.paidAt && (
                       <div className="flex items-center gap-3 p-3 bg-success/5 rounded-xl border border-success/20">
-                        <div className="p-1.5 bg-success/20 rounded-lg border border-success/30 flex-shrink-0"><CheckCircle className="w-3.5 h-3.5 text-success" /></div>
+                        <div className="p-1.5 bg-success/20 rounded-lg border border-success/30 flex-shrink-0 flex items-center justify-center"><CheckCircle className="w-3.5 h-3.5 text-success" /></div>
                         <div>
                           <p className="text-[10px] text-muted-foreground">Tanggal Bayar</p>
                           <p className="text-[11px] font-bold text-success">{formatDateTime(selectedDetail.paidAt)}</p>

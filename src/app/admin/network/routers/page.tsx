@@ -376,7 +376,7 @@ export default function RouterPage() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2.5 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-xl shadow-[0_0_20px_rgba(0,247,255,0.4)]">
+                  <div className="p-2.5 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-xl shadow-[0_0_20px_rgba(0,247,255,0.4)] flex items-center justify-center">
                     <Server className="w-6 h-6 text-white" />
                   </div>
                   <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent">
@@ -405,7 +405,7 @@ export default function RouterPage() {
                   <p className="text-muted-foreground text-sm mb-1">{t('common.totalRouters')}</p>
                   <p className="text-3xl font-bold text-foreground">{totalRouters}</p>
                 </div>
-                <div className="p-3 bg-[#bc13fe]/20 rounded-xl group-hover:bg-[#bc13fe]/30 transition-colors">
+                <div className="p-3 bg-[#bc13fe]/20 rounded-xl group-hover:bg-[#bc13fe]/30 transition-colors flex items-center justify-center">
                   <Server className="w-6 h-6 text-[#bc13fe]" />
                 </div>
               </div>
@@ -417,7 +417,7 @@ export default function RouterPage() {
                   <p className="text-muted-foreground text-sm mb-1">{t('network.online')}</p>
                   <p className="text-3xl font-bold text-green-400">{onlineRouters}</p>
                 </div>
-                <div className="p-3 bg-green-500/20 rounded-xl group-hover:bg-green-500/30 transition-colors">
+                <div className="p-3 bg-green-500/20 rounded-xl group-hover:bg-green-500/30 transition-colors flex items-center justify-center">
                   <Wifi className="w-6 h-6 text-green-400" />
                 </div>
               </div>
@@ -429,7 +429,7 @@ export default function RouterPage() {
                   <p className="text-muted-foreground text-sm mb-1">MikroTik</p>
                   <p className="text-3xl font-bold text-[#00f7ff]">{mikrotikRouters}</p>
                 </div>
-                <div className="p-3 bg-[#00f7ff]/20 rounded-xl group-hover:bg-[#00f7ff]/30 transition-colors">
+                <div className="p-3 bg-[#00f7ff]/20 rounded-xl group-hover:bg-[#00f7ff]/30 transition-colors flex items-center justify-center">
                   <Activity className="w-6 h-6 text-[#00f7ff]" />
                 </div>
               </div>
@@ -441,7 +441,7 @@ export default function RouterPage() {
                   <p className="text-muted-foreground text-sm mb-1">{t('common.viaVpn')}</p>
                   <p className="text-3xl font-bold text-purple-400">{vpnRouters}</p>
                 </div>
-                <div className="p-3 bg-purple-500/20 rounded-xl group-hover:bg-purple-500/30 transition-colors">
+                <div className="p-3 bg-purple-500/20 rounded-xl group-hover:bg-purple-500/30 transition-colors flex items-center justify-center">
                   <Shield className="w-6 h-6 text-purple-400" />
                 </div>
               </div>
@@ -479,7 +479,7 @@ export default function RouterPage() {
                     <div className="p-6 border-b border-[#bc13fe]/20">
                       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="p-3 bg-gradient-to-br from-[#bc13fe]/30 to-[#00f7ff]/30 rounded-xl group-hover:from-[#bc13fe]/40 group-hover:to-[#00f7ff]/40 transition-colors">
+                          <div className="p-3 bg-gradient-to-br from-[#bc13fe]/30 to-[#00f7ff]/30 rounded-xl group-hover:from-[#bc13fe]/40 group-hover:to-[#00f7ff]/40 transition-colors flex items-center justify-center">
                             <Server className="w-7 h-7 text-[#00f7ff]" />
                           </div>
                           <div>
@@ -611,7 +611,7 @@ export default function RouterPage() {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-4">
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-[#bc13fe]/50 rounded-2xl max-w-lg w-full p-6 shadow-[0_0_50px_rgba(188,19,254,0.3)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-lg">
+                <div className="p-2 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-lg flex items-center justify-center">
                   <Server className="w-5 h-5 text-white" />
                 </div>
                 <h2 className="text-xl font-bold text-foreground">

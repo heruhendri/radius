@@ -199,7 +199,7 @@ export default function AgentSessionsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white/80 dark:bg-[#0a0520]/80 backdrop-blur-xl rounded-xl border-2 border-cyan-200 dark:border-[#00f7ff]/30 p-4 shadow-[0_0_20px_rgba(0,247,255,0.1)]">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-[#00f7ff]/20 rounded-lg">
+            <div className="p-3 bg-[#00f7ff]/20 rounded-lg flex items-center justify-center">
               <Users className="h-6 w-6 text-[#00f7ff]" />
             </div>
             <div>
@@ -211,7 +211,7 @@ export default function AgentSessionsPage() {
 
         <div className="bg-white/80 dark:bg-[#0a0520]/80 backdrop-blur-xl rounded-xl border-2 border-emerald-200 dark:border-[#00ff88]/30 p-4 shadow-[0_0_20px_rgba(0,255,136,0.1)]">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-[#00ff88]/20 rounded-lg">
+            <div className="p-3 bg-[#00ff88]/20 rounded-lg flex items-center justify-center">
               <Activity className="h-6 w-6 text-[#00ff88]" />
             </div>
             <div>
@@ -223,7 +223,7 @@ export default function AgentSessionsPage() {
 
         <div className="bg-white/80 dark:bg-[#0a0520]/80 backdrop-blur-xl rounded-xl border-2 border-pink-200 dark:border-[#ff44cc]/30 p-4 shadow-[0_0_20px_rgba(255,68,204,0.1)]">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-[#ff44cc]/20 rounded-lg">
+            <div className="p-3 bg-[#ff44cc]/20 rounded-lg flex items-center justify-center">
               <Activity className="h-6 w-6 text-[#ff44cc]" />
             </div>
             <div>

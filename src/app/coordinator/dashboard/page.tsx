@@ -92,7 +92,7 @@ export default function CoordinatorDashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-xl shadow-[0_0_20px_rgba(188,19,254,0.4)]">
+              <div className="p-2 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-xl shadow-[0_0_20px_rgba(188,19,254,0.4)] flex items-center justify-center">
                 <UserCheck className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -147,7 +147,7 @@ export default function CoordinatorDashboardPage() {
                   0
                 </p>
               </div>
-              <div className="p-3 bg-[#00f7ff]/20 rounded-xl border border-[#00f7ff]/30">
+              <div className="p-3 bg-[#00f7ff]/20 rounded-xl border border-[#00f7ff]/30 flex items-center justify-center">
                 <ClipboardList className="h-10 w-10 text-[#00f7ff] drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]" />
               </div>
             </div>
@@ -163,7 +163,7 @@ export default function CoordinatorDashboardPage() {
                   0
                 </p>
               </div>
-              <div className="p-3 bg-[#00ff88]/20 rounded-xl border border-[#00ff88]/30">
+              <div className="p-3 bg-[#00ff88]/20 rounded-xl border border-[#00ff88]/30 flex items-center justify-center">
                 <Users className="h-10 w-10 text-[#00ff88] drop-shadow-[0_0_10px_rgba(0,255,136,0.5)]" />
               </div>
             </div>
@@ -179,7 +179,7 @@ export default function CoordinatorDashboardPage() {
                   0
                 </p>
               </div>
-              <div className="p-3 bg-[#bc13fe]/20 rounded-xl border border-[#bc13fe]/30">
+              <div className="p-3 bg-[#bc13fe]/20 rounded-xl border border-[#bc13fe]/30 flex items-center justify-center">
                 <MapPin className="h-10 w-10 text-[#bc13fe] drop-shadow-[0_0_10px_rgba(188,19,254,0.5)]" />
               </div>
             </div>

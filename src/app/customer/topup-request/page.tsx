@@ -103,7 +103,7 @@ export default function TopUpRequestPage() {
 
         <CyberCard className="p-5 bg-gradient-to-r from-[#bc13fe]/20 to-[#00f7ff]/20">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-[#bc13fe]/30 rounded-xl border border-[#bc13fe]/50 shadow-[0_0_15px_rgba(188,19,254,0.4)] shrink-0">
+            <div className="p-3 bg-[#bc13fe]/30 rounded-xl border border-[#bc13fe]/50 shadow-[0_0_15px_rgba(188,19,254,0.4)] shrink-0 flex items-center justify-center">
               <DollarSign className="w-7 h-7 text-[#bc13fe]" />
             </div>
             <div>

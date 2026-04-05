@@ -474,7 +474,7 @@ ${radiusSection}`.trim()
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2.5 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-xl shadow-[0_0_20px_rgba(0,247,255,0.4)]">
+                  <div className="p-2.5 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-xl shadow-[0_0_20px_rgba(0,247,255,0.4)] flex items-center justify-center">
                     <Users className="w-6 h-6 text-white" />
                   </div>
                   <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent">
@@ -506,7 +506,7 @@ ${radiusSection}`.trim()
                   <p className="text-muted-foreground text-sm mb-1">{t('common.totalClients')}</p>
                   <p className="text-3xl font-bold text-foreground">{totalClients}</p>
                 </div>
-                <div className="p-3 bg-[#bc13fe]/20 rounded-xl group-hover:bg-[#bc13fe]/30 transition-colors">
+                <div className="p-3 bg-[#bc13fe]/20 rounded-xl group-hover:bg-[#bc13fe]/30 transition-colors flex items-center justify-center">
                   <Users className="w-6 h-6 text-[#bc13fe]" />
                 </div>
               </div>
@@ -518,7 +518,7 @@ ${radiusSection}`.trim()
                   <p className="text-muted-foreground text-sm mb-1">{t('network.radiusServer')}</p>
                   <p className="text-3xl font-bold text-[#00f7ff]">{radiusServers}</p>
                 </div>
-                <div className="p-3 bg-[#00f7ff]/20 rounded-xl group-hover:bg-[#00f7ff]/30 transition-colors">
+                <div className="p-3 bg-[#00f7ff]/20 rounded-xl group-hover:bg-[#00f7ff]/30 transition-colors flex items-center justify-center">
                   <Radio className="w-6 h-6 text-[#00f7ff]" />
                 </div>
               </div>
@@ -530,7 +530,7 @@ ${radiusSection}`.trim()
                   <p className="text-muted-foreground text-sm mb-1">{t('common.activeClients')}</p>
                   <p className="text-3xl font-bold text-green-400">{activeClients}</p>
                 </div>
-                <div className="p-3 bg-green-500/20 rounded-xl group-hover:bg-green-500/30 transition-colors">
+                <div className="p-3 bg-green-500/20 rounded-xl group-hover:bg-green-500/30 transition-colors flex items-center justify-center">
                   <Wifi className="w-6 h-6 text-green-400" />
                 </div>
               </div>
@@ -569,7 +569,7 @@ ${radiusSection}`.trim()
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2 bg-gradient-to-br from-[#00f7ff]/30 to-[#bc13fe]/30 rounded-lg">
+                          <div className="p-2 bg-gradient-to-br from-[#00f7ff]/30 to-[#bc13fe]/30 rounded-lg flex items-center justify-center">
                             <Shield className="w-5 h-5 text-[#00f7ff]" />
                           </div>
                           <h3 className="font-bold text-lg text-foreground group-hover:text-[#00f7ff] transition-colors">{client.name}</h3>
@@ -631,7 +631,7 @@ ${radiusSection}`.trim()
                               onClick={() => toggleRoutingPanel(client.id)}
                               className="flex items-center gap-2 text-sm font-medium text-[#00f7ff] hover:text-white transition-colors w-full text-left"
                             >
-                              <div className="p-1.5 bg-[#00f7ff]/20 rounded-lg">
+                              <div className="p-1.5 bg-[#00f7ff]/20 rounded-lg flex items-center justify-center">
                                 <Terminal className="w-3.5 h-3.5 text-[#00f7ff]" />
                               </div>
                               <span>{t('network.vpsRoutingSetup')}</span>
@@ -715,7 +715,7 @@ ${radiusSection}`.trim()
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-4">
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-[#bc13fe]/50 rounded-2xl max-w-lg w-full p-6 shadow-[0_0_50px_rgba(188,19,254,0.3)]">
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-lg">
+                <div className="p-2 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-lg flex items-center justify-center">
                   <Plus className="w-5 h-5 text-white" />
                 </div>
                 <h2 className="text-xl font-bold text-foreground">{t('network.addVpnClient')}</h2>
@@ -815,7 +815,7 @@ ${radiusSection}`.trim()
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-4">
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-[#bc13fe]/50 rounded-2xl max-w-4xl w-full p-6 shadow-[0_0_50px_rgba(188,19,254,0.3)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-lg">
+                <div className="p-2 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-lg flex items-center justify-center">
                   <Shield className="w-5 h-5 text-white" />
                 </div>
                 <h2 className="text-xl font-bold text-foreground">{t('network.vpnClientCredentials')}</h2>
@@ -957,7 +957,7 @@ ${radiusSection}`.trim()
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-[#00f7ff]/50 rounded-2xl max-w-xl w-full p-6 shadow-[0_0_50px_rgba(0,247,255,0.3)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-lg">
+                  <div className="p-2 bg-gradient-to-br from-[#00f7ff] to-[#bc13fe] rounded-lg flex items-center justify-center">
                     <Route className="w-5 h-5 text-white" />
                   </div>
                   <h2 className="text-xl font-bold text-foreground">Apply VPS Routing</h2>

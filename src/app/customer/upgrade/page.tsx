@@ -247,7 +247,7 @@ export default function UpgradePackagePage() {
               <div className="h-1 w-full bg-gradient-to-r from-[#bc13fe] via-[#ff44cc] to-[#00f7ff]" />
               <div className="p-5">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2.5 bg-[#bc13fe]/20 rounded-xl border border-[#bc13fe]/30 shadow-[0_0_15px_rgba(188,19,254,0.3)]">
+                  <div className="p-2.5 bg-[#bc13fe]/20 rounded-xl border border-[#bc13fe]/30 shadow-[0_0_15px_rgba(188,19,254,0.3)] flex items-center justify-center">
                     <Package className="w-5 h-5 text-[#bc13fe]" />
                   </div>
                   <div>
@@ -305,7 +305,7 @@ export default function UpgradePackagePage() {
           {/* Info Box */}
           <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-cyan-500/20">
             <div className="flex items-start gap-3">
-              <div className="p-1.5 bg-cyan-500/20 rounded-lg border border-cyan-500/30 flex-shrink-0 mt-0.5">
+              <div className="p-1.5 bg-cyan-500/20 rounded-lg border border-cyan-500/30 flex-shrink-0 mt-0.5 flex items-center justify-center">
                 <Wifi className="w-4 h-4 text-cyan-400" />
               </div>
               <div className="space-y-1.5">
@@ -333,7 +333,7 @@ export default function UpgradePackagePage() {
           {/* Available Packages */}
           <CyberCard className="bg-card/80 backdrop-blur-xl border-2 border-[#00f7ff]/30">
             <div className="px-5 pt-5 pb-3 border-b border-[#00f7ff]/10 flex items-center gap-3">
-              <div className="p-2 bg-amber-500/20 rounded-lg border border-amber-500/30">
+              <div className="p-2 bg-amber-500/20 rounded-lg border border-amber-500/30 flex items-center justify-center">
                 <Zap className="w-4 h-4 text-amber-400" />
               </div>
               <h2 className="text-sm font-bold text-amber-400 uppercase tracking-wider">{t('customer.selectNewPackage')}</h2>
@@ -404,7 +404,7 @@ export default function UpgradePackagePage() {
           {selectedPackage && paymentGateways.length > 0 && (
             <CyberCard className="bg-card/80 backdrop-blur-xl border-2 border-[#ff44cc]/30">
               <div className="px-5 pt-5 pb-3 border-b border-[#ff44cc]/10 flex items-center gap-3">
-                <div className="p-2 bg-[#ff44cc]/20 rounded-lg border border-[#ff44cc]/30">
+                <div className="p-2 bg-[#ff44cc]/20 rounded-lg border border-[#ff44cc]/30 flex items-center justify-center">
                   <CreditCard className="w-4 h-4 text-[#ff44cc]" />
                 </div>
                 <h2 className="text-sm font-bold text-[#ff44cc] uppercase tracking-wider">{t('customer.paymentMethod')}</h2>
@@ -423,7 +423,7 @@ export default function UpgradePackagePage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-800 border border-[#bc13fe]/20 rounded-lg">
+                        <div className="p-2 bg-slate-800 border border-[#bc13fe]/20 rounded-lg flex items-center justify-center">
                           <CreditCard className="w-4 h-4 text-[#00f7ff]" />
                         </div>
                         <div>

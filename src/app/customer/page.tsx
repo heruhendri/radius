@@ -382,7 +382,7 @@ export default function CustomerDashboard() {
       <div>
         <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-primary/30 shadow-[0_0_30px_rgba(188,19,254,0.15)]">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 bg-primary/20 rounded-lg border border-primary/30 shadow-[0_0_10px_rgba(188,19,254,0.3)]">
+            <div className="p-2 bg-primary/20 rounded-lg border border-primary/30 shadow-[0_0_10px_rgba(188,19,254,0.3)] flex items-center justify-center">
               <User className="w-4 h-4 text-primary drop-shadow-[0_0_5px_rgba(188,19,254,0.8)]" />
             </div>
             <h2 className="text-sm font-bold text-primary uppercase tracking-wider drop-shadow-[0_0_5px_rgba(188,19,254,0.5)]">{t('customer.accountInfo')}</h2>
@@ -437,7 +437,7 @@ export default function CustomerDashboard() {
         {/* ONT/WiFi Card */}
         <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-accent/30 shadow-[0_0_30px_rgba(0,247,255,0.15)]">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 bg-accent/20 rounded-lg border border-accent/30 shadow-[0_0_10px_rgba(0,247,255,0.3)]">
+            <div className="p-2 bg-accent/20 rounded-lg border border-accent/30 shadow-[0_0_10px_rgba(0,247,255,0.3)] flex items-center justify-center">
               <Wifi className="w-4 h-4 text-accent drop-shadow-[0_0_5px_rgba(0,247,255,0.8)]" />
             </div>
             <h2 className="text-sm font-bold text-accent uppercase tracking-wider drop-shadow-[0_0_5px_rgba(0,247,255,0.5)]">{t('customer.ontWifi')}</h2>
@@ -561,7 +561,7 @@ export default function CustomerDashboard() {
         {/* Invoices Card */}
         <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-success/30 shadow-[0_0_30px_rgba(0,255,136,0.15)]">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 bg-success/20 rounded-lg border border-success/30 shadow-[0_0_10px_rgba(0,255,136,0.3)]">
+            <div className="p-2 bg-success/20 rounded-lg border border-success/30 shadow-[0_0_10px_rgba(0,255,136,0.3)] flex items-center justify-center">
               <Receipt className="w-4 h-4 text-success drop-shadow-[0_0_5px_rgba(0,255,136,0.8)]" />
             </div>
             <h2 className="text-sm font-bold text-success uppercase tracking-wider drop-shadow-[0_0_5px_rgba(0,255,136,0.5)]">{t('customer.invoices')}</h2>
@@ -643,7 +643,7 @@ export default function CustomerDashboard() {
       <div className="mt-3">
         <CyberCard className="p-3 bg-card/80 backdrop-blur-xl border-2 border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]">
           <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 bg-cyan-500/20 rounded-lg border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+            <div className="p-1.5 bg-cyan-500/20 rounded-lg border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.3)] flex items-center justify-center">
               <Zap className="w-3.5 h-3.5 text-cyan-400 drop-shadow-[0_0_5px_rgba(6,182,212,0.8)]" />
             </div>
             <h2 className="text-xs font-bold text-cyan-400 uppercase tracking-wider drop-shadow-[0_0_5px_rgba(6,182,212,0.5)]">Menu Cepat</h2>

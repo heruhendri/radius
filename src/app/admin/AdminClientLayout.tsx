@@ -422,7 +422,7 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
           )}
         >
           <span className={cn(
-            'flex-shrink-0 p-0.5 rounded-md transition-all duration-300',
+            'flex-shrink-0 p-0.5 rounded-md transition-all duration-300 flex items-center justify-center',
             isActive ? 'text-cyan-400 bg-cyan-500/10 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]' : 'text-muted-foreground group-hover:text-cyan-400'
           )}>
             {item.icon}
@@ -492,7 +492,7 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
       )}
     >
       <span className={cn(
-        'flex-shrink-0 p-0.5 rounded-md transition-all duration-300',
+        'flex-shrink-0 p-0.5 rounded-md transition-all duration-300 flex items-center justify-center',
         pathname === item.href ? 'text-cyan-400 bg-cyan-500/10 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]' : 'text-muted-foreground group-hover:text-cyan-400'
       )}>
         {item.icon}
@@ -1046,7 +1046,7 @@ function AdminLayoutContent({
             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-blue-400 rounded-br-lg" />
 
             <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse">
+              <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse flex items-center justify-center">
                 <Timer className="w-6 h-6 text-amber-400" />
               </div>
               <div>

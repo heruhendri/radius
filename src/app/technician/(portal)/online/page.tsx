@@ -85,7 +85,7 @@ export default function TechnicianOnlinePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-green-500/10 dark:bg-green-500/20 rounded-xl">
+          <div className="p-2 bg-green-500/10 dark:bg-green-500/20 rounded-xl flex items-center justify-center">
             <Wifi className="w-5 h-5 text-green-500" />
           </div>
           <div>

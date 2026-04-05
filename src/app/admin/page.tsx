@@ -548,7 +548,7 @@ export default function AdminDashboard() {
                         <p className="text-[9px] sm:text-[10px] text-[#00f7ff]/60 mt-0.5 font-medium">{card.detail}</p>
                       )}
                     </div>
-                    <div className={`p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl bg-gradient-to-br ${card.gradient} text-white shadow-lg flex-shrink-0`}>
+                    <div className={`p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl bg-gradient-to-br ${card.gradient} text-white shadow-lg flex-shrink-0 flex items-center justify-center`}>
                       {React.cloneElement(card.icon, { className: 'w-4 h-4 sm:w-5 sm:h-5' })}
                     </div>
                   </div>

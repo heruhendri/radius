@@ -264,7 +264,7 @@ export default function RenewalPage() {
       {user && (
         <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-primary/30 shadow-[0_0_20px_rgba(188,19,254,0.1)]">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-1.5 bg-primary/20 rounded-lg border border-primary/30">
+            <div className="p-1.5 bg-primary/20 rounded-lg border border-primary/30 flex items-center justify-center">
               <Package className="w-3.5 h-3.5 text-primary" />
             </div>
             <span className="text-xs font-bold text-primary uppercase tracking-wider">Info Langganan</span>
@@ -316,7 +316,7 @@ export default function RenewalPage() {
         <div className="space-y-4">
           <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-cyan-500/30">
             <div className="flex items-center gap-2 mb-3">
-              <div className="p-1.5 bg-cyan-500/20 rounded-lg border border-cyan-500/30">
+              <div className="p-1.5 bg-cyan-500/20 rounded-lg border border-cyan-500/30 flex items-center justify-center">
                 <Zap className="w-3.5 h-3.5 text-cyan-400" />
               </div>
               <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Pilih Paket</span>
@@ -336,7 +336,7 @@ export default function RenewalPage() {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-slate-800 rounded-lg border border-border/30">
+                      <div className="p-1.5 bg-slate-800 rounded-lg border border-border/30 flex items-center justify-center">
                         <Package className="w-4 h-4 text-cyan-400" />
                       </div>
                       <div>
@@ -443,7 +443,7 @@ export default function RenewalPage() {
               onClick={() => paymentGateways.length > 0 ? setStep('online-pay') : (createdInvoice.paymentLink ? window.open(createdInvoice.paymentLink, '_blank') : toast('warning', 'Tidak tersedia', 'Payment gateway tidak dikonfigurasi'))}
               className="w-full flex items-center gap-3 p-4 bg-cyan-500/10 hover:bg-cyan-500/20 border-2 border-cyan-500/40 rounded-xl transition-all text-left"
             >
-              <div className="p-2 bg-cyan-500/20 rounded-lg border border-cyan-500/30"><CreditCard className="w-5 h-5 text-cyan-400" /></div>
+              <div className="p-2 bg-cyan-500/20 rounded-lg border border-cyan-500/30 flex items-center justify-center"><CreditCard className="w-5 h-5 text-cyan-400" /></div>
               <div className="flex-1">
                 <p className="text-sm font-bold text-white">Bayar Online</p>
                 <p className="text-[10px] text-muted-foreground">Payment Gateway (Midtrans, Xendit, dll)</p>
@@ -454,7 +454,7 @@ export default function RenewalPage() {
               onClick={() => setStep('offline-pay')}
               className="w-full flex items-center gap-3 p-4 bg-purple-500/10 hover:bg-purple-500/20 border-2 border-purple-500/40 rounded-xl transition-all text-left"
             >
-              <div className="p-2 bg-purple-500/20 rounded-lg border border-purple-500/30"><Building2 className="w-5 h-5 text-purple-400" /></div>
+              <div className="p-2 bg-purple-500/20 rounded-lg border border-purple-500/30 flex items-center justify-center"><Building2 className="w-5 h-5 text-purple-400" /></div>
               <div className="flex-1">
                 <p className="text-sm font-bold text-white">Transfer Manual</p>
                 <p className="text-[10px] text-muted-foreground">Upload bukti transfer, tunggu konfirmasi admin</p>
@@ -484,7 +484,7 @@ export default function RenewalPage() {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-1.5 bg-slate-800 rounded-lg border border-border/30"><CreditCard className="w-4 h-4 text-cyan-400" /></div>
+                  <div className="p-1.5 bg-slate-800 rounded-lg border border-border/30 flex items-center justify-center"><CreditCard className="w-4 h-4 text-cyan-400" /></div>
                   <div className="text-left">
                     <p className="text-sm font-bold text-white">{gw.name}</p>
                     <p className="text-[10px] text-muted-foreground capitalize">{gw.provider}</p>

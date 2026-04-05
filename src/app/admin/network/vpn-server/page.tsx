@@ -720,7 +720,7 @@ export default function VpnServerPage() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2.5 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-xl shadow-[0_0_20px_rgba(188,19,254,0.4)]">
+                  <div className="p-2.5 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-xl shadow-[0_0_20px_rgba(188,19,254,0.4)] flex items-center justify-center">
                     <Shield className="w-6 h-6 text-white" />
                   </div>
                   <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent">
@@ -746,7 +746,7 @@ export default function VpnServerPage() {
             {/* Total Servers */}
             <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-[#bc13fe]/30 p-5 hover:border-[#bc13fe]/50 transition-all group">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-[#bc13fe]/20 rounded-lg group-hover:bg-[#bc13fe]/30 transition-colors">
+                <div className="p-2 bg-[#bc13fe]/20 rounded-lg group-hover:bg-[#bc13fe]/30 transition-colors flex items-center justify-center">
                   <Server className="w-5 h-5 text-[#bc13fe]" />
                 </div>
               </div>
@@ -756,7 +756,7 @@ export default function VpnServerPage() {
             {/* Active Servers */}
             <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-green-500/30 p-5 hover:border-green-500/50 transition-all group">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-green-500/20 rounded-lg group-hover:bg-green-500/30 transition-colors">
+                <div className="p-2 bg-green-500/20 rounded-lg group-hover:bg-green-500/30 transition-colors flex items-center justify-center">
                   <Activity className="w-5 h-5 text-green-400" />
                 </div>
               </div>
@@ -766,7 +766,7 @@ export default function VpnServerPage() {
             {/* L2TP Servers */}
             <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-green-500/30 p-5 hover:border-green-500/50 transition-all group">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-green-500/20 rounded-lg group-hover:bg-green-500/30 transition-colors">
+                <div className="p-2 bg-green-500/20 rounded-lg group-hover:bg-green-500/30 transition-colors flex items-center justify-center">
                   <Shield className="w-5 h-5 text-green-400" />
                 </div>
               </div>
@@ -776,7 +776,7 @@ export default function VpnServerPage() {
             {/* SSTP Servers */}
             <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-cyan-500/30 p-5 hover:border-cyan-500/50 transition-all group">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-cyan-500/20 rounded-lg group-hover:bg-cyan-500/30 transition-colors">
+                <div className="p-2 bg-cyan-500/20 rounded-lg group-hover:bg-cyan-500/30 transition-colors flex items-center justify-center">
                   <Shield className="w-5 h-5 text-cyan-400" />
                 </div>
               </div>
@@ -814,7 +814,7 @@ export default function VpnServerPage() {
                   <div className="p-6 border-b border-[#bc13fe]/20">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-br from-[#bc13fe]/30 to-[#00f7ff]/30 rounded-xl group-hover:from-[#bc13fe]/40 group-hover:to-[#00f7ff]/40 transition-colors">
+                        <div className="p-3 bg-gradient-to-br from-[#bc13fe]/30 to-[#00f7ff]/30 rounded-xl group-hover:from-[#bc13fe]/40 group-hover:to-[#00f7ff]/40 transition-colors flex items-center justify-center">
                           <Server className="w-7 h-7 text-[#00f7ff]" />
                         </div>
                         <div>
@@ -962,7 +962,7 @@ export default function VpnServerPage() {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-4">
               <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-[#bc13fe]/50 rounded-2xl max-w-lg w-full p-6 shadow-[0_0_50px_rgba(188,19,254,0.3)] max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-lg">
+                  <div className="p-2 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-lg flex items-center justify-center">
                     <Shield className="w-5 h-5 text-white" />
                   </div>
                   <h2 className="text-xl font-bold text-foreground">
@@ -1117,7 +1117,7 @@ export default function VpnServerPage() {
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-[#bc13fe]/50 rounded-2xl max-w-2xl w-full p-6 shadow-[0_0_50px_rgba(188,19,254,0.3)] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-lg">
+                  <div className="p-2 bg-gradient-to-br from-[#bc13fe] to-[#00f7ff] rounded-lg flex items-center justify-center">
                     <Terminal className="w-5 h-5 text-white" />
                   </div>
                   <h2 className="text-xl font-bold text-foreground">L2TP Control - {editingServer.name}</h2>
