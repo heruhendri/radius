@@ -309,8 +309,6 @@ export default function PppoeUsersPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [importProfileId, setImportProfileId] = useState('');
-  const [importRouterId, setImportRouterId] = useState('');
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
 
@@ -1044,14 +1042,13 @@ export default function PppoeUsersPage() {
   };
 
   const handleImport = async () => {
-    if (!importFile || !importProfileId) { await showError(t('pppoe.selectFileAndProfile')); return; }
+    if (!importFile) { await showError(t('pppoe.selectFile')); return; }
     setImporting(true); setImportResult(null);
     try {
-      const formData = new FormData(); formData.append('file', importFile); formData.append('pppoeProfileId', importProfileId);
-      if (importRouterId) formData.append('routerId', importRouterId);
+      const formData = new FormData(); formData.append('file', importFile);
       const res = await fetch('/api/pppoe/users/bulk', { method: 'POST', body: formData });
       const data = await res.json();
-      if (res.ok) { setImportResult(data.results); loadData(); if (data.results.failed === 0) setTimeout(() => { setIsImportDialogOpen(false); setImportFile(null); setImportProfileId(''); setImportRouterId(''); setImportResult(null); }, 3000); }
+      if (res.ok) { setImportResult(data.results); loadData(); if (data.results.failed === 0) setTimeout(() => { setIsImportDialogOpen(false); setImportFile(null); setImportResult(null); }, 3000); }
       else { await showError(t('pppoe.importFailed') + ': ' + data.error); }
     } catch (error) { console.error('Import error:', error); await showError(t('pppoe.importFailed')); }
     finally { setImporting(false); }
@@ -1616,30 +1613,19 @@ export default function PppoeUsersPage() {
         <MapPicker isOpen={showMapPicker} onClose={() => setShowMapPicker(false)} onSelect={(lat, lng) => { const latStr = lat.toFixed(6); const lonStr = lng.toFixed(6); setMapPickerLat(latStr); setMapPickerLon(lonStr); setModalLatLng({ lat: latStr, lng: lonStr }); }} initialLat={mapPickerLat ? parseFloat(mapPickerLat) : undefined} initialLng={mapPickerLon ? parseFloat(mapPickerLon) : undefined} />
 
         {/* Import Dialog */}
-        <SimpleModal isOpen={isImportDialogOpen} onClose={() => { setIsImportDialogOpen(false); setImportFile(null); setImportProfileId(''); setImportRouterId(''); setImportResult(null); }} size="md">
+        <SimpleModal isOpen={isImportDialogOpen} onClose={() => { setIsImportDialogOpen(false); setImportFile(null); setImportResult(null); }} size="md">
           <ModalHeader>
             <ModalTitle>{t('pppoe.importCsv')}</ModalTitle>
             <ModalDescription>{t('pppoe.uploadCsvOrExcel')}</ModalDescription>
           </ModalHeader>
           <ModalBody className="space-y-4">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-lg text-xs text-blue-700 dark:text-blue-300">
+              Profile dan NAS/Router akan diambil otomatis dari kolom <strong>Profile</strong> dan <strong>Router</strong> dalam file. Gunakan file hasil Export untuk memastikan format yang benar.
+            </div>
             <div>
               <ModalLabel required>{t('pppoe.selectFile')}</ModalLabel>
               <input type="file" accept=".csv,.xlsx,.xls" onChange={(e) => setImportFile(e.target.files?.[0] || null)} className="w-full px-3 py-2 text-xs bg-background dark:bg-[#0a0520] border border-border dark:border-[#bc13fe]/40 rounded-lg text-foreground file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary/20 dark:file:bg-[#bc13fe]/30 file:text-foreground hover:file:bg-primary/30 dark:hover:file:bg-[#bc13fe]/50 focus:border-primary dark:focus:border-[#00f7ff] focus:ring-1 focus:ring-primary/30 dark:focus:ring-[#00f7ff]/30 transition-all" />
               <p className="text-[9px] text-muted-foreground mt-1">{t('pppoe.csvExcelFormat')}</p>
-            </div>
-            <div>
-              <ModalLabel required>{t('pppoe.profile')}</ModalLabel>
-              <ModalSelect value={importProfileId} onChange={(e) => setImportProfileId(e.target.value)}>
-                <option value="" className="bg-[#0a0520]">{t('common.select')}</option>
-                {profiles.map((p) => <option key={p.id} value={p.id} className="bg-[#0a0520]">{p.name} - Rp {p.price.toLocaleString('id-ID')}</option>)}
-              </ModalSelect>
-            </div>
-            <div>
-              <ModalLabel>{t('pppoe.nasLabel')}</ModalLabel>
-              <ModalSelect value={importRouterId} onChange={(e) => setImportRouterId(e.target.value)}>
-                <option value="" className="bg-[#0a0520]">{t('pppoe.global')}</option>
-                {routers.map((r) => <option key={r.id} value={r.id} className="bg-[#0a0520]">{r.name}</option>)}
-              </ModalSelect>
             </div>
             {importResult && (
               <div className="p-3 border border-border dark:border-[#bc13fe]/30 rounded-lg bg-muted/30 dark:bg-[#0a0520]/50 text-xs max-h-60 overflow-y-auto">
@@ -1663,8 +1649,8 @@ export default function PppoeUsersPage() {
             )}
           </ModalBody>
           <ModalFooter>
-            <ModalButton variant="secondary" onClick={() => { setIsImportDialogOpen(false); setImportFile(null); setImportProfileId(''); setImportRouterId(''); setImportResult(null); }}>{t('common.cancel')}</ModalButton>
-            <ModalButton variant="primary" onClick={handleImport} disabled={!importFile || !importProfileId || importing}>{importing ? t('notifications.processing') : t('common.import')}</ModalButton>
+            <ModalButton variant="secondary" onClick={() => { setIsImportDialogOpen(false); setImportFile(null); setImportResult(null); }}>{t('common.cancel')}</ModalButton>
+            <ModalButton variant="primary" onClick={handleImport} disabled={!importFile || importing}>{importing ? t('notifications.processing') : t('common.import')}</ModalButton>
           </ModalFooter>
         </SimpleModal>
 

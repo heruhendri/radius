@@ -156,116 +156,20 @@ export async function POST(request: NextRequest) {
     const profileId = formData.get('pppoeProfileId') as string;
     const routerId = formData.get('routerId') as string | null;
 
-    if (!file || !profileId) {
+    if (!file) {
       return NextResponse.json(
-        { error: 'File and profile are required' },
+        { error: 'File is required' },
         { status: 400 }
       );
     }
 
-    // Verify profile exists
-    const profile = await prisma.pppoeProfile.findUnique({
-      where: { id: profileId },
-    });
+    // Pre-load all profiles and routers for per-row auto-resolution from file data
+    const allProfiles = await prisma.pppoeProfile.findMany();
+    const profileByNameMap = new Map(allProfiles.map(p => [p.name.toLowerCase(), p]));
+    const allRouters = await prisma.router.findMany();
+    const routerByNameMap = new Map(allRouters.map(r => [r.name.toLowerCase(), r]));
 
-    if (!profile) {
-      return NextResponse.json(
-        { error: 'Profile not found' },
-        { status: 404 }
-      );
-    }
-
-    // Verify router if provided
-    if (routerId) {
-      const router = await prisma.router.findUnique({
-        where: { id: routerId },
-      });
-
-      if (!router) {
-        return NextResponse.json(
-          { error: 'Router not found' },
-          { status: 404 }
-        );
-      }
-    }
-
-    // Parse file: support both CSV and XLSX/XLS
-    const fileName = file.name.toLowerCase();
-    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
-    let rows: Record<string, string>[] = [];
-    let headers: string[] = [];
-
-    if (isExcel) {
-      // Parse XLSX using ExcelJS
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(arrayBuffer as any);
-      const worksheet = workbook.worksheets[0];
-
-      if (!worksheet) {
-        return NextResponse.json({ error: 'Excel file has no worksheets' }, { status: 400 });
-      }
-
-      // Get headers from row 1
-      const headerRow = worksheet.getRow(1);
-      headerRow.eachCell((cell, colNumber) => {
-        headers[colNumber - 1] = String(cell.value ?? '').trim().toLowerCase();
-      });
-
-      // Parse data rows
-      worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return; // skip header row
-        const rowData: Record<string, string> = {};
-        let hasData = false;
-        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-          const key = headers[colNumber - 1];
-          if (key) {
-            // Handle date cells — ExcelJS may parse dates as Date objects
-            let val = '';
-            if (cell.value instanceof Date) {
-              val = cell.value.toISOString().split('T')[0];
-            } else {
-              val = String(cell.value ?? '').trim();
-            }
-            rowData[key] = val;
-            if (val) hasData = true;
-          }
-        });
-        if (hasData) rows.push(rowData);
-      });
-    } else {
-      // Parse CSV
-      const text = await file.text();
-      const lines = text.split('\n').filter(line => line.trim());
-
-      if (lines.length < 2) {
-        return NextResponse.json(
-          { error: 'CSV file is empty or invalid' },
-          { status: 400 }
-        );
-      }
-
-      headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        const values = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)?.map(v =>
-          v.replace(/^"|"$/g, '').trim()
-        ) || [];
-        const rowData: Record<string, string> = {};
-        headers.forEach((header, index) => {
-          rowData[header] = values[index] || '';
-        });
-        rows.push(rowData);
-      }
-    }
-
-    if (rows.length === 0) {
-      return NextResponse.json({ error: 'No data rows found in file' }, { status: 400 });
-    }
-
-    // Normalize headers: map Indonesian labels → internal field names
+    // Header normalization map — applied BEFORE row parsing so rowData uses normalized keys
     const headerNormalizeMap: Record<string, string> = {
       // English (existing/fallback)
       'username': 'username',
@@ -315,15 +219,93 @@ export async function POST(request: NextRequest) {
       'area/wilayah': 'area',
       'area': 'area',
       'wilayah': 'area',
-      // Export-only columns (ignored in import)
+      // Export columns: profile and router used for auto-resolution
       'no': '_no',
-      'profile': '_profile',
+      'profile': 'profilename',
       'status': '_status',
-      'router': '_router',
+      'router': 'routername',
       'created': '_created',
       'createdat': '_createdat',
     };
-    headers = headers.map(h => headerNormalizeMap[h] ?? h);
+
+    // Parse file: support both CSV and XLSX/XLS
+    const fileName = file.name.toLowerCase();
+    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+    let rows: Record<string, string>[] = [];
+    let headers: string[] = [];
+
+    if (isExcel) {
+      // Parse XLSX using ExcelJS
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer as any);
+      const worksheet = workbook.worksheets[0];
+
+      if (!worksheet) {
+        return NextResponse.json({ error: 'Excel file has no worksheets' }, { status: 400 });
+      }
+
+      // Get headers from row 1 and normalize immediately
+      const headerRow = worksheet.getRow(1);
+      headerRow.eachCell((cell, colNumber) => {
+        headers[colNumber - 1] = String(cell.value ?? '').trim().toLowerCase();
+      });
+      headers = headers.map(h => headerNormalizeMap[h] ?? h);
+
+      // Parse data rows (rowData uses normalized keys)
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // skip header row
+        const rowData: Record<string, string> = {};
+        let hasData = false;
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          const key = headers[colNumber - 1];
+          if (key) {
+            // Handle date cells — ExcelJS may parse dates as Date objects
+            let val = '';
+            if (cell.value instanceof Date) {
+              val = cell.value.toISOString().split('T')[0];
+            } else {
+              val = String(cell.value ?? '').trim();
+            }
+            rowData[key] = val;
+            if (val) hasData = true;
+          }
+        });
+        if (hasData) rows.push(rowData);
+      });
+    } else {
+      // Parse CSV
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+
+      if (lines.length < 2) {
+        return NextResponse.json(
+          { error: 'CSV file is empty or invalid' },
+          { status: 400 }
+        );
+      }
+
+      // Get headers from first line and normalize immediately
+      headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      headers = headers.map(h => headerNormalizeMap[h] ?? h);
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const values = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)?.map(v =>
+          v.replace(/^"|"$/g, '').trim()
+        ) || [];
+        const rowData: Record<string, string> = {};
+        headers.forEach((header, index) => {
+          rowData[header] = values[index] || '';
+        });
+        rows.push(rowData);
+      }
+    }
+
+    if (rows.length === 0) {
+      return NextResponse.json({ error: 'No data rows found in file' }, { status: 400 });
+    }
 
     // Required columns check — password is optional (auto-generated if missing)
     const requiredColumns = ['username', 'name', 'phone'];
@@ -381,6 +363,27 @@ export async function POST(request: NextRequest) {
         const rawSubType = (rowData.subscriptiontype || '').toUpperCase();
         const subscriptionType = rawSubType === 'PREPAID' ? 'PREPAID' : 'POSTPAID';
 
+        // Resolve profile for this row from 'profilename' column (set by export's "Profile" header)
+        const rowProfileName = rowData.profilename?.trim() || '';
+        const rowProfile = rowProfileName ? (profileByNameMap.get(rowProfileName.toLowerCase()) || null) : null;
+        if (!rowProfile) {
+          results.failed++;
+          results.errors.push({
+            line: i + 2,
+            username: rowData.username,
+            error: `Profile tidak ditemukan: "${rowProfileName || 'kolom Profile tidak ada dalam file'}"`,
+          });
+          continue;
+        }
+
+        // Resolve router for this row from 'routername' column (set by export's "Router" header)
+        let rowRouterId: string | null = null;
+        const rowRouterName = rowData.routername?.trim() || '';
+        if (rowRouterName && rowRouterName.toLowerCase() !== 'global') {
+          const foundRouter = routerByNameMap.get(rowRouterName.toLowerCase());
+          if (foundRouter) rowRouterId = foundRouter.id;
+        }
+
         // Create user
         const userData: any = {
           id: randomUUID(),
@@ -391,8 +394,8 @@ export async function POST(request: NextRequest) {
           email: rowData.email || null,
           address: rowData.address || null,
           ipAddress: rowData.ipaddress || null,
-          profileId: profileId,
-          routerId: routerId || null,
+          profileId: rowProfile.id,
+          routerId: rowRouterId,
           status: 'active',
           subscriptionType,
         };
@@ -473,7 +476,7 @@ export async function POST(request: NextRequest) {
 
         await prisma.$executeRaw`
           INSERT INTO radusergroup (username, groupname, priority)
-          VALUES (${newUser.username}, ${profile.groupName}, 1)
+          VALUES (${newUser.username}, ${rowProfile.groupName}, 1)
         `;
 
         // Add static IP if provided
