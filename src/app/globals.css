@@ -170,10 +170,10 @@
 
 /* ===========================================
    LIGHT MODE — Modern Clean Professional
-   White base + Blue-600/Indigo accents
+   Slate-50 base + Blue-600/Indigo accents, Navy sidebar
    =========================================== */
 :root:not(.dark) {
-  --background: #ffffff;
+  --background: #f8fafc;    /* slate-50: off-white so cards/inputs float */
   --foreground: #0f172a;
 
   --card: #ffffff;
@@ -184,11 +184,11 @@
   --primary: #2563eb;
   --primary-foreground: #ffffff;
 
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+  --secondary: #e0e7ff;           /* indigo-100 — blue-tinted secondary */
+  --secondary-foreground: #3730a3; /* indigo-800 */
 
   --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted-foreground: #475569;    /* slate-600 — was #64748b, more readable */
 
   --accent: #4f46e5;
   --accent-foreground: #ffffff;
@@ -203,8 +203,8 @@
   --info-foreground: #ffffff;
 
   --border: #e2e8f0;
-  --input: #f8fafc;
-  --ring: #3b82f6;
+  --input: #ffffff;               /* white inputs on slate-50 bg */
+  --ring: #4f46e5;                /* indigo focus ring */
 
   --chart-1: #2563eb;
   --chart-2: #4f46e5;
@@ -212,13 +212,14 @@
   --chart-4: #059669;
   --chart-5: #d97706;
 
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #2563eb;
+  /* Navy sidebar — consistent with dark mode for brand identity */
+  --sidebar: #0f172a;
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-primary: #3b82f6;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #e2e8f0;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #e2e8f0;
+  --sidebar-border: #334155;
   --sidebar-ring: #3b82f6;
 
   color-scheme: light;
@@ -526,18 +527,18 @@ html.theme-transitioning *::after {
   background-color: rgba(217, 119, 6, 0.08) !important;
 }
 
-/* --- 16. SIDEBAR NEON TOP LINE → subtle --- */
+/* --- 16. SIDEBAR NEON TOP LINE → slate for dark sidebar --- */
 :root:not(.dark) .via-cyan-400 {
-  --tw-gradient-via: #e2e8f0 !important;
+  --tw-gradient-via: #334155 !important;
 }
 
-/* --- 17. SIDEBAR ACTIVE STATE → light-friendly --- */
+/* --- 17. SIDEBAR ACTIVE STATE → blue tint on dark sidebar --- */
 :root:not(.dark) .bg-cyan-500\/10 {
-  background-color: rgba(8, 145, 178, 0.1) !important;
+  background-color: rgba(59, 130, 246, 0.14) !important;
 }
 :root:not(.dark) .border-cyan-400\/20,
 :root:not(.dark) .border-cyan-400\/30 {
-  border-color: rgba(8, 145, 178, 0.2) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
 }
 
 /* --- 18. MOBILE OVERLAY → lighter --- */
@@ -551,18 +552,18 @@ html.theme-transitioning *::after {
   background-color: rgba(0, 0, 0, 0.35) !important;
 }
 
-/* --- 19. SIDEBAR CATEGORY TEXT → more visible on white --- */
+/* --- 19. SIDEBAR CATEGORY TEXT → blue-300/400 on dark sidebar --- */
 :root:not(.dark) .text-cyan-400\/45 {
-  color: rgba(8, 145, 178, 0.75) !important;
+  color: rgba(96, 165, 250, 0.45) !important;
 }
 :root:not(.dark) .text-cyan-400\/60 {
-  color: rgba(8, 145, 178, 0.85) !important;
+  color: rgba(96, 165, 250, 0.60) !important;
 }
 :root:not(.dark) .text-cyan-400\/70 {
-  color: rgba(8, 145, 178, 0.9) !important;
+  color: rgba(96, 165, 250, 0.70) !important;
 }
 :root:not(.dark) .text-cyan-400\/80 {
-  color: var(--primary) !important;
+  color: #60a5fa !important;
 }
 
 /* --- 20. SIDEBAR GRADIENT BACKGROUNDS → transparent on white --- */
@@ -571,13 +572,15 @@ html.theme-transitioning *::after {
   background-color: transparent !important;
 }
 
-/* --- 21. BACKDROP BLUR + BG → solid white on light --- */
+/* --- 21. BACKDROP BLUR + BG — bg/content = light, sidebar = dark --- */
 :root:not(.dark) .bg-background\/80 {
   background-color: rgba(255, 255, 255, 0.97) !important;
 }
-:root:not(.dark) .bg-background\/95,
+:root:not(.dark) .bg-background\/95 {
+  background-color: rgba(248, 250, 252, 0.97) !important;
+}
 :root:not(.dark) .bg-sidebar\/95 {
-  background-color: #ffffff !important;
+  background-color: rgba(15, 23, 42, 0.97) !important;
 }
 
 /* --- 22. FORCE ALL TEXT FOREGROUND DARKER --- */
@@ -1077,6 +1080,99 @@ html.theme-transitioning *::after {
 :root:not(.dark) [class*="bg-purple-500/20"] {
   background-color: rgba(124, 58, 237, 0.1) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LIGHT MODE — DARK SIDEBAR RESTORE
+   Sidebar uses navy (#0f172a) in both light and dark themes.
+   These rules restore dark-context colors for all elements inside
+   the sidebar so light-mode overrides don't make text invisible.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Text: restore light-on-dark foreground inside sidebar */
+:root:not(.dark) [data-sidebar="sidebar"] .text-white,
+:root:not(.dark) [data-sidebar="sidebar"] .text-foreground {
+  color: #e2e8f0 !important;
+}
+:root:not(.dark) [data-sidebar="sidebar"] .text-slate-100,
+:root:not(.dark) [data-sidebar="sidebar"] .text-slate-200,
+:root:not(.dark) [data-sidebar="sidebar"] .text-slate-300 {
+  color: #e2e8f0 !important;
+}
+:root:not(.dark) [data-sidebar="sidebar"] .text-slate-400,
+:root:not(.dark) [data-sidebar="sidebar"] .text-slate-500 {
+  color: #94a3b8 !important;
+}
+:root:not(.dark) [data-sidebar="sidebar"] .text-muted-foreground {
+  color: #94a3b8 !important;
+}
+:root:not(.dark) [data-sidebar="sidebar"] [class*="text-white\\/"] {
+  color: rgba(226, 232, 240, 0.7) !important;
+}
+
+/* Sidebar cyan label text → blue-400 on dark bg */
+:root:not(.dark) [data-sidebar="sidebar"] .text-cyan-400 { color: #60a5fa !important; }
+
+/* Background: keep sidebar items dark */
+:root:not(.dark) [data-sidebar="sidebar"] .bg-slate-800,
+:root:not(.dark) [data-sidebar="sidebar"] [class*="bg-slate-8"] {
+  background-color: #1e293b !important;
+}
+:root:not(.dark) [data-sidebar="sidebar"] .bg-slate-700,
+:root:not(.dark) [data-sidebar="sidebar"] [class*="bg-slate-7"] {
+  background-color: #334155 !important;
+}
+:root:not(.dark) [data-sidebar="sidebar"] [class*="bg-slate-700\\/"],
+:root:not(.dark) [data-sidebar="sidebar"] [class*="bg-slate-800\\/"] {
+  background-color: rgba(51, 65, 85, 0.6) !important;
+}
+:root:not(.dark) [data-sidebar="sidebar"] .bg-slate-950 {
+  background-color: #0f172a !important;
+}
+
+/* Hover states: restore dark-sidebar hover behavior */
+:root:not(.dark) [data-sidebar="sidebar"] [class*="hover\\:bg-slate-"]:hover {
+  background-color: #1e293b !important;
+}
+:root:not(.dark) [data-sidebar="sidebar"] [class*="hover\\:text-slate-"]:hover {
+  color: #e2e8f0 !important;
+}
+:root:not(.dark) [data-sidebar="sidebar"] [class*="hover\\:text-white"]:hover {
+  color: #f1f5f9 !important;
+}
+:root:not(.dark) [data-sidebar="sidebar"] [class*="hover\\:bg-primary"]:hover {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Border: restore dark-sidebar borders */
+:root:not(.dark) [data-sidebar="sidebar"] .border-slate-700,
+:root:not(.dark) [data-sidebar="sidebar"] .border-slate-600,
+:root:not(.dark) [data-sidebar="sidebar"] .border-slate-800,
+:root:not(.dark) [data-sidebar="sidebar"] [class*="border-slate-7"],
+:root:not(.dark) [data-sidebar="sidebar"] [class*="border-slate-6"],
+:root:not(.dark) [data-sidebar="sidebar"] [class*="border-slate-8"] {
+  border-color: #334155 !important;
+}
+:root:not(.dark) [data-sidebar="sidebar"] [class*="border-white\\/"],
+:root:not(.dark) [data-sidebar="sidebar"] .border-white {
+  border-color: #334155 !important;
+}
+
+/* Gradient: restore dark gradient lines in sidebar */
+:root:not(.dark) [data-sidebar="sidebar"] .h-px.bg-gradient-to-r,
+:root:not(.dark) [data-sidebar="sidebar"] .h-\[2px\].bg-gradient-to-r {
+  background-image: linear-gradient(to right, transparent, #334155, transparent) !important;
+}
+
+/* Placeholder: restore light placeholder in dark sidebar inputs */
+:root:not(.dark) [data-sidebar="sidebar"] ::placeholder {
+  color: #64748b !important;
+}
+
+/* Neon overwrites: restore dark-mode tone for cyberpunk classes inside sidebar */
+:root:not(.dark) [data-sidebar="sidebar"] [class*="text-[#00f7ff]"] { color: #60a5fa !important; }
+:root:not(.dark) [data-sidebar="sidebar"] [class*="text-[#e0d0ff]"] { color: #94a3b8 !important; }
+:root:not(.dark) [data-sidebar="sidebar"] [class*="bg-[#0a0520]"] { background-color: #1e293b !important; }
+:root:not(.dark) [data-sidebar="sidebar"] [class*="bg-[#1a0f35]"] { background-color: #1e293b !important; }
 
 /* --- 61. SMOOTH MODAL ENTRANCE ANIMATION (consistent for ALL modals) --- */
 @keyframes modalBackdropIn {
