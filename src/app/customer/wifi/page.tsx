@@ -354,7 +354,7 @@ export default function CustomerWiFiPage() {
           <CyberCard key={wlan.index} className="p-4 sm:p-5">
             {/* WLAN Header */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full bg-muted dark:bg-slate-800 flex items-center justify-center">
                 <Radio className={`w-5 h-5 ${wlan.enabled ? 'text-emerald-400' : 'text-slate-500'}`} />
               </div>
               <div className="flex-1">
@@ -370,7 +370,7 @@ export default function CustomerWiFiPage() {
               </span>
             </div>
 
-            <div className="border-t border-slate-700/50 pt-4">
+            <div className="border-t border-border/50 dark:border-slate-700/50 pt-4">
               {!isEditing ? (
                 // ── View mode ─────────────────────────────────────────────
                 <div className="space-y-2">
@@ -405,11 +405,11 @@ export default function CustomerWiFiPage() {
                     const wlanDevices = device.connectedHosts.filter(h => h.associatedDevice === String(wlan.index));
                     if (wlanDevices.length === 0) return null;
                     return (
-                      <div className="mt-3 pt-3 border-t border-slate-700/50">
+                      <div className="mt-3 pt-3 border-t border-border/50 dark:border-slate-700/50">
                         <p className="text-xs text-slate-500 mb-2">Perangkat terhubung ke SSID ini:</p>
                         <div className="space-y-1.5">
                           {wlanDevices.map((host, i) => (
-                            <div key={i} className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-800/40 border border-slate-700/40">
+                            <div key={i} className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/40 dark:bg-slate-800/40 border border-border/40 dark:border-slate-700/40">
                               <div className="w-6 h-6 rounded-full bg-emerald-400/10 flex items-center justify-center shrink-0">
                                 <Monitor className="w-3 h-3 text-emerald-400" />
                               </div>
@@ -435,7 +435,7 @@ export default function CustomerWiFiPage() {
                 <div className="space-y-4">
                   {/* SSID */}
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1.5">
+                    <label className="block text-xs text-muted-foreground dark:text-slate-400 mb-1.5">
                       Nama WiFi (SSID)
                     </label>
                     <input
@@ -445,14 +445,14 @@ export default function CustomerWiFiPage() {
                       maxLength={32}
                       autoComplete="off"
                       placeholder="Nama WiFi baru"
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full bg-background dark:bg-slate-800 border border-border dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-cyan-500 transition-colors"
                     />
                     <p className="text-xs text-slate-500 mt-1">{editing.ssid.length}/32 karakter</p>
                   </div>
 
                   {/* Password */}
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1.5">
+                    <label className="block text-xs text-muted-foreground dark:text-slate-400 mb-1.5">
                       Password WiFi
                     </label>
                     <div className="relative">
@@ -463,7 +463,7 @@ export default function CustomerWiFiPage() {
                         maxLength={63}
                         autoComplete="new-password"
                         placeholder="Kosongkan jika tidak ingin mengubah"
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 pr-10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                        className="w-full bg-background dark:bg-slate-800 border border-border dark:border-slate-700 rounded-lg px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-cyan-500 transition-colors"
                       />
                       <button
                         type="button"
@@ -481,7 +481,7 @@ export default function CustomerWiFiPage() {
                     <button
                       onClick={cancelEdit}
                       disabled={saving}
-                      className="flex-1 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm font-bold hover:border-slate-400 transition-colors disabled:opacity-40"
+                      className="flex-1 py-2 rounded-lg border border-border dark:border-slate-600 text-foreground dark:text-slate-300 text-sm font-bold hover:border-muted-foreground/50 transition-colors disabled:opacity-40"
                     >
                       Batal
                     </button>

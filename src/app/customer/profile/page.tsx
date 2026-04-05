@@ -238,7 +238,7 @@ export default function CustomerProfilePage() {
                   type="text"
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
-                  className="w-full bg-slate-800/60 border border-slate-600/50 focus:border-cyan-500/60 rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors"
+                  className="w-full bg-background dark:bg-slate-800/60 border border-border dark:border-slate-600/50 focus:border-cyan-500/60 rounded-lg px-3 py-2 text-sm text-foreground outline-none transition-colors"
                   placeholder="Nama lengkap"
                 />
               ) : (
@@ -256,7 +256,7 @@ export default function CustomerProfilePage() {
                   type="email"
                   value={editEmail}
                   onChange={e => setEditEmail(e.target.value)}
-                  className="w-full bg-slate-800/60 border border-slate-600/50 focus:border-cyan-500/60 rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors"
+                  className="w-full bg-background dark:bg-slate-800/60 border border-border dark:border-slate-600/50 focus:border-cyan-500/60 rounded-lg px-3 py-2 text-sm text-foreground outline-none transition-colors"
                   placeholder="email@contoh.com"
                 />
               ) : (
@@ -274,7 +274,7 @@ export default function CustomerProfilePage() {
                   type="tel"
                   value={editPhone}
                   onChange={e => setEditPhone(e.target.value)}
-                  className="w-full bg-slate-800/60 border border-slate-600/50 focus:border-cyan-500/60 rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors"
+                  className="w-full bg-background dark:bg-slate-800/60 border border-border dark:border-slate-600/50 focus:border-cyan-500/60 rounded-lg px-3 py-2 text-sm text-foreground outline-none transition-colors"
                   placeholder="0812-3456-7890"
                 />
               ) : (

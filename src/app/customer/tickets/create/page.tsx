@@ -206,7 +206,7 @@ export default function CreateTicketPage() {
               type="text"
               value={formData.customerName}
               onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-              className={`w-full bg-slate-900/50 border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all ${
+              className={`w-full bg-background dark:bg-slate-900/50 border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all ${
                 errors.customerName ? 'border-red-500/50 focus:ring-red-500/50' : 'border-cyan-500/30'
               }`}
               placeholder={t('ticket.enterYourName')}
@@ -225,7 +225,7 @@ export default function CreateTicketPage() {
               type="text"
               value={formData.customerPhone}
               onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-              className={`w-full bg-slate-900/50 border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all ${
+              className={`w-full bg-background dark:bg-slate-900/50 border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all ${
                 errors.customerPhone ? 'border-red-500/50 focus:ring-red-500/50' : 'border-cyan-500/30'
               }`}
               placeholder="08xxxxxxxxxx"
@@ -244,7 +244,7 @@ export default function CreateTicketPage() {
               type="email"
               value={formData.customerEmail}
               onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-              className="w-full bg-slate-900/50 border border-cyan-500/30 rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all"
+              className="w-full bg-background dark:bg-slate-900/50 border border-cyan-500/30 rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all"
               placeholder="email@example.com"
             />
           </div>
@@ -258,7 +258,7 @@ export default function CreateTicketPage() {
               type="text"
               value={formData.subject}
               onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-              className={`w-full bg-slate-900/50 border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all ${
+              className={`w-full bg-background dark:bg-slate-900/50 border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all ${
                 errors.subject ? 'border-red-500/50 focus:ring-red-500/50' : 'border-cyan-500/30'
               }`}
               placeholder={t('ticket.subjectPlaceholder')}
@@ -276,7 +276,7 @@ export default function CreateTicketPage() {
             <select
               value={formData.categoryId}
               onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-              className="w-full bg-slate-900/50 border border-cyan-500/30 rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all"
+              className="w-full bg-background dark:bg-slate-900/50 border border-cyan-500/30 rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all"
             >
               <option value="">{t('ticket.selectCategory')}</option>
               {categories.map((cat) => (
@@ -296,7 +296,7 @@ export default function CreateTicketPage() {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={6}
-              className={`w-full bg-slate-900/50 border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none ${
+              className={`w-full bg-background dark:bg-slate-900/50 border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none ${
                 errors.description ? 'border-red-500/50 focus:ring-red-500/50' : 'border-cyan-500/30'
               }`}
               placeholder={t('ticket.descriptionPlaceholder')}

@@ -678,8 +678,8 @@ export default function CustomerDashboard() {
       {/* Manual Payment Proof Modal */}
       {manualPayModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-purple-500/30 rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="p-5 border-b border-slate-700/50">
+          <div className="bg-card dark:bg-slate-900 border border-purple-500/30 rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-5 border-b border-border/50 dark:border-slate-700/50">
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <Banknote className="w-5 h-5 text-purple-400" />
                 Kirim Bukti Transfer
@@ -690,27 +690,27 @@ export default function CustomerDashboard() {
             </div>
             <div className="p-5 space-y-3">
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">Nama Bank <span className="text-red-400">*</span></label>
+                <label className="text-xs font-medium text-foreground dark:text-slate-300 block mb-1.5">Nama Bank <span className="text-red-400">*</span></label>
                 <input
                   type="text"
                   placeholder="cth: BCA, Mandiri, BRI…"
                   value={manualForm.bankName}
                   onChange={e => setManualForm(f => ({ ...f, bankName: e.target.value }))}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60"
+                  className="w-full bg-background dark:bg-slate-800 border border-border dark:border-slate-600 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/60"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">Nama Pengirim <span className="text-red-400">*</span></label>
+                <label className="text-xs font-medium text-foreground dark:text-slate-300 block mb-1.5">Nama Pengirim <span className="text-red-400">*</span></label>
                 <input
                   type="text"
                   placeholder="Nama sesuai rekening pengirim"
                   value={manualForm.accountName}
                   onChange={e => setManualForm(f => ({ ...f, accountName: e.target.value }))}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60"
+                  className="w-full bg-background dark:bg-slate-800 border border-border dark:border-slate-600 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/60"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">Bukti Transfer (Opsional)</label>
+                <label className="text-xs font-medium text-foreground dark:text-slate-300 block mb-1.5">Bukti Transfer (Opsional)</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -719,21 +719,21 @@ export default function CustomerDashboard() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">Catatan (Opsional)</label>
+                <label className="text-xs font-medium text-foreground dark:text-slate-300 block mb-1.5">Catatan (Opsional)</label>
                 <textarea
                   placeholder="Informasi tambahan…"
                   value={manualForm.notes}
                   onChange={e => setManualForm(f => ({ ...f, notes: e.target.value }))}
                   rows={2}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 resize-none"
+                  className="w-full bg-background dark:bg-slate-800 border border-border dark:border-slate-600 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/60 resize-none"
                 />
               </div>
             </div>
-            <div className="p-5 flex gap-3 border-t border-slate-700/50">
+            <div className="p-5 flex gap-3 border-t border-border/50 dark:border-slate-700/50">
               <button
                 onClick={() => { setManualPayModal(null); setManualForm({ bankName: '', accountName: '', notes: '', file: null }); }}
                 disabled={submittingManual}
-                className="flex-1 py-2.5 rounded-xl border border-slate-600 text-slate-300 text-sm font-medium hover:bg-slate-700/50 transition-colors disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-xl border border-border dark:border-slate-600 text-foreground dark:text-slate-300 text-sm font-medium hover:bg-muted/50 transition-colors disabled:opacity-50"
               >
                 Batal
               </button>

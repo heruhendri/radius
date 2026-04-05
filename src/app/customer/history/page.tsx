@@ -813,12 +813,12 @@ export default function PaymentHistoryPage() {
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={() => setPaymentChoiceVisible(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
             <div className="pointer-events-auto w-full max-w-sm">
-              <CyberCard className="bg-[#0a0514]/95 backdrop-blur-xl border-2 border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.15)] overflow-hidden">
+              <CyberCard className="bg-card/95 dark:bg-[#0a0514]/95 backdrop-blur-xl border-2 border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.15)] overflow-hidden">
                 <div className="h-1 w-full bg-gradient-to-r from-cyan-400 to-[#bc13fe]" />
                 <div className="p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="text-sm font-bold text-white">Pilih Metode Pembayaran</h3>
+                      <h3 className="text-sm font-bold text-foreground">Pilih Metode Pembayaran</h3>
                       <p className="text-[10px] text-muted-foreground">Invoice: {selectedPaymentInvoice.invoiceNumber}</p>
                     </div>
                     <button onClick={() => setPaymentChoiceVisible(false)} className="p-1.5 rounded-lg bg-muted/20 hover:bg-muted/40 border border-border/50"><X className="w-4 h-4 text-muted-foreground" /></button>
@@ -862,11 +862,11 @@ export default function PaymentHistoryPage() {
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={() => setGatewayDialogVisible(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
             <div className="pointer-events-auto w-full max-w-sm">
-              <CyberCard className="bg-[#0a0514]/95 backdrop-blur-xl border-2 border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.15)] overflow-hidden">
+              <CyberCard className="bg-card/95 dark:bg-[#0a0514]/95 backdrop-blur-xl border-2 border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.15)] overflow-hidden">
                 <div className="h-1 w-full bg-gradient-to-r from-cyan-400 to-[#bc13fe]" />
                 <div className="p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-bold text-white">Pilih Payment Gateway</h3>
+                    <h3 className="text-sm font-bold text-foreground">Pilih Payment Gateway</h3>
                     <button onClick={() => setGatewayDialogVisible(false)} className="p-1.5 rounded-lg bg-muted/20 hover:bg-muted/40 border border-border/50"><X className="w-4 h-4 text-muted-foreground" /></button>
                   </div>
                   <div className="space-y-2 mb-4">
@@ -881,7 +881,7 @@ export default function PaymentHistoryPage() {
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="p-1.5 bg-slate-800 rounded-lg border border-border/30 flex items-center justify-center"><CreditCard className="w-4 h-4 text-cyan-400" /></div>
+                          <div className="p-1.5 bg-muted dark:bg-slate-800 rounded-lg border border-border/30 flex items-center justify-center"><CreditCard className="w-4 h-4 text-cyan-400" /></div>
                           <div className="text-left">
                             <p className="text-sm font-bold text-white">{gw.name}</p>
                             <p className="text-[10px] text-muted-foreground capitalize">{gw.provider}</p>
@@ -910,7 +910,7 @@ export default function PaymentHistoryPage() {
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={() => !submittingOffline && setOfflineDialogVisible(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
             <div className="pointer-events-auto w-full max-w-md max-h-[90vh] flex flex-col">
-              <CyberCard className="bg-[#0a0514]/95 backdrop-blur-xl border-2 border-purple-500/40 shadow-[0_0_30px_rgba(188,19,254,0.15)] overflow-hidden flex flex-col max-h-[90vh]">
+              <CyberCard className="bg-card/95 dark:bg-[#0a0514]/95 backdrop-blur-xl border-2 border-purple-500/40 shadow-[0_0_30px_rgba(188,19,254,0.15)] overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="h-1 w-full bg-gradient-to-r from-purple-400 to-[#bc13fe] flex-shrink-0" />
                 <div className="p-5 border-b border-purple-500/20 flex items-center justify-between flex-shrink-0">
                   <div>
@@ -1041,7 +1041,7 @@ export default function PaymentHistoryPage() {
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={() => setSelectedDetail(null)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
             <div className="pointer-events-auto w-full max-w-sm">
-              <CyberCard className={`bg-[#0a0514]/95 backdrop-blur-xl border-2 overflow-hidden ${
+              <CyberCard className={`bg-card/95 dark:bg-[#0a0514]/95 backdrop-blur-xl border-2 overflow-hidden ${
                 selectedDetail.status === 'PAID' ? 'border-success/40 shadow-[0_0_30px_rgba(0,255,136,0.15)]' :
                 selectedDetail.status === 'OVERDUE' ? 'border-destructive/40 shadow-[0_0_30px_rgba(255,51,102,0.15)]' :
                 'border-warning/40 shadow-[0_0_30px_rgba(255,170,0,0.15)]'

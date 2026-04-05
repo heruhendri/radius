@@ -336,7 +336,7 @@ export default function RenewalPage() {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-slate-800 rounded-lg border border-border/30 flex items-center justify-center">
+                      <div className="p-1.5 bg-muted dark:bg-slate-800 rounded-lg border border-border/30 flex items-center justify-center">
                         <Package className="w-4 h-4 text-cyan-400" />
                       </div>
                       <div>
@@ -484,7 +484,7 @@ export default function RenewalPage() {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-1.5 bg-slate-800 rounded-lg border border-border/30 flex items-center justify-center"><CreditCard className="w-4 h-4 text-cyan-400" /></div>
+                  <div className="p-1.5 bg-muted dark:bg-slate-800 rounded-lg border border-border/30 flex items-center justify-center"><CreditCard className="w-4 h-4 text-cyan-400" /></div>
                   <div className="text-left">
                     <p className="text-sm font-bold text-white">{gw.name}</p>
                     <p className="text-[10px] text-muted-foreground capitalize">{gw.provider}</p>
