@@ -4,6 +4,22 @@ All notable changes to SALFANET RADIUS will be documented in this file.
 
 ---
 
+## [2.13.1] - 2026-04-05 (Fix Wablas Send Endpoint)
+
+### ✅ Fix: Wablas Kirim Pesan Gagal
+
+- **Root cause**: Kode sebelumnya menggunakan `POST /api/v2/send-message` dengan JSON body. Endpoint v2 tidak tersedia di semua server Wablas (`wa`, `deu`, `jakarta`, `pati`, dll).
+- **Fix**: Ganti ke `GET /api/send-message?token=...&phone=...&message=...&flag=instant` (v1 simple endpoint) yang didukung semua server Wablas.
+- Format API key tetap `token.secret_key` — diisi di field API Key saat tambah/edit provider Wablas.
+- Hint form diperjelas: sekarang menampilkan format yang benar `token.secret_key`.
+
+### Files Changed
+- `src/server/services/notifications/whatsapp.service.ts` — ganti `sendViaWablas` ke GET v1
+- `src/app/api/whatsapp/providers/[id]/test/route.ts` — ganti test Wablas ke GET v1
+- `src/app/admin/whatsapp/providers/page.tsx` — perjelas hint format API key
+
+---
+
 ## [2.13.0] - 2026-04-05 (Kirimi.id Broadcast, Webhook Pesan Masuk, Error Detail)
 
 ### ✅ Fitur: WhatsApp Webhook Endpoint

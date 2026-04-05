@@ -9,14 +9,20 @@
 
 **Salfanet Radius** adalah sistem billing ISP/RTRW.NET berbasis web dengan integrasi FreeRADIUS penuh. Mendukung PPPoE dan Hotspot, cocok untuk ISP kecil-menengah di Indonesia.
 
-- **Version**: 2.13.0
+- **Version**: 2.13.1
 - **Status**: Production-ready, deployed di VPS
 - **Last Updated**: April 5, 2026
-- **Latest Commit**: See GitHub
+- **Latest Commit**: `e8bdf6b`
 - **GitHub**: https://github.com/s4lfanet/salfanet-radius (public)
 - **Live URL**: https://radius.yourdomain.com
 
-### Recent Patch Log (April 2026 — WhatsApp Kirimi.id & Broadcast)
+### Recent Patch Log (April 2026 — WhatsApp Wablas, Kirimi.id & Broadcast)
+
+- **Fix: Wablas send gagal — endpoint salah** (`e8bdf6b`, April 5, 2026)
+  - **Root cause**: `sendViaWablas()` menggunakan `POST /api/v2/send-message` (JSON body) dengan header `Authorization`. Endpoint v2 tidak tersedia di semua server Wablas.
+  - **Fix**: Ganti ke `GET /api/send-message?token=TOKEN.SECRET_KEY&phone=...&message=...&flag=instant` sesuai docs Wablas `#send-text`.
+  - Format API key di DB: `token.secret_key` (titik sebagai separator) — diisi langsung di query param `token`.
+  - **Files**: `whatsapp.service.ts`, `providers/[id]/test/route.ts`, `providers/page.tsx`
 
 - **Fix + Feat: Kirimi.id provider sepenuhnya berfungsi** (`11bc666`, `b7e0544`, April 5, 2026)
   - **Root cause**: Endpoint salah `/send-message` → harusnya `/v1/send-message`. Field penerima salah `number` → harusnya `receiver`. Kedua bug didapat dari screenshot docs resmi Kirimi.id v2.0.
