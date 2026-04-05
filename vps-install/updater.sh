@@ -221,6 +221,21 @@ if [ -z "$STAGED_DIR" ]; then
     exit 1
 fi
 
+# ─── Ensure required system packages (sshpass, xl2tpd) ───────────────────
+print_step "Checking system dependencies"
+MISSING_PKGS=""
+for pkg in sshpass xl2tpd; do
+    if ! dpkg -s "$pkg" &>/dev/null; then
+        MISSING_PKGS="$MISSING_PKGS $pkg"
+    fi
+done
+if [ -n "$MISSING_PKGS" ]; then
+    print_info "Installing missing packages:$MISSING_PKGS"
+    apt-get install -y $MISSING_PKGS || print_info "Warning: some packages could not be installed"
+else
+    print_success "sshpass and xl2tpd already installed"
+fi
+
 # ─── Stop services ────────────────────────────────────────────────────────
 print_step "Stopping PM2 processes"
 pm2 stop "$PM2_APP_NAME" 2>/dev/null || true
