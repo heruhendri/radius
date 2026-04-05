@@ -6,8 +6,10 @@ import { RouterOSAPI } from 'node-routeros';
 import { generateUniqueReferralCode } from '@/server/services/referral.service';
 
 async function generateCustomerId(): Promise<string> {
+  const co = await prisma.company.findFirst({ select: { customerIdPrefix: true } });
+  const prefix = (co as any)?.customerIdPrefix?.trim() || '';
   while (true) {
-    const candidate = (Math.floor(10000000 + Math.random() * 90000000)).toString();
+    const candidate = prefix + (Math.floor(10000000 + Math.random() * 90000000)).toString();
     const exists = await prisma.pppoeUser.findUnique({ where: { customerId: candidate } });
     if (!exists) return candidate;
   }

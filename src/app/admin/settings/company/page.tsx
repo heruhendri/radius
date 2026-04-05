@@ -23,6 +23,7 @@ interface CompanySettings {
   timezone: string;
   bankAccounts: BankAccount[];
   poweredBy: string;
+  customerIdPrefix: string;
   footerAdmin: string;
   footerCustomer: string;
   footerTechnician: string;
@@ -44,6 +45,7 @@ export default function CompanySettingsPage() {
     timezone: 'Asia/Jakarta',
     bankAccounts: [],
     poweredBy: 'SALFANET RADIUS',
+    customerIdPrefix: '',
     footerAdmin: '',
     footerCustomer: '',
     footerTechnician: '',
@@ -77,6 +79,7 @@ export default function CompanySettingsPage() {
             timezone: data.timezone || 'Asia/Jakarta',
             bankAccounts: data.bankAccounts || [],
             poweredBy: data.poweredBy || 'SALFANET RADIUS',
+            customerIdPrefix: data.customerIdPrefix || '',
             footerAdmin: data.footerAdmin || '',
             footerCustomer: data.footerCustomer || '',
             footerTechnician: data.footerTechnician || '',
@@ -418,6 +421,22 @@ export default function CompanySettingsPage() {
                   required
                 />
                 <p className="mt-1 text-[10px] text-muted-foreground">{t('settings.invoiceGenerateDaysHelp')}</p>
+              </div>
+
+              {/* Prefix ID Pelanggan */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[11px] font-medium text-foreground mb-1">
+                  🏷️ Prefix ID Pelanggan
+                </label>
+                <input
+                  type="text"
+                  value={settings.customerIdPrefix}
+                  onChange={(e) => setSettings({ ...settings, customerIdPrefix: e.target.value.toUpperCase().replace(/[^A-Z0-9\-]/g, '').slice(0, 8) })}
+                  className="w-full px-2.5 py-1.5 text-sm border border-border rounded-lg bg-card focus:ring-1 focus:ring-ring focus:border-primary"
+                  placeholder="Contoh: SF- atau ISP"
+                  maxLength={8}
+                />
+                <p className="mt-1 text-[10px] text-muted-foreground">Awalan yang ditambahkan di depan ID pelanggan baru. Kosongkan untuk tanpa prefix. Contoh prefix "SF-" → ID menjadi SF-12345678</p>
               </div>
 
               {/* Timezone */}

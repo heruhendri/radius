@@ -94,6 +94,7 @@ interface CustomerUser {
   expiredAt: Date;
   balance?: number;
   autoRenewal?: boolean;
+  customerId?: string | null;
   profile: {
     name: string;
     downloadSpeed: number;
@@ -391,6 +392,7 @@ export default function CustomerDashboard() {
             <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('common.name')}</span><span className="font-medium text-white">{user.name}</span></div>
             <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('common.phone')}</span><span className="font-medium text-white">{user.phone}</span></div>
             <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('auth.username')}</span><span className="font-mono text-[10px] text-white">{user.username}</span></div>
+            <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">ID Pelanggan</span><span className="font-mono text-[10px] text-white">{user.customerId || '-'}</span></div>
             <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.package')}</span><span className="font-medium text-white">{user.profile.name}</span></div>
             <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.speed')}</span><span className="font-medium text-white">{user.profile.downloadSpeed}/{user.profile.uploadSpeed} Mbps</span></div>
             <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('common.status')}</span>
@@ -417,15 +419,6 @@ export default function CustomerDashboard() {
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Perpanjang
-            </CyberButton>
-            <CyberButton
-              onClick={() => router.push('/customer/upgrade')}
-              className="flex-1"
-              size="sm"
-              variant="purple"
-            >
-              <Package className="w-3.5 h-3.5" />
-              {t('customer.changePackage')}
             </CyberButton>
           </div>
         </CyberCard>
@@ -652,7 +645,6 @@ export default function CustomerDashboard() {
             {([
               { name: 'Semua Tagihan',  href: '/customer/invoices',      icon: FileText,      bg: 'bg-success/10',   border: 'border-success/30',   text: 'text-success' },
               { name: 'Perpanjang',     href: '/customer/renewal',       icon: RefreshCw,     bg: 'bg-cyan-500/10',  border: 'border-cyan-500/30',  text: 'text-cyan-400' },
-              { name: 'Ganti Paket',   href: '/customer/upgrade',       icon: Package,       bg: 'bg-primary/10',   border: 'border-primary/30',   text: 'text-primary' },
               { name: 'Riwayat Bayar', href: '/customer/history',       icon: Receipt,       bg: 'bg-accent/10',    border: 'border-accent/30',    text: 'text-accent' },
               { name: 'WiFi',          href: '/customer/wifi',          icon: Wifi,          bg: 'bg-blue-500/10',  border: 'border-blue-500/30',  text: 'text-blue-400' },
               { name: 'Tiket Support', href: '/customer/tickets',       icon: MessageSquare, bg: 'bg-yellow-500/10',border: 'border-yellow-500/30',text: 'text-yellow-400' },

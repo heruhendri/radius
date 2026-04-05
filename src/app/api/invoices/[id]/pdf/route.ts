@@ -96,6 +96,7 @@ export async function GET(
         phone: company?.phone || '',
         email: company?.email || '',
         logo: company?.logo || null,
+        poweredBy: company?.poweredBy || null,
         bankAccounts,
       },
       invoice: {

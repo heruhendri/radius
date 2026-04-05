@@ -7,8 +7,8 @@ import { generateExcelBuffer } from '@/lib/utils/export';
 import ExcelJS from 'exceljs';
 import { generateUniqueReferralCode } from '@/server/services/referral.service';
 
-function generateCustomerId(): string {
-  return Math.floor(10000000 + Math.random() * 90000000).toString();
+function generateCustomerId(prefix = ''): string {
+  return prefix + Math.floor(10000000 + Math.random() * 90000000).toString();
 }
 
 export async function GET(request: NextRequest) {
@@ -329,6 +329,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch company prefix once for all rows
+    const co = await prisma.company.findFirst({ select: { customerIdPrefix: true } });
+    const idPrefix = (co as any)?.customerIdPrefix?.trim() || '';
+
     // Process data rows
     const results = {
       success: 0,
@@ -471,18 +475,18 @@ export async function POST(request: NextRequest) {
         // Generate unique referral code for new user
         userData.referralCode = await generateUniqueReferralCode();
 
-        // Resolve customerId: use from file if provided, otherwise auto-generate unique 8-digit ID
+        // Resolve customerId: use from file if provided, otherwise auto-generate unique ID (with prefix)
         const fileCustomerId = rowData.customerid?.trim() || '';
         if (fileCustomerId) {
           // Verify uniqueness of the provided customerId
           const custIdConflict = await prisma.pppoeUser.findUnique({ where: { customerId: fileCustomerId } });
-          userData.customerId = custIdConflict ? generateCustomerId() : fileCustomerId;
+          userData.customerId = custIdConflict ? generateCustomerId(idPrefix) : fileCustomerId;
         } else {
-          userData.customerId = generateCustomerId();
+          userData.customerId = generateCustomerId(idPrefix);
         }
         // Ensure uniqueness (re-generate on collision)
         while (await prisma.pppoeUser.findUnique({ where: { customerId: userData.customerId } })) {
-          userData.customerId = generateCustomerId();
+          userData.customerId = generateCustomerId(idPrefix);
         }
 
         const newUser = await prisma.pppoeUser.create({

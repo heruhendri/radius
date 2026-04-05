@@ -77,15 +77,17 @@ export async function POST(
       );
     }
 
-    // Generate unique customerId
+    // Generate unique customerId (with company prefix if configured)
     async function generateUniqueCustomerId() {
+      const co = await prisma.company.findFirst({ select: { customerIdPrefix: true } });
+      const prefix = (co as any)?.customerIdPrefix?.trim() || '';
       for (let i = 0; i < 10; i++) {
-        const candidate = genCustomerId();
+        const candidate = prefix + genCustomerId();
         const exists = await prisma.pppoeUser.findFirst({ where: { customerId: candidate } as any });
         if (!exists) return candidate;
       }
       while (true) {
-        const candidate = genCustomerId();
+        const candidate = prefix + genCustomerId();
         const exists = await prisma.pppoeUser.findFirst({ where: { customerId: candidate } as any });
         if (!exists) return candidate;
       }

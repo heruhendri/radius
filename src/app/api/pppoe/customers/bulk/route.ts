@@ -5,8 +5,8 @@ import { authOptions } from '@/server/auth/config';
 import { generateExcelBuffer } from '@/lib/utils/export';
 import ExcelJS from 'exceljs';
 
-function generateCustomerId(): string {
-  return Math.floor(10000000 + Math.random() * 90000000).toString();
+function generateCustomerId(prefix = ''): string {
+  return prefix + Math.floor(10000000 + Math.random() * 90000000).toString();
 }
 
 function generateId(): string {
@@ -18,14 +18,14 @@ function generateId(): string {
  * - If a non-empty value is provided and it's not already taken, use it.
  * - Otherwise auto-generate a unique 8-digit ID.
  */
-async function resolveCustomerId(provided: string): Promise<string> {
+async function resolveCustomerId(provided: string, prefix = ''): Promise<string> {
   if (provided) {
     const conflict = await (prisma as any).pppoeCustomer.findUnique({ where: { customerId: provided } });
     if (!conflict) return provided;
   }
-  let id = generateCustomerId();
+  let id = generateCustomerId(prefix);
   while (await (prisma as any).pppoeCustomer.findUnique({ where: { customerId: id } })) {
-    id = generateCustomerId();
+    id = generateCustomerId(prefix);
   }
   return id;
 }
@@ -211,6 +211,10 @@ export async function POST(request: NextRequest) {
       errors: [] as any[],
     };
 
+    // Fetch company prefix once for all rows
+    const co = await prisma.company.findFirst({ select: { customerIdPrefix: true } });
+    const idPrefix = (co as any)?.customerIdPrefix?.trim() || '';
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
@@ -240,7 +244,7 @@ export async function POST(request: NextRequest) {
         await (prisma as any).pppoeCustomer.create({
           data: {
             id: generateId(),
-            customerId: await resolveCustomerId(row.customerid || ''),
+            customerId: await resolveCustomerId(row.customerid || '', idPrefix),
             name: row.name,
             phone: row.phone,
             email: row.email || null,

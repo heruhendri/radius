@@ -170,11 +170,13 @@ export async function createPppoeUser(
     throw Object.assign(new Error(`Username "${username}" already exists`), { code: 'DUPLICATE_USERNAME' });
   }
 
-  // Generate unique 8-digit customer ID
+  // Generate unique customer ID (with company prefix if configured)
+  const company = await prisma.company.findFirst({ select: { customerIdPrefix: true } });
+  const prefix = (company as any)?.customerIdPrefix?.trim() || '';
   let customerId = '';
   let isUnique = false;
   while (!isUnique) {
-    customerId = Math.floor(10000000 + Math.random() * 90000000).toString();
+    customerId = prefix + Math.floor(10000000 + Math.random() * 90000000).toString();
     const existing = await prisma.pppoeUser.findUnique({ where: { customerId } });
     if (!existing) isUnique = true;
   }

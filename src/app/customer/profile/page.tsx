@@ -16,6 +16,7 @@ interface CustomerData {
   phone: string | null;
   address?: string | null;
   status: string;
+  customerId?: string | null;
   packageName: string | null;
   packagePrice: number | null;
   expiryDate: string | null;
@@ -85,6 +86,7 @@ export default function CustomerProfilePage() {
           email: user.email,
           phone: user.phone,
           status: user.status,
+          customerId: user.customerId || null,
           packageName: user.profile?.name || null,
           packagePrice: null,
           expiryDate: user.expiredAt,
@@ -338,13 +340,15 @@ export default function CustomerProfilePage() {
               <p className="text-sm font-mono text-white">{customer.username}</p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
-            <Shield size={16} className="text-primary mt-0.5" />
-            <div className="flex-1">
-              <p className="text-xs text-accent font-bold uppercase tracking-wide">ID</p>
-              <p className="text-sm font-mono text-white">{customer.id}</p>
+          {customer.customerId && (
+            <div className="flex items-start gap-3">
+              <Shield size={16} className="text-primary mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs text-accent font-bold uppercase tracking-wide">ID Pelanggan</p>
+                <p className="text-sm font-mono font-bold text-white">{customer.customerId}</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </CyberCard>
 

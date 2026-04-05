@@ -23,7 +23,6 @@ const menuItems: MenuItem[] = [
   { name: 'Riwayat Bayar',      href: '/customer/history',   icon: Receipt },
   { name: 'Tagihan',            href: '/customer/invoices',  icon: FileText },
   { name: 'Perpanjang Paket',   href: '/customer/renewal',   icon: RefreshCcw },
-  { name: 'Ganti Paket',        href: '/customer/upgrade',   icon: Package },
   { name: 'WiFi',               href: '/customer/wifi',      icon: Wifi },
   { name: 'Bantuan',            href: '/customer/tickets',   icon: MessageSquare },
   { name: 'Referral',           href: '/customer/referral',  icon: Gift },

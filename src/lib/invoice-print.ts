@@ -7,6 +7,7 @@ interface InvoicePrintData {
     address?: string | null;
     phone?: string | null;
     email?: string | null;
+    poweredBy?: string | null;
     bankAccounts?: Array<{
       bankName: string;
       accountNumber: string;
@@ -255,7 +256,7 @@ export async function printInvoiceStandard(invoiceId: string, toast: ToastError,
           </div>
         </div>
       ` : '')}
-      <div class="footer">Terima kasih atas kepercayaan Anda &mdash; ${inv.company.name}</div>
+      <div class="footer">Terima kasih atas kepercayaan Anda &mdash; ${inv.company.name}${inv.company.poweredBy ? `<br><span style="font-size:9px">Support by ${inv.company.poweredBy}</span>` : ''}</div>
       </div>
       </div>
       <div class="action-bar no-print">
@@ -336,6 +337,7 @@ export async function printInvoiceThermal(invoiceId: string, toast: ToastError, 
       ` : `${inv.paymentLink ? `<div class="pay-box"><div class="center bold">Link Pembayaran</div><a class="pay-link" href="${inv.paymentLink}" target="_blank" rel="noopener noreferrer">${inv.paymentLink}</a></div>` : ''}${inv.company.bankAccounts && inv.company.bankAccounts.length > 0 ? `<div style="margin:6px 0"><div class="center bold">Transfer Manual</div>${inv.company.bankAccounts.map((ba) => `<div class="bank-box"><div class="bold">${ba.bankName}</div><div>${ba.accountNumber}</div><div class="sm">a/n ${ba.accountName}</div></div>`).join('')}</div>` : `<div class="center sm" style="margin:6px 0">Harap bayar sebelum jatuh tempo</div>`}`}
       <div class="dashed"></div>
       <div class="center sm" style="margin-top:4px">Terima kasih</div>
+      ${inv.company.poweredBy ? `<div class="center sm" style="margin-top:2px">Support by ${inv.company.poweredBy}</div>` : ''}
       </div>
       <div class="action-bar no-print">
         <button class="btn-print" onclick="window.print()">&#128438; Cetak</button>

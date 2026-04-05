@@ -3,8 +3,8 @@ import { prisma } from '@/server/db/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 
-function generateCustomerId(): string {
-  return Math.floor(10000000 + Math.random() * 90000000).toString();
+function generateCustomerId(prefix = ''): string {
+  return prefix + Math.floor(10000000 + Math.random() * 90000000).toString();
 }
 
 function generateId(): string {
@@ -121,13 +121,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No. HP sudah terdaftar' }, { status: 409 });
     }
 
-    // Ensure unique customerId
-    let customerId = providedId || generateCustomerId();
+    // Ensure unique customerId (with company prefix if not explicitly provided)
+    const co = await prisma.company.findFirst({ select: { customerIdPrefix: true } });
+    const prefix = (co as any)?.customerIdPrefix?.trim() || '';
+    let customerId = providedId || generateCustomerId(prefix);
     let tries = 0;
     while (tries < 10) {
       const dup = await (prisma as any).pppoeCustomer.findUnique({ where: { customerId } });
       if (!dup) break;
-      customerId = generateCustomerId();
+      customerId = generateCustomerId(prefix);
       tries++;
     }
 

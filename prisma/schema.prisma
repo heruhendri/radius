@@ -94,6 +94,7 @@ model company {
   timezone             String?  @default("Asia/Jakarta")
   bankAccounts         Json?    // Array of bank account objects: [{bankName, accountNumber, accountName}]
   poweredBy            String?  @default("SALFANET RADIUS")
+  customerIdPrefix     String?  @db.VarChar(10) // Prefix for generated customer IDs e.g. "SF-"
   
   // Footer settings for different portals
   footerAdmin          String?  @db.Text // Footer for admin login page
@@ -493,7 +494,7 @@ model pppoeArea {
 model pppoeUser {
   id               String         @id
   username         String         @unique
-  customerId       String?        @unique @map("customer_id") @db.VarChar(8)
+  customerId       String?        @unique @map("customer_id") @db.VarChar(20)
   pppoeCustomerId  String?        @map("pppoe_customer_id")
   pppoeCustomer    pppoeCustomer? @relation(fields: [pppoeCustomerId], references: [id], onDelete: SetNull)
   password         String
