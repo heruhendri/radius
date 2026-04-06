@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import {
     Archive, RefreshCw, Play, CheckCircle, XCircle,
     Loader2, Terminal, HardDrive, Clock, Download, RotateCcw,
+    Upload, Server,
 } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 
@@ -35,6 +36,9 @@ export default function FreeRADIUSBackupPage() {
     const [polling, setPolling] = useState(false);
     const [restoring, setRestoring] = useState<string | null>(null);
     const [restoreLog, setRestoreLog] = useState<{ file: string; log: string; ok: boolean } | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadFile, setUploadFile] = useState<File | null>(null);
+    const fileInputId = useId();
     const logRef = useRef<HTMLPreElement>(null);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -136,6 +140,56 @@ export default function FreeRADIUSBackupPage() {
             addToast({ type: 'error', title: 'Error', description: e.message });
         } finally {
             setRestoring(null);
+        }
+    };
+
+    const handleUploadRestore = async () => {
+        if (!uploadFile) return;
+        if (!await confirm({
+            title: 'Upload & Restore dari VPS lain?',
+            message: `File "${uploadFile.name}" akan diupload ke VPS ini lalu langsung di-restore ke /etc/freeradius/3.0/. FreeRADIUS akan di-reload. Lanjutkan?`,
+            confirmText: 'Upload & Restore',
+            cancelText: 'Batal',
+            variant: 'danger',
+        })) return;
+
+        setUploading(true);
+        setRestoreLog(null);
+        try {
+            // Step 1: upload
+            const form = new FormData();
+            form.append('file', uploadFile);
+            const upRes = await fetch('/api/admin/system/freeradius-backup/upload', {
+                method: 'POST',
+                body: form,
+            });
+            const upData = await upRes.json();
+            if (!upRes.ok) {
+                addToast({ type: 'error', title: 'Upload gagal', description: upData.error });
+                return;
+            }
+            const savedAs: string = upData.savedAs;
+            addToast({ type: 'info', title: 'Upload selesai', description: `Disimpan sebagai ${savedAs}`, duration: 2000 });
+
+            // Step 2: restore
+            const restRes = await fetch('/api/admin/system/freeradius-backup/restore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file: savedAs }),
+            });
+            const restData = await restRes.json();
+            setRestoreLog({ file: savedAs, log: restData.log || restData.error || '—', ok: restRes.ok && restData.success });
+            if (restRes.ok && restData.success) {
+                addToast({ type: 'success', title: 'Restore berhasil', description: `${restData.restored} file dipulihkan`, duration: 4000 });
+                setUploadFile(null);
+                fetchData();
+            } else {
+                addToast({ type: 'error', title: 'Restore gagal', description: restData.error || 'Lihat log di bawah' });
+            }
+        } catch (e: any) {
+            addToast({ type: 'error', title: 'Error', description: e.message });
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -258,6 +312,57 @@ export default function FreeRADIUSBackupPage() {
                     </pre>
                 </div>
             )}
+
+            {/* Restore from other VPS — Upload section */}
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <div className="px-4 py-3 border-b border-border bg-muted/20 flex items-center gap-2">
+                    <Server className="w-4 h-4 text-primary" />
+                    <h2 className="text-sm font-semibold text-foreground">Restore dari VPS lain</h2>
+                </div>
+                <div className="p-4 space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                        Upload file backup <span className="font-mono bg-muted px-1 rounded">.tar.gz</span> yang didownload dari instalasi Salfanet RADIUS lain, lalu langsung restore ke VPS ini.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                        <label
+                            htmlFor={fileInputId}
+                            className="flex-1 flex items-center gap-2 px-3 py-2 border border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                        >
+                            <Upload className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-sm text-muted-foreground truncate">
+                                {uploadFile ? uploadFile.name : 'Pilih file backup (.tar.gz)…'}
+                            </span>
+                        </label>
+                        <input
+                            id={fileInputId}
+                            type="file"
+                            accept=".tar.gz,application/gzip,application/x-gzip"
+                            className="hidden"
+                            onChange={e => setUploadFile(e.target.files?.[0] ?? null)}
+                            disabled={uploading}
+                        />
+                        <button
+                            onClick={handleUploadRestore}
+                            disabled={!uploadFile || uploading}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                        >
+                            {uploading
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <RotateCcw className="w-4 h-4" />
+                            }
+                            {uploading ? 'Memproses…' : 'Upload & Restore'}
+                        </button>
+                    </div>
+                    {uploadFile && (
+                        <p className="text-xs text-muted-foreground">
+                            Ukuran: {formatBytes(uploadFile.size)}
+                            {uploadFile.size > 10 * 1024 * 1024 && (
+                                <span className="ml-2 text-red-500 font-medium">⚠ Melebihi batas 10MB</span>
+                            )}
+                        </p>
+                    )}
+                </div>
+            </div>
 
             {/* Backup Log */}
             <div className="bg-card rounded-xl border border-border overflow-hidden">
