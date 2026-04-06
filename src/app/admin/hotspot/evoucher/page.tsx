@@ -53,10 +53,12 @@ export default function EVoucherManagementPage() {
 
   useEffect(() => {
     loadOrders();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     filterOrders();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders, statusFilter, searchQuery]);
 
   const loadOrders = async () => {

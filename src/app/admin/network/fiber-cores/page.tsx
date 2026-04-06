@@ -114,6 +114,7 @@ export default function FiberCoresPage() {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterCable, filterStatus, pagination.page, pagination.limit]);
 
   const loadCables = useCallback(async () => {

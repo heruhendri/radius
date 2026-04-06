@@ -990,6 +990,7 @@ export default function PaymentHistoryPage() {
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
                     {proofPreviewUrl ? (
                       <div className="relative rounded-lg overflow-hidden border border-success/30">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={proofPreviewUrl} alt="Bukti transfer" className="w-full max-h-40 object-contain bg-black" />
                         <button
                           onClick={() => { setProofFile(null); if (proofPreviewUrl) URL.revokeObjectURL(proofPreviewUrl); setProofPreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}

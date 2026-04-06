@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Home, MessageSquare, User, Receipt, Shield, Menu, X, Package, Clock, LogOut, Bell, CheckCircle2, XCircle, RefreshCw, Trash2, Wifi, FileText, PauseCircle, Gift, Sun, Moon, RefreshCcw } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
@@ -246,7 +247,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-3">
               {companyLogo ? (
                 <div className="w-9 h-9 rounded-lg bg-white p-1 border border-cyan-400/30 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-                  <img src={companyLogo} alt={companyName} className="w-full h-full object-contain" decoding="async" />
+                  <Image unoptimized src={companyLogo} alt={companyName} width={36} height={36} className="w-full h-full object-contain" decoding="async" />
                 </div>
               ) : (
                 <div className="w-9 h-9 rounded-lg bg-white p-1 border border-cyan-400/30 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.2)]">
@@ -427,7 +428,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
               </button>
               {companyLogo ? (
                 <div className="w-8 h-8 rounded-lg bg-white p-1 border border-cyan-400/30 flex items-center justify-center overflow-hidden">
-                  <img src={companyLogo} alt={companyName} className="w-full h-full object-contain" decoding="async" />
+                  <Image unoptimized src={companyLogo} alt={companyName} width={32} height={32} className="w-full h-full object-contain" decoding="async" />
                 </div>
               ) : (
                 <div className="w-8 h-8 rounded-lg bg-white p-1 border border-cyan-400/30 flex items-center justify-center">

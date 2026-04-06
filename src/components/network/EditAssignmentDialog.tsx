@@ -68,6 +68,7 @@ export default function EditAssignmentDialog({
       setSelectedPort(assignment.portNumber);
       fetchNearestODPs(assignment.customerId);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, assignment]);
 
   const fetchNearestODPs = async (customerId: string) => {

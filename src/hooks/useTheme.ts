@@ -33,6 +33,7 @@ export function useTheme() {
       html.classList.toggle('dark', dark);
       html.style.colorScheme = dark ? 'dark' : 'light';
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const applyTheme = useCallback((next: boolean) => {

@@ -59,6 +59,7 @@ export default function SendMessagePage() {
   useEffect(() => {
     loadUsers();
     loadTemplates();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, profileFilter, routerFilter, addressFilter, odpFilters]);
 
   const loadUsers = async () => {

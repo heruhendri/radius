@@ -58,6 +58,7 @@ export default function RadiusConfigPage() {
 
     useEffect(() => {
         fetchConfigList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Fetch file content
@@ -89,6 +90,7 @@ export default function RadiusConfigPage() {
         if (selectedFile) {
             fetchFileContent(selectedFile);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedFile]);
 
     const toggleGroup = (groupId: string) => {

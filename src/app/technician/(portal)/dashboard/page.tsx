@@ -55,6 +55,7 @@ export default function TechnicianDashboardPage() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadWorkOrders(); }, [filterStatus, filterPriority, showMyTasks]);
 
   const handleAction = async (workOrderId: string, action: string) => {

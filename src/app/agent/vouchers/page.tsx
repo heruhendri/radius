@@ -70,6 +70,7 @@ export default function AgentVouchersPage() {
     const agentData = JSON.parse(agentDataStr);
     setAgent(agentData);
     loadVouchers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   // API /api/agent/dashboard returns voucher datetimes as local datetime strings

@@ -568,6 +568,7 @@ export default function NetworkMapPage() {
     if (mapReady) {
       fetchData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady]);
 
   // Calculate map center

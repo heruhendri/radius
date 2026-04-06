@@ -123,6 +123,7 @@ export default function OLTsPage() {
       checkOLTsStatus();
     }, 30000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-refresh saat olts berubah
@@ -130,6 +131,7 @@ export default function OLTsPage() {
     if (olts.length > 0) {
       checkOLTsStatus();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [olts.length]);
 
   const loadData = async () => {

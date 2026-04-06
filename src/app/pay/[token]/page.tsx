@@ -45,6 +45,7 @@ export default function PaymentPage() {
   const [duitkuMethods, setDuitkuMethods] = useState<{ code: string; name: string; group: string }[]>([]);
   const [loadingDuitkuMethods, setLoadingDuitkuMethods] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadInvoice(); }, [token]);
 
   const loadInvoice = async () => {

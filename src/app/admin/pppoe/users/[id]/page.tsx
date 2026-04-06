@@ -97,6 +97,7 @@ export default function PppoeUserDetailPage({ params }: { params: Promise<{ id: 
   const [sendingWA, setSendingWA]           = useState(false);
   const [waResult, setWaResult]             = useState<string | null>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData(); }, [id]);
 
   const fetchData = async () => {

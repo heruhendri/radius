@@ -51,6 +51,7 @@ export default function AgentNotificationDropdown({ agentId, enableToasts = true
       clearInterval(interval);
       if (_agentPollingInstance === id) _agentPollingInstance = null;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentId]);
 
   useEffect(() => {

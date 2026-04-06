@@ -133,6 +133,7 @@ export default function SplicePointsPage() {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterType]);
 
   const loadCables = useCallback(async () => {

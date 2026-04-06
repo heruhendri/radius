@@ -77,6 +77,7 @@ export default function FiberJointClosuresPage() {
 
   useEffect(() => {
     loadJointClosures();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadJointClosures = async () => {

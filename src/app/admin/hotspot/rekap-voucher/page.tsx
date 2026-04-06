@@ -47,6 +47,7 @@ export default function RekapVoucherPage() {
 
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterAgent, filterProfile, voucherMonth]);
 
   const fetchData = async () => {

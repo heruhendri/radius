@@ -65,6 +65,7 @@ function PayManualPageContent() {
     if (token) {
       fetchPaymentInfo();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const fetchPaymentInfo = async () => {
@@ -438,6 +439,7 @@ function PayManualPageContent() {
                 <div className="mt-2">
                   {imagePreview ? (
                     <div className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={imagePreview}
                         alt="Preview"

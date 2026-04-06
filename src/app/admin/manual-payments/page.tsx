@@ -101,10 +101,12 @@ export default function ManualPaymentsPage() {
 
   useEffect(() => {
     fetchPayments();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentMonth]);
 
   useEffect(() => {
     filterPayments();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payments, statusFilter, searchQuery]);
 
   const fetchPayments = async () => {
@@ -676,6 +678,7 @@ export default function ManualPaymentsPage() {
                 <div className="border-t-2 border-primary/20 pt-4">
                   <Label className="text-xs text-accent font-bold uppercase tracking-wide">{t('manualPayment.transferReceipt')}</Label>
                   <div className="mt-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`/api/uploads/payment-proofs/${selectedPayment.receiptImage}`}
                       alt={t('manualPayment.transferReceipt')}

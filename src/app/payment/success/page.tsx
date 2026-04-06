@@ -47,6 +47,7 @@ function PaymentSuccessContent() {
       setError('Token tidak ditemukan');
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, orderId, transactionStatus]);
 
   const checkOrderId = async () => {

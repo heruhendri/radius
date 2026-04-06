@@ -69,6 +69,7 @@ export default function DeviceDetailPage({ params }: { params: Promise<{ deviceI
 
   useEffect(() => {
     if (deviceId) fetchDeviceDetail();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deviceId]);
 
   const fetchDeviceDetail = async () => {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
+import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Loader2, Shield, Smartphone, User, Lock, Clock, LogIn, ArrowLeft, KeyRound } from 'lucide-react';
@@ -199,7 +200,7 @@ function LoginForm() {
           <div className="flex items-center justify-center gap-3 mb-4">
             {companyLogo ? (
               <div className="inline-flex items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 shadow-sm flex-shrink-0">
-                <img src={companyLogo} alt={companyName} className="max-h-10 max-w-[100px] w-auto h-auto object-contain" />
+                <Image unoptimized src={companyLogo} alt={companyName} width={100} height={40} className="max-h-10 max-w-[100px] w-auto h-auto object-contain" />
               </div>
             ) : (
               <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl flex-shrink-0 transition-all duration-300 ${

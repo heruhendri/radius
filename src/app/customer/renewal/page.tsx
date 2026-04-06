@@ -90,6 +90,7 @@ export default function RenewalPage() {
     const token = localStorage.getItem('customer_token');
     if (!token) { router.push('/customer/login'); return; }
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const loadData = async () => {

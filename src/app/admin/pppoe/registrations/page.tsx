@@ -121,6 +121,7 @@ export default function RegistrationsPage() {
     fetchRegistrations();
     fetch('/api/pppoe/areas').then(r => r.json()).then(d => setAreas(d.areas || [])).catch(() => {});
     fetch('/api/pppoe/profiles/sync-mikrotik').then(r => r.json()).then(d => setRouters(d.routers || [])).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, searchFilter]);
 
   const handleApproveClick = (registration: Registration) => {

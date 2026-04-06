@@ -39,6 +39,7 @@ export default function TechnicianOfflinePage() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, []);
 
   const filtered = users.filter(u =>

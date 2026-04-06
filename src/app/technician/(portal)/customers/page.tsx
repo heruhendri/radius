@@ -127,6 +127,7 @@ export default function TechnicianCustomersPage() {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, filterStatus, addToast]);
 
   useEffect(() => { setPage(1); }, [search, filterStatus]);

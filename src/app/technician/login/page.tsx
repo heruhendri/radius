@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useTranslation } from '@/hooks/useTranslation';
 import { User, Lock, Loader2, Wrench } from 'lucide-react';
 
@@ -79,7 +80,7 @@ export default function TechnicianLoginPage() {
           <div className="flex items-center justify-center gap-3 mb-4">
             {companyLogo ? (
               <div className="inline-flex items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 shadow-sm flex-shrink-0">
-                <img src={companyLogo} alt={companyName} className="max-h-10 max-w-[100px] w-auto h-auto object-contain" />
+                <Image unoptimized src={companyLogo} alt={companyName} width={100} height={40} className="max-h-10 max-w-[100px] w-auto h-auto object-contain" />
               </div>
             ) : (
               <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-600 rounded-2xl shadow-lg shadow-blue-500/25 flex-shrink-0">

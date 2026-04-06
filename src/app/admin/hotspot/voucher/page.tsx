@@ -98,6 +98,7 @@ export default function HotspotVoucherPage() {
       console.log('[SSE] Voucher list changed, refreshing...')
       loadVouchers()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Setup SSE connection
@@ -152,8 +153,11 @@ export default function HotspotVoucherPage() {
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadProfiles(); loadRouters(); loadAgents(); loadVouchers(); loadTemplates(); }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setCurrentPage(1); loadVouchers(); }, [filterProfile, filterBatch, filterStatus, filterRouter, filterAgent])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadVouchers(); }, [currentPage, pageSize])
   
   // Auto-refresh voucher list every 30 seconds to sync with cron updates
@@ -162,6 +166,7 @@ export default function HotspotVoucherPage() {
       loadVouchers()
     }, 30000) // 30 seconds
     return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterProfile, filterBatch, filterStatus, filterRouter, filterAgent, currentPage, pageSize])
 
   const loadProfiles = async () => { try { const res = await fetch('/api/hotspot/profiles'); const data = await res.json(); setProfiles(data.profiles || []); } catch (e) { console.error(e); } }

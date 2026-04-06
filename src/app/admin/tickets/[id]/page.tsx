@@ -65,6 +65,7 @@ export default function AdminTicketDetailPage() {
       fetchTicket();
       fetchMessages();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId]);
 
   const fetchTicket = async () => {

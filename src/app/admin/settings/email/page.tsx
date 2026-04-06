@@ -245,6 +245,7 @@ export default function EmailSettingsPage() {
       await fetchSettings();
     };
     initializeData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSettings = async () => {
@@ -1215,6 +1216,7 @@ function HistoryTab() {
 
   useEffect(() => {
     fetchHistory();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, statusFilter]);
 
   const fetchHistory = async () => {

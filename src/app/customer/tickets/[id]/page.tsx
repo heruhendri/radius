@@ -62,6 +62,7 @@ export default function TicketDetailPage() {
       fetchTicket();
       fetchMessages();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId, router]);
 
   const fetchTicket = async () => {

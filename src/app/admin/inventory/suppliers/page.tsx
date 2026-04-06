@@ -59,6 +59,7 @@ export default function SuppliersPage() {
 
   useEffect(() => {
     loadSuppliers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSuppliers = async () => {

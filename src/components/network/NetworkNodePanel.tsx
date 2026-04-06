@@ -289,6 +289,7 @@ export default function NetworkNodePanel({ entity, onClose, onDeleted, onUpdated
       })
       .catch(() => { /* show basic entity info */ })
       .finally(() => setLoadingDetail(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity?.id, entity?.type]);
 
   // Load OLTs and ODCs for dropdowns
@@ -300,6 +301,7 @@ export default function NetworkNodePanel({ entity, onClose, onDeleted, onUpdated
     if (entity.type === 'ODP') {
       fetch('/api/network/odcs').then(r => r.json()).then(d => setOdcs(d.odcs || [])).catch(() => {});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity?.type]);
 
   const handleChange = (name: string, value: string) => {

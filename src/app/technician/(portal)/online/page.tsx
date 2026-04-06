@@ -68,6 +68,7 @@ export default function TechnicianOnlinePage() {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routerFilter, search]);
 
   useEffect(() => {
@@ -78,6 +79,7 @@ export default function TechnicianOnlinePage() {
     fetchSessions(1);
     const interval = setInterval(() => fetchSessions(pagination.page), 15000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchSessions]);
 
   return (

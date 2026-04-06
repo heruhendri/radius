@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { LogIn, Phone, Loader2, Shield, Ticket, MessageCircle } from 'lucide-react';
 import { showError } from '@/lib/sweetalert';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -84,7 +85,7 @@ export default function AgentLoginPage() {
         <div className="text-center mb-8">
           {companyLogo ? (
             <div className="inline-flex items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 shadow-sm mb-4">
-              <img src={companyLogo} alt={companyName} className="max-h-12 max-w-[120px] w-auto h-auto object-contain" />
+              <Image unoptimized src={companyLogo} alt={companyName} width={120} height={48} className="max-h-12 max-w-[120px] w-auto h-auto object-contain" />
             </div>
           ) : (
             <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/25 mb-4">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import {
@@ -103,12 +104,14 @@ export default function WhatsAppProvidersPage() {
       fetchAllStatuses();
     }, 30000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (providers.length > 0) {
       fetchAllStatuses();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [providers]);
 
   const fetchProviders = async () => {
@@ -710,7 +713,7 @@ export default function WhatsAppProvidersPage() {
             ) : qrImage ? (
               <>
                 <div className="p-3 bg-white rounded-lg shadow-[0_0_20px_rgba(0,247,255,0.3)]">
-                  <img src={qrImage} alt="QR Code" className="w-48 h-48" />
+                  <Image unoptimized src={qrImage} alt="QR Code" width={192} height={192} className="w-48 h-48" />
                 </div>
                 <p className="text-[10px] text-muted-foreground text-center">{t('whatsapp.scanWhatsapp')}</p>
                 <ModalButton variant="primary" onClick={() => showQrCode(qrProvider!)}>{t('whatsapp.refreshQr')}</ModalButton>

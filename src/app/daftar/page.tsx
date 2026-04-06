@@ -466,6 +466,7 @@ function DaftarPageInner() {
                 </label>
                 {idCardPhoto ? (
                   <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={idCardPhoto} alt="Foto KTP" className="w-full h-32 object-cover rounded-xl border-2 border-[#00ff88]/50" />
                     <button
                       type="button"

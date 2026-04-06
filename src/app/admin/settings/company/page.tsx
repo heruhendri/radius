@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Building2, Mail, Phone, MapPin, Globe, Save, Loader2, RotateCcw, Upload, ImageIcon, X as XIcon } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
@@ -284,9 +285,11 @@ export default function CompanySettingsPage() {
                 <div className="flex items-center gap-3">
                   {settings.logo ? (
                     <div className="relative group">
-                      <img
+                      <Image unoptimized
                         src={settings.logo}
                         alt="Logo"
+                        width={56}
+                        height={56}
                         className="w-14 h-14 object-contain rounded-lg border border-border bg-card p-1"
                       />
                       <button

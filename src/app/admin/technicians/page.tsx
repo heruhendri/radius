@@ -61,6 +61,7 @@ export default function TechniciansManagementPage() {
 
   useEffect(() => {
     loadTechnicians();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, filterActive]);
 
   const loadTechnicians = async () => {

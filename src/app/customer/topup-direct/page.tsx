@@ -433,6 +433,7 @@ export default function TopUpDirectPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             {ch.iconUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
                               <img src={ch.iconUrl} alt={ch.name} className="w-10 h-10 object-contain rounded-lg bg-white p-1" />
                             ) : (
                               <div className="p-2 bg-slate-800/80 border border-[#bc13fe]/30 rounded-lg flex items-center justify-center">

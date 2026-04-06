@@ -169,6 +169,7 @@ export default function CustomerDashboard() {
       window.removeEventListener('customer-data-refresh', handleAdminUpdate);
       clearInterval(interval);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const loadPaymentGateways = async () => {

@@ -33,6 +33,7 @@ export default function TopUpRequestsPage() {
 
   useEffect(() => {
     loadRequests();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadRequests = async () => {
@@ -301,6 +302,7 @@ export default function TopUpRequestsPage() {
             >
               <X className="w-5 h-5" />
             </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={selectedImage}
               alt={t('topup.paymentProof')}

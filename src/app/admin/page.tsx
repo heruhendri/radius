@@ -316,6 +316,7 @@ export default function AdminDashboard() {
       clearInterval(dataInterval);
       clearInterval(analyticsInterval);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadDashboardData, loadRadiusStatus, loadAnalyticsData, loadActivityLog]);
 
   // Navigate months

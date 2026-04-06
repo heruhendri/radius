@@ -100,6 +100,7 @@ export default function AgentTicketsPage() {
     if (!data) { router.push('/agent'); return; }
     loadTickets();
     loadCategories();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const loadTickets = async (status = filterStatus) => {

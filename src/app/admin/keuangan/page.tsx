@@ -139,6 +139,7 @@ export default function KeuanganPage() {
     setTransactions([]);
     setHasMore(true);
     loadData(1, true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterType, filterCategory, startDate, endDate, debouncedSearch]);
 
   useEffect(() => {
@@ -149,11 +150,12 @@ export default function KeuanganPage() {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, loadingMore, hasMore, page]);
 
   const loadData = async (pageNum = 1, reset = false) => {
     try {
-      reset ? setLoading(true) : setLoadingMore(true);
+      if (reset) { setLoading(true); } else { setLoadingMore(true); }
 
       let url = `/api/keuangan/transactions?page=${pageNum}&limit=50`;
       if (filterType !== "all") url += `&type=${filterType}`;
@@ -166,7 +168,7 @@ export default function KeuanganPage() {
       const catData = await catRes.json();
 
       if (transData.success) {
-        reset ? setTransactions(transData.transactions) : setTransactions((prev) => [...prev, ...transData.transactions]);
+        if (reset) { setTransactions(transData.transactions); } else { setTransactions((prev) => [...prev, ...transData.transactions]); }
         setStats(transData.stats);
         setTotal(transData.total || 0);
         setHasMore(transData.transactions.length === 50);

@@ -135,6 +135,7 @@ export default function TrafficMonitor() {
     fetchTraffic();
     const interval = setInterval(fetchTraffic, 3000); // Update every 3 seconds
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {

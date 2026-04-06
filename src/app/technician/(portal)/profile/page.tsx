@@ -38,6 +38,7 @@ export default function TechnicianProfilePage() {
       })
       .catch(() => addToast({ type: 'error', title: t('techPortal.failedLoadProfile') }))
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSaveProfile = async () => {

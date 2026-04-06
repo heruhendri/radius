@@ -378,6 +378,7 @@ export default function PayManualPage({ params }: { params: Promise<{ token: str
                 
                 {proofImageUrl && (
                   <div className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={proofImageUrl}
                       alt="Bukti Transfer"

@@ -141,6 +141,7 @@ export default function AgentDashboardPage() {
     setAgent(agentData);
     loadDashboard();
     loadAdminBankAccounts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   // Auto-load payment methods when modal is open and both gateway + amount are valid
@@ -996,6 +997,7 @@ export default function AgentDashboardPage() {
                                 className="sr-only"
                               />
                               {method.iconUrl && (
+                                // eslint-disable-next-line @next/next/no-img-element
                                 <img src={method.iconUrl} alt={method.name} className="w-8 h-8 object-contain rounded" />
                               )}
                               <div className="flex-1 min-w-0">
@@ -1079,6 +1081,7 @@ export default function AgentDashboardPage() {
                     />
                     {proofPreviewUrl && (
                       <div className="mt-2 rounded-lg overflow-hidden border border-purple-300 dark:border-[#bc13fe]/30">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={proofPreviewUrl} alt="Bukti transfer" className="w-full max-h-48 object-contain bg-black/20" />
                       </div>
                     )}

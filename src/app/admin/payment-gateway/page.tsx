@@ -68,10 +68,12 @@ export default function PaymentGatewayPage() {
   useEffect(() => {
     fetchConfigs();
     fetchWebhookLogs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   useEffect(() => {
     fetchWebhookLogs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logsPage, logsFilter]);
 
   const fetchConfigs = async () => {

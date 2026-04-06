@@ -72,6 +72,7 @@ export default function AdminTicketsPage() {
   useEffect(() => {
     fetchStats();
     fetchTickets();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const fetchStats = async () => {

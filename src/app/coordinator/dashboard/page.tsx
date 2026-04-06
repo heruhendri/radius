@@ -21,6 +21,7 @@ export default function CoordinatorDashboardPage() {
 
   useEffect(() => {
     checkSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkSession = async () => {

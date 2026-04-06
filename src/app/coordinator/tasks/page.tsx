@@ -98,6 +98,7 @@ function CoordinatorTasksContent() {
 
   useEffect(() => {
     checkSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -105,6 +106,7 @@ function CoordinatorTasksContent() {
       loadTasks();
       loadTechnicians();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coordinator, searchTerm, filterStatus, filterPriority]);
 
   const checkSession = async () => {

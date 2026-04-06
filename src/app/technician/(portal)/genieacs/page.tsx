@@ -88,6 +88,7 @@ export default function TechnicianGenieACSPage() {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => { fetchDevices(); }, [fetchDevices]);

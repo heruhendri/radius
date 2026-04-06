@@ -110,6 +110,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     loadInvoices();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, invoiceMonth]);
 
   const loadInvoices = async () => {

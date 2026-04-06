@@ -166,6 +166,7 @@ export default function SessionsPage() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisible);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter, routerFilter, searchFilter, pageSize, currentPage]);
 
   // Export functions

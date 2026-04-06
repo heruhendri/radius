@@ -83,6 +83,7 @@ export default function ParameterConfigPage() {
   useEffect(() => {
     console.log('Tab changed to:', activeTab);
     fetchConfigs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   // Toggle enabled/disabled

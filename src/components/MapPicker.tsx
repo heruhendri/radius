@@ -124,6 +124,7 @@ export default function MapPicker({
       markerRef.current = null;
       setMapLoaded(false);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, isMounted]);
 
   // Handle basemap change

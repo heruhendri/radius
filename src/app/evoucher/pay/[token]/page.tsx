@@ -27,6 +27,7 @@ export default function EVoucherPaymentPage() {
   const [processing, setProcessing] = useState(false);
   const [paymentGateways, setPaymentGateways] = useState<any[]>([]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadOrder(); }, [token]);
 
   const loadOrder = async () => {

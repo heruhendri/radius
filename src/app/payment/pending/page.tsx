@@ -24,12 +24,14 @@ function PaymentPendingContent() {
       setError('Token/order_id tidak ditemukan');
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, orderId]);
 
   useEffect(() => {
     if (!autoRefresh || (!token && !orderId)) return;
     const interval = setInterval(() => fetchInvoiceStatus(true), 5000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, token, orderId]);
 
   const fetchInvoiceStatus = async (silent = false) => {

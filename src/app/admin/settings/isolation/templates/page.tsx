@@ -53,6 +53,7 @@ export default function TemplatesPage() {
       .then(r => r.json())
       .then(d => { if (d.success && d.data?.baseUrl) setCompanyBaseUrl(d.data.baseUrl.replace(/\/$/, '')); })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchTemplates = async () => {

@@ -331,6 +331,7 @@ export default function NewPppoeUserPage() {
           </div>
           {formData.idCardPhoto && (
             <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={formData.idCardPhoto} alt="KTP" className="w-full h-28 object-cover rounded border border-border" />
               <button
                 type="button"
@@ -369,6 +370,7 @@ export default function NewPppoeUserPage() {
               <div className="grid grid-cols-3 gap-2 mt-2">
                 {formData.installationPhotos.map((photo, i) => (
                   <div key={i} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={photo} alt={`Instalasi ${i + 1}`} className="w-full h-20 object-cover rounded border" />
                     <button
                       type="button"

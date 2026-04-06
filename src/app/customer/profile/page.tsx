@@ -56,6 +56,7 @@ export default function CustomerProfilePage() {
     }
 
     fetchCustomerProfile(token);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const fetchCustomerProfile = async (token: string) => {

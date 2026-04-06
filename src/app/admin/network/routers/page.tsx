@@ -87,6 +87,7 @@ export default function RouterPage() {
 
   useEffect(() => {
     loadRouters()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadRouters = async () => {

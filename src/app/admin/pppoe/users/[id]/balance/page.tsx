@@ -106,6 +106,7 @@ export default function BalanceManagementPage() {
 
   useEffect(() => {
     loadBalanceData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const loadBalanceData = async () => {

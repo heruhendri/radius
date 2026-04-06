@@ -231,6 +231,7 @@ function AddPppoeUserModal({ isOpen, onClose, onSuccess, profiles, routers, area
                 </div>
                 {formData.idCardPhoto && (
                   <div className="mt-2 relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={formData.idCardPhoto} alt="Preview KTP" className="w-full h-28 object-cover rounded border border-border dark:border-[#bc13fe]/30" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <button type="button" onClick={() => setFormData(prev => ({ ...prev, idCardPhoto: '' }))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"><X className="w-3 h-3" /></button>
                   </div>
@@ -255,6 +256,7 @@ function AddPppoeUserModal({ isOpen, onClose, onSuccess, profiles, routers, area
                 <div className="grid grid-cols-3 gap-2">
                   {formData.installationPhotos.map((photo, index) => (
                     <div key={index} className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={photo} alt={`Instalasi ${index + 1}`} className="w-full h-20 object-cover rounded border border-border dark:border-[#00f7ff]/20" />
                       <button type="button" onClick={() => handleRemoveInstallationPhoto(index)} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] hover:bg-red-600"><X className="w-2.5 h-2.5" /></button>
                     </div>
@@ -791,8 +793,8 @@ export default function PppoeUsersPage() {
     } catch (error) { console.error('Bulk error:', error); await showError(t('common.failed')); }
   };
 
-  const toggleSelectUser = (userId: string) => { const n = new Set(selectedUsers); n.has(userId) ? n.delete(userId) : n.add(userId); setSelectedUsers(n); };
-  const toggleSelectAll = () => { selectedUsers.size === filteredUsers.length && filteredUsers.length > 0 ? setSelectedUsers(new Set()) : setSelectedUsers(new Set(filteredUsers.map(u => u.id))); };
+  const toggleSelectUser = (userId: string) => { const n = new Set(selectedUsers); if (n.has(userId)) { n.delete(userId); } else { n.add(userId); } setSelectedUsers(n); };
+  const toggleSelectAll = () => { if (selectedUsers.size === filteredUsers.length && filteredUsers.length > 0) { setSelectedUsers(new Set()); } else { setSelectedUsers(new Set(filteredUsers.map(u => u.id))); } };
 
   const handleStopSubscription = async (user: PppoeUser) => {
     const confirmed = await showConfirm(

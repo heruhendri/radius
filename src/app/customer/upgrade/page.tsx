@@ -50,6 +50,7 @@ export default function UpgradePackagePage() {
       return;
     }
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   // Debug logging

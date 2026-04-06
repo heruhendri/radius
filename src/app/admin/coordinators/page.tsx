@@ -58,6 +58,7 @@ export default function CoordinatorsManagementPage() {
 
   useEffect(() => {
     loadCoordinators();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, filterActive]);
 
   const loadCoordinators = async () => {

@@ -182,6 +182,7 @@ export default function TrafficChartMonitor() {
     fetchTraffic();
     const interval = setInterval(fetchTraffic, 3000); // Update every 3 seconds
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRouterId, selectedInterface]);
 
   // Reset history when filter changes

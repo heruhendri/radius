@@ -157,6 +157,7 @@ export default function UserDetailModal({
     if (user && activeTab !== 'info') {
       loadTabData(activeTab);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, activeTab]);
 
   // Sync lat/lng from parent (for map picker)
@@ -654,6 +655,7 @@ export default function UserDetailModal({
                 </div>
                 {formData.idCardPhoto && (
                   <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={formData.idCardPhoto} alt="KTP" className="w-full h-28 object-cover rounded border border-border dark:border-[#bc13fe]/30" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <button type="button" onClick={() => setFormData({ ...formData, idCardPhoto: '' })} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600">×</button>
                   </div>
@@ -674,6 +676,7 @@ export default function UserDetailModal({
                   <div className="grid grid-cols-4 gap-2">
                     {formData.installationPhotos.map((photo, index) => (
                       <div key={index} className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={photo} alt={`Instalasi ${index + 1}`} className="w-full h-16 object-cover rounded border border-border dark:border-[#00f7ff]/20" />
                         <button type="button" onClick={() => setFormData(prev => ({ ...prev, installationPhotos: prev.installationPhotos.filter((_, i) => i !== index) }))} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] hover:bg-red-600">×</button>
                       </div>

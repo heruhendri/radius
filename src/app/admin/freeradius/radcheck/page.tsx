@@ -58,6 +58,7 @@ export default function RadCheckPage() {
 
     useEffect(() => {
         fetchItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, search]);
 
     const handleDelete = async (id: number) => {

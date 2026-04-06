@@ -499,6 +499,7 @@ export default function TechnicianRegisterPage() {
                     <p className="text-[10px] text-slate-400 mt-1">Format: JPG/PNG/WebP, maks. 5MB</p>
                     {form.idCardPhoto && (
                       <div className="mt-2 relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={form.idCardPhoto} alt="Preview KTP" className="w-full h-28 object-cover rounded-xl border border-slate-200 dark:border-[#bc13fe]/30" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                         <button type="button" onClick={() => setForm((f) => ({ ...f, idCardPhoto: '' }))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">
                           <X className="w-3 h-3" />

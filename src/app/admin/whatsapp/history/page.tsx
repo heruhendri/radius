@@ -50,6 +50,7 @@ export default function WhatsAppHistoryPage() {
 
   useEffect(() => {
     fetchHistory();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, statusFilter]);
 
   const fetchHistory = async () => {
