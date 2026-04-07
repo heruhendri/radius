@@ -12,6 +12,27 @@ interface BroadcastInvoiceRequest {
   channel?: 'whatsapp' | 'email' | 'both'; // Optional, defaults to 'both'
 }
 
+function renderTemplate(template: string, variables: Record<string, string>): string {
+  let rendered = template;
+  for (const [key, value] of Object.entries(variables)) {
+    rendered = rendered.replace(new RegExp(`{{${key}}}`, 'g'), value ?? '');
+  }
+  return rendered;
+}
+
+function formatBankAccountsForWA(bankAccounts: any): string {
+  if (!bankAccounts) return '';
+  let accounts: Array<{ bankName?: string; bank?: string; accountNumber?: string; accountName?: string }> = [];
+  try {
+    accounts = Array.isArray(bankAccounts) ? bankAccounts : JSON.parse(String(bankAccounts));
+  } catch { return ''; }
+  if (!accounts.length) return '';
+  const lines = accounts.map((a) =>
+    `🏦 ${a.bankName || a.bank || '-'}\n   📋 No. Rek: ${a.accountNumber || '-'}\n   👤 A/N: ${a.accountName || '-'}`
+  );
+  return `━━━━━━━━━━━━━━━━━━━━━━\n🏦 *Transfer Manual ke Rekening:*\n${lines.join('\n\n')}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: BroadcastInvoiceRequest = await request.json();
@@ -56,6 +77,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch WA templates from DB once
+    const [waReminderTemplate, waOverdueTemplate] = await Promise.all([
+      prisma.whatsapp_templates.findFirst({ where: { type: 'invoice-reminder', isActive: true } }),
+      prisma.whatsapp_templates.findFirst({ where: { type: 'invoice-overdue', isActive: true } }),
+    ]);
+
+    const bankAccountsText = formatBankAccountsForWA(company.bankAccounts);
+
     // Calculate invoice data once
     const invoiceDataList = invoices.map(invoice => {
       const now = new Date();
@@ -86,30 +115,36 @@ export async function POST(request: NextRequest) {
     if (channel === 'whatsapp' || channel === 'both') {
       const messagesToSend = invoiceDataList
         .filter(({ invoice }) => invoice.customerPhone)
-        .map(({ invoice, daysRemaining, dueDateStr }) => {
-          const message = `📄 *Tagihan Internet*
+        .map(({ invoice, daysRemaining, dueDateStr, isOverdue, daysOverdue }) => {
+          // Pick DB template (overdue vs reminder), fallback to the other one
+          const templateContent = isOverdue
+            ? (waOverdueTemplate?.message || waReminderTemplate?.message)
+            : (waReminderTemplate?.message || waOverdueTemplate?.message);
 
-Halo *${invoice.customerName || 'Pelanggan'}*,
-
-Kami ingatkan untuk segera melakukan pembayaran tagihan internet Anda.
-
-📋 *Detail Invoice:*
-━━━━━━━━━━━━━━━━━━
-📄 No. Invoice: *${invoice.invoiceNumber}*
-👤 Username: ${invoice.customerUsername || invoice.user?.username || '-'}
-📦 Paket: ${invoice.user?.profile?.name || '-'}
-💰 Jumlah: *Rp ${invoice.amount.toLocaleString('id-ID')}*
-📆 Jatuh Tempo: *${dueDateStr}*
-${daysRemaining >= 0 ? `⏰ Sisa Waktu: *${daysRemaining} hari*` : `⚠️ Terlambat: *${Math.abs(daysRemaining)} hari*`}
-━━━━━━━━━━━━━━━━━━
-
-${invoice.paymentLink ? `💳 *Bayar Sekarang:*\n${invoice.paymentLink}\n\n` : ''}⚠️ *Penting:*
-Pembayaran tepat waktu memastikan layanan Anda tetap aktif tanpa gangguan.
-
-📞 Butuh bantuan? Hubungi: ${company.phone}
-
-Terima kasih,
-${company.name} 🙏`;
+          let message: string;
+          if (templateContent) {
+            const variables: Record<string, string> = {
+              customerName: invoice.customerName || invoice.customerUsername || 'Pelanggan',
+              customerId: invoice.user?.customerId || '-',
+              username: invoice.customerUsername || invoice.user?.username || '-',
+              profileName: invoice.user?.profile?.name || '-',
+              area: invoice.user?.area?.name || '-',
+              invoiceNumber: invoice.invoiceNumber,
+              amount: `Rp ${invoice.amount.toLocaleString('id-ID')}`,
+              dueDate: dueDateStr,
+              daysRemaining: String(Math.max(0, daysRemaining)),
+              daysOverdue: String(daysOverdue),
+              paymentLink: invoice.paymentLink || '-',
+              bankAccounts: bankAccountsText,
+              companyName: company.name,
+              companyPhone: company.phone || '',
+              companyEmail: company.email || '',
+            };
+            message = renderTemplate(templateContent, variables);
+          } else {
+            // Ultimate fallback - no template in DB
+            message = `📄 *Tagihan Internet*\n\nHalo *${invoice.customerName || 'Pelanggan'}*,\n\nNo. Invoice: *${invoice.invoiceNumber}*\nJumlah: *Rp ${invoice.amount.toLocaleString('id-ID')}*\nJatuh Tempo: *${dueDateStr}*\n${invoice.paymentLink ? `\nBayar: ${invoice.paymentLink}` : ''}\n\n${company.name}`;
+          }
 
           return {
             phone: invoice.customerPhone!,
@@ -274,6 +309,8 @@ ${company.name} 🙏`;
       success: true,
       message: messages.join(' | '),
       total: invoices.length,
+      successCount: results.whatsapp.sent + results.email.sent,
+      failCount: results.whatsapp.failed + results.email.failed,
       results: {
         whatsapp: channel === 'email' ? undefined : results.whatsapp,
         email: channel === 'whatsapp' ? undefined : results.email,
