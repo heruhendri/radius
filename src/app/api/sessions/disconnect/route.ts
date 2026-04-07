@@ -70,13 +70,17 @@ async function disconnectHotspotUser(router: any, username: string): Promise<{ s
   
   console.log(`[Disconnect] Connecting to router ${router.name} (${host}:${port}) for user ${username}`);
   
-  const api = new RouterOSAPI({
+  const apiOpts: any = {
     host,
     port,
     user: router.username,
     password: router.password,
-    timeout: 15,
-  });
+    timeout: 5,
+  };
+  if (port === 8729 || port === router.apiPort) {
+    apiOpts.tls = { rejectUnauthorized: false };
+  }
+  const api = new RouterOSAPI(apiOpts);
 
   try {
     await api.connect();
@@ -135,45 +139,78 @@ async function disconnectHotspotUser(router: any, username: string): Promise<{ s
   }
 }
 
+// Helper: hard timeout wrapper for RouterOS API calls
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      v => { clearTimeout(timer); resolve(v); },
+      e => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 // Disconnect PPPoE user via MikroTik API
 async function disconnectPPPoEUser(router: any, username: string): Promise<{ success: boolean; error?: string }> {
   const host = router.ipAddress || router.nasname;
-  const port = router.port || 8728;
-  
-  const api = new RouterOSAPI({
-    host,
-    port,
-    user: router.username,
-    password: router.password,
-    timeout: 15,
-  });
+  // Try API-SSL port first (apiPort/8729), then plaintext (port/8728)
+  const primaryPort = router.apiPort || 8729;
+  const fallbackPort = router.port || 8728;
+  const portsToTry = [primaryPort, ...(fallbackPort !== primaryPort ? [fallbackPort] : [])];
 
-  try {
-    await api.connect();
-    
-    // Find active PPPoE session
-    const activeSessions = await api.write('/ppp/active/print', [
-      `?name=${username}`,
-    ]);
-    
-    if (activeSessions.length === 0) {
-      await api.close();
-      return { success: false, error: 'User not found in PPPoE active list' };
+  for (const tryPort of portsToTry) {
+    try {
+      const result = await withTimeout(
+        (async () => {
+          const apiOpts: any = {
+            host,
+            port: tryPort,
+            user: router.username,
+            password: router.password,
+            timeout: 5,
+          };
+          // Enable TLS for API-SSL port (8729)
+          if (tryPort === 8729 || tryPort === router.apiPort) {
+            apiOpts.tls = { rejectUnauthorized: false };
+          }
+          const api = new RouterOSAPI(apiOpts);
+
+          try {
+            await api.connect();
+            
+            // Find active PPPoE session
+            const activeSessions = await api.write('/ppp/active/print', [
+              `?name=${username}`,
+            ]);
+            
+            if (activeSessions.length === 0) {
+              await api.close();
+              return { success: false, error: 'User not found in PPPoE active list' };
+            }
+            
+            // Remove the session (disconnect)
+            for (const session of activeSessions) {
+              await api.write('/ppp/active/remove', [
+                `=.id=${session['.id']}`,
+              ]);
+            }
+            
+            await api.close();
+            return { success: true };
+          } catch (error: any) {
+            try { await api.close(); } catch {}
+            return { success: false, error: error.message };
+          }
+        })(),
+        8000,
+        `MikroTik API ${host}:${tryPort}`
+      );
+      if (result.success) return result;
+    } catch (err: any) {
+      console.log(`[Disconnect] PPPoE API failed on ${host}:${tryPort}: ${err?.message}`);
     }
-    
-    // Remove the session (disconnect)
-    for (const session of activeSessions) {
-      await api.write('/ppp/active/remove', [
-        `=.id=${session['.id']}`,
-      ]);
-    }
-    
-    await api.close();
-    return { success: true };
-  } catch (error: any) {
-    console.error(`Failed to disconnect PPPoE user ${username}:`, error);
-    return { success: false, error: error.message };
   }
+  return { success: false, error: `All API ports failed for ${host}` };
 }
 
 export async function POST(request: NextRequest) {

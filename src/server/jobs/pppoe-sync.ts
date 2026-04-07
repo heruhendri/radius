@@ -59,13 +59,18 @@ export async function disconnectViaMikrotikAPI(username: string) {
     const fallbackPort = router.port || 8728
 
     const tryDisconnect = async (port: number) => {
-      const api = new RouterOSAPI({
+      const apiOpts: any = {
         host,
         port,
         user: router.username,
         password: router.password,
         timeout: 3,
-      })
+      }
+      // Enable TLS for API-SSL port (8729)
+      if (port === 8729 || port === router.apiPort) {
+        apiOpts.tls = { rejectUnauthorized: false }
+      }
+      const api = new RouterOSAPI(apiOpts)
 
       try {
         await api.connect()
@@ -92,8 +97,15 @@ export async function disconnectViaMikrotikAPI(username: string) {
       }
     }
 
-    // Try API-SSL first (8729), then plaintext (8728)
-    const first = await tryDisconnect(primaryPort)
+    // Hard timeout wrapper — node-routeros timeout doesn't limit TCP SYN phase
+    const withTimeout = <T>(p: Promise<T>, ms: number, label: string): Promise<T> =>
+      new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+        p.then(v => { clearTimeout(t); resolve(v) }, e => { clearTimeout(t); reject(e) })
+      })
+
+    // Try API-SSL first (8729), then plaintext (8728) — 5s hard timeout each
+    const first = await withTimeout(tryDisconnect(primaryPort), 5000, `API ${host}:${primaryPort}`)
     if (first.success) {
       console.log(`[MikroTik API] ✅ Disconnected ${username} on ${router.name} (${host}:${primaryPort})`)
       return
@@ -101,12 +113,12 @@ export async function disconnectViaMikrotikAPI(username: string) {
 
     if (fallbackPort !== primaryPort) {
       console.log(`[MikroTik API] Retry disconnect on fallback port ${fallbackPort} (reason: ${first.error})`)
-      const second = await tryDisconnect(fallbackPort)
+      const second = await withTimeout(tryDisconnect(fallbackPort), 5000, `API ${host}:${fallbackPort}`)
       if (second.success) {
         console.log(`[MikroTik API] ✅ Disconnected ${username} on ${router.name} (${host}:${fallbackPort})`)
         return
       }
-      throw new Error(`Disconnect failed (8728: ${first.error}) (8729: ${second.error})`)
+      throw new Error(`Disconnect failed (${primaryPort}: ${first.error}) (${fallbackPort}: ${second.error})`)
     }
 
     throw new Error(`Disconnect failed on port ${primaryPort}: ${first.error}`)

@@ -289,15 +289,29 @@ export async function disconnectExpiredSessions() {
 }
 
 /**
+ * Helper: wrap a promise with a hard timeout (kills hanging TCP connections).
+ * node-routeros `timeout` only applies after TCP connect, NOT during SYN phase.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    promise.then(
+      v => { clearTimeout(timer); resolve(v) },
+      e => { clearTimeout(timer); reject(e) },
+    )
+  })
+}
+
+/**
  * Disconnect PPPoE user session by username.
  *
  * Strategy (in order):
- * 1. MikroTik RouterOS API  — /ppp/active/remove (direct, no radclient needed)
- * 2. RADIUS CoA Disconnect-Request (radclient) + marks DB as stopped
+ * 1. Mark session stopped in database (instant, always works)
+ * 2. RADIUS CoA Disconnect-Request via radclient (fast UDP)
+ * 3. MikroTik RouterOS API /ppp/active/remove (with TLS + hard timeout)
  *
- * Both methods are attempted so we cover:
- * - Cases where CoA secret/IP is not yet configured
- * - Cases where the MikroTik API is unreachable
+ * DB is marked FIRST so the UI reflects the disconnect immediately.
+ * CoA + API are best-effort to actually drop the PPPoE tunnel on MikroTik.
  */
 export async function disconnectPPPoEUser(username: string) {
   try {
@@ -329,15 +343,33 @@ export async function disconnectPPPoEUser(username: string) {
       return { success: false, error: 'NAS not configured' }
     }
 
-    // Determine CoA target IP
-    // Use ipAddress (VPN-reachable management IP) if different from nasname (NAS-IP sent in RADIUS)
+    // Determine target IP (VPN-reachable management IP if available)
     const coaTargetIp = nas.ipAddress && nas.ipAddress !== nas.nasname
       ? nas.ipAddress
       : nas.nasname
 
-    // ── METHOD 1: MikroTik RouterOS API (/ppp/active/remove) ─────────────
-    // Fastest and most reliable — direct API call, no radclient dependency.
-    // Try API-SSL port first (apiPort/8729), then plaintext (port/8728)
+    // ── STEP 1: Mark DB stopped FIRST (instant, guaranteed) ──────────────
+    let dbSuccess = false
+    if (activeSession.acctsessionid) {
+      dbSuccess = await markSessionStopped(activeSession.acctsessionid, username, 'Admin-Reset')
+    }
+
+    // ── STEP 2: CoA Disconnect-Request (fast UDP, 2s timeout) ────────────
+    let coaSuccess = false
+    try {
+      const coaResult = await sendCoADisconnect(
+        activeSession.username,
+        coaTargetIp,
+        nas.secret,
+        activeSession.acctsessionid,
+        activeSession.framedipaddress
+      )
+      coaSuccess = coaResult.coaSuccess || false
+    } catch (coaErr: any) {
+      console.log(`[CoA] CoA failed for ${username}: ${coaErr?.message}`)
+    }
+
+    // ── STEP 3: MikroTik API disconnect (with TLS + hard 5s timeout) ─────
     let apiSuccess = false
     if (nas.username && nas.password) {
       const primaryPort = (nas as any).apiPort || 8729
@@ -347,53 +379,63 @@ export async function disconnectPPPoEUser(username: string) {
       for (const tryPort of portsToTry) {
         if (apiSuccess) break
         try {
-          const api = new RouterOSAPI({
-            host: coaTargetIp,
-            port: tryPort,
-            user: nas.username,
-            password: nas.password,
-            timeout: 3,
-          })
-          await api.connect()
-          const activePPP = await api.write('/ppp/active/print')
-          const pppSession = activePPP.find(
-            (p: any) => p.name === username || p.username === username
+          const apiResult = await withTimeout(
+            (async () => {
+              const apiOpts: any = {
+                host: coaTargetIp,
+                port: tryPort,
+                user: nas!.username,
+                password: nas!.password,
+                timeout: 3,
+              }
+              // Enable TLS for API-SSL port (8729)
+              if (tryPort === 8729 || tryPort === (nas as any).apiPort) {
+                apiOpts.tls = { rejectUnauthorized: false }
+              }
+              const api = new RouterOSAPI(apiOpts)
+              await api.connect()
+              const activePPP = await api.write('/ppp/active/print')
+              const pppSession = activePPP.find(
+                (p: any) => p.name === username || p.username === username
+              )
+              if (pppSession) {
+                await api.write('/ppp/active/remove', [`=.id=${pppSession['.id']}`])
+                try { await api.close() } catch {}
+                return true
+              }
+              try { await api.close() } catch {}
+              return false
+            })(),
+            5000,
+            `MikroTik API ${coaTargetIp}:${tryPort}`
           )
-          if (pppSession) {
-            await api.write('/ppp/active/remove', [`=.id=${pppSession['.id']}`])
+          if (apiResult) {
             apiSuccess = true
-            console.log(`[CoA] ✓ MikroTik API disconnect OK for ${username} (port ${tryPort})`)
+            console.log(`[CoA] ✓ MikroTik API disconnect OK for ${username} (${coaTargetIp}:${tryPort})`)
           } else {
             console.log(`[CoA] No active PPP found via API for ${username} (port ${tryPort})`)
           }
-          try { await api.close() } catch {}
         } catch (apiErr: any) {
-          console.log(`[CoA] MikroTik API disconnect failed on port ${tryPort}: ${apiErr?.message}`)
+          console.log(`[CoA] MikroTik API failed on port ${tryPort}: ${apiErr?.message}`)
         }
       }
     }
 
-    // ── METHOD 2: RADIUS CoA Disconnect-Request (also marks DB as stopped) ──
-    const result = await sendCoADisconnect(
-      activeSession.username,
-      coaTargetIp,
-      nas.secret,
-      activeSession.acctsessionid,
-      activeSession.framedipaddress
-    )
-
-    if (result.success || apiSuccess) {
-      console.log(`[CoA] User ${username} disconnected (api:${apiSuccess}, coa:${result.coaSuccess}, db:${result.dbSuccess})`)
-    }
+    const success = dbSuccess || coaSuccess || apiSuccess
+    console.log(`[CoA] ${username} disconnect result: db=${dbSuccess}, coa=${coaSuccess}, api=${apiSuccess}`)
 
     return {
-      success: apiSuccess || result.success,
+      success,
       message: apiSuccess
         ? `MikroTik API disconnected ${username}`
-        : result.message,
+        : coaSuccess
+          ? `CoA disconnected ${username}`
+          : dbSuccess
+            ? `Session marked stopped in DB`
+            : 'All disconnect methods failed',
       apiSuccess,
-      coaSuccess: result.coaSuccess,
-      dbSuccess: result.dbSuccess,
+      coaSuccess,
+      dbSuccess,
     }
   } catch (error: any) {
     console.error(`[CoA] Error disconnecting PPPoE user ${username}:`, error.message)
