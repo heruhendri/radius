@@ -100,21 +100,25 @@ if echo "$CHANGED" | grep -q '^prisma/schema\.prisma$'; then
   ok "Prisma updated"
 fi
 
-# ── Prisma seed (always run to keep templates current) ────
-echo ""
-log "Running db:seed to ensure templates are up to date..."
-# Use stdbuf for line-buffered output so progress appears live in web log.
-if command -v stdbuf &>/dev/null; then
-  stdbuf -oL npm run db:seed
-  SEED_EXIT=$?
+# ── Prisma seed (only if seed files changed) ─────────────
+if echo "$CHANGED" | grep -qE '^prisma/seeds/|^prisma/seed\.ts$'; then
+  echo ""
+  log "Seed files changed — running db:seed..."
+  # Use stdbuf for line-buffered output so progress appears live in web log.
+  if command -v stdbuf &>/dev/null; then
+    stdbuf -oL npm run db:seed
+    SEED_EXIT=$?
+  else
+    npm run db:seed
+    SEED_EXIT=$?
+  fi
+  if [ "$SEED_EXIT" -ne 0 ]; then
+    log "Warning: db:seed exited with code $SEED_EXIT (non-fatal)"
+  else
+    ok "Prisma seed done"
+  fi
 else
-  npm run db:seed
-  SEED_EXIT=$?
-fi
-if [ "$SEED_EXIT" -ne 0 ]; then
-  log "Warning: db:seed exited with code $SEED_EXIT (non-fatal)"
-else
-  ok "Prisma seed done"
+  ok "Seed files unchanged — skipping db:seed"
 fi
 
 # ── Clean stale build artifacts ──────────────────────────
