@@ -52,8 +52,10 @@ export async function disconnectViaMikrotikAPI(username: string) {
     }
 
     const host = router.ipAddress || router.nasname
-    const primaryPort = router.port || 8728
-    const fallbackPort = router.apiPort || 8729
+    // Try API-SSL first (apiPort, usually 8729), then plaintext (port/8728)
+    // Many MikroTik routers only have API-SSL enabled
+    const primaryPort = router.apiPort || 8729
+    const fallbackPort = router.port || 8728
 
     const tryDisconnect = async (port: number) => {
       const api = new RouterOSAPI({
@@ -89,7 +91,7 @@ export async function disconnectViaMikrotikAPI(username: string) {
       }
     }
 
-    // Try plaintext API first (8728), then API-SSL (8729)
+    // Try API-SSL first (8729), then plaintext (8728)
     const first = await tryDisconnect(primaryPort)
     if (first.success) {
       console.log(`[MikroTik API] ✅ Disconnected ${username} on ${router.name} (${host}:${primaryPort})`)
