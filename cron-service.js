@@ -40,7 +40,7 @@ async function runCronJob(jobType, description, options = {}) {
 
       const controller = new AbortController();
       // 5 minute timeout for long-running jobs like backup + telegram upload
-      const timeoutMs = ['telegram_backup', 'telegram_health'].includes(jobType) ? 300000 : 30000;
+      const timeoutMs = ['telegram_backup', 'telegram_health'].includes(jobType) ? 300000 : ['pppoe_session_sync'].includes(jobType) ? 90000 : 30000;
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const response = await fetch(`${API_URL}/api/cron`, {

@@ -130,7 +130,7 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
 
       // Try connecting to MikroTik API
       const tryConnect = async (port: number): Promise<MikroTikSession[]> => {
-        const api = new RouterOSAPI({ host, port, user: router.username, password: router.password, timeout: 5 });
+        const api = new RouterOSAPI({ host, port, user: router.username, password: router.password, timeout: 3 });
         try {
           await api.connect();
           const results = await api.write('/ppp/active/print') as MikroTikSession[];
