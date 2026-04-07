@@ -1184,8 +1184,8 @@ export const emailTemplates = [
   },
 ];
 
-export async function seedEmailTemplates() {
-  console.log('🌱 Seeding email templates...');
+export async function seedEmailTemplates(force = false) {
+  console.log(`🌱 Seeding email templates${force ? ' (force reset)' : ' (preserve customizations)'}...`);
   
   for (const template of emailTemplates) {
     await prisma.emailTemplate.upsert({
@@ -1194,12 +1194,9 @@ export async function seedEmailTemplates() {
         id: `template-${template.type}`,
         ...template,
       },
-      update: {
-        name: template.name,
-        subject: template.subject,
-        htmlBody: template.htmlBody,
-        isActive: template.isActive,
-      },
+      update: force
+        ? { name: template.name, subject: template.subject, htmlBody: template.htmlBody, isActive: template.isActive }
+        : { name: template.name, isActive: template.isActive },
     });
     console.log(`   ✅ Template: ${template.name}`);
   }
@@ -1207,7 +1204,8 @@ export async function seedEmailTemplates() {
 
 // Run if executed directly
 if (require.main === module) {
-  seedEmailTemplates()
+  const force = process.argv.includes('--force');
+  seedEmailTemplates(force)
     .then(() => {
       console.log('✅ Email templates seeded successfully!');
       prisma.$disconnect();

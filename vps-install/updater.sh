@@ -293,6 +293,9 @@ node_modules/.bin/prisma db push --accept-data-loss 2>/dev/null || \
     node_modules/.bin/prisma db push || \
     print_info "DB push skipped (check manually)"
 
+print_step "Applying seed data (new templates & config)"
+npm run db:seed 2>/dev/null || print_info "Seed skipped (check manually)"
+
 # ─── Restart services ─────────────────────────────────────────────────────
 print_step "Starting PM2 processes"
 pm2 start "$PM2_APP_NAME" 2>/dev/null || true

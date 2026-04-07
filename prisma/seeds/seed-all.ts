@@ -65,8 +65,11 @@ const adminUser = {
 // =============================================
 // MAIN SEED FUNCTION
 // =============================================
-export async function seedAll() {
+export async function seedAll(forceTemplates = false) {
   console.log('🌱 Starting complete database seed...\n');
+  if (forceTemplates) {
+    console.log('⚠️  Force mode: templates will be reset to defaults\n');
+  }
 
   // 1. Seed Transaction Categories
   console.log('📊 Seeding Transaction Categories...');
@@ -178,7 +181,7 @@ export async function seedAll() {
   // 5. Seed WhatsApp Templates (Using imported function)
   console.log('💬 Seeding WhatsApp Templates...');
   try {
-    await seedWhatsAppTemplates();
+    await seedWhatsAppTemplates(forceTemplates);
   } catch (error) {
     console.error('   ⚠️ Warning: Failed to seed WhatsApp templates:', error);
   }
@@ -245,7 +248,7 @@ export async function seedAll() {
   // 11. Seed Email Templates (All notification templates)
   console.log('📧 Seeding Email Templates...');
   try {
-    await seedEmailTemplates();
+    await seedEmailTemplates(forceTemplates);
   } catch (error) {
     console.error('   ⚠️ Warning: Failed to seed email templates:', error);
   }
@@ -279,7 +282,8 @@ export async function seedAll() {
 
 // Run if called directly
 if (require.main === module) {
-  seedAll()
+  const forceTemplates = process.argv.includes('--force-templates');
+  seedAll(forceTemplates)
     .catch((e) => {
       console.error('❌ Seeding error:', e);
       process.exit(1);

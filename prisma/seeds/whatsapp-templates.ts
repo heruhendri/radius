@@ -681,18 +681,16 @@ _{{companyName}}_`,
   },
 ];
 
-export async function seedWhatsAppTemplates() {
-  console.log('🌱 Seeding WhatsApp templates...');
+export async function seedWhatsAppTemplates(force = false) {
+  console.log(`🌱 Seeding WhatsApp templates${force ? ' (force reset)' : ' (preserve customizations)'}...`);
   
   for (const template of whatsappTemplates) {
     await prisma.whatsapp_templates.upsert({
       where: { type: template.type },
       create: template,
-      update: {
-        name: template.name,
-        message: template.message,
-        isActive: template.isActive,
-      },
+      update: force
+        ? { name: template.name, message: template.message, isActive: template.isActive }
+        : { name: template.name, isActive: template.isActive },
     });
     console.log(`   ✅ Template: ${template.name}`);
   }
@@ -700,7 +698,8 @@ export async function seedWhatsAppTemplates() {
 
 // Run if executed directly
 if (require.main === module) {
-  seedWhatsAppTemplates()
+  const force = process.argv.includes('--force');
+  seedWhatsAppTemplates(force)
     .then(() => {
       console.log('✅ WhatsApp templates seeded successfully!');
       prisma.$disconnect();
