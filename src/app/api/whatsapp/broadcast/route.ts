@@ -6,6 +6,21 @@ import { logActivity } from '@/server/services/activity-log.service';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 
+function formatBankAccountsForWA(bankAccounts: any): string {
+  if (!bankAccounts) return '';
+  let accounts: Array<{ bankName?: string; bank?: string; accountNumber?: string; accountName?: string }> = [];
+  try {
+    accounts = Array.isArray(bankAccounts) ? bankAccounts : JSON.parse(String(bankAccounts));
+  } catch {
+    return '';
+  }
+  if (!accounts.length) return '';
+  const lines = accounts.map((a) =>
+    `🏦 ${a.bankName || a.bank || '-'}\n   📋 No. Rek: ${a.accountNumber || '-'}\n   👤 A/N: ${a.accountName || '-'}`
+  );
+  return `━━━━━━━━━━━━━━━━━━━━━━\n🏦 *Transfer Manual ke Rekening:*\n${lines.join('\n\n')}`;
+}
+
 interface BroadcastRequest {
   userIds: string[];
   message: string;
@@ -42,13 +57,29 @@ export async function POST(request: NextRequest) {
         id: true,
         name: true,
         username: true,
+        customerId: true,
         phone: true,
         email: true,
         address: true,
+        expiredAt: true,
         profile: {
           select: {
             name: true,
             price: true,
+          },
+        },
+        area: {
+          select: { name: true },
+        },
+        invoices: {
+          orderBy: { dueDate: 'desc' },
+          take: 1,
+          select: {
+            invoiceNumber: true,
+            amount: true,
+            dueDate: true,
+            paymentLink: true,
+            status: true,
           },
         },
       },
@@ -66,10 +97,28 @@ export async function POST(request: NextRequest) {
 
     // Helper function to replace variables in message template
     const replaceVariables = (template: string, user: any, company: any) => {
+      // Invoice data (latest invoice for this user)
+      const latestInvoice = user.invoices?.[0];
+      const now = new Date();
+      const dueDate = latestInvoice ? new Date(latestInvoice.dueDate) : null;
+      const diffTime = dueDate ? dueDate.getTime() - now.getTime() : 0;
+      const daysRemaining = dueDate && diffTime > 0 ? Math.ceil(diffTime / (1000 * 60 * 60 * 24)) : 0;
+      const daysOverdue = dueDate && diffTime < 0 ? Math.abs(Math.ceil(diffTime / (1000 * 60 * 60 * 24))) : 0;
+      const dueDateStr = dueDate
+        ? dueDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' })
+        : '-';
+      const amountStr = latestInvoice ? `Rp ${latestInvoice.amount.toLocaleString('id-ID')}` : '-';
+      const expiredDateStr = user.expiredAt
+        ? new Date(user.expiredAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' })
+        : '-';
+      const bankAccountsText = formatBankAccountsForWA(company?.bankAccounts);
+
       return template
         .replace(/\{\{customerName\}\}/gi, user.name || '')
         .replace(/\{\{name\}\}/gi, user.name || '')
         .replace(/\{\{username\}\}/gi, user.username || '')
+        .replace(/\{\{customerUsername\}\}/gi, user.username || '')
+        .replace(/\{\{customerId\}\}/gi, user.customerId || '-')
         .replace(/\{\{profileName\}\}/gi, user.profile?.name || '-')
         .replace(/\{\{paket\}\}/gi, user.profile?.name || '-')
         .replace(/\{\{price\}\}/gi, user.profile?.price ? `Rp ${user.profile.price.toLocaleString('id-ID')}` : '-')
@@ -78,10 +127,21 @@ export async function POST(request: NextRequest) {
         .replace(/\{\{email\}\}/gi, user.email || '')
         .replace(/\{\{address\}\}/gi, user.address || '')
         .replace(/\{\{alamat\}\}/gi, user.address || '')
+        .replace(/\{\{area\}\}/gi, user.area?.name || '-')
+        .replace(/\{\{invoiceNumber\}\}/gi, latestInvoice?.invoiceNumber || '-')
+        .replace(/\{\{amount\}\}/gi, amountStr)
+        .replace(/\{\{dueDate\}\}/gi, dueDateStr)
+        .replace(/\{\{daysRemaining\}\}/gi, String(daysRemaining))
+        .replace(/\{\{daysOverdue\}\}/gi, String(daysOverdue))
+        .replace(/\{\{paymentLink\}\}/gi, latestInvoice?.paymentLink || '-')
+        .replace(/\{\{paymentToken\}\}/gi, '-')
+        .replace(/\{\{bankAccounts\}\}/gi, bankAccountsText)
+        .replace(/\{\{expiredDate\}\}/gi, expiredDateStr)
         .replace(/\{\{companyName\}\}/gi, company?.name || '')
         .replace(/\{\{namaPerusahaan\}\}/gi, company?.name || '')
         .replace(/\{\{companyPhone\}\}/gi, company?.phone || '')
         .replace(/\{\{teleponPerusahaan\}\}/gi, company?.phone || '')
+        .replace(/\{\{companyEmail\}\}/gi, company?.email || '')
         .replace(/\{\{companyAddress\}\}/gi, company?.address || '')
         .replace(/\{\{alamatPerusahaan\}\}/gi, company?.address || '');
     };
