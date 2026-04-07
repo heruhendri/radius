@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
+import { prisma } from '@/server/db/client';
 
 const execAsync = promisify(exec);
 
@@ -125,15 +126,36 @@ export async function GET() {
             console.error('Error checking FreeRADIUS status:', error);
         }
 
-        // Get active session count from database (optional)
+        // Get active session count and request stats from radacct database
         let activeConnections = 0;
         let totalAuthRequests = 0;
         let totalAcctRequests = 0;
 
         try {
-            // This would require database access - placeholder for now
-            // In real implementation, query radacct table for active sessions
-        } catch { }
+            // Active connections = sessions with no stop time in radacct
+            const activeResult = await prisma.$queryRaw<Array<{ cnt: bigint }>>`
+                SELECT COUNT(*) as cnt FROM radacct WHERE acctstoptime IS NULL
+            `;
+            activeConnections = Number(activeResult[0]?.cnt || 0);
+
+            // Total auth requests = count of radpostauth entries (all-time)
+            try {
+                const authResult = await prisma.$queryRaw<Array<{ cnt: bigint }>>`
+                    SELECT COUNT(*) as cnt FROM radpostauth
+                `;
+                totalAuthRequests = Number(authResult[0]?.cnt || 0);
+            } catch {
+                // radpostauth table may not exist
+            }
+
+            // Total acct requests = total radacct entries (all-time)
+            const acctResult = await prisma.$queryRaw<Array<{ cnt: bigint }>>`
+                SELECT COUNT(*) as cnt FROM radacct
+            `;
+            totalAcctRequests = Number(acctResult[0]?.cnt || 0);
+        } catch (dbErr: any) {
+            console.error('Error querying radacct stats:', dbErr.message);
+        }
 
         return NextResponse.json({
             success: true,

@@ -1,5 +1,4 @@
 ﻿import { prisma } from '@/server/db/client';
-import { disconnectPPPoEUser } from '@/server/services/radius/coa-handler.service';
 
 /**
  * Enhanced Auto-Isolation for expired PPPoE users
@@ -109,22 +108,14 @@ export async function autoIsolateExpiredUsers() {
             AND attribute = 'Framed-IP-Address'
         `;
 
-        // 5. Disconnect user session (force re-authentication)
+        // 5. Disconnect user session (force re-authentication)  
         try {
-          // Try MikroTik API first
-          const { disconnectViaMikrotikAPI } = await import('./pppoe-sync');
-          await disconnectViaMikrotikAPI(user.username);
-          console.log(`[AUTO-ISOLATE] ✅ Disconnected ${user.username} via MikroTik API`);
-        } catch (apiError) {
-          console.log(`[AUTO-ISOLATE] ⚠️ MikroTik API failed, trying CoA...`);
-          
-          // Fallback to CoA
-          try {
-            await disconnectPPPoEUser(user.username);
-            console.log(`[AUTO-ISOLATE] ✅ Disconnected ${user.username} via CoA`);
-          } catch (coaError: any) {
-            console.log(`[AUTO-ISOLATE] ❌ CoA failed: ${coaError.message}`);
-          }
+          // Use CoA disconnect (handles DB + CoA + API fallback internally)
+          const { disconnectPPPoEUser } = await import('@/server/services/radius/coa-handler.service');
+          await disconnectPPPoEUser(user.username);
+          console.log(`[AUTO-ISOLATE] ✅ Disconnected ${user.username} via CoA`);
+        } catch (coaError: any) {
+          console.log(`[AUTO-ISOLATE] ❌ Disconnect failed: ${coaError.message}`);
         }
 
         // 6. Close session in radacct

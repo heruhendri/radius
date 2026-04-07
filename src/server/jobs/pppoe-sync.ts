@@ -63,7 +63,7 @@ export async function disconnectViaMikrotikAPI(username: string) {
         port,
         user: router.username,
         password: router.password,
-        timeout: 15,
+        timeout: 3,
       })
 
       try {
@@ -214,15 +214,13 @@ export async function autoIsolatePPPoEUsers(): Promise<{
       `
 
       for (const s of stillOnlineBlocked) {
-        try {
-          await disconnectViaMikrotikAPI(s.username)
-        } catch {}
-
+        // Use CoA disconnect (handles DB + CoA + API fallback internally)
         try {
           const { disconnectPPPoEUser } = await import('@/server/services/radius/coa-handler.service')
           await disconnectPPPoEUser(s.username)
         } catch {}
 
+        // Ensure radacct is closed regardless of disconnect method success
         await prisma.$executeRaw`
           UPDATE radacct
           SET acctstoptime = NOW(),

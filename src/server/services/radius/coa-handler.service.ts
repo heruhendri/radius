@@ -352,7 +352,7 @@ export async function disconnectPPPoEUser(username: string) {
             port: tryPort,
             user: nas.username,
             password: nas.password,
-            timeout: 5,
+            timeout: 3,
           })
           await api.connect()
           const activePPP = await api.write('/ppp/active/print')
