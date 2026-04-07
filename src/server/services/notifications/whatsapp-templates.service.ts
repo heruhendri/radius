@@ -36,6 +36,50 @@ async function getTemplate(type: string): Promise<string | null> {
 }
 
 /**
+ * Send registration confirmation to customer upon form submission
+ * Notifies the customer that their registration is received and pending review
+ */
+export async function sendRegistrationConfirmation(data: {
+  customerName: string;
+  customerPhone: string;
+  profileName: string;
+  address: string;
+}) {
+  try {
+    const company = await prisma.company.findFirst();
+    const companyName = company?.name || '';
+    const companyPhone = company?.phone || '';
+
+    const templateContent = await getTemplate('registration-confirmation');
+
+    if (!templateContent) {
+      console.warn('[WA] No template found for registration-confirmation');
+      return;
+    }
+
+    const variables = {
+      customerName: data.customerName,
+      phone: data.customerPhone,
+      profileName: data.profileName,
+      address: data.address,
+      companyName,
+      companyPhone,
+    };
+
+    const message = renderTemplate(templateContent, variables);
+
+    await WhatsAppService.sendMessage({
+      phone: data.customerPhone,
+      message,
+    });
+
+    console.log(`[WA] ✅ Registration confirmation sent to ${data.customerPhone}`);
+  } catch (error) {
+    console.error(`[WA] ❌ Failed to send registration confirmation:`, error);
+  }
+}
+
+/**
  * Send registration approval notification
  * Includes username, password, and installation info
  */
@@ -46,6 +90,11 @@ export async function sendRegistrationApproval(data: {
   password: string;
   profileName: string;
   installationFee: number;
+  invoiceNumber?: string;
+  subscriptionType?: string;
+  dueDate?: Date;
+  paymentLink?: string;
+  totalAmount?: number;
 }) {
   try {
     const company = await prisma.company.findFirst();
@@ -60,6 +109,10 @@ export async function sendRegistrationApproval(data: {
       return;
     }
 
+    const dueDateStr = data.dueDate
+      ? data.dueDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' })
+      : '-';
+
     // Prepare variables
     const variables = {
       customerName: data.customerName,
@@ -67,6 +120,11 @@ export async function sendRegistrationApproval(data: {
       password: data.password,
       profileName: data.profileName,
       installationFee: `Rp ${data.installationFee.toLocaleString('id-ID')}`,
+      invoiceNumber: data.invoiceNumber || '-',
+      subscriptionType: data.subscriptionType || 'POSTPAID',
+      dueDate: dueDateStr,
+      paymentLink: data.paymentLink || '',
+      amount: data.totalAmount ? `Rp ${data.totalAmount.toLocaleString('id-ID')}` : `Rp ${data.installationFee.toLocaleString('id-ID')}`,
       companyName,
       companyPhone,
     };
@@ -97,6 +155,7 @@ export async function sendInstallationInvoice(data: {
   amount: number;
   paymentLink: string;
   dueDate: Date;
+  profileName?: string;
 }) {
   try {
     const company = await prisma.company.findFirst();
@@ -125,6 +184,7 @@ export async function sendInstallationInvoice(data: {
       amount: `Rp ${data.amount.toLocaleString('id-ID')}`,
       dueDate: dueDateStr,
       paymentLink: data.paymentLink,
+      profileName: data.profileName || '-',
       companyName,
       companyPhone,
     };
@@ -155,6 +215,7 @@ export async function sendAdminCreateUser(data: {
   password: string;
   profileName: string;
   area?: string;
+  expiredAt?: Date;
 }) {
   try {
     const company = await prisma.company.findFirst();
@@ -169,6 +230,10 @@ export async function sendAdminCreateUser(data: {
       return;
     }
 
+    const expiredDateStr = data.expiredAt
+      ? data.expiredAt.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' })
+      : '-';
+
     // Prepare variables
     const variables = {
       customerName: data.customerName,
@@ -177,6 +242,7 @@ export async function sendAdminCreateUser(data: {
       password: data.password,
       profileName: data.profileName,
       area: data.area || '-',
+      expiredDate: expiredDateStr,
       companyName,
       companyPhone,
     };

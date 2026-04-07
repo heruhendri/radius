@@ -28,7 +28,7 @@ const templateConfig = {
   'admin-create-user': {
     title: '👤 Admin Create User',
     description: 'Dikirim saat admin membuat user manual (tanpa flow registrasi)',
-    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{password}}', '{{phone}}', '{{email}}', '{{address}}', '{{profileName}}', '{{area}}', '{{ipAddress}}', '{{expiredAt}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}', '{{companyAddress}}'],
+    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{password}}', '{{phone}}', '{{email}}', '{{address}}', '{{profileName}}', '{{area}}', '{{ipAddress}}', '{{expiredDate}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}', '{{companyAddress}}'],
   },
   'installation-invoice': {
     title: '🔧 Invoice Instalasi',
@@ -83,12 +83,12 @@ const templateConfig = {
   'account-info': {
     title: '📋 Informasi Akun Pelanggan',
     description: 'Mengirimkan informasi akun pelanggan seperti username, password, dan detail lainnya',
-    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{password}}', '{{phone}}', '{{email}}', '{{address}}', '{{profileName}}', '{{area}}', '{{ipAddress}}', '{{expiredAt}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}', '{{companyAddress}}'],
+    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{password}}', '{{phone}}', '{{email}}', '{{address}}', '{{profileName}}', '{{area}}', '{{ipAddress}}', '{{expiredDate}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}', '{{companyAddress}}'],
   },
   'auto-renewal-success': {
     title: '🔄 Auto-Renewal Berhasil',
     description: 'Dikirim otomatis saat sistem berhasil melakukan auto-renewal langganan',
-    variables: ['{{customerName}}', '{{customerUsername}}', '{{profileName}}', '{{area}}', '{{amount}}', '{{newExpiredAt}}', '{{invoiceNumber}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}'],
+    variables: ['{{customerName}}', '{{customerUsername}}', '{{profileName}}', '{{area}}', '{{amount}}', '{{expiredDate}}', '{{newBalance}}', '{{invoiceNumber}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}'],
   },
   'general-broadcast': {
     title: '📢 Broadcast Umum ke Pelanggan',
@@ -103,7 +103,7 @@ const templateConfig = {
   'invoice-overdue': {
     title: '⚠️ Invoice Overdue Reminder',
     description: 'Dikirim saat invoice sudah melewati tanggal jatuh tempo',
-    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{phone}}', '{{email}}', '{{invoiceNumber}}', '{{amount}}', '{{dueDate}}', '{{overdueDays}}', '{{paymentLink}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}'],
+    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{phone}}', '{{email}}', '{{invoiceNumber}}', '{{amount}}', '{{dueDate}}', '{{daysOverdue}}', '{{paymentLink}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}'],
   },
   'maintenance-info': {
     title: '🔧 Pemberitahuan Maintenance',
@@ -426,7 +426,7 @@ export default function WhatsAppTemplatesPage() {
                         '{{phone}}': '08123456789', '{{telepon}}': '08123456789',
                         '{{address}}': 'Jl. Merdeka No. 10, RT 05/RW 03', '{{alamat}}': 'Jl. Merdeka No. 10',
                         '{{date}}': '15 Januari 2025', '{{tanggal}}': '15 Januari 2025', '{{tanggalBayar}}': '15 Januari 2025',
-                        '{{companyName}}': 'Salfanet ISP', '{{perusahaan}}': 'Salfanet ISP',
+                        '{{companyName}}': 'PT. Internet Anda', '{{perusahaan}}': 'PT. Internet Anda',
                         '{{technicianName}}': 'Ahmad (Teknisi)', '{{teknisi}}': 'Ahmad (Teknisi)',
                         '{{issueDescription}}': 'Gangguan pada kabel backbone', '{{masalah}}': 'Gangguan kabel backbone',
                         '{{estimatedTime}}': '2-3 jam', '{{estimasi}}': '2-3 jam',
@@ -438,7 +438,7 @@ export default function WhatsAppTemplatesPage() {
                         '{{installationDate}}': '10 Januari 2025', '{{tanggalPasang}}': '10 Januari 2025',
                         '{{notes}}': 'Terima kasih atas pembayarannya', '{{catatan}}': '-',
                         '{{otp}}': '123456', '{{kode}}': '123456', '{{token}}': 'TKN-ABC123',
-                        '{{link}}': 'https://salfanet.net/bayar', '{{url}}': 'https://salfanet.net',
+                        '{{link}}': 'https://yourdomain.com/pay', '{{url}}': 'https://yourdomain.com',
                         '{{year}}': new Date().getFullYear().toString(),
                         '{{month}}': formatWIB(new Date(), 'MMMM'),
                       };

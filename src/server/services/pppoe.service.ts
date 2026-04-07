@@ -301,6 +301,7 @@ export async function createPppoeUser(
       password,
       profileName: profile.name,
       area: areaName,
+      expiredAt: finalExpiredAt,
     });
   } catch (waError) {
     console.error('WhatsApp notification error:', waError);

@@ -65,7 +65,7 @@ const templateConfig = {
   'admin-create-user': {
     title: '👤 Admin Create User',
     description: 'Dikirim saat admin membuat user manual (tanpa flow registrasi)',
-    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{password}}', '{{phone}}', '{{email}}', '{{address}}', '{{profileName}}', '{{area}}', '{{ipAddress}}', '{{expiredAt}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}', '{{companyAddress}}'],
+    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{password}}', '{{phone}}', '{{email}}', '{{address}}', '{{profileName}}', '{{area}}', '{{ipAddress}}', '{{expiredDate}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}', '{{companyAddress}}'],
   },
   'installation-invoice': {
     title: '🔧 Invoice Instalasi',
@@ -120,12 +120,12 @@ const templateConfig = {
   'account-info': {
     title: '📋 Informasi Akun Pelanggan',
     description: 'Mengirimkan informasi akun pelanggan seperti username, password, dan detail lainnya',
-    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{password}}', '{{phone}}', '{{email}}', '{{address}}', '{{profileName}}', '{{area}}', '{{ipAddress}}', '{{expiredAt}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}', '{{companyAddress}}'],
+    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{password}}', '{{phone}}', '{{email}}', '{{address}}', '{{profileName}}', '{{area}}', '{{ipAddress}}', '{{expiredDate}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}', '{{companyAddress}}'],
   },
   'auto-renewal-success': {
     title: '🔄 Auto-Renewal Berhasil',
     description: 'Dikirim otomatis saat sistem berhasil melakukan auto-renewal langganan',
-    variables: ['{{customerName}}', '{{customerUsername}}', '{{profileName}}', '{{area}}', '{{amount}}', '{{newExpiredAt}}', '{{invoiceNumber}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}'],
+    variables: ['{{customerName}}', '{{customerUsername}}', '{{profileName}}', '{{area}}', '{{amount}}', '{{expiredDate}}', '{{newBalance}}', '{{invoiceNumber}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}'],
   },
   'general-broadcast': {
     title: '📢 Broadcast Umum ke Pelanggan',
@@ -140,7 +140,7 @@ const templateConfig = {
   'invoice-overdue': {
     title: '⚠️ Invoice Overdue Reminder',
     description: 'Dikirim saat invoice sudah melewati tanggal jatuh tempo',
-    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{phone}}', '{{email}}', '{{invoiceNumber}}', '{{amount}}', '{{dueDate}}', '{{overdueDays}}', '{{paymentLink}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}'],
+    variables: ['{{customerId}}', '{{customerName}}', '{{username}}', '{{phone}}', '{{email}}', '{{invoiceNumber}}', '{{amount}}', '{{dueDate}}', '{{daysOverdue}}', '{{paymentLink}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}'],
   },
   'maintenance-info': {
     title: '🔧 Pemberitahuan Maintenance',
@@ -165,7 +165,7 @@ const templateConfig = {
   'payment-confirmed': {
     title: '✅ Konfirmasi Pembayaran Diterima',
     description: 'Dikirim saat pembayaran telah dikonfirmasi dan diterima',
-    variables: ['{{customerName}}', '{{customerUsername}}', '{{invoiceNumber}}', '{{amount}}', '{{paymentDate}}', '{{newExpiredAt}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}'],
+    variables: ['{{customerName}}', '{{customerUsername}}', '{{invoiceNumber}}', '{{amount}}', '{{paymentDate}}', '{{expiredDate}}', '{{companyName}}', '{{companyPhone}}', '{{companyEmail}}'],
   },
   'payment-reminder-general': {
     title: '💰 Pengingat Pembayaran Umum',

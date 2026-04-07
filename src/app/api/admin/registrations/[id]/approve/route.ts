@@ -323,6 +323,11 @@ export async function POST(
       password: pppoeUser.password,
       profileName: registration.profile.name,
       installationFee: Math.round(Number(fee)),
+      invoiceNumber: invoice.invoiceNumber,
+      subscriptionType: subscriptionType as string,
+      dueDate: invoice.dueDate,
+      paymentLink: paymentLink,
+      totalAmount: invoiceAmount,
     });
 
     // Send Email notification

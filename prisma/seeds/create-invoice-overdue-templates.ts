@@ -21,7 +21,7 @@ Invoice Anda sudah melewati tanggal jatuh tempo:
 📅 Jatuh Tempo: *{{dueDate}}*
 ⏰ Terlambat: *{{daysOverdue}} hari*
 
-Username: {{customerUsername}}
+Username: {{username}}
 
 ⚠️ *Layanan Anda mungkin akan diisolir jika tidak segera melakukan pembayaran.*
 
@@ -52,7 +52,7 @@ Invoice Anda sudah melewati tanggal jatuh tempo:
 📅 Jatuh Tempo: *{{dueDate}}*
 ⏰ Terlambat: *{{daysOverdue}} hari*
 
-Username: {{customerUsername}}
+Username: {{username}}
 
 ⚠️ *Layanan Anda mungkin akan diisolir jika tidak segera melakukan pembayaran.*
 
@@ -131,7 +131,7 @@ Terima kasih,
           </tr>
           <tr>
             <td>👤 Username</td>
-            <td>{{customerUsername}}</td>
+            <td>{{username}}</td>
           </tr>
           <tr>
             <td>💰 Total Tagihan</td>
@@ -231,7 +231,7 @@ Terima kasih,
           </tr>
           <tr>
             <td>👤 Username</td>
-            <td>{{customerUsername}}</td>
+            <td>{{username}}</td>
           </tr>
           <tr>
             <td>💰 Total Tagihan</td>

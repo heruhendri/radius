@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
+import { sendRegistrationConfirmation } from '@/server/services/notifications/whatsapp-templates.service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -91,6 +92,14 @@ export async function POST(request: NextRequest) {
           `Silakan buka panel admin untuk menyetujui:\n${adminUrl}`;
         await WhatsAppService.sendMessage({ phone: company.adminPhone, message });
       } catch (_) { /* intentionally silent */ }
+    }).catch(() => {});
+
+    // Send customer WA confirmation using DB template (fire-and-forget)
+    sendRegistrationConfirmation({
+      customerName: name,
+      customerPhone: phone,
+      profileName: registration.profile.name,
+      address,
     }).catch(() => {});
 
     return NextResponse.json({

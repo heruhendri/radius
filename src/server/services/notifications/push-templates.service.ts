@@ -79,7 +79,7 @@ export function generatePushContent(
   if (data.username) dataPayload.username = data.username;
   if (data.newBalance !== undefined) dataPayload.newBalance = String(data.newBalance);
 
-  const company = data.companyName || 'Salfanet';
+  const company = data.companyName || '';
   const phone = data.companyPhone || '';
   const footer = phone ? `\n${company} ☎️ ${phone}` : `\n${company}`;
 

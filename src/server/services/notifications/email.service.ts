@@ -1057,7 +1057,7 @@ export const EmailService = {
       const formatDate = (date: Date) => 
         date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-      const htmlBody = template?.htmlBody || this.generateRegistrationApprovalEmail({
+      let htmlBody = template?.htmlBody || this.generateRegistrationApprovalEmail({
         customerName: data.toName,
         username: data.username,
         password: data.password,
@@ -1070,7 +1070,37 @@ export const EmailService = {
         subscriptionType: data.subscriptionType,
       });
 
-      const subject = template?.subject || `Pendaftaran Anda Telah Disetujui - ${data.invoiceNumber || 'Welcome'}`;
+      let subject = template?.subject || `Pendaftaran Anda Telah Disetujui - ${data.invoiceNumber || 'Welcome'}`;
+
+      // If using DB template, apply variable substitution
+      if (template?.htmlBody) {
+        const company = await prisma.company.findFirst();
+        const variables: Record<string, string> = {
+          customerName: data.toName,
+          username: data.username,
+          password: data.password,
+          profileName: data.profile,
+          subscriptionType: data.subscriptionType || 'POSTPAID',
+          invoiceNumber: data.invoiceNumber || '-',
+          installationFee: data.installationFee.toLocaleString('id-ID'),
+          amount: data.totalAmount
+            ? `Rp ${data.totalAmount.toLocaleString('id-ID')}`
+            : `Rp ${data.installationFee.toLocaleString('id-ID')}`,
+          dueDate: data.dueDate ? formatDate(data.dueDate) : '-',
+          paymentLink: data.paymentLink || '',
+          paymentToken: data.paymentToken || '',
+          baseUrl: company?.baseUrl || '',
+          bankAccounts: '',
+          companyName: company?.name || '',
+          companyPhone: company?.phone || '',
+          companyEmail: company?.email || '',
+        };
+        Object.entries(variables).forEach(([key, value]) => {
+          const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+          subject = subject.replace(regex, value);
+          htmlBody = htmlBody.replace(regex, value);
+        });
+      }
 
       // Send email
       const result = await this.send({

@@ -310,7 +310,7 @@ export const emailTemplates = [
                     <strong>Jumlah:</strong>
                   </td>
                   <td style="color: #10b981; font-size: 18px; font-weight: bold; border-bottom: 1px solid #d1fae5; padding: 12px;">
-                    Rp {{amount}}
+                    {{amount}}
                   </td>
                 </tr>
                 <tr>
@@ -318,7 +318,7 @@ export const emailTemplates = [
                     <strong>Username:</strong>
                   </td>
                   <td style="color: #333333; font-size: 14px; border-bottom: 1px solid #d1fae5; padding: 12px; font-family: monospace;">
-                    {{username}}
+                    {{customerUsername}}
                   </td>
                 </tr>
                 <tr>
@@ -407,7 +407,7 @@ export const emailTemplates = [
                     <strong>Jumlah:</strong>
                   </td>
                   <td style="color: #ef4444; font-size: 18px; font-weight: bold; padding: 12px;">
-                    Rp {{amount}}
+                    {{amount}}
                   </td>
                 </tr>
               </table>
@@ -1130,7 +1130,7 @@ export const emailTemplates = [
                     <strong>Jumlah Dibayar:</strong>
                   </td>
                   <td style="color: #10b981; font-size: 18px; font-weight: bold; border-bottom: 1px solid #d1fae5; padding: 12px;">
-                    Rp {{amount}}
+                    {{amount}}
                   </td>
                 </tr>
                 <tr>

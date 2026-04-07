@@ -109,6 +109,7 @@ export async function POST(
       amount: invoice.amount,
       paymentLink,
       dueDate: invoice.dueDate,
+      profileName: registration.profile?.name || '-',
     });
 
     return NextResponse.json({

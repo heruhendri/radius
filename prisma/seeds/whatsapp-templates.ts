@@ -86,10 +86,7 @@ Halo {{customerName}},
 👤 Nama: {{customerName}}
 📦 Paket: {{profileName}}
 
-💰 *Rincian Biaya:*
-• Biaya Instalasi: Rp {{installationFee}}
-• Total Tagihan: Rp {{totalAmount}}
-
+💰 Total Tagihan: {{amount}}
 📅 Jatuh Tempo: {{dueDate}}
 
 🔗 *Bayar Sekarang:*
@@ -139,7 +136,7 @@ Ini adalah pengingat untuk invoice Anda yang akan segera jatuh tempo.
 *📋 Detail Invoice*
 ━━━━━━━━━━━━━━━━━━━━━━
 🧾 No. Invoice: {{invoiceNumber}}
-💰 Jumlah: Rp {{amount}}
+💰 Jumlah: {{amount}}
 📅 Jatuh Tempo: {{dueDate}}
 ⏱️ Sisa Waktu: {{daysRemaining}} hari
 
@@ -166,7 +163,7 @@ Terima kasih! Pembayaran Anda telah berhasil dikonfirmasi.
 📋 *Detail Pembayaran*
 ━━━━━━━━━━━━━━━━━━━━━━
 📌 Invoice: {{invoiceNumber}}
-💰 Jumlah: Rp {{amount}}
+💰 Jumlah: {{amount}}
 👤 Username: {{username}}
 📅 Aktif hingga: {{expiredDate}}
 
@@ -214,8 +211,8 @@ Pembayaran manual Anda telah *DISETUJUI* oleh admin kami.
 
 📋 *Detail:*
 • Invoice: {{invoiceNumber}}
-• Jumlah: Rp {{amount}}
-• Username: {{username}}
+• Jumlah: {{amount}}
+• Username: {{customerUsername}}
 • Masa aktif hingga: {{expiredDate}}
 
 ✅ Akun Anda sekarang sudah aktif dan dapat digunakan.
@@ -237,7 +234,7 @@ Mohon maaf, pembayaran manual Anda *DITOLAK* oleh admin kami.
 
 📋 *Detail:*
 • Invoice: {{invoiceNumber}}
-• Jumlah: Rp {{amount}}
+• Jumlah: {{amount}}
 
 💬 *Alasan:*
 {{rejectionReason}}
@@ -387,10 +384,9 @@ Layanan Anda telah diperpanjang otomatis!
 ━━━━━━━━━━━━━━━━━━━━━━
 👤 Username: {{username}}
 📦 Paket: {{profileName}}
-💰 Biaya: Rp {{amount}}
-💵 Saldo Sebelum: Rp {{previousBalance}}
-💳 Saldo Sekarang: Rp {{currentBalance}}
-📅 Aktif hingga: {{newExpiredDate}}
+💰 Biaya: {{amount}}
+💳 Saldo Sekarang: {{newBalance}}
+📅 Aktif hingga: {{expiredDate}}
 
 Terima kasih telah menjadi pelanggan setia kami! 🙏
 
@@ -485,7 +481,7 @@ Halo {{customerName}},
 ━━━━━━━━━━━━━━━━━━━━━━
 👤 Username: {{username}}
 📦 Paket: {{profileName}}
-📅 Masa Aktif: {{expiredAt}}
+📅 Masa Aktif: {{expiredDate}}
 
 Hubungi: {{companyPhone}}
 

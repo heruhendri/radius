@@ -310,11 +310,12 @@ export async function PATCH(
             customerUsername: manualPayment.user.username,
             invoiceNumber,
             amount,
-            expiredDate: newExpiry.toISOString(),
+            expiredDate: newExpiry.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' }),
             profileName: (manualPayment.user as any)?.profile?.name || '-',
             area: (manualPayment.user as any)?.area?.name || '-',
             companyName: company?.name || '',
             companyPhone: company?.phone || '',
+            companyEmail: company?.email || '',
             baseUrl: company?.baseUrl || '',
           };
           
@@ -373,6 +374,11 @@ export async function PATCH(
       // Send rejection notifications
       const customerName = manualPayment.user.name;
       const invoiceNumber = manualPayment.invoice.invoiceNumber;
+      const amount = new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+      }).format(manualPayment.invoice.amount);
       
       // WhatsApp notification
       const whatsappTemplate = await prisma.whatsapp_templates.findFirst({
@@ -384,6 +390,7 @@ export async function PATCH(
           .replace(/{{customerName}}/g, customerName)
           .replace(/{{customerUsername}}/g, manualPayment.user.username)
           .replace(/{{invoiceNumber}}/g, invoiceNumber)
+          .replace(/{{amount}}/g, amount)
           .replace(/{{rejectionReason}}/g, rejectionReason)
           .replace(/{{paymentLink}}/g, `${company?.baseUrl}/pay-manual?token=${manualPayment.invoice.paymentToken}`)
           .replace(/{{profileName}}/g, (manualPayment.user as any)?.profile?.name || '-')
@@ -409,12 +416,14 @@ export async function PATCH(
             customerName,
             customerUsername: manualPayment.user.username,
             invoiceNumber,
+            amount,
             rejectionReason,
             paymentLink: `${company?.baseUrl}/pay-manual?token=${manualPayment.invoice.paymentToken}`,
             profileName: (manualPayment.user as any)?.profile?.name || '-',
             area: (manualPayment.user as any)?.area?.name || '-',
             companyName: company?.name || '',
             companyPhone: company?.phone || '',
+            companyEmail: company?.email || '',
             baseUrl: company?.baseUrl || '',
           };
           
