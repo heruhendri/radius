@@ -3,6 +3,9 @@ import { promisify } from 'util';
 import { prisma } from '@/server/db/client';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { createReadStream, createWriteStream } from 'fs';
+import { createGunzip } from 'zlib';
+import { pipeline } from 'stream/promises';
 
 const execAsync = promisify(exec);
 
@@ -114,7 +117,7 @@ export async function createBackup(type: 'auto' | 'manual' = 'manual') {
 }
 
 /**
- * Restore database from SQL file
+ * Restore database from SQL file (.sql or .sql.gz / .gz)
  */
 export async function restoreBackup(filepath: string) {
   const dbUrl = process.env.DATABASE_URL;
@@ -124,21 +127,44 @@ export async function restoreBackup(filepath: string) {
 
   const { user, password, host, port, database } = parseDbUrl(dbUrl);
 
+  // If file is gzip-compressed, decompress to a temporary .sql file first
+  const isGzip = filepath.endsWith('.gz');
+  let sqlFilepath = filepath;
+  let tempDecompressed: string | null = null;
+
+  if (isGzip) {
+    tempDecompressed = filepath.replace(/\.gz$/, '') + `_decomp_${Date.now()}.sql`;
+    try {
+      console.log('[Restore] Decompressing gzip backup...');
+      await pipeline(
+        createReadStream(filepath),
+        createGunzip(),
+        createWriteStream(tempDecompressed)
+      );
+      sqlFilepath = tempDecompressed;
+      console.log('[Restore] Decompressed to:', sqlFilepath);
+    } catch (err: any) {
+      if (tempDecompressed) await fs.unlink(tempDecompressed).catch(() => {});
+      throw new Error('Failed to decompress backup file: ' + err.message);
+    }
+  }
+
   try {
     // Verify file exists
-    await fs.access(filepath);
-    
-    console.log('[Restore] Restoring from:', filepath);
-    
+    await fs.access(sqlFilepath);
+
+    console.log('[Restore] Restoring from:', sqlFilepath);
+
     // Run mysql import command - use env option for safe password passing
-    const command = `mysql -u ${user} -h ${host} -P ${port} ${database} < "${filepath}"`;
-    
+    const command = `mysql -u ${user} -h ${host} -P ${port} ${database} < "${sqlFilepath}"`;
+
     await execAsync(command, {
       env: { ...process.env, MYSQL_PWD: password },
+      maxBuffer: 10 * 1024 * 1024,
     });
-    
+
     console.log('[Restore] Database restored successfully');
-    
+
     return {
       success: true,
       message: 'Database restored successfully',
@@ -146,6 +172,11 @@ export async function restoreBackup(filepath: string) {
   } catch (error: any) {
     console.error('[Restore] Error:', error);
     throw new Error('Restore failed: ' + error.message);
+  } finally {
+    // Clean up decompressed temp file
+    if (tempDecompressed) {
+      await fs.unlink(tempDecompressed).catch(() => {});
+    }
   }
 }
 

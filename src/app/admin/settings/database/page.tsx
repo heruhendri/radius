@@ -331,15 +331,20 @@ export default function DatabaseSettingsPage() {
                 Restore Database
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Upload and restore database from backup file (.sql)
+                Upload file backup untuk restore database. Mendukung file <span className="font-semibold text-foreground">.sql</span> maupun <span className="font-semibold text-foreground">.sql.gz</span> (hasil backup otomatis Telegram).
               </p>
               <input
                 type="file"
-                accept=".sql"
+                accept=".sql,.gz,.sql.gz"
                 onChange={(e) => setRestoreFile(e.target.files?.[0] || null)}
                 className="block w-full text-sm mb-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 dark:file:bg-gray-700 dark:file:text-violet-200"
                 disabled={!canEdit}
               />
+              {restoreFile && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  File dipilih: <span className="font-medium text-foreground">{restoreFile.name}</span> ({(restoreFile.size / 1024 / 1024).toFixed(2)} MB)
+                </p>
+              )}
               <button
                 onClick={handleRestore}
                 disabled={!restoreFile || restoring || !canEdit}
