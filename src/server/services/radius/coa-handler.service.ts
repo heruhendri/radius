@@ -309,35 +309,23 @@ export async function disconnectPPPoEUser(username: string) {
       orderBy: { acctstarttime: 'desc' },
     })
 
-    // Get NAS configuration — from active session, or try all active routers
-    let nas: any = null
-    if (activeSession) {
-      nas = await prisma.router.findFirst({
-        where: { nasname: activeSession.nasipaddress },
-      })
+    if (!activeSession) {
+      console.log(`[CoA] No active session found for ${username}`)
+      return { success: true, message: 'No active session' }
     }
+
+    // Get NAS configuration — exact match first, then any active NAS
+    let nas = await prisma.router.findFirst({
+      where: { nasname: activeSession.nasipaddress },
+    })
     if (!nas) {
-      // Try to find the most recent router that had this user
-      const lastSession = await prisma.radacct.findFirst({
-        where: { username },
-        orderBy: { acctstarttime: 'desc' },
-        select: { nasipaddress: true },
-      })
-      if (lastSession) {
-        nas = await prisma.router.findFirst({
-          where: { OR: [{ nasname: lastSession.nasipaddress }, { ipAddress: lastSession.nasipaddress }] },
-        })
-      }
-    }
-    if (!nas) {
-      // Fallback to any active NAS
       nas = await prisma.router.findFirst({
         where: { isActive: true },
         orderBy: { createdAt: 'desc' },
       })
     }
     if (!nas) {
-      console.log(`[CoA] NAS not found, cannot disconnect ${username}`)
+      console.log(`[CoA] NAS not found for ${activeSession.nasipaddress}`)
       return { success: false, error: 'NAS not configured' }
     }
 
@@ -349,80 +337,63 @@ export async function disconnectPPPoEUser(username: string) {
 
     // ── METHOD 1: MikroTik RouterOS API (/ppp/active/remove) ─────────────
     // Fastest and most reliable — direct API call, no radclient dependency.
-    // When no active radacct session, try ALL active routers (user might be on any).
+    // Try API-SSL port first (apiPort/8729), then plaintext (port/8728)
     let apiSuccess = false
-
-    const routersToTry = !activeSession
-      ? await prisma.router.findMany({ where: { isActive: true } })
-      : [nas]
-
-    for (const tryNas of routersToTry) {
-      if (apiSuccess) break
-      if (!tryNas.username || !tryNas.password) continue
-
-      const targetIp = tryNas.ipAddress && tryNas.ipAddress !== tryNas.nasname
-        ? tryNas.ipAddress
-        : tryNas.nasname
-      const primaryPort = tryNas.apiPort || 8729
-      const fallbackPort = tryNas.port || 8728
+    if (nas.username && nas.password) {
+      const primaryPort = (nas as any).apiPort || 8729
+      const fallbackPort = (nas as any).port || 8728
       const portsToTry = [primaryPort, ...(fallbackPort !== primaryPort ? [fallbackPort] : [])]
 
       for (const tryPort of portsToTry) {
         if (apiSuccess) break
         try {
           const api = new RouterOSAPI({
-            host: targetIp,
+            host: coaTargetIp,
             port: tryPort,
-            user: tryNas.username,
-            password: tryNas.password,
-            timeout: 10,
+            user: nas.username,
+            password: nas.password,
+            timeout: 5,
           })
           await api.connect()
-          console.log(`[CoA] Connected to MikroTik ${tryNas.name} (${targetIp}:${tryPort})`)
-          const activePPP = await api.write('/ppp/active/print', [`?name=${username}`])
-          if (activePPP.length > 0) {
-            for (const pppSession of activePPP) {
-              await api.write('/ppp/active/remove', [`=.id=${pppSession['.id']}`])
-            }
+          const activePPP = await api.write('/ppp/active/print')
+          const pppSession = activePPP.find(
+            (p: any) => p.name === username || p.username === username
+          )
+          if (pppSession) {
+            await api.write('/ppp/active/remove', [`=.id=${pppSession['.id']}`])
             apiSuccess = true
-            console.log(`[CoA] ✓ MikroTik API disconnect OK for ${username} on ${tryNas.name}:${tryPort}`)
+            console.log(`[CoA] ✓ MikroTik API disconnect OK for ${username} (port ${tryPort})`)
+          } else {
+            console.log(`[CoA] No active PPP found via API for ${username} (port ${tryPort})`)
           }
           try { await api.close() } catch {}
         } catch (apiErr: any) {
-          console.log(`[CoA] MikroTik API failed on ${tryNas.name}:${tryPort}: ${apiErr?.message}`)
+          console.log(`[CoA] MikroTik API disconnect failed on port ${tryPort}: ${apiErr?.message}`)
         }
       }
     }
 
-    if (!apiSuccess && !activeSession) {
-      console.log(`[CoA] No active PPP session found for ${username} on any router`)
-    }
-
     // ── METHOD 2: RADIUS CoA Disconnect-Request (also marks DB as stopped) ──
-    // Only attempt CoA if we have an active radacct session to reference
-    let coaResult = { success: false, coaSuccess: false, dbSuccess: false, message: 'No active session for CoA' }
-    if (activeSession) {
-      coaResult = await sendCoADisconnect(
-        activeSession.username,
-        coaTargetIp,
-        nas.secret,
-        activeSession.acctsessionid,
-        activeSession.framedipaddress
-      ) as any
-    }
+    const result = await sendCoADisconnect(
+      activeSession.username,
+      coaTargetIp,
+      nas.secret,
+      activeSession.acctsessionid,
+      activeSession.framedipaddress
+    )
 
-    if (coaResult.success || apiSuccess) {
-      console.log(`[CoA] User ${username} disconnected (api:${apiSuccess}, coa:${coaResult.coaSuccess}, db:${coaResult.dbSuccess})`)
+    if (result.success || apiSuccess) {
+      console.log(`[CoA] User ${username} disconnected (api:${apiSuccess}, coa:${result.coaSuccess}, db:${result.dbSuccess})`)
     }
 
     return {
-      success: apiSuccess || coaResult.success,
+      success: apiSuccess || result.success,
       message: apiSuccess
         ? `MikroTik API disconnected ${username}`
-        : coaResult.message,
+        : result.message,
       apiSuccess,
-      coaSuccess: coaResult.coaSuccess,
-      dbSuccess: coaResult.dbSuccess,
+      coaSuccess: result.coaSuccess,
+      dbSuccess: result.dbSuccess,
     }
   } catch (error: any) {
     console.error(`[CoA] Error disconnecting PPPoE user ${username}:`, error.message)
