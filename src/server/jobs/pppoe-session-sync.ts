@@ -77,9 +77,9 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
   let routerErrors = 0;
 
   try {
-    // 1. Get all active routers
+    // 1. Get all active MikroTik routers (skip gateway/VPS type — not RouterOS devices)
     const routers = await prisma.router.findMany({
-      where: { isActive: true },
+      where: { isActive: true, type: { not: 'gateway' } },
       select: {
         id: true,
         name: true,
@@ -94,7 +94,7 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
     });
 
     if (routers.length === 0) {
-      console.log('[PPPoE-Sync] No active routers');
+      console.log('[PPPoE-Sync] No active MikroTik routers');
       return { success: true, inserted: 0, closed: 0, routers: 0, routerErrors: 0 };
     }
 
@@ -130,7 +130,7 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
 
       // Try connecting to MikroTik API
       const tryConnect = async (port: number): Promise<MikroTikSession[]> => {
-        const api = new RouterOSAPI({ host, port, user: router.username, password: router.password, timeout: 15 });
+        const api = new RouterOSAPI({ host, port, user: router.username, password: router.password, timeout: 5 });
         try {
           await api.connect();
           const results = await api.write('/ppp/active/print') as MikroTikSession[];
