@@ -325,6 +325,7 @@ export async function isolateUser(username: string, reason?: string) {
 
     // Disconnect
     try {
+      const { disconnectPPPoEUser } = await import('@/server/services/radius/coa-handler.service');
       await disconnectPPPoEUser(user.username);
     } catch (err) {
       console.log('Disconnect failed, but isolation applied');
