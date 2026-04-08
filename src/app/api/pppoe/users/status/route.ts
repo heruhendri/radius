@@ -4,6 +4,7 @@ import { disconnectPPPoEUser } from '@/server/services/radius/coa-handler.servic
 import { logActivity } from '@/server/services/activity-log.service';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
+import { sendIsolationNotification } from '@/server/jobs/auto-isolation';
 
 export async function PUT(request: Request) {
   try {
@@ -39,6 +40,9 @@ export async function PUT(request: Request) {
         status: true,
         password: true,
         ipAddress: true,
+        phone: true,
+        email: true,
+        expiredAt: true,
         profile: { select: { groupName: true } },
         router: { select: { id: true, nasname: true } },
       },
@@ -213,6 +217,18 @@ export async function PUT(request: Request) {
             name: user.name || undefined,
             reason: 'manual isolation'
           });
+
+          // Send customer notification via WhatsApp, Email, and Push
+          sendIsolationNotification({
+            id: user.id,
+            username: user.username,
+            name: user.name || user.username,
+            phone: user.phone,
+            email: user.email,
+            expiredAt: user.expiredAt,
+          }).catch((err: any) =>
+            console.error(`[Status Change] Customer isolation notification failed for ${user.username}:`, err.message)
+          );
         } else if (status === 'active' && (oldStatus === 'isolated' || oldStatus === 'blocked')) {
           await NotificationService.notifyUserReactivated({
             username: user.username,

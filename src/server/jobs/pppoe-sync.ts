@@ -2,6 +2,7 @@
 import { nanoid } from 'nanoid'
 import { RouterOSAPI } from 'node-routeros'
 import { getIsolationSettings } from '@/server/services/isolation.service'
+import { sendIsolationNotification } from '@/server/jobs/auto-isolation'
 
 let isPPPoESyncRunning = 0  // timestamp lock: 0 = free, >0 = lock start time
 const LOCK_TTL_MS = 5 * 60 * 1000  // auto-expire lock after 5 minutes
@@ -256,12 +257,15 @@ export async function autoIsolatePPPoEUsers(): Promise<{
     const expiredUsers = await prisma.$queryRaw<Array<{
       id: string
       username: string
+      name: string
+      phone: string | null
+      email: string | null
       password: string
       status: string
       expiredAt: Date
       profileId: string
     }>>`
-      SELECT id, username, password, status, expiredAt, profileId
+      SELECT id, username, name, phone, email, password, status, expiredAt, profileId
       FROM pppoe_users
       WHERE status = 'active'
         AND expiredAt < DATE_SUB(CURDATE(), INTERVAL ${gracePeriodDays} DAY)
@@ -362,7 +366,7 @@ export async function autoIsolatePPPoEUsers(): Promise<{
           })`
         )
 
-        // Create individual user isolation notification
+        // Create individual user isolation notification (admin in-app)
         try {
           const { NotificationService } = await import('@/server/services/notifications/dispatcher.service')
           await NotificationService.notifyUserIsolated({
@@ -371,6 +375,20 @@ export async function autoIsolatePPPoEUsers(): Promise<{
           })
         } catch (notifError: any) {
           console.error(`[PPPoE Auto-Isolir] Failed to create notification for ${user.username}:`, notifError.message)
+        }
+
+        // Send customer notification via WhatsApp, Email, and Push
+        try {
+          await sendIsolationNotification({
+            id: user.id,
+            username: user.username,
+            name: user.name || user.username,
+            phone: user.phone,
+            email: user.email,
+            expiredAt: user.expiredAt,
+          })
+        } catch (customerNotifError: any) {
+          console.error(`[PPPoE Auto-Isolir] Customer notification failed for ${user.username}:`, customerNotifError.message)
         }
       } catch (error: any) {
         console.error(`❌ [PPPoE Auto-Isolir] Failed to isolate ${user.username}:`, error.message)
