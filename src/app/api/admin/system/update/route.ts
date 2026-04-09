@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { spawn, execSync, execFileSync } from 'child_process';
-import { openSync, closeSync, existsSync, readFileSync } from 'fs';
+import { openSync, closeSync, existsSync, readFileSync, statSync } from 'fs';
 import path from 'path';
 
 export const dynamic = 'force-dynamic';
@@ -140,8 +140,26 @@ export async function POST(request: Request) {
         changelog = execFileSync('git', ['log', '--oneline', `${local}..${remote}`], { cwd: appDir }).toString().trim();
       }
 
+      // Detect if build artifacts are missing even if code is up to date
+      const standaloneServer = path.join(appDir, '.next', 'standalone', 'server.js');
+      const needsBuild = !existsSync(standaloneServer);
+
+      // Also expose build age for informational purposes
+      let buildAge: string | null = null;
+      if (!needsBuild) {
+        try {
+          const stat = statSync(standaloneServer);
+          const ageMs = Date.now() - stat.mtimeMs;
+          const ageHours = Math.floor(ageMs / 3600000);
+          buildAge = ageHours < 24 ? `${ageHours}j lalu` : `${Math.floor(ageHours / 24)}h lalu`;
+        } catch { /* ignore */ }
+      }
+
       return NextResponse.json({
-        upToDate:     local === remote,
+        upToDate:     local === remote && !needsBuild,
+        codeUpToDate: local === remote,
+        needsBuild,
+        buildAge,
         localCommit:  local.slice(0, 7),
         remoteCommit: remote.slice(0, 7),
         changelog,

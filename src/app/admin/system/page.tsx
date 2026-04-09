@@ -51,7 +51,7 @@ export default function SystemUpdatePage() {
   const [log, setLog]             = useState('');
   const [showLog, setShowLog]     = useState(false);
   const [updateDone, setUpdateDone] = useState(false);
-  const [checkResult, setCheckResult] = useState<{ upToDate?: boolean; changelog?: string; error?: string } | null>(null);
+  const [checkResult, setCheckResult] = useState<{ upToDate?: boolean; codeUpToDate?: boolean; needsBuild?: boolean; buildAge?: string | null; changelog?: string; error?: string } | null>(null);
   const [restartWait, setRestartWait] = useState(false);
   const logRef   = useRef<HTMLPreElement>(null);
   const sseRef   = useRef<EventSource | null>(null);
@@ -279,12 +279,19 @@ export default function SystemUpdatePage() {
             ? 'bg-red-500/10 border-red-500/30 text-red-400'
             : checkResult.upToDate
             ? 'bg-green-500/10 border-green-500/30 text-green-400'
+            : checkResult.needsBuild
+            ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
             : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
         )}>
           {checkResult.error ? (
             <p className="font-bold">Error: {checkResult.error}</p>
           ) : checkResult.upToDate ? (
-            <p className="font-bold flex items-center gap-2"><CheckCircle className="w-4 h-4" />{t('system.upToDate')}</p>
+            <p className="font-bold flex items-center gap-2"><CheckCircle className="w-4 h-4" />{t('system.upToDate')}{checkResult.buildAge && <span className="font-normal opacity-70"> · build {checkResult.buildAge}</span>}</p>
+          ) : checkResult.needsBuild && checkResult.codeUpToDate ? (
+            <>
+              <p className="font-bold flex items-center gap-2"><AlertCircle className="w-4 h-4" />Build hilang / tidak valid — perlu rebuild ulang</p>
+              <p className="mt-1 opacity-80">Kode sudah terbaru tapi .next/standalone tidak ada. Klik <strong>Force Rebuild</strong> untuk memperbaiki.</p>
+            </>
           ) : (
             <>
               <p className="font-bold mb-2">{t('system.updateAvailable')}:</p>

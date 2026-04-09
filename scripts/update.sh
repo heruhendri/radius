@@ -42,6 +42,12 @@ git fetch origin master 2>&1 || err "git fetch failed — check network or crede
 NEW_COMMIT=$(git rev-parse origin/master)
 NEW_SHORT=${NEW_COMMIT:0:7}
 
+# If standalone server.js is missing, force a full rebuild even if code is up to date
+if [ ! -f "$APP_DIR/.next/standalone/server.js" ] && [ "$FORCE" != "--force" ]; then
+  log "WARNING: .next/standalone/server.js missing — forcing build even if code is up to date"
+  FORCE="--force"
+fi
+
 if [ "$PREV_COMMIT" = "$NEW_COMMIT" ] && [ "$FORCE" != "--force" ]; then
   echo ""
   ok "Already up to date (v$PREV_VERSION / $PREV_SHORT)"
@@ -238,6 +244,13 @@ if [ -d ".next/static" ] && [ -d ".next/standalone" ]; then
   mkdir -p .next/standalone/.next/static
   cp -r .next/static/. .next/standalone/.next/static/ || err "Failed to copy static assets to standalone"
   ok "Static assets copied to standalone"
+fi
+
+# ── Copy public/ to standalone/public/ ────────────────────
+if [ -d "public" ] && [ -d ".next/standalone" ]; then
+  mkdir -p .next/standalone/public
+  cp -r public/. .next/standalone/public/ || log "Warning: failed to copy public/ to standalone"
+  ok "public/ copied to standalone"
 fi
 
 # ── Restart PM2 ───────────────────────────────────────────
