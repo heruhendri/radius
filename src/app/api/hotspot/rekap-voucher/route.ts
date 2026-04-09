@@ -15,12 +15,32 @@ export async function GET(req: NextRequest) {
     const agentId = searchParams.get('agentId');
     const profileId = searchParams.get('profileId');
     const monthParam = searchParams.get('month'); // YYYY-MM
+    const dateParam  = searchParams.get('date');  // YYYY-MM-DD (daily)
+    const weekParam  = searchParams.get('week');  // YYYY-MM-DD Monday of week
 
-    // Build optional month filter for createdAt
-    let monthFilter: any = {};
-    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+    // Build date range filter for createdAt (WIB-as-UTC)
+    let dateRangeFilter: any = {};
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      dateRangeFilter = {
+        createdAt: {
+          gte: startOfDayWIBtoUTC(dateParam),
+          lte: endOfDayWIBtoUTC(dateParam),
+        },
+      };
+    } else if (weekParam && /^\d{4}-\d{2}-\d{2}$/.test(weekParam)) {
+      // weekParam is Monday (YYYY-MM-DD), end is Sunday (+6 days)
+      const weekStart = new Date(weekParam + 'T00:00:00Z');
+      const weekEnd   = new Date(weekParam + 'T00:00:00Z');
+      weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+      dateRangeFilter = {
+        createdAt: {
+          gte: startOfDayWIBtoUTC(weekStart),
+          lte: endOfDayWIBtoUTC(weekEnd),
+        },
+      };
+    } else if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
       const [y, m] = monthParam.split('-').map(Number);
-      monthFilter = {
+      dateRangeFilter = {
         createdAt: {
           gte: startOfDayWIBtoUTC(new Date(Date.UTC(y, m - 1, 1))),
           lte: endOfDayWIBtoUTC(new Date(Date.UTC(y, m, 0))),
@@ -35,7 +55,7 @@ export async function GET(req: NextRequest) {
         batchCode: { not: null },
         ...(agentId && agentId !== 'all' ? { agentId } : {}),
         ...(profileId && profileId !== 'all' ? { profileId } : {}),
-        ...monthFilter,
+        ...dateRangeFilter,
       },
       _min: { createdAt: true },
       orderBy: { _min: { createdAt: 'desc' } },

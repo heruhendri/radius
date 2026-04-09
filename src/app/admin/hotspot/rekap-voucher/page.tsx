@@ -52,7 +52,11 @@ export default function RekapVoucherPage() {
   const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [voucherMonth, setVoucherMonth] = useState<string>(''); // '' = all-time
+  const [periodMode, setPeriodMode] = useState<'all' | 'daily' | 'weekly' | 'monthly'>('monthly');
+  const [periodValue, setPeriodValue] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  });
   const [voucherModal, setVoucherModal] = useState<{
     open: boolean;
     batchCode: string;
@@ -63,22 +67,76 @@ export default function RekapVoucherPage() {
   }>({ open: false, batchCode: '', filter: '', loading: false, vouchers: [], copiedCode: null });
 
   const MONTH_NAMES_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  const getMonthLabel = (ym: string) => {
-    if (!ym) return 'Semua';
-    const [y, m] = ym.split('-').map(Number);
-    return `${MONTH_NAMES_ID[m - 1]} ${y}`;
+  const DAY_NAMES_ID = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+
+  const todayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   };
-  const shiftVoucherMonth = (delta: number) => {
-    const base = voucherMonth || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })();
-    const [y, m] = base.split('-').map(Number);
-    const d = new Date(y, m - 1 + delta, 1);
-    setVoucherMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  const currentMonthStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  };
+  const getWeekMonday = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  };
+  const switchPeriodMode = (mode: 'all' | 'daily' | 'weekly' | 'monthly') => {
+    setPeriodMode(mode);
+    if (mode === 'all') setPeriodValue('');
+    else if (mode === 'daily') setPeriodValue(todayStr());
+    else if (mode === 'weekly') setPeriodValue(getWeekMonday(todayStr()));
+    else setPeriodValue(currentMonthStr());
+  };
+  const shiftPeriod = (delta: number) => {
+    if (periodMode === 'all') return;
+    if (periodMode === 'daily') {
+      const d = new Date(periodValue + 'T00:00:00');
+      d.setDate(d.getDate() + delta);
+      setPeriodValue(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    } else if (periodMode === 'weekly') {
+      const d = new Date(periodValue + 'T00:00:00');
+      d.setDate(d.getDate() + 7 * delta);
+      setPeriodValue(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    } else {
+      const [y, m] = periodValue.split('-').map(Number);
+      const d = new Date(y, m - 1 + delta, 1);
+      setPeriodValue(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    }
+  };
+  const getPeriodLabel = () => {
+    if (periodMode === 'all') return 'Semua Data';
+    if (periodMode === 'daily' && periodValue) {
+      const [y, m, day] = periodValue.split('-').map(Number);
+      const d = new Date(y, m - 1, day);
+      return `${DAY_NAMES_ID[d.getDay()]}, ${day} ${MONTH_NAMES_ID[m - 1].slice(0,3)} ${y}`;
+    }
+    if (periodMode === 'weekly' && periodValue) {
+      const start = new Date(periodValue + 'T00:00:00');
+      const end = new Date(periodValue + 'T00:00:00');
+      end.setDate(start.getDate() + 6);
+      const fmt = (d: Date) => `${d.getDate()} ${MONTH_NAMES_ID[d.getMonth()].slice(0,3)}`;
+      return `${fmt(start)} – ${fmt(end)} ${end.getFullYear()}`;
+    }
+    if (periodMode === 'monthly' && periodValue) {
+      const [y, m] = periodValue.split('-').map(Number);
+      return `${MONTH_NAMES_ID[m - 1]} ${y}`;
+    }
+    return '';
+  };
+  const buildPeriodParams = (params: URLSearchParams) => {
+    if (periodMode === 'monthly' && periodValue) params.set('month', periodValue);
+    else if (periodMode === 'daily' && periodValue) params.set('date', periodValue);
+    else if (periodMode === 'weekly' && periodValue) params.set('week', periodValue);
   };
 
   useEffect(() => {
     fetchData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterAgent, filterProfile, voucherMonth]);
+  }, [filterAgent, filterProfile, periodMode, periodValue]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -86,7 +144,7 @@ export default function RekapVoucherPage() {
       const params = new URLSearchParams();
       if (filterAgent && filterAgent !== 'all') params.set('agentId', filterAgent);
       if (filterProfile && filterProfile !== 'all') params.set('profileId', filterProfile);
-      if (voucherMonth) params.set('month', voucherMonth);
+      buildPeriodParams(params);
 
       const res = await fetch(`/api/hotspot/rekap-voucher?${params}`);
       const data = await res.json();
@@ -104,8 +162,8 @@ export default function RekapVoucherPage() {
       const params = new URLSearchParams();
       if (filterAgent && filterAgent !== 'all') params.set('agentId', filterAgent);
       if (filterProfile && filterProfile !== 'all') params.set('profileId', filterProfile);
-      if (voucherMonth) params.set('month', voucherMonth);
-      
+      buildPeriodParams(params);
+
       const res = await fetch(`/api/hotspot/rekap-voucher/export?${params}`);
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -261,29 +319,46 @@ export default function RekapVoucherPage() {
             />
           </div>
         </div>
-        {/* Month Filter */}
-        <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Periode:</span>
-          <div className="flex items-center gap-1 border border-border rounded-lg bg-muted/30 px-1 py-1">
-            <button
-              onClick={() => shiftVoucherMonth(-1)}
-              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setVoucherMonth('')}
-              className="text-xs font-medium text-foreground min-w-[90px] text-center hover:text-primary transition-colors"
-              title="Klik untuk reset ke semua"
-            >
-              {getMonthLabel(voucherMonth)}
-            </button>
-            <button
-              onClick={() => shiftVoucherMonth(1)}
-              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+        {/* Period Filter */}
+        <div className="mt-3 pt-3 border-t border-border">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Periode:</span>
+            {/* Mode tabs */}
+            <div className="flex gap-1">
+              {(['all', 'daily', 'weekly', 'monthly'] as const).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => switchPeriodMode(mode)}
+                  className={`px-2.5 py-1 text-[11px] rounded-md transition-colors font-medium ${
+                    periodMode === mode
+                      ? 'bg-primary text-white shadow-[0_0_8px_rgba(188,19,254,0.4)]'
+                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {mode === 'all' ? 'Semua' : mode === 'daily' ? 'Harian' : mode === 'weekly' ? 'Mingguan' : 'Bulanan'}
+                </button>
+              ))}
+            </div>
+            {/* Navigator */}
+            {periodMode !== 'all' && (
+              <div className="flex items-center gap-1 border border-border rounded-lg bg-muted/30 px-1 py-1">
+                <button
+                  onClick={() => shiftPeriod(-1)}
+                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-xs font-medium text-foreground min-w-[145px] text-center">
+                  {getPeriodLabel()}
+                </span>
+                <button
+                  onClick={() => shiftPeriod(1)}
+                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
