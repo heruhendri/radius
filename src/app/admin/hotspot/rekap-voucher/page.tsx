@@ -227,6 +227,14 @@ export default function RekapVoucherPage() {
   const totalExpired = filteredRekap.reduce((sum, item) => sum + item.expired, 0);
   const totalSold = filteredRekap.reduce((sum, item) => sum + item.sold, 0);
   const totalRevenue = filteredRekap.reduce((sum, item) => sum + item.totalRevenue, 0);
+  const adminRevenue = filteredRekap.filter(i => i.agent === null).reduce((sum, i) => sum + i.totalRevenue, 0);
+  const agentRevenue = filteredRekap.filter(i => i.agent !== null).reduce((sum, i) => sum + i.totalRevenue, 0);
+  const adminSold = filteredRekap.filter(i => i.agent === null).reduce((sum, i) => sum + i.sold, 0);
+  const agentSold = filteredRekap.filter(i => i.agent !== null).reduce((sum, i) => sum + i.sold, 0);
+  const adminRevenue = filteredRekap.filter(i => i.agent === null).reduce((sum, i) => sum + i.totalRevenue, 0);
+  const agentRevenue = filteredRekap.filter(i => i.agent !== null).reduce((sum, i) => sum + i.totalRevenue, 0);
+  const adminSold = filteredRekap.filter(i => i.agent === null).reduce((sum, i) => sum + i.sold, 0);
+  const agentSold = filteredRekap.filter(i => i.agent !== null).reduce((sum, i) => sum + i.sold, 0);
 
   const formatRupiah = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
 
@@ -380,6 +388,82 @@ export default function RekapVoucherPage() {
         <div className="bg-card p-4 rounded-lg border-2 border-[#00f7ff]/30 shadow-[0_0_15px_rgba(0,247,255,0.1)] col-span-2 md:col-span-1">
           <div className="text-xs text-[#00f7ff] font-bold uppercase mb-1">Total Pendapatan</div>
           <div className="text-base sm:text-xl font-bold text-[#00f7ff] drop-shadow-[0_0_5px_rgba(0,247,255,0.5)]">{formatRupiah(totalRevenue)}</div>
+        </div>
+      </div>
+
+      {/* Revenue Breakdown: Admin vs Agent */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-card p-4 rounded-lg border border-border">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold text-foreground">Pendapatan Admin (Tanpa Agent)</div>
+            <span className="text-[10px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded">{adminSold} terjual</span>
+          </div>
+          <div className="text-xl font-bold text-blue-400">{formatRupiah(adminRevenue)}</div>
+          {totalRevenue > 0 && (
+            <div className="mt-2">
+              <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                <span>{Math.round(adminRevenue / totalRevenue * 100)}% dari total</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-1.5">
+                <div className="bg-blue-400 rounded-full h-1.5 transition-all" style={{ width: `${Math.round(adminRevenue / totalRevenue * 100)}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="bg-card p-4 rounded-lg border border-border">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold text-foreground">Pendapatan Agent</div>
+            <span className="text-[10px] bg-[#bc13fe]/10 text-[#bc13fe] px-1.5 py-0.5 rounded">{agentSold} terjual</span>
+          </div>
+          <div className="text-xl font-bold text-[#bc13fe]">{formatRupiah(agentRevenue)}</div>
+          {totalRevenue > 0 && (
+            <div className="mt-2">
+              <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                <span>{Math.round(agentRevenue / totalRevenue * 100)}% dari total</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-1.5">
+                <div className="bg-[#bc13fe] rounded-full h-1.5 transition-all" style={{ width: `${Math.round(agentRevenue / totalRevenue * 100)}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Revenue Breakdown: Admin vs Agent */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-card p-4 rounded-lg border border-border">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold text-foreground">Pendapatan Admin (Tanpa Agent)</div>
+            <span className="text-[10px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded">{adminSold} terjual</span>
+          </div>
+          <div className="text-xl font-bold text-blue-400">{formatRupiah(adminRevenue)}</div>
+          {totalRevenue > 0 && (
+            <div className="mt-2">
+              <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                <span>{Math.round(adminRevenue / totalRevenue * 100)}% dari total</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-1.5">
+                <div className="bg-blue-400 rounded-full h-1.5 transition-all" style={{ width: `${Math.round(adminRevenue / totalRevenue * 100)}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="bg-card p-4 rounded-lg border border-border">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold text-foreground">Pendapatan Agent</div>
+            <span className="text-[10px] bg-[#bc13fe]/10 text-[#bc13fe] px-1.5 py-0.5 rounded">{agentSold} terjual</span>
+          </div>
+          <div className="text-xl font-bold text-[#bc13fe]">{formatRupiah(agentRevenue)}</div>
+          {totalRevenue > 0 && (
+            <div className="mt-2">
+              <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                <span>{Math.round(agentRevenue / totalRevenue * 100)}% dari total</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-1.5">
+                <div className="bg-[#bc13fe] rounded-full h-1.5 transition-all" style={{ width: `${Math.round(agentRevenue / totalRevenue * 100)}%` }} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

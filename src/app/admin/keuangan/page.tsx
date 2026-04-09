@@ -128,6 +128,23 @@ export default function KeuanganPage() {
   });
 
   const [processing, setProcessing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selectedIds.size === transactions.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(transactions.map(tx => tx.id)));
+    }
+  };
+  const clearSelection = () => setSelectedIds(new Set());
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
@@ -261,6 +278,54 @@ export default function KeuanganPage() {
 
       if (data.success) {
         await showSuccess(data.message);
+        clearSelection();
+        setPage(1);
+        setTransactions([]);
+        setHasMore(true);
+        loadData(1, true);
+      } else {
+        await showError(data.error);
+      }
+    } catch (error) {
+      await showError(t('keuangan.failedDeleteTransaction'));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const confirmed = await showConfirm(`Hapus ${selectedIds.size} transaksi yang dipilih?`, "Hapus");
+    if (!confirmed) return;
+    try {
+      const ids = Array.from(selectedIds).join(",");
+      const res = await fetch(`/api/keuangan/transactions?ids=${encodeURIComponent(ids)}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        await showSuccess(data.message);
+        clearSelection();
+        setPage(1);
+        setTransactions([]);
+        setHasMore(true);
+        loadData(1, true);
+      } else {
+        await showError(data.error);
+      }
+    } catch (error) {
+      await showError(t('keuangan.failedDeleteTransaction'));
+    }
+  };
+
+  const handleDeleteByFilter = async () => {
+    const confirmed = await showConfirm(`Hapus SEMUA ${total} transaksi sesuai filter saat ini? Tindakan ini tidak bisa dibatalkan.`, "Hapus Semua");
+    if (!confirmed) return;
+    try {
+      let url = `/api/keuangan/transactions?filterDelete=true&type=${filterType}&categoryId=${filterCategory}`;
+      if (startDate && endDate) url += `&startDate=${startDate}&endDate=${endDate}`;
+      if (debouncedSearch) url += `&search=${encodeURIComponent(debouncedSearch)}`;
+      const res = await fetch(url, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        await showSuccess(data.message);
+        clearSelection();
         setPage(1);
         setTransactions([]);
         setHasMore(true);
@@ -586,6 +651,47 @@ export default function KeuanganPage() {
           </div>
         </div>
 
+        {/* Bulk Action Toolbar */}
+        {(selectedIds.size > 0 || transactions.length > 0) && (
+          <div className="px-3 py-2 bg-muted/50 border-b border-border flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={transactions.length > 0 && selectedIds.size === transactions.length}
+                onChange={toggleSelectAll}
+                className="w-3.5 h-3.5 accent-primary cursor-pointer"
+              />
+              <span className="text-[11px] text-muted-foreground">
+                {selectedIds.size > 0 ? `${selectedIds.size} dipilih` : 'Pilih semua'}
+              </span>
+            </label>
+            {selectedIds.size > 0 && (
+              <>
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-2.5 py-1 text-[11px] bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 flex items-center gap-1"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Hapus Dipilih ({selectedIds.size})
+                </button>
+                <button
+                  onClick={clearSelection}
+                  className="px-2.5 py-1 text-[11px] bg-muted text-muted-foreground rounded hover:bg-muted/80"
+                >
+                  Batal
+                </button>
+              </>
+            )}
+            <button
+              onClick={handleDeleteByFilter}
+              className="ml-auto px-2.5 py-1 text-[11px] border border-destructive/50 text-destructive rounded hover:bg-destructive/10 flex items-center gap-1"
+            >
+              <Trash2 className="w-3 h-3" />
+              Hapus Sesuai Filter ({total})
+            </button>
+          </div>
+        )}
+
         {/* Mobile Card View */}
         <div className="block sm:hidden divide-y divide-border">
           {transactions.length === 0 ? (
@@ -594,12 +700,20 @@ export default function KeuanganPage() {
             </div>
           ) : (
             transactions.map((tx) => (
-              <div key={tx.id} className="p-3 space-y-2 active:bg-muted transition-colors">
+              <div key={tx.id} className={`p-3 space-y-2 active:bg-muted transition-colors ${selectedIds.has(tx.id) ? 'bg-primary/5' : ''}`}>
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-foreground truncate">{tx.description}</p>
-                    {tx.notes && <p className="text-[10px] text-muted-foreground truncate">{tx.notes}</p>}
-                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(tx.id)}
+                      onChange={() => toggleSelect(tx.id)}
+                      className="w-3.5 h-3.5 accent-primary cursor-pointer flex-shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{tx.description}</p>
+                      {tx.notes && <p className="text-[10px] text-muted-foreground truncate">{tx.notes}</p>}
+                    </div>
+                  </label>
                   <div className="flex items-center gap-0.5 flex-shrink-0">
                     <button onClick={() => handleEditTransaction(tx)} className="p-1.5 hover:bg-muted rounded">
                       <Edit className="w-3.5 h-3.5 text-muted-foreground" />
@@ -634,6 +748,7 @@ export default function KeuanganPage() {
           <Table>
             <TableHeader>
               <TableRow className="text-[10px]">
+                <TableHead className="text-[10px] py-2 w-8"></TableHead>
                 <TableHead className="text-[10px] py-2">{t('keuangan.date')}</TableHead>
                 <TableHead className="text-[10px] py-2">{t('keuangan.description')}</TableHead>
                 <TableHead className="text-[10px] py-2 hidden sm:table-cell">{t('keuangan.category')}</TableHead>
@@ -645,13 +760,21 @@ export default function KeuanganPage() {
             <TableBody>
               {transactions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-xs">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs">
                     {t('common.noData')}
                   </TableCell>
                 </TableRow>
               ) : (
                 transactions.map((t) => (
-                  <TableRow key={t.id} className="text-xs">
+                  <TableRow key={t.id} className={`text-xs ${selectedIds.has(t.id) ? 'bg-primary/5' : ''}`}>
+                    <TableCell className="py-2 w-8">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(t.id)}
+                        onChange={() => toggleSelect(t.id)}
+                        className="w-3.5 h-3.5 accent-primary cursor-pointer"
+                      />
+                    </TableCell>
                     <TableCell className="py-2 text-[10px]">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Calendar className="w-3 h-3" />

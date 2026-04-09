@@ -138,7 +138,6 @@ const menuGroups: MenuGroup[] = [
         requiredPermission: 'hotspot.view',
         children: [
           { titleKey: 'nav.voucher', href: '/admin/hotspot/voucher', requiredPermission: 'vouchers.view' },
-          { titleKey: 'nav.rekapVoucher', href: '/admin/hotspot/rekap-voucher', requiredPermission: 'vouchers.view' },
           { titleKey: 'nav.profile', href: '/admin/hotspot/profile', requiredPermission: 'hotspot.view' },
           { titleKey: 'nav.template', href: '/admin/hotspot/template', requiredPermission: 'hotspot.view' },
           { titleKey: 'nav.evoucher', href: '/admin/hotspot/evoucher', requiredPermission: 'vouchers.view' },
@@ -195,6 +194,12 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.manualPayments', href: '/admin/manual-payments', badge: 'manualPayments', requiredPermission: 'invoices.view' },
           { titleKey: 'nav.bankAccounts', href: '/admin/payment/bank-accounts', requiredPermission: 'settings.payment' },
         ],
+      },
+      {
+        titleKey: 'nav.rekapVoucher',
+        icon: <BarChart3 className="w-4 h-4" />,
+        href: '/admin/hotspot/rekap-voucher',
+        requiredPermission: 'vouchers.view',
       },
       {
         titleKey: 'nav.transaksi',

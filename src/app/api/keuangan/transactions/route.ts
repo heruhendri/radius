@@ -352,12 +352,63 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Delete transaction
+// DELETE - Delete transaction(s)
+// Supports:
+//   ?id=xxx            — single delete (existing)
+//   ?ids=x,y,z         — bulk delete by IDs
+//   ?filterDelete=true — delete all matching current filter (?type=&categoryId=&startDate=&endDate=)
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const idsParam = searchParams.get("ids");
+    const filterDelete = searchParams.get("filterDelete") === "true";
 
+    // ── Bulk delete by IDs ────────────────────────────────────────────────
+    if (idsParam) {
+      const ids = idsParam.split(",").filter(Boolean);
+      if (ids.length === 0) {
+        return NextResponse.json({ success: false, error: "No IDs provided" }, { status: 400 });
+      }
+      const result = await prisma.transaction.deleteMany({ where: { id: { in: ids } } });
+      return NextResponse.json({ success: true, message: `${result.count} transaksi dihapus`, count: result.count });
+    }
+
+    // ── Delete by filter ─────────────────────────────────────────────────
+    if (filterDelete) {
+      const type = searchParams.get("type");
+      const categoryId = searchParams.get("categoryId");
+      const startDate = searchParams.get("startDate");
+      const endDate = searchParams.get("endDate");
+      const search = searchParams.get("search");
+
+      const where: any = {};
+      if (type && type !== "all") where.type = type;
+      if (categoryId && categoryId !== "all") where.categoryId = categoryId;
+      if (startDate && endDate) {
+        where.date = {
+          gte: startOfDayWIBtoUTC(startDate),
+          lte: endOfDayWIBtoUTC(endDate),
+        };
+      }
+      if (search) {
+        where.OR = [
+          { description: { contains: search } },
+          { reference: { contains: search } },
+          { notes: { contains: search } },
+        ];
+      }
+
+      const result = await prisma.transaction.deleteMany({ where });
+      return NextResponse.json({ success: true, message: `${result.count} transaksi dihapus`, count: result.count });
+    }
+
+    // ── Single delete ─────────────────────────────────────────────────────
     if (!id) {
       return NextResponse.json(
         { success: false, error: "Transaction ID required" },
@@ -383,7 +434,6 @@ export async function DELETE(request: NextRequest) {
 
     // Log activity
     try {
-      const session = await getServerSession(authOptions);
       await logActivity({
         userId: (session?.user as any)?.id,
         username: (session?.user as any)?.username || 'Admin',
