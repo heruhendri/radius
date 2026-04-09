@@ -413,6 +413,52 @@ export default function RekapVoucherPage() {
         </div>
       </div>
 
+      {/* Per-agent breakdown */}
+      {(() => {
+        const agentMap = new Map<string, { name: string; sold: number; profit: number }>();
+        filteredRekap.forEach(item => {
+          if (!item.agent) return;
+          const key = item.agent.id;
+          const prev = agentMap.get(key) ?? { name: item.agent.name, sold: 0, profit: 0 };
+          agentMap.set(key, { name: prev.name, sold: prev.sold + item.sold, profit: prev.profit + item.agentProfit });
+        });
+        if (agentMap.size === 0) return null;
+        return (
+          <div className="bg-card rounded-lg border border-border overflow-hidden">
+            <div className="px-4 py-2 bg-muted border-b border-border">
+              <span className="text-xs font-semibold text-foreground">Rincian Pendapatan per Agent</span>
+            </div>
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-muted-foreground uppercase">Agent</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-medium text-muted-foreground uppercase">Terjual</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-medium text-muted-foreground uppercase">Profit Agent</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {Array.from(agentMap.entries()).map(([id, a]) => (
+                  <tr key={id} className="hover:bg-muted">
+                    <td className="px-3 py-2 text-xs font-medium text-foreground">{a.name}</td>
+                    <td className="px-3 py-2 text-xs text-right text-muted-foreground">{a.sold}</td>
+                    <td className="px-3 py-2 text-xs text-right font-semibold text-[#bc13fe]">{formatRupiah(a.profit)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              {agentMap.size > 1 && (
+                <tfoot className="bg-muted border-t border-border">
+                  <tr>
+                    <td className="px-3 py-2 text-xs font-bold text-foreground">Total</td>
+                    <td className="px-3 py-2 text-xs text-right font-bold text-muted-foreground">{agentSold}</td>
+                    <td className="px-3 py-2 text-xs text-right font-bold text-[#bc13fe]">{formatRupiah(totalAgentProfit)}</td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        );
+      })()}
+
       {/* Mobile Card View */}
       <div className="block md:hidden space-y-3">
         {loading ? (
@@ -520,18 +566,19 @@ export default function RekapVoucherPage() {
                 <th className="px-3 py-2 text-right text-[10px] font-medium text-muted-foreground uppercase">Expired</th>
                 <th className="px-3 py-2 text-right text-[10px] font-medium text-muted-foreground uppercase">Harga/pcs</th>
                 <th className="px-3 py-2 text-right text-[10px] font-medium text-muted-foreground uppercase">Pendapatan</th>
+                <th className="px-3 py-2 text-right text-[10px] font-medium text-muted-foreground uppercase">Profit Agent</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={13} className="px-3 py-8 text-center text-muted-foreground text-xs">
+                  <td colSpan={14} className="px-3 py-8 text-center text-muted-foreground text-xs">
                     {t('common.loading')}
                   </td>
                 </tr>
               ) : filteredRekap.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="px-3 py-8 text-center text-muted-foreground text-xs">
+                  <td colSpan={14} className="px-3 py-8 text-center text-muted-foreground text-xs">
                     {t('hotspot.noRekapData')}
                   </td>
                 </tr>
@@ -582,6 +629,9 @@ export default function RekapVoucherPage() {
                     <td className="px-3 py-2 text-[10px] text-right font-medium text-[#00f7ff]">
                       {item.totalRevenue > 0 ? formatRupiah(item.totalRevenue) : '-'}
                     </td>
+                    <td className="px-3 py-2 text-[10px] text-right font-medium text-[#bc13fe]">
+                      {item.agentProfit > 0 ? formatRupiah(item.agentProfit) : <span className="text-muted-foreground">-</span>}
+                    </td>
                   </tr>
                 ))
               )}
@@ -610,6 +660,9 @@ export default function RekapVoucherPage() {
                   <td className="px-3 py-2 text-xs text-right text-muted-foreground">-</td>
                   <td className="px-3 py-2 text-xs text-right text-[#00f7ff]">
                     {formatRupiah(totalRevenue)}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-right text-[#bc13fe]">
+                    {formatRupiah(totalAgentProfit)}
                   </td>
                 </tr>
               </tfoot>
