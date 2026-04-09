@@ -81,6 +81,99 @@ log "Applying code update..."
 git reset --hard origin/master 2>&1 || err "git reset --hard failed"
 ok "Code updated to $NEW_SHORT"
 
+# ── Deploy VPN / system config files (production/) ────────
+echo ""
+log "Checking VPN config files for changes..."
+NEED_XL2TPD_RESTART=false
+NEED_DAEMON_RELOAD=false
+
+# xl2tpd.conf → /etc/xl2tpd/xl2tpd.conf
+if [ -f "production/xl2tpd.conf" ]; then
+  mkdir -p /etc/xl2tpd
+  if ! diff -q "production/xl2tpd.conf" /etc/xl2tpd/xl2tpd.conf &>/dev/null; then
+    cp "production/xl2tpd.conf" /etc/xl2tpd/xl2tpd.conf
+    ok "xl2tpd.conf deployed → /etc/xl2tpd/xl2tpd.conf"
+    NEED_XL2TPD_RESTART=true
+  else
+    log "xl2tpd.conf unchanged — skipped"
+  fi
+fi
+
+# ppp options → /etc/ppp/options.l2tpd.client
+if [ -f "production/ppp-options.l2tpd.client" ]; then
+  if ! diff -q "production/ppp-options.l2tpd.client" /etc/ppp/options.l2tpd.client &>/dev/null; then
+    cp "production/ppp-options.l2tpd.client" /etc/ppp/options.l2tpd.client
+    ok "ppp options deployed → /etc/ppp/options.l2tpd.client"
+    NEED_XL2TPD_RESTART=true
+  else
+    log "ppp options unchanged — skipped"
+  fi
+fi
+
+# systemd override → /etc/systemd/system/xl2tpd.service.d/restart.conf
+if [ -f "production/xl2tpd-restart.conf" ]; then
+  mkdir -p /etc/systemd/system/xl2tpd.service.d
+  if ! diff -q "production/xl2tpd-restart.conf" /etc/systemd/system/xl2tpd.service.d/restart.conf &>/dev/null; then
+    cp "production/xl2tpd-restart.conf" /etc/systemd/system/xl2tpd.service.d/restart.conf
+    ok "xl2tpd systemd override deployed"
+    NEED_DAEMON_RELOAD=true
+    NEED_XL2TPD_RESTART=true
+  else
+    log "xl2tpd systemd override unchanged — skipped"
+  fi
+fi
+
+# ip-up script → /etc/ppp/ip-up.d/99-vpn-routes
+if [ -f "production/99-vpn-routes" ]; then
+  if ! diff -q "production/99-vpn-routes" /etc/ppp/ip-up.d/99-vpn-routes &>/dev/null; then
+    cp "production/99-vpn-routes" /etc/ppp/ip-up.d/99-vpn-routes
+    chmod +x /etc/ppp/ip-up.d/99-vpn-routes
+    ok "99-vpn-routes deployed → /etc/ppp/ip-up.d/"
+  else
+    log "99-vpn-routes unchanged — skipped"
+  fi
+fi
+
+# ip-down script → /etc/ppp/ip-down.d/99-vpn-routes
+if [ -f "production/99-vpn-routes-ipdown" ]; then
+  if ! diff -q "production/99-vpn-routes-ipdown" /etc/ppp/ip-down.d/99-vpn-routes &>/dev/null; then
+    cp "production/99-vpn-routes-ipdown" /etc/ppp/ip-down.d/99-vpn-routes
+    chmod +x /etc/ppp/ip-down.d/99-vpn-routes
+    ok "99-vpn-routes-ipdown deployed → /etc/ppp/ip-down.d/"
+  else
+    log "99-vpn-routes-ipdown unchanged — skipped"
+  fi
+fi
+
+# vpn-watchdog.sh → /usr/local/bin/vpn-watchdog.sh
+if [ -f "vpn-watchdog.sh" ]; then
+  if ! diff -q "vpn-watchdog.sh" /usr/local/bin/vpn-watchdog.sh &>/dev/null; then
+    cp "vpn-watchdog.sh" /usr/local/bin/vpn-watchdog.sh
+    chmod +x /usr/local/bin/vpn-watchdog.sh
+    ok "vpn-watchdog.sh deployed → /usr/local/bin/"
+  else
+    log "vpn-watchdog.sh unchanged — skipped"
+  fi
+fi
+
+# Apply systemd changes if needed
+if [ "$NEED_DAEMON_RELOAD" = true ]; then
+  systemctl daemon-reload
+  ok "systemd daemon-reload done"
+fi
+
+# Restart xl2tpd only if config changed AND ppp0 is not currently up
+# (if ppp0 is up, xl2tpd will pick up new config on next reconnect)
+if [ "$NEED_XL2TPD_RESTART" = true ]; then
+  if ip link show ppp0 &>/dev/null; then
+    log "xl2tpd config changed but ppp0 is UP — new config takes effect on next reconnect (no restart to avoid VPN drop)"
+  else
+    log "xl2tpd config changed and ppp0 is DOWN — restarting xl2tpd..."
+    systemctl restart xl2tpd 2>&1 | tail -3 || log "Warning: xl2tpd restart failed (non-fatal)"
+    ok "xl2tpd restarted"
+  fi
+fi
+
 # ── npm install (if package.json changed OR node_modules missing) ────
 if echo "$CHANGED" | grep -qE '^package\.json$|^package-lock\.json$' || [ ! -d node_modules ]; then
   echo ""
