@@ -22,6 +22,7 @@ import {
   ChevronRight,
   User,
   Bell,
+  BellOff,
   Cpu,
   Clock,
 } from 'lucide-react';
@@ -91,11 +92,11 @@ const MENU_ITEMS: MenuItem[] = [
 
 /* â”€â”€â”€ Notification Bell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-/* --- Push Notification Banner --- */
-function PushNotificationBanner({ techId }: { techId: string }) {
+/* --- Sidebar Push Notification Toggle --- */
+function SidebarPushToggle({ techId }: { techId: string }) {
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('default');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'subscribed' | 'error'>('idle');
-  const [dismissed, setDismissed] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const urlBase64ToUint8Array = (base64String: string) => {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -104,8 +105,9 @@ function PushNotificationBanner({ techId }: { techId: string }) {
     return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
   };
 
-  const doSubscribe = async (id: string) => {
-    setStatus('loading');
+  const doSubscribe = async () => {
+    if (!techId) return;
+    setLoading(true);
     try {
       const reg = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
@@ -118,13 +120,38 @@ function PushNotificationBanner({ techId }: { techId: string }) {
       await fetch('/api/push/technician-subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ technicianId: id, subscription: sub.toJSON() }),
+        body: JSON.stringify({ technicianId: techId, subscription: sub.toJSON() }),
       });
-      setPermission('granted');
-      setStatus('subscribed');
+      setSubscribed(true);
     } catch (e) {
-      console.error('[PushBanner] Subscribe error:', e);
-      setStatus('error');
+      console.error('[SidebarPush] Subscribe error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const doUnsubscribe = async () => {
+    if (!techId) return;
+    setLoading(true);
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          const endpoint = sub.endpoint;
+          await sub.unsubscribe();
+          await fetch('/api/push/technician-unsubscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ technicianId: techId, endpoint }),
+          });
+        }
+      }
+      setSubscribed(false);
+    } catch (e) {
+      console.error('[SidebarPush] Unsubscribe error:', e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -136,40 +163,72 @@ function PushNotificationBanner({ techId }: { techId: string }) {
     }
     const perm = Notification.permission;
     setPermission(perm);
-    if (perm === 'granted') doSubscribe(techId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    navigator.serviceWorker.ready
+      .then(reg => reg.pushManager.getSubscription())
+      .then(sub => setSubscribed(!!sub))
+      .catch(() => {});
   }, [techId]);
 
-  const handleActivate = async () => {
-    if (Notification.permission === 'default') {
-      const perm = await Notification.requestPermission();
-      setPermission(perm);
-      if (perm === 'granted') await doSubscribe(techId);
-    } else if (Notification.permission === 'granted') {
-      await doSubscribe(techId);
+  const handleToggle = async () => {
+    if (permission === 'unsupported' || permission === 'denied') return;
+    if (subscribed) {
+      await doUnsubscribe();
+    } else {
+      if (Notification.permission === 'default') {
+        const perm = await Notification.requestPermission();
+        setPermission(perm as NotificationPermission);
+        if (perm !== 'granted') return;
+      }
+      await doSubscribe();
     }
   };
 
-  if (permission === 'unsupported' || permission === 'denied' || dismissed) return null;
-  if (status === 'subscribed' || permission === 'granted') return null;
+  if (permission === 'unsupported') return null;
+
+  const isDenied = permission === 'denied';
+  const isOn = subscribed && permission === 'granted';
 
   return (
-    <div className="mx-4 mt-3 flex items-center gap-3 px-3 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-xs text-cyan-700 dark:text-cyan-300">
-      <Bell className="w-3.5 h-3.5 flex-shrink-0" />
-      <span className="flex-1">Aktifkan notifikasi push untuk menerima tiket baru secara real-time.</span>
-      <button
-        onClick={handleActivate}
-        disabled={status === 'loading'}
-        className="px-2.5 py-1 text-[10px] font-bold bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition disabled:opacity-50 flex-shrink-0"
-      >
-        {status === 'loading' ? 'Memproses...' : 'Aktifkan'}
-      </button>
-      <button onClick={() => setDismissed(true)} className="p-0.5 hover:opacity-70 transition flex-shrink-0">
-        <X className="w-3.5 h-3.5" />
-      </button>
-    </div>
+    <button
+      onClick={handleToggle}
+      disabled={loading || isDenied}
+      title={isDenied ? 'Notifikasi diblokir di browser' : isOn ? 'Nonaktifkan notifikasi push' : 'Aktifkan notifikasi push'}
+      className={cn(
+        'w-full flex items-center gap-3 px-3 py-2.5 text-xs font-semibold rounded-xl transition-all duration-300 border',
+        isDenied
+          ? 'text-slate-400 dark:text-slate-600 bg-transparent border-transparent cursor-not-allowed opacity-50'
+          : isOn
+          ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 border-cyan-200 dark:border-cyan-500/30 hover:bg-cyan-100 dark:hover:bg-cyan-500/20'
+          : 'text-slate-500 dark:text-slate-400 bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-cyan-500/10 hover:border-slate-200 dark:hover:border-cyan-500/20',
+      )}
+    >
+      <span className={cn('p-1.5 rounded-lg flex-shrink-0 flex items-center justify-center transition-all', isOn ? 'text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10' : 'text-slate-400 dark:text-slate-400')}>
+        {loading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : isOn ? (
+          <Bell className="w-4 h-4" />
+        ) : (
+          <BellOff className="w-4 h-4" />
+        )}
+      </span>
+      <span className="flex-1 text-left tracking-wide">Notif Push</span>
+      <span className={cn(
+        'relative inline-flex h-4 w-7 flex-shrink-0 rounded-full border-2 transition-colors duration-200',
+        isDenied
+          ? 'border-slate-300 dark:border-slate-600 bg-slate-200 dark:bg-slate-700'
+          : isOn
+          ? 'border-cyan-500 bg-cyan-500'
+          : 'border-slate-300 dark:border-slate-600 bg-slate-200 dark:bg-slate-700',
+      )}>
+        <span className={cn(
+          'pointer-events-none inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform duration-200',
+          isOn ? 'translate-x-3' : 'translate-x-0',
+        )} />
+      </span>
+    </button>
   );
 }
+
 function NotificationBell() {
   const { addToast } = useToast();
   const [count, setCount] = useState(0);
@@ -414,6 +473,7 @@ function TechSidebar({
             </span>
             <span className="tracking-wide">{t('techPortal.profile')}</span>
           </Link>
+          {tech && <SidebarPushToggle techId={tech.id} />}
           <button
             onClick={onLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-xl transition-all duration-300"
@@ -593,10 +653,6 @@ function TechnicianPortalInner({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-
-        {/* Push Notification Banner */}
-        {tech && <PushNotificationBanner techId={tech.id} />}
-
         {/* Page Content */}
         <main className="flex-1 relative z-10">
           {children}
