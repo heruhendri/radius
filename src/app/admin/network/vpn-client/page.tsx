@@ -84,7 +84,7 @@ export default function VpnClientPage() {
   const [wgGeneratedScript, setWgGeneratedScript] = useState<string | null>(null);
   const [showWgSection, setShowWgSection] = useState(false);
   // Tutorial toggle
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(true);
 
   useEffect(() => {
     loadClients();

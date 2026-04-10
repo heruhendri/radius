@@ -129,7 +129,7 @@ export default function VpnServerPage() {
     pptpEnabled: false,
     openVpnEnabled: false,
   });
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(true);
 
   useEffect(() => {
     // Restore saved SSH + L2TP credentials from localStorage

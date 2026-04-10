@@ -83,7 +83,7 @@ export default function RouterPage() {
   // settingUpIsolir removed - isolation uses NAT redirect, not router-based setup
   const [settingUpRadius, setSettingUpRadius] = useState<string | null>(null)
   const [showScriptModal, setShowScriptModal] = useState(false)
-  const [showTutorial, setShowTutorial] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(true)
   const [scriptModalData, setScriptModalData] = useState<{ script: string; config: any } | null>(null)
 
   useEffect(() => {
