@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { showSuccess, showError, showConfirm } from '@/lib/sweetalert';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Shield, Server, Plus, Pencil, Trash2, Zap, Activity, CheckCircle, XCircle, Settings, Terminal, RefreshCw, FileText, X, Wifi } from 'lucide-react';
+import { Shield, Server, Plus, Pencil, Trash2, Zap, Activity, CheckCircle, XCircle, Settings, Terminal, RefreshCw, FileText, X, Wifi, ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 interface VpnServer {
   id: string
@@ -129,6 +129,7 @@ export default function VpnServerPage() {
     pptpEnabled: false,
     openVpnEnabled: false,
   });
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     // Restore saved SSH + L2TP credentials from localStorage
@@ -853,6 +854,58 @@ export default function VpnServerPage() {
                 <Plus className="w-5 h-5" />
                 {t('network.addVpnServer')}
               </button>
+            </div>
+          </div>
+
+          {/* ── Tutorial / Flow Banner ───────────────────────────────── */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl border border-[#00f7ff]/20 rounded-2xl overflow-hidden">
+              <button
+                onClick={() => setShowTutorial(!showTutorial)}
+                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-[#00f7ff]/5 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 bg-[#00f7ff]/20 rounded-lg flex items-center justify-center">
+                    <Info className="w-4 h-4 text-[#00f7ff]" />
+                  </div>
+                  <span className="text-sm font-bold text-[#00f7ff] uppercase tracking-wider">Cara Penggunaan — Alur VPN Server</span>
+                </div>
+                {showTutorial ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              {showTutorial && (
+                <div className="px-6 pb-6 border-t border-[#00f7ff]/10">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-5">
+                    {[
+                      { step: 1, icon: '☁️', color: 'border-[#bc13fe]/40 bg-[#bc13fe]/5', title: 'Install di VPS', desc: 'Jalankan installer SALFANET di VPS: bash vps-install.sh. FreeRADIUS, Node.js, dan PM2 akan terinstall otomatis.', link: null, linkLabel: null },
+                      { step: 2, icon: '🖥️', color: 'border-[#00f7ff]/40 bg-[#00f7ff]/5', title: 'Tambah VPN Server', desc: 'Isi IP MikroTik CHR, username admin, dan subnet VPN (contoh: 10.20.30.0/24). Klik "Test Koneksi" lalu Simpan.', link: null, linkLabel: null },
+                      { step: 3, icon: '⚙️', color: 'border-green-500/40 bg-green-500/5', title: 'Setup Protokol', desc: 'Klik tombol "Setup" pada kartu server untuk konfigurasi L2TP/SSTP/PPTP di MikroTik CHR secara otomatis. Untuk WireGuard (RouterOS 7+) klik tombol WireGuard.', link: null, linkLabel: null },
+                      { step: 4, icon: '📡', color: 'border-amber-500/40 bg-amber-500/5', title: 'Tambah VPN Client', desc: 'Setelah server siap, pergi ke menu VPN Client untuk tambahkan setiap NAS sebagai client. Sistem generate script RouterOS otomatis.', link: '/admin/network/vpn-client', linkLabel: '→ Menu VPN Client' },
+                    ].map(item => (
+                      <div key={item.step} className={`rounded-xl border ${item.color} p-4`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xl">{item.icon}</span>
+                          <span className="text-xs font-bold text-muted-foreground bg-muted/50 dark:bg-slate-800/80 px-2 py-0.5 rounded-full">Step {item.step}</span>
+                        </div>
+                        <p className="text-sm font-bold text-foreground mb-1">{item.title}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                        {item.link && (
+                          <a href={item.link} className="inline-block mt-2 text-xs font-medium text-[#00f7ff] hover:underline">{item.linkLabel}</a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl border border-[#bc13fe]/20 bg-[#bc13fe]/5">
+                      <p className="text-xs font-bold text-[#bc13fe] mb-1">🔷 WireGuard (RouterOS 7+)</p>
+                      <p className="text-xs text-muted-foreground">Arsitektur baru: VPS sebagai WG server, setiap NAS connect langsung ke VPS. Lebih cepat, lebih aman, tidak perlu CHR.</p>
+                    </div>
+                    <div className="p-3 rounded-xl border border-[#00f7ff]/20 bg-[#00f7ff]/5">
+                      <p className="text-xs font-bold text-[#00f7ff] mb-1">🔶 L2TP/SSTP (RouterOS 6+)</p>
+                      <p className="text-xs text-muted-foreground">Arsitektur legacy: VPS connect ke MikroTik CHR via L2TP/SSTP. NAS kemudian connect ke CHR. Gunakan jika RouterOS belum di-upgrade.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

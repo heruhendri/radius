@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { showSuccess, showError, showConfirm } from '@/lib/sweetalert';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Server, Plus, Trash2, Edit, CheckCircle, XCircle, Copy, Loader2, Shield, Radio, Wifi, Activity, RefreshCw, Settings, X } from 'lucide-react';
+import { Server, Plus, Trash2, Edit, CheckCircle, XCircle, Copy, Loader2, Shield, Radio, Wifi, Activity, RefreshCw, Settings, X, ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 interface Router {
   id: string
@@ -83,6 +83,7 @@ export default function RouterPage() {
   // settingUpIsolir removed - isolation uses NAT redirect, not router-based setup
   const [settingUpRadius, setSettingUpRadius] = useState<string | null>(null)
   const [showScriptModal, setShowScriptModal] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
   const [scriptModalData, setScriptModalData] = useState<{ script: string; config: any } | null>(null)
 
   useEffect(() => {
@@ -395,6 +396,51 @@ export default function RouterPage() {
                 <Plus className="w-5 h-5" />
                 {t('network.addRouter')}
               </button>
+            </div>
+          </div>
+
+          {/* ── Tutorial / Flow Banner ───────────────────────────────── */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl border border-[#00f7ff]/20 rounded-2xl overflow-hidden">
+              <button
+                onClick={() => setShowTutorial(!showTutorial)}
+                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-[#00f7ff]/5 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 bg-[#00f7ff]/20 rounded-lg flex items-center justify-center">
+                    <Info className="w-4 h-4 text-[#00f7ff]" />
+                  </div>
+                  <span className="text-sm font-bold text-[#00f7ff] uppercase tracking-wider">Cara Penggunaan — Alur NAS / Router</span>
+                </div>
+                {showTutorial ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              {showTutorial && (
+                <div className="px-6 pb-6 border-t border-[#00f7ff]/10">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-5">
+                    {[
+                      { step: 1, icon: '🔌', color: 'border-[#bc13fe]/40 bg-[#bc13fe]/5', title: 'Sambungkan VPN', desc: 'Pastikan NAS/router sudah tersambung ke VPN (L2TP, WireGuard, atau SSTP) melalui menu VPN Client.', link: '/admin/network/vpn-client', linkLabel: '→ Menu VPN Client' },
+                      { step: 2, icon: '➕', color: 'border-[#00f7ff]/40 bg-[#00f7ff]/5', title: 'Tambah NAS/Router', desc: 'Klik "+ Tambah Router/NAS". Isi Nama, IP VPN NAS (mis. 10.20.30.10), username & password Winbox/API MikroTik.', link: null, linkLabel: null },
+                      { step: 3, icon: '🔬', color: 'border-green-500/40 bg-green-500/5', title: 'Test & Simpan', desc: 'Klik "Test Koneksi" untuk verifikasi API MikroTik dapat diakses. Simpan jika berhasil. NAS terdaftar sebagai RADIUS client.', link: null, linkLabel: null },
+                      { step: 4, icon: '📜', color: 'border-amber-500/40 bg-amber-500/5', title: 'Generate RADIUS Script', desc: 'Klik "RADIUS Script" pada kartu NAS. Copy script RouterOS yang dihasilkan dan paste di terminal/WinBox MikroTik NAS tersebut.', link: null, linkLabel: null },
+                    ].map(item => (
+                      <div key={item.step} className={`rounded-xl border ${item.color} p-4`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xl">{item.icon}</span>
+                          <span className="text-xs font-bold text-muted-foreground bg-muted/50 dark:bg-slate-800/80 px-2 py-0.5 rounded-full">Step {item.step}</span>
+                        </div>
+                        <p className="text-sm font-bold text-foreground mb-1">{item.title}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                        {item.link && (
+                          <a href={item.link} className="inline-block mt-2 text-xs font-medium text-[#00f7ff] hover:underline">{item.linkLabel}</a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 p-3 rounded-xl border border-[#00f7ff]/20 bg-[#00f7ff]/5">
+                    <p className="text-xs text-[#00f7ff]/80"><span className="font-bold">ℹ️ Tentang NAS/Router:</span> NAS (Network Access Server) adalah MikroTik router di lokasi pelanggan yang menangani autentikasi PPPoE atau Hotspot. Setiap NAS harus terdaftar di sini agar RADIUS server SALFANET dapat mengenali request autentikasi dari NAS tersebut.</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

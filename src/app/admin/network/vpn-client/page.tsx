@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { showSuccess, showError, showConfirm } from '@/lib/sweetalert';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Shield, Plus, Trash2, Eye, Loader2, Users, Server, Copy, CheckCircle, XCircle, Wifi, Radio, Terminal, ChevronDown, ChevronUp, Route, Zap } from 'lucide-react';
+import { Shield, Plus, Trash2, Eye, Loader2, Users, Server, Copy, CheckCircle, XCircle, Wifi, Radio, Terminal, ChevronDown, ChevronUp, Route, Zap, Info, Key } from 'lucide-react';
 
 interface VpnClient {
   id: string
@@ -17,6 +17,8 @@ interface VpnClient {
   winboxPort?: number
   apiUsername?: string
   apiPassword?: string
+  clientPublicKey?: string | null
+  clientPrivateKey?: string | null
   isActive: boolean
   isRadiusServer: boolean
   createdAt: string
@@ -29,6 +31,9 @@ interface VpnServer {
   host: string
   name: string
   subnet: string
+  wgPublicKey?: string | null
+  wgPort?: number | null
+  wgEnabled?: boolean
 }
 
 interface Credentials {
@@ -43,6 +48,10 @@ interface Credentials {
   vpnType?: string
   nasSecret?: string        // RADIUS shared secret for this NAS
   radiusServerIp?: string  // RADIUS server VPN IP
+  clientPrivateKey?: string | null  // WireGuard private key
+  serverPublicKey?: string | null   // WireGuard server public key
+  wgPort?: number | null            // WireGuard listen port
+  serverHost?: string               // VPN server host (for WG endpoint)
 }
 
 export default function VpnClientPage() {
@@ -53,7 +62,7 @@ export default function VpnClientPage() {
   const [showModal, setShowModal] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
   const [credentials, setCredentials] = useState<Credentials | null>(null);
-  const [selectedVpnType, setSelectedVpnType] = useState<'l2tp' | 'pptp' | 'sstp'>('l2tp');
+  const [selectedVpnType, setSelectedVpnType] = useState<'l2tp' | 'pptp' | 'sstp' | 'wireguard'>('l2tp');
   const [creating, setCreating] = useState(false);
   const [expandedRoutingPanels, setExpandedRoutingPanels] = useState<Set<string>>(new Set());
   const [showApplyRoutingModal, setShowApplyRoutingModal] = useState(false);
@@ -65,8 +74,17 @@ export default function VpnClientPage() {
     name: '',
     description: '',
     vpnServerId: '',
-    vpnType: 'l2tp' as 'l2tp' | 'pptp' | 'sstp',
+    vpnType: 'l2tp' as 'l2tp' | 'pptp' | 'sstp' | 'wireguard',
   });
+  // WireGuard NAS Peers (VPS as WG server)
+  const [wgPeers, setWgPeers] = useState<{ publicKey: string; endpoint?: string; allowedIps?: string; lastHandshake?: string }[]>([]);
+  const [wgLoading, setWgLoading] = useState(false);
+  const [wgAddingPeer, setWgAddingPeer] = useState(false);
+  const [wgNewPeerName, setWgNewPeerName] = useState('');
+  const [wgGeneratedScript, setWgGeneratedScript] = useState<string | null>(null);
+  const [showWgSection, setShowWgSection] = useState(false);
+  // Tutorial toggle
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     loadClients();
@@ -127,6 +145,83 @@ export default function VpnClientPage() {
       setApplyRoutingRunning(false);
     }
   };
+
+  // ── WireGuard NAS Peer handlers (VPS as WG server) ─────────────────────
+  const loadWgPeers = async () => {
+    setWgLoading(true);
+    try {
+      const res = await fetch('/api/network/vps-wg-peer');
+      const data = await res.json();
+      if (data.installed) {
+        setWgPeers(data.peers || []);
+      } else {
+        setWgPeers([]);
+        showError('WireGuard server belum terinstall. Install dulu melalui menu VPN Server → WireGuard.');
+      }
+    } catch (e: any) {
+      showError('Gagal muat peers WireGuard: ' + e.message);
+    } finally {
+      setWgLoading(false);
+    }
+  };
+
+  const handleWgAddPeer = async () => {
+    if (!wgNewPeerName.trim()) { showError('Nama NAS wajib diisi'); return; }
+    setWgAddingPeer(true);
+    try {
+      const res = await fetch('/api/network/vps-wg-peer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', nasName: wgNewPeerName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Gagal tambah peer');
+      const script = `# WireGuard NAS Client Setup — ${wgNewPeerName.trim()}
+# Generated: ${new Date().toISOString().split('T')[0]}
+# Paste script ini ke terminal MikroTik (RouterOS 7+)
+# ──────────────────────────────────────────────────
+
+/interface/wireguard/add name=wg-salfanet private-key="${data.clientPrivateKey || '<PRIVATE_KEY>'}"
+/interface/wireguard/peers/add interface=wg-salfanet public-key="${data.serverPublicKey}" endpoint-address="${data.serverEndpoint?.split(':')[0]}" endpoint-port=${data.wgPort} allowed-address="${data.allowedIps}" persistent-keepalive=25
+/ip/address/add address=${data.vpnIp}/32 interface=wg-salfanet
+
+# Route ke subnet VPN melalui WireGuard
+/ip/route/add dst-address=${data.allowedIps || '10.200.0.0/24'} gateway=wg-salfanet
+
+# RADIUS via WireGuard
+/radius/remove [find where comment~"SALFANET"]
+/radius/add address=${data.allowedIps?.split('/')[0] || data.serverEndpoint?.split(':')[0]} secret=<RADIUS_SECRET> service=ppp,hotspot authentication-port=1812 accounting-port=1813 timeout=3000 comment="SALFANET RADIUS via WireGuard"
+/ppp/aaa/set use-radius=yes accounting=yes interim-update=5m
+/radius/incoming/set accept=yes port=3799`;
+      setWgGeneratedScript(script);
+      setWgNewPeerName('');
+      showSuccess(`Peer "${wgNewPeerName}" berhasil ditambahkan! VPN IP: ${data.vpnIp}`);
+      loadWgPeers();
+    } catch (e: any) {
+      showError('Gagal tambah peer WireGuard: ' + e.message);
+    } finally {
+      setWgAddingPeer(false);
+    }
+  };
+
+  const handleWgRemovePeer = async (pubKey: string) => {
+    const confirmed = await showConfirm('Hapus peer WireGuard ini? Koneksi NAS akan terputus.', 'Hapus Peer WireGuard');
+    if (!confirmed) return;
+    try {
+      const res = await fetch('/api/network/vps-wg-peer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove', publicKey: pubKey }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Gagal hapus peer');
+      showSuccess('Peer WireGuard dihapus');
+      setWgPeers(prev => prev.filter(p => p.publicKey !== pubKey));
+    } catch (e: any) {
+      showError('Gagal hapus peer: ' + e.message);
+    }
+  };
+  // ── End WireGuard handlers ──────────────────────────────────────────────
 
   const generateVpsRoutingScript = (client: VpnClient): string => {
     const server = vpnServers.find(s => s.id === client.vpnServerId);
@@ -294,11 +389,15 @@ export default function VpnClientPage() {
     if (!server) return
 
     const normalizedClientType = String(client.vpnType || 'l2tp').toLowerCase()
-    const clientVpnType = (normalizedClientType === 'pptp' || normalizedClientType === 'sstp' ? normalizedClientType : 'l2tp') as 'l2tp' | 'pptp' | 'sstp'
+    const clientVpnType = (
+      normalizedClientType === 'pptp' || normalizedClientType === 'sstp' || normalizedClientType === 'wireguard'
+        ? normalizedClientType : 'l2tp'
+    ) as 'l2tp' | 'pptp' | 'sstp' | 'wireguard'
     const radiusServer = clients.find(c => c.isRadiusServer)
 
     setCredentials({
       server: server.host,
+      serverHost: server.host,
       username: client.username,
       password: client.password,
       vpnIp: client.vpnIp,
@@ -309,6 +408,9 @@ export default function VpnClientPage() {
       vpnType: clientVpnType,
       nasSecret: client.nasSecret || undefined,
       radiusServerIp: (!client.isRadiusServer && radiusServer) ? radiusServer.vpnIp : undefined,
+      clientPrivateKey: client.clientPrivateKey || null,
+      serverPublicKey: server.wgPublicKey || null,
+      wgPort: server.wgPort || null,
     })
     setSelectedVpnType(clientVpnType)
     setShowCredentials(true)
@@ -392,6 +494,30 @@ ${radiusSection}`.trim()
         `add connect-to=${credentials.server} port=992 user=${credentials.username} password=${credentials.password} disabled=no name=sstp-client-salfanet add-default-route=no authentication=mschap2 certificate=none comment="SALFANET VPN"`,
         'sstp-client'
       )
+    } else if (selectedVpnType === 'wireguard') {
+      // WireGuard script for RouterOS 7+
+      const serverPk = credentials.serverPublicKey || '<SERVER_PUBLIC_KEY>'
+      const clientPk = credentials.clientPrivateKey || '<CLIENT_PRIVATE_KEY>'
+      const wgPort = credentials.wgPort || 51820
+      const serverHost = credentials.serverHost || credentials.server
+      return `# ============================================================
+# MikroTik WireGuard Client Setup Script (RouterOS 7+)
+# NAS IP: ${credentials.vpnIp}
+# VPN Server: ${serverHost}
+# ============================================================
+
+# 1. Buat WireGuard interface dengan private key NAS
+/interface/wireguard/add name=wg-salfanet private-key="${clientPk}"
+
+# 2. Tambah peer (VPS WireGuard server)
+/interface/wireguard/peers/add interface=wg-salfanet public-key="${serverPk}" endpoint-address="${serverHost}" endpoint-port=${wgPort} allowed-address="10.200.0.0/24" persistent-keepalive=25
+
+# 3. Assign IP address ke interface WireGuard
+/ip/address/add address=${credentials.vpnIp}/32 interface=wg-salfanet
+
+# 4. Route ke subnet VPN melalui WireGuard
+/ip/route/add dst-address=10.200.0.0/24 gateway=wg-salfanet
+${radiusSection}`.trim()
     } else {
       return scriptBase(
         `add connect-to=${credentials.server} user=${credentials.username} password=${credentials.password} disabled=no name=pptp-client-salfanet add-default-route=no comment="SALFANET VPN"`,
@@ -534,6 +660,161 @@ ${radiusSection}`.trim()
                   <Wifi className="w-6 h-6 text-green-400" />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* ── Tutorial / Flow Banner ───────────────────────────────── */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl border border-[#00f7ff]/20 rounded-2xl overflow-hidden">
+              <button
+                onClick={() => setShowTutorial(!showTutorial)}
+                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-[#00f7ff]/5 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 bg-[#00f7ff]/20 rounded-lg flex items-center justify-center">
+                    <Info className="w-4 h-4 text-[#00f7ff]" />
+                  </div>
+                  <span className="text-sm font-bold text-[#00f7ff] uppercase tracking-wider">Cara Penggunaan — Alur VPN Client</span>
+                </div>
+                {showTutorial ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              {showTutorial && (
+                <div className="px-6 pb-6 border-t border-[#00f7ff]/10">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-5">
+                    {[
+                      { step: 1, icon: '🖥️', color: 'border-[#bc13fe]/40 bg-[#bc13fe]/5', title: 'VPN Server Dulu', desc: 'Pastikan VPN Server sudah dikonfigurasi di menu VPN Server (MikroTik CHR atau WireGuard VPS).', link: '/admin/network/vpn-server', linkLabel: '→ Menu VPN Server' },
+                      { step: 2, icon: '➕', color: 'border-[#00f7ff]/40 bg-[#00f7ff]/5', title: 'Buat VPN Client', desc: 'Klik "+ Tambah VPN Client", pilih protokol (WireGuard/L2TP/SSTP/PPTP), dan nama NAS. Sistem otomatis generate user & konfigurasi di CHR.', link: null, linkLabel: null },
+                      { step: 3, icon: '📋', color: 'border-green-500/40 bg-green-500/5', title: 'Apply Script ke NAS', desc: 'Copy script RouterOS yang dihasilkan → paste di terminal MikroTik/WinBox pada router/NAS pelanggan. VPN akan tersambung otomatis.', link: null, linkLabel: null },
+                      { step: 4, icon: '📡', color: 'border-amber-500/40 bg-amber-500/5', title: 'Tandai RADIUS Server', desc: 'Centang "Jadikan RADIUS Server" pada client yang jalan di VPS/Raspberry Pi. Lalu daftarkan NAS di menu NAS/Router.', link: '/admin/network/routers', linkLabel: '→ Menu NAS/Router' },
+                    ].map(item => (
+                      <div key={item.step} className={`rounded-xl border ${item.color} p-4`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xl">{item.icon}</span>
+                          <span className="text-xs font-bold text-muted-foreground bg-muted/50 dark:bg-slate-800/80 px-2 py-0.5 rounded-full">Step {item.step}</span>
+                        </div>
+                        <p className="text-sm font-bold text-foreground mb-1">{item.title}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                        {item.link && (
+                          <a href={item.link} className="inline-block mt-2 text-xs font-medium text-[#00f7ff] hover:underline">{item.linkLabel}</a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 p-3 rounded-xl border border-amber-500/20 bg-amber-500/5">
+                    <p className="text-xs text-amber-400/90"><span className="font-bold">💡 Tips protokol:</span> Gunakan <strong>WireGuard</strong> untuk RouterOS 7+ (lebih cepat &amp; modern). Gunakan <strong>L2TP/SSTP</strong> untuk RouterOS 6 atau jika WireGuard tidak support. PPTP sudah deprecated, hindari untuk keamanan.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── WireGuard NAS Peers (VPS sebagai WG Server) ────────────── */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl border border-[#bc13fe]/30 rounded-2xl overflow-hidden">
+              <button
+                onClick={() => { setShowWgSection(!showWgSection); if (!showWgSection && wgPeers.length === 0) loadWgPeers(); }}
+                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-[#bc13fe]/5 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 bg-gradient-to-br from-[#bc13fe]/30 to-[#00f7ff]/30 rounded-lg flex items-center justify-center">
+                    <Wifi className="w-4 h-4 text-[#bc13fe]" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold text-[#bc13fe] uppercase tracking-wider">WireGuard NAS Client Setup</span>
+                    <span className="ml-2 text-xs text-muted-foreground">— VPS sebagai WireGuard Server (RouterOS 7+)</span>
+                  </div>
+                  {wgPeers.length > 0 && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-[#bc13fe]/20 text-[#bc13fe] rounded-full border border-[#bc13fe]/40">{wgPeers.length} peers</span>
+                  )}
+                </div>
+                {showWgSection ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              {showWgSection && (
+                <div className="border-t border-[#bc13fe]/20">
+                  {/* Info */}
+                  <div className="px-6 pt-4 pb-2">
+                    <p className="text-xs text-muted-foreground">Tambahkan NAS/router sebagai WireGuard peer pada VPS server. Setiap NAS mendapat IP VPN dan script RouterOS untuk dikonfigurasi. <strong className="text-[#00f7ff]">Pastikan WireGuard server sudah terinstall di VPS</strong> melalui menu VPN Server → tombol WireGuard.</p>
+                  </div>
+                  {/* Add Peer Form */}
+                  <div className="px-6 py-4 flex items-center gap-3 border-b border-[#bc13fe]/10">
+                    <input
+                      type="text"
+                      value={wgNewPeerName}
+                      onChange={(e) => setWgNewPeerName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleWgAddPeer()}
+                      placeholder="Nama NAS (contoh: NAS-Kantor-A)"
+                      className="flex-1 px-4 py-2.5 bg-input border border-[#bc13fe]/30 rounded-xl text-foreground text-sm placeholder-muted-foreground focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/20 transition-all"
+                    />
+                    <button
+                      onClick={handleWgAddPeer}
+                      disabled={wgAddingPeer}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#bc13fe] to-[#ff44cc] text-white font-bold rounded-xl hover:shadow-[0_0_20px_rgba(188,19,254,0.4)] transition-all disabled:opacity-50 text-sm whitespace-nowrap"
+                    >
+                      {wgAddingPeer ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      Tambah Peer
+                    </button>
+                    <button
+                      onClick={loadWgPeers}
+                      disabled={wgLoading}
+                      className="p-2.5 bg-muted/60 dark:bg-slate-800/60 border border-border rounded-xl text-muted-foreground hover:text-foreground transition-colors"
+                      title="Refresh"
+                    >
+                      {wgLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Server className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {/* Generated Script */}
+                  {wgGeneratedScript && (
+                    <div className="mx-6 my-4 rounded-xl overflow-hidden border border-green-500/30">
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-green-500/10 border-b border-green-500/20">
+                        <p className="text-xs font-bold text-green-400 uppercase tracking-wider">✅ Script RouterOS — Paste di MikroTik NAS</p>
+                        <button onClick={() => copyToClipboard(wgGeneratedScript)} className="flex items-center gap-1.5 px-3 py-1 bg-green-500/20 border border-green-500/30 text-green-400 rounded-lg hover:bg-green-500/30 transition-all text-xs font-medium">
+                          <Copy className="w-3 h-3" /> Copy
+                        </button>
+                      </div>
+                      <pre className="p-4 bg-gray-100 dark:bg-slate-950 text-green-700 dark:text-green-400 text-xs font-mono overflow-x-auto max-h-64 overflow-y-auto whitespace-pre leading-relaxed">
+                        {wgGeneratedScript}
+                      </pre>
+                      <div className="px-4 py-2 bg-amber-500/5 border-t border-amber-500/20">
+                        <p className="text-xs text-amber-400/80">⚠️ Ganti &lt;RADIUS_SECRET&gt; dengan secret RADIUS dari menu NAS/Router → Generate Script.</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Peers List */}
+                  {wgLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-[#bc13fe]" />
+                    </div>
+                  ) : wgPeers.length === 0 ? (
+                    <div className="px-6 py-6 text-center">
+                      <p className="text-sm text-muted-foreground">Belum ada WireGuard peer. Tambahkan nama NAS di atas untuk membuat peer baru.</p>
+                    </div>
+                  ) : (
+                    <div className="px-6 pb-4">
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 pt-3">Active Peers ({wgPeers.length})</p>
+                      <div className="space-y-2">
+                        {wgPeers.map((peer, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-3 bg-muted/40 dark:bg-slate-900/60 border border-[#bc13fe]/20 rounded-xl group">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-mono text-xs text-foreground truncate">{peer.publicKey}</p>
+                              <div className="flex items-center gap-3 mt-1">
+                                {peer.allowedIps && <span className="text-xs text-[#00f7ff]">{peer.allowedIps}</span>}
+                                {peer.lastHandshake && <span className="text-xs text-muted-foreground">Last: {peer.lastHandshake}</span>}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleWgRemovePeer(peer.publicKey)}
+                              className="ml-3 p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                              title="Hapus peer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -746,7 +1027,7 @@ ${radiusSection}`.trim()
                     VPN Protocol <span className="text-red-400">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {(['l2tp', 'pptp', 'sstp'] as const).map((type) => (
+                    {(['wireguard', 'l2tp', 'pptp', 'sstp'] as const).map((type) => (
                       <button
                         key={type}
                         type="button"
@@ -756,10 +1037,16 @@ ${radiusSection}`.trim()
                           : 'bg-muted/60 dark:bg-slate-800/60 border border-[#bc13fe]/30 text-foreground hover:bg-[#bc13fe]/20'
                         }`}
                       >
-                        {type === 'l2tp' ? 'L2TP/IPSec' : type.toUpperCase()}
+                        {type === 'l2tp' ? 'L2TP/IPSec' : type === 'wireguard' ? 'WireGuard' : type.toUpperCase()}
                       </button>
                     ))}
                   </div>
+                  {formData.vpnType === 'wireguard' && (
+                    <p className="text-xs text-[#00f7ff]/80 mt-2 flex items-center gap-1"><Wifi className="w-3 h-3" /> WireGuard memerlukan RouterOS 7+ di NAS. Sistem akan menambah peer ke CHR secara otomatis.</p>
+                  )}
+                  {formData.vpnType === 'pptp' && (
+                    <p className="text-xs text-amber-400/80 mt-2">⚠️ PPTP sudah deprecated dan kurang aman. Gunakan WireGuard atau L2TP jika memungkinkan.</p>
+                  )}
                 </div>
 
                 <div>
@@ -881,7 +1168,7 @@ ${radiusSection}`.trim()
                     {t('network.selectVpnType')}
                   </p>
                   <div className="flex gap-2 flex-wrap">
-                    {(['l2tp', 'pptp', 'sstp'] as const).map((type) => (
+                    {(['wireguard', 'l2tp', 'pptp', 'sstp'] as const).map((type) => (
                       <button
                         key={type}
                         onClick={() => setSelectedVpnType(type)}
@@ -890,10 +1177,37 @@ ${radiusSection}`.trim()
                           : 'bg-muted/60 dark:bg-slate-800/60 border border-[#bc13fe]/30 text-foreground hover:bg-[#bc13fe]/20'
                           }`}
                       >
-                        {type === 'l2tp' ? 'L2TP/IPSec' : type.toUpperCase()}
+                        {type === 'l2tp' ? 'L2TP/IPSec' : type === 'wireguard' ? 'WireGuard' : type.toUpperCase()}
                       </button>
                     ))}
                   </div>
+                  {selectedVpnType === 'wireguard' && (
+                    <div className="mt-3 p-3 bg-[#bc13fe]/10 border border-[#bc13fe]/30 rounded-xl">
+                      <div className="flex items-start gap-2">
+                        <Key className="w-4 h-4 text-[#bc13fe] mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs font-bold text-[#bc13fe] mb-1">WireGuard Keys</p>
+                          {credentials.clientPrivateKey ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground w-20 shrink-0">Private Key:</span>
+                                <code className="text-xs font-mono text-green-400 truncate">{credentials.clientPrivateKey.substring(0, 20)}...</code>
+                                <button onClick={() => copyToClipboard(credentials.clientPrivateKey!)} className="text-xs text-[#00f7ff] hover:underline shrink-0"><Copy className="w-3 h-3" /></button>
+                              </div>
+                              {credentials.serverPublicKey && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground w-20 shrink-0">Server PubKey:</span>
+                                  <code className="text-xs font-mono text-amber-400 truncate">{credentials.serverPublicKey.substring(0, 20)}...</code>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Key dihasilkan otomatis saat membuat client. Gunakan tombol "Lihat" pada client WireGuard.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* MikroTik Script */}
