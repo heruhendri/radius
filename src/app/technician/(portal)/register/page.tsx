@@ -477,6 +477,7 @@ export default function TechnicianRegisterPage() {
                       theme="light"
                       hint="Format: JPG/PNG/WebP, maks. 5MB"
                     />
+                  </div>
                 </div>
               </div>
 
