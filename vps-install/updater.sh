@@ -145,6 +145,30 @@ if [ -n "$USE_BRANCH" ]; then
     pm2 restart "$PM2_CRON_NAME" 2>/dev/null || true
     pm2 save
 
+    # ─── VPN post-update (sama seperti mode release) ──────────────────────
+    # VPN Client (CHR forwarding)
+    if [ -f "/usr/local/bin/vpn-connect" ]; then
+        REINSTALL_VPN=true bash "$APP_DIR/vps-install/install-vpn-client.sh" 2>/dev/null \
+            && print_success "VPN client (CHR mode) helper diperbarui" || true
+    fi
+    # WireGuard Server
+    if [ -f "/etc/wireguard/wg-server-info.json" ] && [ -f "$APP_DIR/vps-install/install-wg-server.sh" ]; then
+        WG_IFACE=$(grep -o '"interface": *"[^"]*"' /etc/wireguard/wg-server-info.json 2>/dev/null | sed 's/.*: *"//;s/"//' || echo "wg0")
+        WG_PORT=$(grep -o '"listenPort": *[0-9]*' /etc/wireguard/wg-server-info.json 2>/dev/null | grep -o '[0-9]*$' || echo "51820")
+        WG_SUBNET=$(grep -o '"subnet": *"[^"]*"' /etc/wireguard/wg-server-info.json 2>/dev/null | sed 's/.*: *"//;s/"//' || echo "10.200.0.0/24")
+        WG_IFACE="$WG_IFACE" WG_PORT="$WG_PORT" WG_SUBNET="$WG_SUBNET" \
+            bash "$APP_DIR/vps-install/install-wg-server.sh" 2>/dev/null \
+            && print_success "WireGuard server diperbarui" || true
+    fi
+    # L2TP/IPsec Server
+    if [ -f "/etc/salfanet/l2tp/l2tp-server-info.json" ] && [ -f "$APP_DIR/vps-install/install-l2tp-server.sh" ]; then
+        L2TP_PSK=$(grep -o '"ipsecPsk": *"[^"]*"' /etc/salfanet/l2tp/l2tp-server-info.json 2>/dev/null | sed 's/.*: *"//;s/"//' || echo "")
+        L2TP_SUBNET=$(grep -o '"subnet": *"[^"]*"' /etc/salfanet/l2tp/l2tp-server-info.json 2>/dev/null | sed 's/.*: *"//;s/"//' || echo "10.201.0.0/24")
+        L2TP_PSK="$L2TP_PSK" L2TP_SUBNET="$L2TP_SUBNET" \
+            bash "$APP_DIR/vps-install/install-l2tp-server.sh" 2>/dev/null \
+            && print_success "L2TP/IPsec server diperbarui" || true
+    fi
+
     NEW_VERSION=$(node -p "require('$APP_DIR/package.json').version" 2>/dev/null || echo "unknown")
     echo ""
     print_success "Update complete! ${CURRENT_VERSION} → ${NEW_VERSION}"
@@ -221,7 +245,7 @@ if [ -z "$STAGED_DIR" ]; then
     exit 1
 fi
 
-# ─── Ensure required system packages (sshpass, xl2tpd) ───────────────────
+# ─── Ensure required system packages ─────────────────────────────────────
 print_step "Checking system dependencies"
 MISSING_PKGS=""
 for pkg in sshpass xl2tpd; do
@@ -229,11 +253,27 @@ for pkg in sshpass xl2tpd; do
         MISSING_PKGS="$MISSING_PKGS $pkg"
     fi
 done
+# Jika WireGuard server sudah terinstall, pastikan paket wg tersedia
+if [ -f "/etc/wireguard/wg-server-info.json" ]; then
+    for pkg in wireguard wireguard-tools; do
+        if ! dpkg -s "$pkg" &>/dev/null; then
+            MISSING_PKGS="$MISSING_PKGS $pkg"
+        fi
+    done
+fi
+# Jika L2TP server sudah terinstall, pastikan strongswan+xl2tpd tersedia
+if [ -f "/etc/salfanet/l2tp/l2tp-server-info.json" ]; then
+    for pkg in strongswan xl2tpd; do
+        if ! dpkg -s "$pkg" &>/dev/null; then
+            MISSING_PKGS="$MISSING_PKGS $pkg"
+        fi
+    done
+fi
 if [ -n "$MISSING_PKGS" ]; then
     print_info "Installing missing packages:$MISSING_PKGS"
     apt-get install -y $MISSING_PKGS || print_info "Warning: some packages could not be installed"
 else
-    print_success "sshpass and xl2tpd already installed"
+    print_success "System packages OK (sshpass, xl2tpd, wg tools if applicable)"
 fi
 
 # ─── Stop services ────────────────────────────────────────────────────────
@@ -296,6 +336,67 @@ node_modules/.bin/prisma db push --accept-data-loss 2>/dev/null || \
 print_step "Applying seed data (new templates & config)"
 npm run db:seed 2>/dev/null || print_info "Seed skipped (check manually)"
 
+# ─── Update VPN Client (SSTP/L2TP ke CHR) jika sudah terinstall ──────────
+# Flow lama: VPS sebagai client → konek ke MikroTik CHR → FreeRADIUS
+# Tetap dipertahankan untuk deployment VPS lokal lewat CHR
+VPN_CLIENT_CONF="/etc/vpn/vpn.conf"
+if [ -f "$VPN_CLIENT_CONF" ] || systemctl is-active --quiet vpn-tunnel 2>/dev/null || [ -f "/usr/local/bin/vpn-connect" ]; then
+    print_step "Update VPN Client (CHR forwarding — SSTP/L2TP client)"
+    if [ -f "$APP_DIR/vps-install/install-vpn-client.sh" ]; then
+        # Re-install hanya update helper scripts + service file, tidak reset konfigurasi
+        REINSTALL_VPN=true bash "$APP_DIR/vps-install/install-vpn-client.sh" 2>/dev/null \
+            && print_success "VPN client (CHR mode) helper diperbarui" \
+            || print_info "VPN client update skipped (tidak kritis)"
+    fi
+fi
+
+# ─── Update WireGuard Server jika sudah terinstall ───────────────────────
+# Flow baru: VPS sebagai WireGuard server, NAS konek langsung
+WG_INFO="/etc/wireguard/wg-server-info.json"
+if [ -f "$WG_INFO" ]; then
+    print_step "Update WireGuard VPN Server"
+    WG_IFACE=$(grep -o '"interface": *"[^"]*"' "$WG_INFO" 2>/dev/null | sed 's/.*: *"//;s/"//' || echo "wg0")
+    WG_SUBNET=$(grep -o '"subnet": *"[^"]*"' "$WG_INFO" 2>/dev/null | sed 's/.*: *"//;s/"//' || echo "10.200.0.0/24")
+    WG_PORT=$(grep -o '"listenPort": *[0-9]*' "$WG_INFO" 2>/dev/null | grep -o '[0-9]*$' || echo "51820")
+
+    if [ -f "$APP_DIR/vps-install/install-wg-server.sh" ]; then
+        print_info "Re-running WireGuard server installer (idempotent, peers tidak terputus)"
+        # jalankan dengan subnet/port yang sama dari info file yang ada
+        WG_IFACE="$WG_IFACE" WG_PORT="$WG_PORT" WG_SUBNET="$WG_SUBNET" \
+            bash "$APP_DIR/vps-install/install-wg-server.sh" \
+            && print_success "WireGuard server diperbarui (wg-server-info.json + wg syncconf)" \
+            || print_info "WireGuard update gagal — cek: systemctl status wg-quick@${WG_IFACE}"
+    else
+        # Jika tidak ada script (versi lama), pastikan service jalan saja
+        systemctl is-active --quiet "wg-quick@${WG_IFACE}" \
+            && print_success "WireGuard service masih aktif" \
+            || { systemctl start "wg-quick@${WG_IFACE}" 2>/dev/null && print_success "WireGuard service direstart"; }
+    fi
+fi
+
+# ─── Update L2TP/IPsec Server jika sudah terinstall ──────────────────────
+# Fallback untuk RouterOS 6 yang tidak support WireGuard
+L2TP_INFO="/etc/salfanet/l2tp/l2tp-server-info.json"
+if [ -f "$L2TP_INFO" ]; then
+    print_step "Update L2TP/IPsec VPN Server"
+    if [ -f "$APP_DIR/vps-install/install-l2tp-server.sh" ]; then
+        # Preserve PSK agar NAS tidak perlu rekonfigurasi
+        L2TP_PSK=$(grep -o '"ipsecPsk": *"[^"]*"' "$L2TP_INFO" 2>/dev/null | sed 's/.*: *"//;s/"//' || echo "")
+        L2TP_SUBNET=$(grep -o '"subnet": *"[^"]*"' "$L2TP_INFO" 2>/dev/null | sed 's/.*: *"//;s/"//' || echo "10.201.0.0/24")
+
+        print_info "Re-running L2TP server installer (PSK dipertahankan)"
+        L2TP_PSK="$L2TP_PSK" L2TP_SUBNET="$L2TP_SUBNET" \
+            bash "$APP_DIR/vps-install/install-l2tp-server.sh" \
+            && print_success "L2TP/IPsec server diperbarui" \
+            || print_info "L2TP update gagal — cek: systemctl status xl2tpd"
+    else
+        # Pastikan service jalan
+        systemctl is-active --quiet xl2tpd \
+            && print_success "xl2tpd service masih aktif" \
+            || { systemctl start xl2tpd 2>/dev/null && print_success "xl2tpd direstart"; }
+    fi
+fi
+
 # ─── Restart services ─────────────────────────────────────────────────────
 print_step "Starting PM2 processes"
 pm2 start "$PM2_APP_NAME" 2>/dev/null || true
@@ -317,4 +418,8 @@ echo ""
 print_info "Cek status   : pm2 status"
 print_info "Cek log      : pm2 logs ${PM2_APP_NAME}"
 print_info "Backup ada di: $BACKUP_BASE"
+# Tampilkan status VPN
+[ -f "/usr/local/bin/vpn-connect" ]               && print_info "VPN Client (CHR) : vpn-connect status"
+[ -f "/etc/wireguard/wg-server-info.json" ]        && print_info "WireGuard Server : wg show wg0"
+[ -f "/etc/salfanet/l2tp/l2tp-server-info.json" ]  && print_info "L2TP/IPsec Server: systemctl status xl2tpd"
 echo ""
