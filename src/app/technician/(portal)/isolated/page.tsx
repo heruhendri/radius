@@ -94,7 +94,7 @@ export default function TechnicianIsolatedPage() {
             <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{filtered.length} {t('techPortal.customers')}</p>
           </div>
         </div>
-        <button onClick={fetchData} className="p-2 bg-slate-100 dark:bg-[#1a0f35] border border-slate-200 dark:border-[#bc13fe]/20 rounded-xl hover:bg-slate-200 dark:hover:bg-[#bc13fe]/10 transition">
+        <button onClick={fetchData} title="Perbarui Data" className="p-2 bg-slate-100 dark:bg-[#1a0f35] border border-slate-200 dark:border-[#bc13fe]/20 rounded-xl hover:bg-slate-200 dark:hover:bg-[#bc13fe]/10 transition">
           <RefreshCw className={`w-4 h-4 text-slate-600 dark:text-[#e0d0ff] ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>

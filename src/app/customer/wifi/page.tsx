@@ -281,6 +281,7 @@ export default function CustomerWiFiPage() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
+            title="Perbarui Data"
             className="p-2 rounded-lg border border-slate-700 text-slate-400 hover:text-cyan-400 hover:border-cyan-400 transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />

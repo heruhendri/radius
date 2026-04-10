@@ -312,7 +312,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
               <button
                 onClick={toggleTheme}
                 className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 dark:bg-cyan-500/10 hover:bg-slate-200 dark:hover:bg-cyan-500/20 border border-slate-200 dark:border-cyan-500/30 transition-all"
-                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                title={isDark ? 'Mode Terang' : 'Mode Gelap'}
               >
                 {isDark ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-slate-600" />}
               </button>
@@ -341,6 +341,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
               <button
                 onClick={toggleTheme}
                 className="p-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 rounded-xl transition border border-slate-200 dark:border-white/20 flex items-center justify-center"
+                title={isDark ? 'Mode Terang' : 'Mode Gelap'}
               >
                 {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
               </button>

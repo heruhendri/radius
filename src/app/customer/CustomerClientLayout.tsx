@@ -404,7 +404,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
             <button
               onClick={toggleTheme}
               className="p-2 flex items-center justify-center rounded-xl hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/20 transition-all"
-              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              title={isDark ? 'Mode Terang' : 'Mode Gelap'}
             >
               {isDark
                 ? <Sun className="w-4 h-4 text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.7)]" />
@@ -514,7 +514,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
               <button
                 onClick={toggleTheme}
                 className="p-2 flex items-center justify-center hover:bg-cyan-500/20 rounded-xl transition-all border border-cyan-500/30"
-                title={isDark ? 'Light Mode' : 'Dark Mode'}
+                title={isDark ? 'Mode Terang' : 'Mode Gelap'}
               >
                 {isDark
                   ? <Sun className="w-4 h-4 text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.7)]" />

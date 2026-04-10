@@ -95,7 +95,7 @@ export default function TechnicianOnlinePage() {
             <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{pagination.total} {t('techPortal.activeUsers')}</p>
           </div>
         </div>
-        <button onClick={() => fetchSessions(pagination.page)} className="p-2 bg-slate-100 dark:bg-[#1a0f35] border border-slate-200 dark:border-[#bc13fe]/20 rounded-xl hover:bg-slate-200 dark:hover:bg-[#bc13fe]/10 transition">
+        <button onClick={() => fetchSessions(pagination.page)} title="Perbarui Data" className="p-2 bg-slate-100 dark:bg-[#1a0f35] border border-slate-200 dark:border-[#bc13fe]/20 rounded-xl hover:bg-slate-200 dark:hover:bg-[#bc13fe]/10 transition">
           <RefreshCw className={`w-4 h-4 text-slate-600 dark:text-[#e0d0ff] ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
