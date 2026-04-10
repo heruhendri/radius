@@ -129,22 +129,39 @@ export async function GET() {
     })
 
     // Fetch NAS secrets from router (nas) table for each client
+    // Primary: match by vpnClientId (linked); Fallback: match by nasname=vpnIp (older unlinked data)
     const clientIds = clients.map((c: { id: string }) => c.id).filter(Boolean)
-    const nasEntries = clientIds.length > 0
-      ? await prisma.router.findMany({
-          where: { vpnClientId: { in: clientIds } },
-          select: { vpnClientId: true, secret: true, nasname: true },
-        })
-      : []
-    const nasMap = new Map(nasEntries.map((n: { vpnClientId: string | null; secret: string; nasname: string }) => [n.vpnClientId, n]))
+    const clientVpnIps = clients.map((c: { vpnIp: string }) => c.vpnIp).filter(Boolean)
+    const [nasEntries, nasEntriesByIp] = await Promise.all([
+      clientIds.length > 0
+        ? prisma.router.findMany({
+            where: { vpnClientId: { in: clientIds } },
+            select: { vpnClientId: true, secret: true, nasname: true },
+          })
+        : Promise.resolve([]),
+      clientVpnIps.length > 0
+        ? prisma.router.findMany({
+            where: { nasname: { in: clientVpnIps } },
+            select: { vpnClientId: true, secret: true, nasname: true },
+          })
+        : Promise.resolve([]),
+    ])
+    type NasRow = { vpnClientId: string | null; secret: string; nasname: string }
+    const nasMapById = new Map((nasEntries as NasRow[]).map(n => [n.vpnClientId, n]))
+    const nasMapByIp = new Map((nasEntriesByIp as NasRow[]).map(n => [n.nasname, n]))
 
     // Also find RADIUS server IP for frontend
     const radiusServerClient = clients.find((c: { isRadiusServer: boolean }) => c.isRadiusServer)
 
-    const clientsWithNas = clients.map((c: { id: string }) => ({
-      ...c,
-      nasSecret: nasMap.get(c.id)?.secret ?? null,
-    }))
+    const clientsWithNas = clients.map((c: { id: string; vpnIp: string }) => {
+      const nasByClientId = nasMapById.get(c.id)
+      const nasByIp = nasMapByIp.get(c.vpnIp)
+      const nas = nasByClientId || nasByIp
+      return {
+        ...c,
+        nasSecret: nas?.secret ?? null,
+      }
+    })
 
     return NextResponse.json({
       clients: clientsWithNas,

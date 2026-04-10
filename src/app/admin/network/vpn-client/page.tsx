@@ -633,8 +633,11 @@ export default function VpnClientPage() {
 # --- RADIUS not configured ---
 # Mark one VPN Client as "RADIUS Server" in admin panel first`
 
-    const scriptBase = (vpnCmd: string, iface: string) =>
-`# ============================================================
+    const scriptBase = (vpnCmd: string, iface: string) => {
+      const safeApiUsername = credentials.apiUsername || `api-${credentials.vpnIp?.replace(/\./g, '-')}`
+      const safeApiPassword = credentials.apiPassword || '<generate-password>'
+      const safeWinbox = credentials.winboxRemote || `${credentials.serverHost || credentials.server}:8291`
+      return `# ============================================================
 # MikroTik VPN Client + RADIUS Setup Script
 # NAS: ${credentials.vpnIp}
 # VPN Server: ${credentials.server}
@@ -644,7 +647,7 @@ export default function VpnClientPage() {
 /user group add name=api-users policy=read,api,test comment="Limited API Access Group"
 
 # 2. Create API User
-/user add name=${credentials.apiUsername} group=api-users password=${credentials.apiPassword} comment="API User for Remote Access"
+/user add name=${safeApiUsername} group=api-users password=${safeApiPassword} comment="API User for Remote Access"
 
 # 3. Setup ${(selectedVpnType as string).toUpperCase()} Client
 /interface ${iface}
@@ -653,10 +656,11 @@ ${vpnCmd}
 # 4. Assign IP Address (if needed)
 # /ip address add address=${credentials.vpnIp}/32 interface=${iface}-salfanet
 
-# Remote Winbox Access: ${credentials.winboxRemote}
-# API Username: ${credentials.apiUsername}
-# API Password: ${credentials.apiPassword}
+# Remote Winbox Access: ${safeWinbox}
+# API Username: ${safeApiUsername}
+# API Password: ${safeApiPassword}
 ${radiusSection}`.trim()
+    }
 
     if (selectedVpnType === 'l2tp') {
       return scriptBase(
