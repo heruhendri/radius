@@ -422,10 +422,10 @@ export default function InventoryItemsPage() {
                     <div><span className="text-muted-foreground">Sell:</span> <span className="text-foreground">Rp {item.sellingPrice.toLocaleString('id-ID')}</span></div>
                   </div>
                   <div className="flex items-center gap-2 pt-2 border-t border-border">
-                    <button onClick={() => handleEdit(item)} className="p-2 text-primary hover:text-blue-800 dark:text-primary dark:hover:text-blue-300">
+                    <button onClick={() => handleEdit(item)} className="p-2 text-primary hover:text-blue-800 dark:text-primary dark:hover:text-blue-300" title="Edit Barang">
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button onClick={() => handleDelete(item)} className="p-2 text-destructive hover:text-red-800 dark:text-destructive dark:hover:text-red-300">
+                    <button onClick={() => handleDelete(item)} className="p-2 text-destructive hover:text-red-800 dark:text-destructive dark:hover:text-red-300" title="Hapus Barang">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -536,12 +536,14 @@ export default function InventoryItemsPage() {
                           <button
                             onClick={() => handleEdit(item)}
                             className="p-0.5 text-primary hover:text-blue-800 dark:text-primary dark:hover:text-blue-300"
+                            title="Edit Barang"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => handleDelete(item)}
                             className="p-0.5 text-destructive hover:text-red-800 dark:text-destructive dark:hover:text-red-300"
+                            title="Hapus Barang"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

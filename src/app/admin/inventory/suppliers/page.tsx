@@ -263,10 +263,10 @@ export default function SuppliersPage() {
                     <div><span className="text-muted-foreground">{t('inventory.items')}:</span> <span className="text-foreground">{supplier._count?.items || 0}</span></div>
                   </div>
                   <div className="flex items-center gap-2 pt-2 border-t border-border">
-                    <button onClick={() => handleEdit(supplier)} className="p-2 text-primary hover:text-primary/80 dark:text-violet-200 dark:hover:text-violet-100">
+                    <button onClick={() => handleEdit(supplier)} className="p-2 text-primary hover:text-primary/80 dark:text-violet-200 dark:hover:text-violet-100" title="Edit Supplier">
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button onClick={() => handleDelete(supplier)} className="p-2 text-destructive hover:text-red-800 dark:text-destructive dark:hover:text-red-300">
+                    <button onClick={() => handleDelete(supplier)} className="p-2 text-destructive hover:text-red-800 dark:text-destructive dark:hover:text-red-300" title="Hapus Supplier">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -363,12 +363,14 @@ export default function SuppliersPage() {
                           <button
                             onClick={() => handleEdit(supplier)}
                             className="p-1 text-primary hover:text-primary/80 dark:text-violet-200 dark:hover:text-violet-100"
+                            title="Edit Supplier"
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(supplier)}
                             className="p-1 text-destructive hover:text-red-800 dark:text-destructive dark:hover:text-red-300"
+                            title="Hapus Supplier"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>

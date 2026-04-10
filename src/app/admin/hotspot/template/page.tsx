@@ -280,10 +280,10 @@ export default function VoucherTemplatesPage() {
                   </div>
                 </div>
                 <div className="flex justify-end gap-1 border-t border-border pt-2">
-                  <button onClick={() => handleEdit(template)} className="p-2 text-primary hover:bg-primary/10 rounded" title="Edit">
+                  <button onClick={() => handleEdit(template)} className="p-2 text-primary hover:bg-primary/10 rounded" title="Edit Template">
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleDelete(template.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Delete">
+                  <button onClick={() => handleDelete(template.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Hapus Template">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -332,14 +332,14 @@ export default function VoucherTemplatesPage() {
                         <button
                           onClick={() => handleEdit(template)}
                           className="p-1 text-primary hover:bg-primary/10 rounded"
-                          title="Edit"
+                          title="Edit Template"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDelete(template.id)}
                           className="p-1 text-destructive hover:bg-destructive/10 rounded"
-                          title="Delete"
+                          title="Hapus Template"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

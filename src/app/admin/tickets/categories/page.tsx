@@ -271,6 +271,7 @@ export default function TicketCategoriesPage() {
                     <button
                       onClick={() => handleOpenModal(category)}
                       className="text-muted-foreground hover:text-[#00f7ff] transition-colors"
+                      title="Edit Kategori"
                     >
                       <Edit2 size={16} />
                     </button>
@@ -278,6 +279,7 @@ export default function TicketCategoriesPage() {
                       onClick={() => handleDelete(category)}
                       className="text-muted-foreground hover:text-[#ff44cc] transition-colors"
                       disabled={category._count.tickets > 0}
+                      title="Hapus Kategori"
                     >
                       <Trash2 size={16} />
                     </button>

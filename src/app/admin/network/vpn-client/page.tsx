@@ -688,7 +688,7 @@ ${radiusSection}`.trim()
                         <button
                           onClick={() => viewCredentials(client)}
                           className="flex items-center gap-2 px-4 py-2.5 bg-[#00f7ff]/20 border border-[#00f7ff]/40 text-[#00f7ff] rounded-xl hover:bg-[#00f7ff]/30 transition-all"
-                          title="View Credentials"
+                          title="Lihat Kredensial"
                         >
                           <Eye className="w-4 h-4" />
                           <span className="text-sm font-medium">{t('common.view')}</span>
@@ -696,7 +696,7 @@ ${radiusSection}`.trim()
                         <button
                           onClick={() => handleDelete(client.id, client.name)}
                           className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-500/20 transition-all"
-                          title="Delete"
+                          title="Hapus"
                         >
                           <Trash2 className="w-4 h-4" />
                           <span className="text-sm font-medium">{t('common.delete')}</span>

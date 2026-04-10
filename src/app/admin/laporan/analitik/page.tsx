@@ -231,7 +231,7 @@ export default function LaporanAnalitikPage() {
             onClick={() => loadAnalytics(period, true)}
             disabled={refreshing}
             className="p-2 rounded-lg border border-border hover:bg-accent transition-colors disabled:opacity-50"
-            title="Refresh"
+            title="Perbarui Data"
           >
             <RefreshCw className={`w-4 h-4 text-muted-foreground ${refreshing ? 'animate-spin' : ''}`} />
           </button>

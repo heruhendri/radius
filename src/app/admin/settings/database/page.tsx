@@ -524,7 +524,7 @@ export default function DatabaseSettingsPage() {
                                 link.click();
                               }}
                               className="text-primary hover:text-primary/80 dark:text-violet-200 dark:hover:text-violet-100"
-                              title="Download"
+                              title="Unduh Backup"
                             >
                               <Download className="w-4 h-4" />
                             </button>
@@ -532,7 +532,7 @@ export default function DatabaseSettingsPage() {
                               <button
                                 onClick={() => handleDeleteBackup(backup.id, backup.filename)}
                                 className="text-destructive hover:text-destructive dark:hover:text-red-300"
-                                title="Delete"
+                                title="Hapus Backup"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>

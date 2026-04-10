@@ -363,10 +363,10 @@ export default function HotspotProfilePage() {
                   </div>
                 </div>
                 <div className="flex justify-end gap-1 border-t border-border pt-2">
-                  <button onClick={() => handleEdit(profile)} className="p-2 text-muted-foreground hover:bg-muted rounded" title="Edit">
+                  <button onClick={() => handleEdit(profile)} className="p-2 text-muted-foreground hover:bg-muted rounded" title="Edit Paket">
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setDeleteProfileId(profile.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Delete">
+                  <button onClick={() => setDeleteProfileId(profile.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Hapus Paket">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -427,14 +427,14 @@ export default function HotspotProfilePage() {
                           <button
                             onClick={() => handleEdit(profile)}
                             className="p-1 text-muted-foreground hover:bg-muted rounded"
-                            title="Edit"
+                            title="Edit Paket"
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => setDeleteProfileId(profile.id)}
                             className="p-1 text-destructive hover:bg-destructive/10 rounded"
-                            title="Delete"
+                            title="Hapus Paket"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

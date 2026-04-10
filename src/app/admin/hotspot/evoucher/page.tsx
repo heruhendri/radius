@@ -380,12 +380,12 @@ export default function EVoucherManagementPage() {
               {(order.status === 'PENDING' || order.status === 'PAID') && (
                 <div className="flex justify-end gap-1 border-t border-border pt-2">
                   {order.status === 'PENDING' && (
-                    <button onClick={() => handleCancelOrder(order.id, order.orderNumber)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Cancel">
+                    <button onClick={() => handleCancelOrder(order.id, order.orderNumber)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Batalkan Pesanan">
                       <Ban className="w-4 h-4" />
                     </button>
                   )}
                   {order.status === 'PAID' && (
-                    <button onClick={() => handleResendVoucher(order.id, order.orderNumber)} className="p-2 text-primary hover:bg-primary/10 rounded" title="Resend">
+                    <button onClick={() => handleResendVoucher(order.id, order.orderNumber)} className="p-2 text-primary hover:bg-primary/10 rounded" title="Kirim Ulang Voucher">
                       <Send className="w-4 h-4" />
                     </button>
                   )}
@@ -460,7 +460,7 @@ export default function EVoucherManagementPage() {
                             <button
                               onClick={() => handleCancelOrder(order.id, order.orderNumber)}
                               className="p-1 text-destructive hover:bg-destructive/10 rounded"
-                              title="Cancel"
+                              title="Batalkan Pesanan"
                             >
                               <Ban className="w-3.5 h-3.5" />
                             </button>
@@ -469,7 +469,7 @@ export default function EVoucherManagementPage() {
                             <button
                               onClick={() => handleResendVoucher(order.id, order.orderNumber)}
                               className="p-1 text-primary hover:bg-primary/10 rounded"
-                              title="Resend"
+                              title="Kirim Ulang Voucher"
                             >
                               <Send className="w-3.5 h-3.5" />
                             </button>

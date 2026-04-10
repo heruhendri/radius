@@ -719,12 +719,14 @@ export default function OLTsPage() {
                         <button
                           onClick={() => handleEdit(olt)}
                           className="p-1 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                          title="Edit OLT"
                         >
                           <Pencil className="h-3 w-3" />
                         </button>
                         <button
                           onClick={() => handleDelete(olt)}
                           className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                          title="Hapus OLT"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -944,14 +946,14 @@ export default function OLTsPage() {
                 <button
                   onClick={() => handleEdit(olt)}
                   className="p-1.5 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                  title="Edit"
+                  title="Edit OLT"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={() => handleDelete(olt)}
                   className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                  title="Delete"
+                  title="Hapus OLT"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>

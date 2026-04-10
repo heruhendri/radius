@@ -216,12 +216,14 @@ export default function CategoriesPage() {
                     <button
                       onClick={() => handleEdit(category)}
                       className="p-1 text-primary hover:text-blue-800 dark:text-primary dark:hover:text-blue-300"
+                      title="Edit Kategori"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(category)}
                       className="p-1 text-destructive hover:text-red-800 dark:text-destructive dark:hover:text-red-300"
+                      title="Hapus Kategori"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

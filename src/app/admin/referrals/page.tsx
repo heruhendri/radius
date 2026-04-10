@@ -332,7 +332,7 @@ export default function AdminReferralsPage() {
                             onClick={() => processReward(reward.id, 'expire')}
                             disabled={processing === reward.id}
                             className="p-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 disabled:opacity-50"
-                            title="Expire"
+                            title="Kadaluarkan"
                           >
                             <XCircle className="w-4 h-4" />
                           </button>
