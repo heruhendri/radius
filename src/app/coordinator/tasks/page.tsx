@@ -429,13 +429,15 @@ function CoordinatorTasksContent() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleEdit(task)}
-                      className="p-0.5 text-primary hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300"
+                      className="p-0.5 text-primary hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300 cursor-pointer"
+                      title="Edit Tugas"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => handleDelete(task)}
-                      className="p-0.5 text-destructive hover:text-red-800 dark:text-destructive dark:hover:text-red-300"
+                      className="p-0.5 text-destructive hover:text-red-800 dark:text-destructive dark:hover:text-red-300 cursor-pointer"
+                      title="Hapus Tugas"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

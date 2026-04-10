@@ -425,6 +425,7 @@ export default function ManualPaymentsPage() {
                       size="sm"
                       variant="outline"
                       className="p-2 h-auto"
+                      title="Lihat Detail"
                       onClick={() => {
                         setSelectedPayment(payment);
                         setShowDetailDialog(true);
@@ -438,6 +439,7 @@ export default function ManualPaymentsPage() {
                           size="sm"
                           variant="outline"
                           className="p-2 h-auto text-success hover:bg-success/10"
+                          title="Setujui"
                           onClick={() => {
                             setSelectedPayment(payment);
                             setShowApproveDialog(true);
@@ -449,6 +451,7 @@ export default function ManualPaymentsPage() {
                           size="sm"
                           variant="outline"
                           className="p-2 h-auto text-destructive hover:bg-destructive/10"
+                          title="Tolak"
                           onClick={() => {
                             setSelectedPayment(payment);
                             setShowRejectDialog(true);
@@ -462,6 +465,7 @@ export default function ManualPaymentsPage() {
                       size="sm"
                       variant="outline"
                       className="p-2 h-auto text-destructive hover:bg-destructive/10"
+                      title="Hapus"
                       onClick={() => handleDelete(payment.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -516,6 +520,7 @@ export default function ManualPaymentsPage() {
                           <Button
                             size="sm"
                             variant="outline"
+                            title="Lihat Detail"
                             onClick={() => {
                               setSelectedPayment(payment);
                               setShowDetailDialog(true);
@@ -529,6 +534,7 @@ export default function ManualPaymentsPage() {
                                 size="sm"
                                 variant="outline"
                                 className="text-success hover:bg-success/10"
+                                title="Setujui"
                                 onClick={() => {
                                   setSelectedPayment(payment);
                                   setShowApproveDialog(true);
@@ -540,6 +546,7 @@ export default function ManualPaymentsPage() {
                                 size="sm"
                                 variant="outline"
                                 className="text-destructive hover:bg-destructive/10"
+                                title="Tolak"
                                 onClick={() => {
                                   setSelectedPayment(payment);
                                   setShowRejectDialog(true);
@@ -553,6 +560,7 @@ export default function ManualPaymentsPage() {
                             size="sm"
                             variant="outline"
                             className="text-destructive hover:bg-destructive/10"
+                            title="Hapus"
                             onClick={() => handleDelete(payment.id)}
                           >
                             <Trash2 className="h-4 w-4" />

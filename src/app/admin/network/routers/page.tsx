@@ -518,14 +518,14 @@ export default function RouterPage() {
                           <button
                             onClick={() => handleEdit(routerData)}
                             className="p-2.5 bg-muted border border-border text-foreground rounded-xl hover:bg-accent transition-all"
-                            title="Edit"
+                            title="Edit Router"
                           >
                             <Edit className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => handleDelete(routerData.id, routerData.name)}
                             className="p-2.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-500/20 transition-all"
-                            title="Delete"
+                            title="Hapus Router"
                           >
                             <Trash2 className="w-5 h-5" />
                           </button>

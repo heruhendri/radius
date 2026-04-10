@@ -715,10 +715,10 @@ export default function KeuanganPage() {
                     </div>
                   </label>
                   <div className="flex items-center gap-0.5 flex-shrink-0">
-                    <button onClick={() => handleEditTransaction(tx)} className="p-1.5 hover:bg-muted rounded">
+                    <button onClick={() => handleEditTransaction(tx)} className="p-1.5 hover:bg-muted rounded cursor-pointer" title="Edit Transaksi">
                       <Edit className="w-3.5 h-3.5 text-muted-foreground" />
                     </button>
-                    <button onClick={() => handleDeleteTransaction(tx)} className="p-1.5 hover:bg-destructive/10 rounded">
+                    <button onClick={() => handleDeleteTransaction(tx)} className="p-1.5 hover:bg-destructive/10 rounded cursor-pointer" title="Hapus Transaksi">
                       <Trash2 className="w-3.5 h-3.5 text-destructive" />
                     </button>
                   </div>
@@ -800,10 +800,10 @@ export default function KeuanganPage() {
                     </TableCell>
                     <TableCell className="py-2 text-right">
                       <div className="flex items-center justify-end gap-0.5">
-                        <button onClick={() => handleEditTransaction(t)} className="p-1 hover:bg-muted rounded">
+                        <button onClick={() => handleEditTransaction(t)} className="p-1 hover:bg-muted rounded cursor-pointer" title="Edit Transaksi">
                           <Edit className="w-3 h-3 text-muted-foreground" />
                         </button>
-                        <button onClick={() => handleDeleteTransaction(t)} className="p-1 hover:bg-destructive/10 rounded">
+                        <button onClick={() => handleDeleteTransaction(t)} className="p-1 hover:bg-destructive/10 rounded cursor-pointer" title="Hapus Transaksi">
                           <Trash2 className="w-3 h-3 text-destructive" />
                         </button>
                       </div>

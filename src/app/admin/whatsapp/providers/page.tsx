@@ -527,7 +527,7 @@ export default function WhatsAppProvidersPage() {
                     <button
                       onClick={() => deleteProvider(provider.id)}
                       className="h-7 px-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-white text-[10px] font-medium rounded transition-colors"
-                      title="Delete"
+                      title="Hapus"
                     >
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

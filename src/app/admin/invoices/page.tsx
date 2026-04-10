@@ -940,14 +940,14 @@ export default function InvoicesPage() {
                       <TableCell className="py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
                           {invoice.paymentLink && (
-                            <button onClick={() => handleCopyPaymentLink(invoice)} className="p-1 hover:bg-muted rounded" title="Copy Link">
+                            <button onClick={() => handleCopyPaymentLink(invoice)} className="p-1 hover:bg-muted rounded" title="Salin Link Pembayaran">
                               {copiedId === invoice.id ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
                             </button>
                           )}
-                          <button onClick={() => setPrintDialogInvoice(invoice)} className="p-1 hover:bg-muted rounded" title="Print">
+                          <button onClick={() => setPrintDialogInvoice(invoice)} className="p-1 hover:bg-muted rounded" title="Cetak Invoice">
                             <Printer className="h-3 w-3 text-muted-foreground" />
                           </button>
-                          <button onClick={() => handleViewDetail(invoice)} className="p-1 hover:bg-muted rounded" title="View">
+                          <button onClick={() => handleViewDetail(invoice)} className="p-1 hover:bg-muted rounded" title="Lihat Detail">
                             <Eye className="h-3 w-3 text-muted-foreground" />
                           </button>
                           {(invoice.status === 'PENDING' || invoice.status === 'OVERDUE') && invoice.customerPhone && (
@@ -960,7 +960,7 @@ export default function InvoicesPage() {
                               {t('invoices.markAsPaid')}
                             </button>
                           )}
-                          <button onClick={() => handleDeleteInvoice(invoice)} disabled={deleting === invoice.id} className="p-1 hover:bg-destructive/10 rounded text-destructive" title="Delete">
+                          <button onClick={() => handleDeleteInvoice(invoice)} disabled={deleting === invoice.id} className="p-1 hover:bg-destructive/10 rounded text-destructive" title="Hapus">
                             {deleting === invoice.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
                           </button>
                         </div>
@@ -1033,14 +1033,14 @@ export default function InvoicesPage() {
                   </div>
                   <div className="flex items-center justify-end gap-1 mt-2 ml-6">
                     {invoice.paymentLink && (
-                      <button onClick={() => handleCopyPaymentLink(invoice)} className="p-1.5 hover:bg-muted rounded" title="Copy Link">
+                      <button onClick={() => handleCopyPaymentLink(invoice)} className="p-1.5 hover:bg-muted rounded" title="Salin Link Pembayaran">
                         {copiedId === invoice.id ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
                       </button>
                     )}
-                    <button onClick={() => setPrintDialogInvoice(invoice)} className="p-1.5 hover:bg-muted rounded" title="Print">
+                    <button onClick={() => setPrintDialogInvoice(invoice)} className="p-1.5 hover:bg-muted rounded" title="Cetak Invoice">
                       <Printer className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
-                    <button onClick={() => handleViewDetail(invoice)} className="p-1.5 hover:bg-muted rounded" title="View">
+                    <button onClick={() => handleViewDetail(invoice)} className="p-1.5 hover:bg-muted rounded" title="Lihat Detail">
                       <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
                     {(invoice.status === 'PENDING' || invoice.status === 'OVERDUE') && invoice.customerPhone && (
@@ -1053,7 +1053,7 @@ export default function InvoicesPage() {
                         {t('invoices.markAsPaid')}
                       </button>
                     )}
-                    <button onClick={() => handleDeleteInvoice(invoice)} disabled={deleting === invoice.id} className="p-1.5 hover:bg-destructive/10 rounded text-destructive" title="Delete">
+                    <button onClick={() => handleDeleteInvoice(invoice)} disabled={deleting === invoice.id} className="p-1.5 hover:bg-destructive/10 rounded text-destructive" title="Hapus">
                       {deleting === invoice.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                     </button>
                   </div>

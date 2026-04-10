@@ -76,48 +76,6 @@ const dashboardMenuItem: MenuItem = {
 
 const menuGroups: MenuGroup[] = [
   {
-    titleKey: 'nav.catNotifikasi',
-    items: [
-      {
-        titleKey: 'nav.notifications',
-        icon: <Bell className="w-4 h-4" />,
-        href: '/admin/notifications',
-        badge: 'notifications',
-        requiredPermission: 'dashboard.view',
-      },
-      {
-        titleKey: 'nav.pushNotifications',
-        icon: <Bell className="w-4 h-4" />,
-        href: '/admin/notifications/push',
-        requiredPermission: 'dashboard.view',
-      },
-      {
-        titleKey: 'nav.whatsapp',
-        icon: <MessageCircle className="w-4 h-4" />,
-        href: '/admin/settings/whatsapp',
-        requiredPermission: 'whatsapp.view',
-      },
-      {
-        titleKey: 'nav.email',
-        icon: <Mail className="w-4 h-4" />,
-        href: '/admin/settings/email',
-        requiredPermission: 'settings.view',
-      },
-      {
-        titleKey: 'nav.telegram',
-        icon: <Send className="w-4 h-4" />,
-        href: '/admin/settings/telegram',
-        requiredPermission: 'settings.view',
-      },
-      {
-        titleKey: 'nav.isolationTemplates',
-        icon: <FileText className="w-4 h-4" />,
-        href: '/admin/settings/isolation/templates',
-        requiredPermission: 'settings.view',
-      },
-    ],
-  },
-  {
     titleKey: 'nav.catCustomerAgent',
     items: [
       {
@@ -174,12 +132,6 @@ const menuGroups: MenuGroup[] = [
     titleKey: 'nav.catBillingTransactions',
     items: [
       {
-        titleKey: 'nav.agentDeposits',
-        icon: <Wallet className="w-4 h-4" />,
-        href: '/admin/hotspot/agent/deposits',
-        requiredPermission: 'hotspot.view',
-      },
-      {
         titleKey: 'nav.invoices',
         icon: <Receipt className="w-4 h-4" />,
         href: '/admin/invoices',
@@ -196,16 +148,22 @@ const menuGroups: MenuGroup[] = [
         ],
       },
       {
-        titleKey: 'nav.rekapVoucher',
-        icon: <BarChart3 className="w-4 h-4" />,
-        href: '/admin/hotspot/rekap-voucher',
-        requiredPermission: 'vouchers.view',
-      },
-      {
         titleKey: 'nav.transaksi',
         icon: <Wallet className="w-4 h-4" />,
         href: '/admin/keuangan',
         requiredPermission: 'keuangan.view',
+      },
+      {
+        titleKey: 'nav.agentDeposits',
+        icon: <Wallet className="w-4 h-4" />,
+        href: '/admin/hotspot/agent/deposits',
+        requiredPermission: 'hotspot.view',
+      },
+      {
+        titleKey: 'nav.rekapVoucher',
+        icon: <BarChart3 className="w-4 h-4" />,
+        href: '/admin/hotspot/rekap-voucher',
+        requiredPermission: 'vouchers.view',
       },
     ],
   },
@@ -239,6 +197,11 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.oltManagement', href: '/admin/network/olts', requiredPermission: 'network.view' },
         ],
       },
+    ],
+  },
+  {
+    titleKey: 'nav.catInfrastruktur',
+    items: [
       {
         titleKey: 'nav.topology',
         icon: <Globe className="w-4 h-4" />,
@@ -305,6 +268,15 @@ const menuGroups: MenuGroup[] = [
     titleKey: 'nav.catManagement',
     items: [
       {
+        titleKey: 'nav.tickets',
+        icon: <MessageSquare className="w-4 h-4" />,
+        requiredPermission: 'dashboard.view',
+        children: [
+          { titleKey: 'nav.allTickets', href: '/admin/tickets', requiredPermission: 'dashboard.view' },
+          { titleKey: 'nav.ticketCategories', href: '/admin/tickets/categories', requiredPermission: 'settings.view' },
+        ],
+      },
+      {
         titleKey: 'nav.inventory',
         icon: <Package className="w-4 h-4" />,
         requiredPermission: 'settings.view',
@@ -313,15 +285,6 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.inventoryMovements', href: '/admin/inventory/movements', requiredPermission: 'settings.view' },
           { titleKey: 'nav.inventoryCategories', href: '/admin/inventory/categories', requiredPermission: 'settings.view' },
           { titleKey: 'nav.inventorySuppliers', href: '/admin/inventory/suppliers', requiredPermission: 'settings.view' },
-        ],
-      },
-      {
-        titleKey: 'nav.tickets',
-        icon: <MessageSquare className="w-4 h-4" />,
-        requiredPermission: 'dashboard.view',
-        children: [
-          { titleKey: 'nav.allTickets', href: '/admin/tickets', requiredPermission: 'dashboard.view' },
-          { titleKey: 'nav.ticketCategories', href: '/admin/tickets/categories', requiredPermission: 'settings.view' },
         ],
       },
       {
@@ -342,6 +305,48 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.genieacs', href: '/admin/settings/genieacs', requiredPermission: 'settings.genieacs' },
           { titleKey: 'nav.systemUpdate', href: '/admin/system', requiredPermission: 'settings.view' },
         ],
+      },
+    ],
+  },
+  {
+    titleKey: 'nav.catNotifikasi',
+    items: [
+      {
+        titleKey: 'nav.notifications',
+        icon: <Bell className="w-4 h-4" />,
+        href: '/admin/notifications',
+        badge: 'notifications',
+        requiredPermission: 'dashboard.view',
+      },
+      {
+        titleKey: 'nav.pushNotifications',
+        icon: <Bell className="w-4 h-4" />,
+        href: '/admin/notifications/push',
+        requiredPermission: 'dashboard.view',
+      },
+      {
+        titleKey: 'nav.whatsapp',
+        icon: <MessageCircle className="w-4 h-4" />,
+        href: '/admin/settings/whatsapp',
+        requiredPermission: 'whatsapp.view',
+      },
+      {
+        titleKey: 'nav.email',
+        icon: <Mail className="w-4 h-4" />,
+        href: '/admin/settings/email',
+        requiredPermission: 'settings.view',
+      },
+      {
+        titleKey: 'nav.telegram',
+        icon: <Send className="w-4 h-4" />,
+        href: '/admin/settings/telegram',
+        requiredPermission: 'settings.view',
+      },
+      {
+        titleKey: 'nav.isolationTemplates',
+        icon: <FileText className="w-4 h-4" />,
+        href: '/admin/settings/isolation/templates',
+        requiredPermission: 'settings.view',
       },
     ],
   },

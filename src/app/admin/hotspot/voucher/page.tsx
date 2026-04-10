@@ -1036,8 +1036,8 @@ export default function HotspotVoucherPage() {
                     <TableCell className="py-1.5 text-[10px] hidden md:table-cell">{v.expiresAt ? <div><div>{formatLocal(v.expiresAt, 'dd MMM yyyy HH:mm')}</div>{v.status === 'ACTIVE' && <div className="text-primary font-medium">{timeLeft(v.expiresAt)}</div>}</div> : <span className="text-muted-foreground">-</span>}</TableCell>
                     <TableCell className="py-1.5 text-right">
                       <div className="flex items-center justify-end gap-0.5">
-                        <button onClick={() => openEditSingle(v)} className="p-1 text-primary hover:bg-primary/10 rounded"><Pencil className="h-3 w-3" /></button>
-                        <button onClick={() => handleDeleteVoucher(v.id, v.code)} className="p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-3 w-3" /></button>
+                        <button onClick={() => openEditSingle(v)} className="p-1 text-primary hover:bg-primary/10 rounded" title="Edit Voucher"><Pencil className="h-3 w-3" /></button>
+                        <button onClick={() => handleDeleteVoucher(v.id, v.code)} className="p-1 text-destructive hover:bg-destructive/10 rounded" title="Hapus Voucher"><Trash2 className="h-3 w-3" /></button>
                       </div>
                     </TableCell>
                   </TableRow>

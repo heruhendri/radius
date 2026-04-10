@@ -488,16 +488,16 @@ export default function AgentPage() {
                   </div>
                 </div>
                 <div className="flex justify-end gap-1 border-t border-border pt-2">
-                  <button onClick={() => openBalanceModal(agent)} className="p-2 text-primary hover:bg-primary/10 rounded" title="Balance">
+                  <button onClick={() => openBalanceModal(agent)} className="p-2 text-primary hover:bg-primary/10 rounded" title="Sesuaikan Saldo">
                     <Wallet className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleViewHistory(agent)} className="p-2 text-accent hover:bg-accent/10 rounded" title="History">
+                  <button onClick={() => handleViewHistory(agent)} className="p-2 text-accent hover:bg-accent/10 rounded" title="Riwayat">
                     <Eye className="w-4 h-4" />
                   </button>
                   <button onClick={() => handleEdit(agent)} className="p-2 text-muted-foreground hover:bg-muted rounded" title="Edit">
                     <Pencil className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setDeleteAgentId(agent.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Delete">
+                  <button onClick={() => setDeleteAgentId(agent.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Hapus">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -590,7 +590,7 @@ export default function AgentPage() {
                           <button
                             onClick={() => openBalanceModal(agent)}
                             className="p-1 text-primary hover:bg-primary/10 rounded"
-                            title="Adjust"
+                            title="Sesuaikan Saldo"
                           >
                             <Wallet className="w-3 h-3" />
                           </button>
@@ -617,7 +617,7 @@ export default function AgentPage() {
                           <button
                             onClick={() => handleViewHistory(agent)}
                             className="p-1 text-accent hover:bg-accent/10 rounded"
-                            title="History"
+                            title="Riwayat"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
@@ -631,7 +631,7 @@ export default function AgentPage() {
                           <button
                             onClick={() => setDeleteAgentId(agent.id)}
                             className="p-1 text-destructive hover:bg-destructive/10 rounded"
-                            title="Delete"
+                            title="Hapus"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

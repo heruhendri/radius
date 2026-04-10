@@ -408,14 +408,14 @@ export default function RegistrationsPage() {
                 <div className="flex justify-end gap-1 border-t border-border pt-2">
                   {reg.status === 'PENDING' && (
                     <>
-                      <button onClick={() => handleApproveClick(reg)} className="p-2 text-success hover:bg-success/10 rounded" title="Approve"><CheckCircle className="w-4 h-4" /></button>
-                      <button onClick={() => handleRejectClick(reg)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Reject"><XCircle className="w-4 h-4" /></button>
+                      <button onClick={() => handleApproveClick(reg)} className="p-2 text-success hover:bg-success/10 rounded" title="Terima Pendaftaran"><CheckCircle className="w-4 h-4" /></button>
+                      <button onClick={() => handleRejectClick(reg)} className="p-2 text-destructive hover:bg-destructive/10 rounded" title="Tolak Pendaftaran"><XCircle className="w-4 h-4" /></button>
                     </>
                   )}
                   {reg.status === 'APPROVED' && (
-                    <button onClick={() => handleMarkInstalled(reg)} disabled={marking} className="p-2 text-accent hover:bg-accent/100/10 rounded disabled:opacity-50" title="Mark Installed"><Wrench className="w-4 h-4" /></button>
+                    <button onClick={() => handleMarkInstalled(reg)} disabled={marking} className="p-2 text-accent hover:bg-accent/100/10 rounded disabled:opacity-50" title="Tandai Sudah Terpasang"><Wrench className="w-4 h-4" /></button>
                   )}
-                  <button onClick={() => handleDelete(reg.id, reg.name)} disabled={deleting === reg.id} className="p-2 text-destructive hover:bg-destructive/10 rounded disabled:opacity-50" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => handleDelete(reg.id, reg.name)} disabled={deleting === reg.id} className="p-2 text-destructive hover:bg-destructive/10 rounded disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
             ))
@@ -516,14 +516,14 @@ export default function RegistrationsPage() {
                                 <button
                                   onClick={() => handleApproveClick(reg)}
                                   className="p-1 text-success hover:bg-success/10 rounded"
-                                  title="Approve"
+                                  title="Terima Pendaftaran"
                                 >
                                   <CheckCircle className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                   onClick={() => handleRejectClick(reg)}
                                   className="p-1 text-destructive hover:bg-destructive/10 rounded"
-                                  title="Reject"
+                                  title="Tolak Pendaftaran"
                                 >
                                   <XCircle className="w-3.5 h-3.5" />
                                 </button>
@@ -534,7 +534,7 @@ export default function RegistrationsPage() {
                                 onClick={() => handleMarkInstalled(reg)}
                                 disabled={marking}
                                 className="p-1 text-accent hover:bg-accent/100/10 rounded disabled:opacity-50"
-                                title="Mark Installed"
+                                title="Tandai Sudah Terpasang"
                               >
                                 <Wrench className="w-3.5 h-3.5" />
                               </button>
@@ -543,7 +543,7 @@ export default function RegistrationsPage() {
                               onClick={() => handleDelete(reg.id, reg.name)}
                               disabled={deleting === reg.id}
                               className="p-1 text-destructive hover:bg-destructive/10 rounded disabled:opacity-50"
-                              title="Delete"
+                              title="Hapus"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
