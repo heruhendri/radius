@@ -4,6 +4,17 @@ import { authOptions } from '@/server/auth/config'
 import { exec as execCb } from 'child_process'
 import { promisify } from 'util'
 import { readFile, writeFile } from 'fs/promises'
+import { prisma } from '@/server/db/client'
+
+// Fixed DB ID for VPS WireGuard virtual server entry
+const VPS_WG_SERVER_ID = '__vps_wg_server__'
+
+function generatePassword(length = 12): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+  let pass = ''
+  for (let i = 0; i < length; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length))
+  return pass
+}
 
 const exec = promisify(execCb)
 
@@ -110,6 +121,83 @@ async function removePeerFromConf(pubKey: string): Promise<void> {
   }
 }
 
+/**
+ * Parse peer blocks from wg.conf to extract name (from comment), publicKey, and vpnIp.
+ * Returns a map: publicKey → { name, vpnIp }
+ */
+async function parsePeerNamesFromConf(): Promise<Map<string, { name: string; vpnIp: string }>> {
+  const map = new Map<string, { name: string; vpnIp: string }>()
+  try {
+    const conf = await readFile(WG_CONF, 'utf8')
+    // Match each peer block (optional leading comment + [Peer] section)
+    const blockRe = /(?:# Peer:\s*([^\n]*)\n)?\[Peer\][^\[]*PublicKey\s*=\s*(\S+)[^\[]*AllowedIPs\s*=\s*([\d.]+)\/32/g
+    let m
+    while ((m = blockRe.exec(conf)) !== null) {
+      const [, name, pubKey, ip] = m
+      map.set(pubKey.trim(), { name: (name || pubKey.substring(0, 8)).trim(), vpnIp: ip.trim() })
+    }
+  } catch { /* conf not readable */ }
+  return map
+}
+
+/**
+ * Sync WG peers from conf into the DB so they appear in router VPN-client dropdown.
+ * Safe to call every time GET is invoked — no-op if already in DB.
+ */
+async function syncPeersToDB(
+  info: Record<string, any>,
+  confPeers: Map<string, { name: string; vpnIp: string }>,
+): Promise<void> {
+  if (confPeers.size === 0) return
+  try {
+    // Ensure virtual VPS WG server row exists
+    await prisma.vpnServer.upsert({
+      where: { id: VPS_WG_SERVER_ID },
+      create: {
+        id: VPS_WG_SERVER_ID,
+        name: 'VPS WireGuard Server',
+        host: info.publicIp || 'vps',
+        username: 'vps',
+        password: 'vps',
+        subnet: info.subnet,
+        wgEnabled: true,
+        wgPublicKey: info.publicKey,
+        wgPort: info.listenPort,
+      },
+      update: { host: info.publicIp || 'vps', subnet: info.subnet, wgPublicKey: info.publicKey, wgPort: info.listenPort },
+    })
+
+    // For each conf peer not yet in DB, create a record
+    const existingByPubKey = await prisma.vpnClient.findMany({
+      where: { vpnServerId: VPS_WG_SERVER_ID },
+      select: { clientPublicKey: true, vpnIp: true },
+    })
+    const existingIps = new Set(existingByPubKey.map((c) => c.vpnIp))
+    const existingKeys = new Set(existingByPubKey.map((c) => c.clientPublicKey).filter(Boolean))
+
+    for (const [pubKey, { name, vpnIp }] of confPeers) {
+      if (existingKeys.has(pubKey) || existingIps.has(vpnIp)) continue
+      const username = `wg-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Math.random().toString(36).substring(2, 6)}`
+      try {
+        await prisma.vpnClient.create({
+          data: {
+            name,
+            vpnServerId: VPS_WG_SERVER_ID,
+            vpnIp,
+            username,
+            password: generatePassword(12),
+            vpnType: 'WIREGUARD',
+            clientPublicKey: pubKey,
+            isActive: true,
+          },
+        })
+      } catch { /* might already exist by vpnIp unique constraint */ }
+    }
+  } catch (e) {
+    console.error('[vps-wg-peer] syncPeersToDB error (ignored):', e)
+  }
+}
+
 // ─── GET /api/network/vps-wg-peer ────────────────────────────────────────
 // Returns WG server info + list of active peers from `wg show`
 export async function GET() {
@@ -124,8 +212,14 @@ export async function GET() {
     })
   }
 
+  // Parse conf for peer names (needed for sync + enrichment)
+  const confPeers = await parsePeerNamesFromConf()
+
+  // Sync any conf peers not yet in DB (background, fire-and-forget)
+  syncPeersToDB(info, confPeers).catch(() => {})
+
   // Parse live peers from `wg show`
-  let peers: Array<{ publicKey: string; endpoint?: string; allowedIps?: string; lastHandshake?: string; transfer?: string }> = []
+  let peers: Array<{ publicKey: string; name?: string; endpoint?: string; allowedIps?: string; lastHandshake?: string; transfer?: string }> = []
   try {
     const { stdout } = await exec(`wg show ${WG_IFACE} dump`)
     const lines = stdout.trim().split('\n').slice(1) // skip server line
@@ -135,6 +229,7 @@ export async function GET() {
         const [publicKey, , endpoint, allowedIps, lastHandshake, rxBytes, txBytes] = l.split('\t')
         return {
           publicKey,
+          name: confPeers.get(publicKey)?.name,
           endpoint: endpoint !== '(none)' ? endpoint : undefined,
           allowedIps: allowedIps !== '(none)' ? allowedIps : undefined,
           lastHandshake: lastHandshake && lastHandshake !== '0' ? new Date(parseInt(lastHandshake) * 1000).toISOString() : undefined,
@@ -180,6 +275,47 @@ export async function POST(req: NextRequest) {
 
     const vpnIp = await nextAvailableIp(info.subnet)
     await addPeerToConf(clientPublicKey, vpnIp, nasName)
+
+    // Persist client to DB so it appears in Router dropdown
+    try {
+      // Ensure VPS WG virtual server row exists
+      await prisma.vpnServer.upsert({
+        where: { id: VPS_WG_SERVER_ID },
+        create: {
+          id: VPS_WG_SERVER_ID,
+          name: 'VPS WireGuard Server',
+          host: info.publicIp || 'vps',
+          username: 'vps',
+          password: 'vps',
+          subnet: info.subnet,
+          wgEnabled: true,
+          wgPublicKey: info.publicKey,
+          wgPort: info.listenPort,
+        },
+        update: {
+          host: info.publicIp || 'vps',
+          subnet: info.subnet,
+          wgPublicKey: info.publicKey,
+          wgPort: info.listenPort,
+        },
+      })
+      const username = `wg-${nasName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Math.random().toString(36).substring(2, 6)}`
+      await prisma.vpnClient.create({
+        data: {
+          name: nasName,
+          vpnServerId: VPS_WG_SERVER_ID,
+          vpnIp,
+          username,
+          password: generatePassword(12),
+          vpnType: 'WIREGUARD',
+          clientPublicKey,
+          clientPrivateKey: clientPrivateKey || null,
+          isActive: true,
+        },
+      })
+    } catch (dbErr) {
+      console.error('[vps-wg-peer] Gagal simpan ke DB (lanjutkan):', dbErr)
+    }
 
     return NextResponse.json({
       success: true,
