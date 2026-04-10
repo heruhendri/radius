@@ -126,6 +126,7 @@ function SidebarPushToggle({ techId }: { techId: string }) {
       if (sub && techId) {
         fetch('/api/push/technician-subscribe', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ technicianId: techId, subscription: sub.toJSON() }),
         }).catch(() => { /* silent sync */ });
@@ -152,6 +153,7 @@ function SidebarPushToggle({ techId }: { techId: string }) {
         if (sub) await sub.unsubscribe();
         await fetch('/api/push/technician-unsubscribe', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ technicianId: techId, endpoint }),
         });
@@ -177,6 +179,7 @@ function SidebarPushToggle({ techId }: { techId: string }) {
         }
         await fetch('/api/push/technician-subscribe', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ technicianId: techId, subscription: sub.toJSON() }),
         });
