@@ -8,9 +8,10 @@ import {
   Plus, Pencil, Trash2, Users, CheckCircle2, MapPin, Map, MoreVertical,
   Shield, ShieldOff, Ban, Download, Upload, Search, Filter, X, Eye, EyeOff, RefreshCcw, DollarSign, Loader2, Zap,
   UserPlus, RefreshCw, Clock, Bell, Send, Mail, ArrowUpDown, Printer, FileText,
-  Calendar, CreditCard, Camera, Info, AlertTriangle, Wrench, CheckCircle, XCircle,
+  Calendar, CreditCard, Camera, ImageIcon, Info, AlertTriangle, Wrench, CheckCircle, XCircle,
 } from 'lucide-react';
 import MapPicker from '@/components/MapPicker';
+import { CameraPhotoInput } from '@/components/CameraPhotoInput';
 import UserDetailModal from '@/components/UserDetailModal';
 import { formatWIB, isExpiredWIB as isExpired, endOfDayWIBtoUTC } from '@/lib/timezone';
 import {
@@ -107,20 +108,6 @@ function AddPppoeUserModal({ isOpen, onClose, onSuccess, profiles, routers, area
         await showSuccess(t('management.userCreated'));
       } else { await showError(result.error || t('common.failed')); }
     } catch (error) { console.error('Submit error:', error); await showError(t('management.failedSaveUser')); }
-  };
-
-  const handleUploadIdCard = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingIdCard(true);
-    try {
-      const fd = new FormData(); fd.append('file', file); fd.append('type', 'idCard');
-      const res = await fetch('/api/upload/pppoe-customer', { method: 'POST', body: fd });
-      const result = await res.json();
-      if (result.success) { setFormData(prev => ({ ...prev, idCardPhoto: result.url })); }
-      else { await showError(result.error || 'Upload KTP gagal'); }
-    } catch { await showError('Upload KTP gagal'); }
-    finally { setUploadingIdCard(false); }
   };
 
   const handleUploadInstallation = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,21 +210,23 @@ function AddPppoeUserModal({ isOpen, onClose, onSuccess, profiles, routers, area
               </div>
               <div>
                 <ModalLabel>Foto KTP</ModalLabel>
-                <div className="flex gap-2 items-center">
-                  <input type="file" accept="image/*" onChange={handleUploadIdCard} disabled={uploadingIdCard} className="hidden" id="idCardUploadAdd" />
-                  <label htmlFor="idCardUploadAdd" className={`flex-1 px-3 py-1.5 text-xs text-center border border-border dark:border-[#bc13fe]/40 rounded cursor-pointer hover:bg-muted dark:hover:bg-[#bc13fe]/10 text-muted-foreground ${uploadingIdCard ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                    {uploadingIdCard ? '⏳ Mengupload...' : '📎 Upload Foto KTP'}
-                  </label>
-                </div>
-                {formData.idCardPhoto && (
-                  <div className="mt-2 relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={formData.idCardPhoto} alt="Preview KTP" className="w-full h-28 object-cover rounded border border-border dark:border-[#bc13fe]/30" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, idCardPhoto: '' }))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"><X className="w-3 h-3" /></button>
-                  </div>
-                )}
-                <p className="text-[9px] text-muted-foreground mt-1">Format: JPG/PNG/WebP, maks. 5MB</p>
-              </div>
+                <CameraPhotoInput
+                  photoUrl={formData.idCardPhoto}
+                  onRemove={() => setFormData(prev => ({ ...prev, idCardPhoto: '' }))}
+                  uploading={uploadingIdCard}
+                  onUploadFile={async (file) => {
+                    setUploadingIdCard(true);
+                    try {
+                      const fd = new FormData(); fd.append('file', file); fd.append('type', 'idCard');
+                      const res = await fetch('/api/upload/pppoe-customer', { method: 'POST', body: fd });
+                      const result = await res.json();
+                      if (result.success) { setFormData(prev => ({ ...prev, idCardPhoto: result.url })); return result.url; }
+                      await showError(result.error || 'Upload KTP gagal'); return null;
+                    } catch { await showError('Upload KTP gagal'); return null; }
+                    finally { setUploadingIdCard(false); }
+                  }}
+                  theme="light"
+                />
             </div>
 
             {/* Foto Instalasi */}
@@ -247,10 +236,16 @@ function AddPppoeUserModal({ isOpen, onClose, onSuccess, profiles, routers, area
               </div>
               <div>
                 <input type="file" accept="image/*" onChange={handleUploadInstallation} disabled={uploadingInstallation} className="hidden" id="installationUploadAdd" />
-                <label htmlFor="installationUploadAdd" className={`w-full block px-3 py-1.5 text-xs text-center border border-border dark:border-[#00f7ff]/30 rounded cursor-pointer hover:bg-muted dark:hover:bg-[#00f7ff]/10 text-muted-foreground ${uploadingInstallation ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                  {uploadingInstallation ? '⏳ Mengupload...' : '📸 Upload Foto Instalasi'}
-                </label>
-                <p className="text-[9px] text-muted-foreground mt-1">Bisa upload beberapa foto. Maks. 5MB per foto.</p>
+                <input type="file" accept="image/*" capture="environment" onChange={async (e) => { const hasFile = !!e.target.files?.[0]; await handleUploadInstallation(e); if (hasFile && navigator.geolocation) { navigator.geolocation.getCurrentPosition((p) => { setFormData(prev => ({ ...prev, latitude: p.coords.latitude.toFixed(6), longitude: p.coords.longitude.toFixed(6) })); }, () => {}, { enableHighAccuracy: true, timeout: 10000 }); } }} disabled={uploadingInstallation} className="hidden" id="installationCameraAdd" />
+                <div className="grid grid-cols-2 gap-2">
+                  <label htmlFor="installationUploadAdd" className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs border border-border dark:border-[#00f7ff]/30 rounded cursor-pointer hover:bg-muted dark:hover:bg-[#00f7ff]/10 text-muted-foreground ${uploadingInstallation ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <ImageIcon className="w-3 h-3" /> {uploadingInstallation ? '⏳ Mengupload...' : 'Galeri'}
+                  </label>
+                  <label htmlFor="installationCameraAdd" className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs border border-primary/30 dark:border-[#00f7ff]/40 rounded cursor-pointer hover:bg-primary/5 dark:hover:bg-[#00f7ff]/10 text-primary/70 dark:text-[#00f7ff]/70 ${uploadingInstallation ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <Camera className="w-3 h-3" /> Kamera HP
+                  </label>
+                </div>
+                <p className="text-[9px] text-muted-foreground mt-1">Bisa upload beberapa foto. Maks. 5MB per foto. Kamera HP otomatis mengambil GPS.</p>
               </div>
               {formData.installationPhotos.length > 0 && (
                 <div className="grid grid-cols-3 gap-2">

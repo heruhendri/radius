@@ -9,14 +9,27 @@
 
 **Salfanet Radius** adalah sistem billing ISP/RTRW.NET berbasis web dengan integrasi FreeRADIUS penuh. Mendukung PPPoE dan Hotspot, cocok untuk ISP kecil-menengah di Indonesia.
 
-- **Version**: 2.16.0
+- **Version**: 2.17.0
 - **Status**: Production-ready, deployed di VPS
 - **Last Updated**: April 10, 2026
-- **Latest Commit**: `57f6169`
+- **Latest Commit**: camera+GPS photo upload
 - **GitHub**: https://github.com/s4lfanet/salfanet-radius (public)
 - **Live URL**: https://radius.hotspotapp.net
 
-### Recent Patch Log (April 2026 — PWA Web Push, Teknisi Notifikasi, GitHub Actions)
+### Recent Patch Log (April 10, 2026 — Kamera HP + GPS otomatis)
+
+- **Feat: `CameraPhotoInput` reusable component** (Apr 10, 2026)
+  - **File baru**: `src/components/CameraPhotoInput.tsx`
+  - Dua tombol: [🖼 Galeri] buka gallery biasa, [📷 Kamera HP] pakai `capture="environment"` → langsung buka kamera belakang di mobile
+  - Setelah upload sukses: auto `navigator.geolocation.getCurrentPosition` → tampilkan badge 📍 lat,lng clickable ke Google Maps
+  - Props: `photoUrl`, `onRemove`, `onUploadFile (async → string|null)`, `uploading`, `onGpsCapture?`, `theme ('dark'|'light')`, `hint`, `previewClassName`
+  - Theme `dark`: cyberpunk (untuk `/daftar`); theme `light`: admin/modal biasa
+
+- **Updated: 4 halaman/komponen** (Apr 10, 2026)
+  - `src/app/daftar/page.tsx` — KTP photo → CameraPhotoInput (dark); GPS mengisi `formData.latitude/longitude`
+  - `src/app/admin/pppoe/users/page.tsx` — KTP → CameraPhotoInput; foto instalasi → [Galeri][Kamera HP] inline + capture GPS ke lat/lng
+  - `src/app/technician/(portal)/register/page.tsx` — KTP → CameraPhotoInput; removed `ktpInputRef` + `handleUploadKtp`
+  - `src/components/UserDetailModal.tsx` — KTP → CameraPhotoInput; foto instalasi → [Galeri][Kamera HP] + GPS ke lat/lng
 
 - **CRITICAL FIX: Push subscription tidak tersimpan ke DB** (`57f6169`, April 10, 2026)
   - **Root cause**: `fetch('/api/push/technician-subscribe', ...)` tidak menyertakan `credentials: 'same-origin'` sehingga cookie `technician-token` tidak dikirim ke server. Tanpa cookie, admin_user tidak terdeteksi → API cari ID di tabel `technician` → 404 → subscription tidak tersimpan.

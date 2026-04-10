@@ -130,6 +130,7 @@ Public IP: 103.67.244.131
 - Bulk operations
 - Per-user RADIUS sync via API `POST /api/pppoe/users/[userId]/sync-radius`
 - NIK KTP + foto KTP + foto instalasi
+- **Foto KTP & instalasi via kamera HP** — tombol [Galeri] / [📷 Kamera HP] (`capture="environment"`) di semua form; GPS otomatis diambil setelah foto, badge 📍 lat,lng clickable ke Google Maps (`CameraPhotoInput` component)
 
 **Tabel PPPoE — Kolom**:
 - **ID** — customerId (clickable filter)

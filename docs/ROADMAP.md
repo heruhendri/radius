@@ -1,6 +1,6 @@
 # SALFANET RADIUS — Roadmap 2026
 
-> Last updated: **March 30, 2026** | Version: **2.11.8**  
+> Last updated: **April 10, 2026** | Version: **2.17.0**  
 > Legend: ✅ Done · 🔄 In Progress · 📅 Planned · 🐛 Bug/Debt · 🔒 Security
 
 ---
@@ -17,6 +17,7 @@
 - [x] GenieACS integration (ONT/device management, parameter monitoring)
 - [x] GPON/OLT network mapping (OLT → ODC → ODP → Customer)
 - [x] PPPoE Customer Documents — NIK KTP, foto KTP, foto instalasi, followRoad GPS ✅ (Feb 27, 2026)
+- [x] **Kamera HP + GPS otomatis di form pelanggan** — `CameraPhotoInput` component: tombol [Galeri]/[Kamera HP] di semua 4 titik entry (daftar publik, AddPppoeUserModal, form teknisi, UserDetailModal). `capture="environment"` buka kamera belakang langsung. Setelah foto GPS auto-capture → badge 📍 lat,lng clickable ke Google Maps. ✅ (Apr 10, 2026)
 
 ### Billing & Payment
 - [x] Auto invoice generation (monthly, prepaid/postpaid)
@@ -134,6 +135,7 @@
 - [x] **Mobile form keyboard dismiss fix (pppoe/customers)** — Ekstrak `CustomerFormModal` sebagai standalone component. Root cause: `CustomerForm` didefinisikan inline di render body → React membuat komponen type baru setiap render → form unmount/remount. Commit `6a1db58`. ✅ (Mar 29, 2026)
 - [x] **Duplicate notification fix** — `activity-log.service.ts` memanggil `notifyUserStatusChange()` duplikat dengan email admin sebagai username (salah). Hapus 15-baris blok duplicate; `status/route.ts` sudah menangani semua kasus dengan benar. Commit `37f901a`. ✅ (Mar 30, 2026)
 - [x] **Project root cleanup** — Hapus 10 file AI-generated audit report dari root (`CODE_QUALITY_AUDIT_REPORT.md`, `MASTER_AUDIT_REPORT.md`, `SECURITY_*.md`, dll). ✅ (Mar 30, 2026)
+- [x] **Kamera HP + GPS di semua form upload foto** — `CameraPhotoInput` reusable component dengan `capture="environment"` + `navigator.geolocation`. 4 halaman diperbarui: daftar/page.tsx, AddPppoeUserModal, technician/register, UserDetailModal. ✅ (Apr 10, 2026)
 
 ---
 

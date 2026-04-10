@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   UserPlus, User, Phone, Mail, MapPin, Package, FileText, Loader2,
   CheckCircle, AlertCircle, Wifi, ChevronDown, Key, Globe, Calendar,
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
+import { CameraPhotoInput } from '@/components/CameraPhotoInput';
 
 interface Profile {
   id: string;
@@ -51,7 +52,6 @@ export default function TechnicianRegisterPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'basic' | 'network'>('basic');
   const [uploadingKtp, setUploadingKtp] = useState(false);
-  const ktpInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     username: '',
@@ -88,28 +88,6 @@ export default function TechnicianRegisterPage() {
   function setValue(key: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
     setError('');
-  }
-
-  async function handleUploadKtp(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingKtp(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('type', 'idCard');
-      const res = await fetch('/api/upload/pppoe-customer', { method: 'POST', body: fd });
-      const result = await res.json();
-      if (result.success) {
-        setForm((f) => ({ ...f, idCardPhoto: result.url }));
-      } else {
-        addToast({ type: 'error', title: result.error || 'Upload KTP gagal' });
-      }
-    } catch {
-      addToast({ type: 'error', title: 'Upload KTP gagal' });
-    } finally {
-      setUploadingKtp(false);
-    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -479,34 +457,26 @@ export default function TechnicianRegisterPage() {
                   </div>
                   <div>
                     <label className={labelClass}>Foto KTP</label>
-                    <input
-                      ref={ktpInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleUploadKtp}
-                      disabled={uploadingKtp}
-                      className="hidden"
+                    <CameraPhotoInput
+                      photoUrl={form.idCardPhoto}
+                      onRemove={() => setForm((f) => ({ ...f, idCardPhoto: '' }))}
+                      uploading={uploadingKtp}
+                      onUploadFile={async (file) => {
+                        setUploadingKtp(true);
+                        try {
+                          const fd = new FormData();
+                          fd.append('file', file);
+                          fd.append('type', 'idCard');
+                          const res = await fetch('/api/upload/pppoe-customer', { method: 'POST', body: fd });
+                          const result = await res.json();
+                          if (result.success) { setForm((f) => ({ ...f, idCardPhoto: result.url })); return result.url; }
+                          addToast({ type: 'error', title: result.error || 'Upload KTP gagal' }); return null;
+                        } catch { addToast({ type: 'error', title: 'Upload KTP gagal' }); return null; }
+                        finally { setUploadingKtp(false); }
+                      }}
+                      theme="light"
+                      hint="Format: JPG/PNG/WebP, maks. 5MB"
                     />
-                    <button
-                      type="button"
-                      onClick={() => ktpInputRef.current?.click()}
-                      disabled={uploadingKtp}
-                      className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm border border-slate-200 dark:border-[#bc13fe]/40 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#bc13fe]/10 transition-all ${uploadingKtp ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      {uploadingKtp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                      {uploadingKtp ? 'Mengupload...' : 'Upload Foto KTP'}
-                    </button>
-                    <p className="text-[10px] text-slate-400 mt-1">Format: JPG/PNG/WebP, maks. 5MB</p>
-                    {form.idCardPhoto && (
-                      <div className="mt-2 relative">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={form.idCardPhoto} alt="Preview KTP" className="w-full h-28 object-cover rounded-xl border border-slate-200 dark:border-[#bc13fe]/30" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                        <button type="button" onClick={() => setForm((f) => ({ ...f, idCardPhoto: '' }))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
 

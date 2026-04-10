@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useToast, CyberToastProvider } from '@/components/cyberpunk/CyberToast';
 import { UserPlus, Loader2, Wifi, CheckCircle, MapPin, Phone, Mail, Home, Package, FileText, Gift, CreditCard, Camera, X, Map } from 'lucide-react';
 import MapPicker from '@/components/MapPicker';
+import { CameraPhotoInput } from '@/components/CameraPhotoInput';
 
 export const dynamic = 'force-dynamic';
 
@@ -464,57 +465,35 @@ function DaftarPageInner() {
                   <Camera className="w-3.5 h-3.5 text-[#00f7ff]" />
                   Foto KTP
                 </label>
-                {idCardPhoto ? (
-                  <div className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={idCardPhoto} alt="Foto KTP" className="w-full h-32 object-cover rounded-xl border-2 border-[#00ff88]/50" />
-                    <button
-                      type="button"
-                      onClick={() => setIdCardPhoto('')}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-[#bc13fe]/40 rounded-xl cursor-pointer hover:border-[#00f7ff]/60 bg-[#0a0520] transition-all">
-                    {uploadingPhoto
-                      ? <Loader2 className="w-6 h-6 animate-spin text-[#00f7ff]" />
-                      : <>
-                          <Camera className="w-6 h-6 text-[#bc13fe]/60 mb-1" />
-                          <span className="text-[10px] text-[#e0d0ff]/60">Tap untuk upload foto KTP</span>
-                          <span className="text-[9px] text-[#e0d0ff]/40 mt-0.5">JPG/PNG, maks. 3MB</span>
-                        </>
+                <CameraPhotoInput
+                  photoUrl={idCardPhoto}
+                  onRemove={() => setIdCardPhoto('')}
+                  uploading={uploadingPhoto}
+                  onUploadFile={async (file) => {
+                    setUploadingPhoto(true);
+                    try {
+                      const fd = new FormData();
+                      fd.append('file', file);
+                      const res = await fetch('/api/public/upload-registration', { method: 'POST', body: fd });
+                      const data = await res.json();
+                      if (data.success) {
+                        setIdCardPhoto(data.url);
+                        return data.url;
+                      }
+                      addToast({ type: 'error', title: 'Upload Gagal', description: data.error || 'Gagal upload foto KTP' });
+                      return null;
+                    } catch {
+                      addToast({ type: 'error', title: 'Upload Gagal', description: 'Gagal upload foto KTP' });
+                      return null;
+                    } finally {
+                      setUploadingPhoto(false);
                     }
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/webp"
-                      className="hidden"
-                      disabled={uploadingPhoto}
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setUploadingPhoto(true);
-                        try {
-                          const fd = new FormData();
-                          fd.append('file', file);
-                          const res = await fetch('/api/public/upload-registration', { method: 'POST', body: fd });
-                          const data = await res.json();
-                          if (data.success) {
-                            setIdCardPhoto(data.url);
-                          } else {
-                            addToast({ type: 'error', title: 'Upload Gagal', description: data.error || 'Gagal upload foto KTP' });
-                          }
-                        } catch {
-                          addToast({ type: 'error', title: 'Upload Gagal', description: 'Gagal upload foto KTP' });
-                        } finally {
-                          setUploadingPhoto(false);
-                          e.target.value = '';
-                        }
-                      }}
-                    />
-                  </label>
-                )}
+                  }}
+                  onGpsCapture={(lat, lng) => setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))}
+                  theme="dark"
+                  hint="JPG/PNG/WebP, maks. 3MB"
+                  previewClassName="h-32"
+                />
               </div>
             </div>
 
