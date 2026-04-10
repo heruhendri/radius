@@ -278,6 +278,8 @@ export async function POST(req: NextRequest) {
 
     // Persist client to DB so it appears in Router dropdown
     let nasSecretForResponse: string | undefined
+    let apiUsernameForResponse: string | undefined
+    let apiPasswordForResponse: string | undefined
     try {
       // Ensure VPS WG virtual server row exists
       await prisma.vpnServer.upsert({
@@ -303,6 +305,8 @@ export async function POST(req: NextRequest) {
       // Use upsert so that if syncPeersToDB already created a stub record (without
       // private key), we update it with the real private key now.
       const username = `wg-${nasName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Math.random().toString(36).substring(2, 6)}`
+      const apiUsername = `api-${nasName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+      const apiPassword = generatePassword(16)
       const nasSecret = generatePassword(16)
       const dbClient = await prisma.vpnClient.upsert({
         where: {
@@ -315,6 +319,8 @@ export async function POST(req: NextRequest) {
           vpnIp,
           username,
           password: generatePassword(12),
+          apiUsername,
+          apiPassword,
           vpnType: 'WIREGUARD',
           clientPublicKey,
           clientPrivateKey: clientPrivateKey || null,
@@ -324,6 +330,8 @@ export async function POST(req: NextRequest) {
           name: nasName,
           clientPublicKey,
           clientPrivateKey: clientPrivateKey || null,
+          apiUsername,
+          apiPassword,
           isActive: true,
         },
       })
@@ -334,7 +342,7 @@ export async function POST(req: NextRequest) {
         finalNasSecret = existingNas.secret
         await prisma.router.update({
           where: { id: existingNas.id },
-          data: { vpnClientId: dbClient.id },
+          data: { vpnClientId: dbClient.id, username: apiUsername, password: apiPassword },
         })
       } else {
         await prisma.router.create({
@@ -345,8 +353,8 @@ export async function POST(req: NextRequest) {
             shortname: nasName.substring(0, 32).replace(/[^a-z0-9]/gi, ''),
             type: 'mikrotik',
             ipAddress: vpnIp,
-            username: 'admin',
-            password: 'admin',
+            username: apiUsername,
+            password: apiPassword,
             secret: finalNasSecret,
             ports: 1812,
             vpnClientId: dbClient.id,
@@ -354,8 +362,13 @@ export async function POST(req: NextRequest) {
           },
         })
       }
-      // Return nasSecret so frontend can build complete RADIUS script immediately
+      // Expose for response
       nasSecretForResponse = finalNasSecret
+      apiUsernameForResponse = apiUsername
+      apiPasswordForResponse = apiPassword
+      ;(nasSecretForResponse as unknown as { apiUsername?: string }).toString // trick to keep vars in scope
+      // store api creds so they can be included in response below
+      Object.assign(info as object, { _apiUsername: apiUsername, _apiPassword: apiPassword })
     } catch (dbErr) {
       console.error('[vps-wg-peer] Gagal simpan ke DB (lanjutkan):', dbErr)
     }
@@ -372,6 +385,8 @@ export async function POST(req: NextRequest) {
       allowedIps: `${info.gatewayIp}/32`, // kept for backward compat
       wgPort: info.listenPort,
       nasSecret: nasSecretForResponse,  // RADIUS shared secret for this NAS
+      apiUsername: apiUsernameForResponse,
+      apiPassword: apiPasswordForResponse,
     })
   }
 

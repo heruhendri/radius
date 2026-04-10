@@ -427,6 +427,8 @@ export default function VpnClientPage() {
             wgSubnet,
             wgGatewayIp,
             nasSecret: data.nasSecret || undefined,
+            apiUsername: data.apiUsername || undefined,
+            apiPassword: data.apiPassword || undefined,
             radiusServerIp: undefined, // VPS gateway is used as fallback in generateMikroTikScript
           })
           setSelectedVpnType('wireguard')
@@ -684,8 +686,9 @@ ${radiusSection}`.trim()
       // fallback to VPS gateway IP (10.200.0.1) when using VPS WireGuard mode
       const wgRadiusIp = credentials.radiusServerIp || wgGatewayIp
       const wgRadiusSection = (wgRadiusIp && credentials.nasSecret) ? `
+
 # ============================================================
-# 5. RADIUS Configuration (NAS Client)
+# 6. RADIUS Configuration (NAS Client)
 # ============================================================
 
 # Remove old RADIUS entries
@@ -719,12 +722,15 @@ ${radiusSection}`.trim()
 # --- RADIUS not configured ---
 # nasSecret belum tersedia. Buka ulang kredensial setelah refresh halaman.
 # Atau tandai satu VPN Client sebagai "RADIUS Server" di panel admin.`
+      const safeApiUsername = credentials.apiUsername || `api-${credentials.vpnIp?.replace(/\./g, '-')}`
+      const safeApiPassword = credentials.apiPassword || '<generate-on-mikrotik>'
       return `# ============================================================
 # MikroTik WireGuard Client Setup Script (RouterOS 7+)
 # NAS IP     : ${credentials.vpnIp}
 # VPN Subnet : ${wgSubnet}
 # VPS Gateway: ${wgGatewayIp}
 # RADIUS IP  : ${wgRadiusIp}
+# API User   : ${safeApiUsername}
 # ============================================================
 
 # 1. Buat WireGuard interface dengan private key NAS
@@ -746,6 +752,12 @@ ${radiusSection}`.trim()
 # 4. Route seluruh subnet VPN melalui WireGuard
 /ip/route/remove [find where comment="SALFANET-VPN"]
 /ip/route/add dst-address=${wgSubnet} gateway=wg-salfanet comment="SALFANET-VPN"
+
+# 5. Buat API User (untuk remote management MikroTik)
+/user/group/add name=api-users policy=read,api,test comment="Limited API Access Group"
+/user/add name=${safeApiUsername} group=api-users password=${safeApiPassword} comment="API User for Remote Access"
+# API Username : ${safeApiUsername}
+# API Password : ${safeApiPassword}
 ${wgRadiusSection}`.trim()
     } else {
       return scriptBase(
