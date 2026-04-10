@@ -595,52 +595,12 @@ export default function VpnClientPage() {
   const generateMikroTikScript = () => {
     if (!credentials) return ''
 
-    // Build RADIUS section (only for NAS clients, not the RADIUS server itself)
-    const radiusSection = (credentials.radiusServerIp && credentials.nasSecret) ? `
-# ============================================================
-# 5. RADIUS Configuration (NAS Client)
-# ============================================================
-
-# Remove old RADIUS entries
-/radius remove [find where comment~"SALFANET"]
-
-# Add RADIUS server — src-address MUST match VPN IP in FreeRADIUS NAS table
-/radius add \\
-  address=${credentials.radiusServerIp} \\
-  secret=${credentials.nasSecret} \\
-  service=ppp,hotspot \\
-  src-address=${credentials.vpnIp} \\
-  authentication-port=1812 \\
-  accounting-port=1813 \\
-  timeout=3s \\
-  require-message-auth=no \\
-  comment="SALFANET RADIUS via VPN"
-
-# Enable RADIUS for PPPoE (with interim-update every 5 minutes)
-/ppp aaa set use-radius=yes accounting=yes interim-update=5m
-
-# Enable RADIUS for Hotspot
-/ip hotspot profile set [find] use-radius=yes
-
-# Enable CoA (Change of Authorization from RADIUS)
-/radius incoming set accept=yes port=3799
-
-# Firewall: Allow CoA + Auth from RADIUS server
-/ip firewall filter remove [find where comment~"SALFANET-RADIUS"]
-/ip firewall filter add chain=input protocol=udp src-address=${credentials.radiusServerIp} dst-port=3799 action=accept comment="SALFANET-RADIUS CoA" place-before=0
-/ip firewall filter add chain=input protocol=udp src-address=${credentials.radiusServerIp} dst-port=1812,1813 action=accept comment="SALFANET-RADIUS Auth" place-before=0
-
-# RADIUS NAS Secret: ${credentials.nasSecret}
-# Verify: /radius print; /ip firewall filter print where comment~"SALFANET-RADIUS"` : `
-# --- RADIUS not configured ---
-# Mark one VPN Client as "RADIUS Server" in admin panel first`
-
     const scriptBase = (vpnCmd: string, iface: string) => {
       const safeApiUsername = credentials.apiUsername || `api-${credentials.vpnIp?.replace(/\./g, '-')}`
       const safeApiPassword = credentials.apiPassword || '<generate-password>'
       const safeWinbox = credentials.winboxRemote || `${credentials.serverHost || credentials.server}:8291`
       return `# ============================================================
-# MikroTik VPN Client + RADIUS Setup Script
+# MikroTik VPN Client Setup Script
 # NAS: ${credentials.vpnIp}
 # VPN Server: ${credentials.server}
 # ============================================================
@@ -661,7 +621,14 @@ ${vpnCmd}
 # Remote Winbox Access: ${safeWinbox}
 # API Username: ${safeApiUsername}
 # API Password: ${safeApiPassword}
-${radiusSection}`.trim()
+
+# ============================================================
+# LANGKAH SELANJUTNYA:
+# 1. Pergi ke menu Routers/NAS
+# 2. Pilih router ini → klik tombol Setup RADIUS (ikon sinyal)
+# 3. Copy dan paste script RADIUS ke terminal MikroTik
+# 4. Setelah RADIUS selesai → klik tombol Setup Isolir (ikon gembok)
+# ============================================================`.trim()
     }
 
     if (selectedVpnType === 'l2tp') {
@@ -682,46 +649,6 @@ ${radiusSection}`.trim()
       const serverHost = credentials.serverHost || credentials.server
       const wgSubnet = credentials.wgSubnet || '10.200.0.0/24'
       const wgGatewayIp = credentials.wgGatewayIp || wgSubnet.replace(/\.\d+\/\d+$/, '.1')
-      // RADIUS server: prefer explicitly marked isRadiusServer client IP,
-      // fallback to VPS gateway IP (10.200.0.1) when using VPS WireGuard mode
-      const wgRadiusIp = credentials.radiusServerIp || wgGatewayIp
-      const wgRadiusSection = (wgRadiusIp && credentials.nasSecret) ? `
-
-# ============================================================
-# 6. RADIUS Configuration (NAS Client)
-# ============================================================
-
-# Remove old RADIUS entries
-/radius remove [find where comment~"SALFANET"]
-
-# Add RADIUS server — src-address MUST match VPN IP in FreeRADIUS NAS table
-#   address     = RADIUS server VPN IP (VPS gateway or isRadiusServer client)
-#   src-address = VPN IP of THIS NAS (used by FreeRADIUS to match NAS identity)
-/radius add \\
-  address=${wgRadiusIp} \\
-  secret=${credentials.nasSecret} \\
-  service=ppp,hotspot \\
-  src-address=${credentials.vpnIp} \\
-  authentication-port=1812 \\
-  accounting-port=1813 \\
-  timeout=3s \\
-  require-message-auth=no \\
-  comment="SALFANET RADIUS via WireGuard"
-
-# Enable RADIUS for PPPoE
-/ppp aaa set use-radius=yes accounting=yes interim-update=5m
-# Enable RADIUS for Hotspot
-/ip hotspot profile set [find] use-radius=yes
-# Enable CoA
-/radius incoming set accept=yes port=3799
-# Firewall: Allow CoA + Auth from RADIUS server
-/ip firewall filter remove [find where comment~"SALFANET-RADIUS"]
-/ip firewall filter add chain=input protocol=udp src-address=${wgRadiusIp} dst-port=3799 action=accept comment="SALFANET-RADIUS CoA" place-before=0
-/ip firewall filter add chain=input protocol=udp src-address=${wgRadiusIp} dst-port=1812,1813 action=accept comment="SALFANET-RADIUS Auth" place-before=0
-# RADIUS Secret: ${credentials.nasSecret}` : `
-# --- RADIUS not configured ---
-# nasSecret belum tersedia. Buka ulang kredensial setelah refresh halaman.
-# Atau tandai satu VPN Client sebagai "RADIUS Server" di panel admin.`
       const safeApiUsername = credentials.apiUsername || `api-${credentials.vpnIp?.replace(/\./g, '-')}`
       const safeApiPassword = credentials.apiPassword || '<generate-on-mikrotik>'
       return `# ============================================================
@@ -729,7 +656,6 @@ ${radiusSection}`.trim()
 # NAS IP     : ${credentials.vpnIp}
 # VPN Subnet : ${wgSubnet}
 # VPS Gateway: ${wgGatewayIp}
-# RADIUS IP  : ${wgRadiusIp}
 # API User   : ${safeApiUsername}
 # ============================================================
 
@@ -758,7 +684,14 @@ ${radiusSection}`.trim()
 /user/add name=${safeApiUsername} group=api-users password=${safeApiPassword} comment="API User for Remote Access"
 # API Username : ${safeApiUsername}
 # API Password : ${safeApiPassword}
-${wgRadiusSection}`.trim()
+
+# ============================================================
+# LANGKAH SELANJUTNYA:
+# 1. Pergi ke menu Routers/NAS
+# 2. Pilih router ini → klik tombol Setup RADIUS (ikon sinyal)
+# 3. Copy dan paste script RADIUS ke terminal MikroTik
+# 4. Setelah RADIUS selesai → klik tombol Setup Isolir (ikon gembok)
+# ============================================================`.trim()
     } else {
       return scriptBase(
         `add connect-to=${credentials.server} user=${credentials.username} password=${credentials.password} disabled=no name=pptp-client-salfanet add-default-route=no comment="SALFANET VPN"`,

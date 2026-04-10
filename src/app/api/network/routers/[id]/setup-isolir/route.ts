@@ -1,5 +1,4 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
-import { RouterOSAPI } from 'node-routeros';
 import { prisma } from '@/server/db/client';
 import { getCidrRange } from '@/server/services/isolation.service';
 
@@ -7,49 +6,19 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let conn: RouterOSAPI | null = null;
   
   try {
     const { id } = await params;
 
-    // Get router from database
+    // Get router + VPN client info
     const router = await prisma.router.findUnique({
       where: { id },
+      include: { vpnClient: { include: { vpnServer: true } } },
     });
 
     if (!router) {
       return NextResponse.json({ error: 'Router not found' }, { status: 404 });
     }
-
-    // Use port field for API connection (apiPort is legacy)
-    const apiPort = router.port || router.apiPort || 8728;
-    
-    console.log(`[Setup Isolir] Connecting to router ${router.name} at ${router.ipAddress}:${apiPort}`);
-
-    // Connect to MikroTik using non-SSL API
-    conn = new RouterOSAPI({
-      host: router.ipAddress,
-      user: router.username,
-      password: router.password,
-      port: apiPort,
-      timeout: 15,
-      tls: undefined, // Force non-SSL connection
-    });
-
-    try {
-      await conn.connect();
-    } catch (connectError: any) {
-      console.error(`[Setup Isolir] Connection failed:`, connectError);
-      return NextResponse.json(
-        {
-          error: 'Failed to connect to router',
-          details: connectError.message || 'Connection timeout or refused',
-        },
-        { status: 500 }
-      );
-    }
-
-    const comment = 'SALFANET RADIUS - Dont Delete';
 
     // Read isolation settings from company config
     const company = await prisma.company.findFirst({
@@ -58,89 +27,109 @@ export async function POST(
     const isolationCidr = company?.isolationIpPool || '192.168.200.0/24';
     const rateLimit = company?.isolationRateLimit || '64k/64k';
     const { startIp, endIp, gateway } = getCidrRange(isolationCidr);
+    const cidrNetwork = isolationCidr; // e.g. 192.168.200.0/24
     const poolRange = `${startIp}-${endIp}`;
 
-    try {
-      // 1. Create IP Pool for isolir
-      const poolName = 'pool-isolir';
-      const allPools = await conn.write('/ip/pool/print');
-      const existingPool = allPools.filter((p: any) => p.name === poolName);
-      const poolExists = existingPool.length > 0;
-
-      if (!poolExists) {
-        try {
-          await conn.write('/ip/pool/add', [
-            `=name=${poolName}`,
-            `=ranges=${poolRange}`,
-            `=comment=${comment}`,
-          ]);
-        } catch (addError: any) {
-          if (!addError.message?.includes('already have')) {
-            throw addError;
-          }
-        }
+    // Determine billing server IP (RADIUS server = VPS public IP or VPN gateway)
+    let billingServerIp = process.env.VPS_IP || process.env.RADIUS_SERVER_IP || '127.0.0.1';
+    const nasVpnIp = router.vpnClient?.vpnIp || router.nasname;
+    if (router.vpnClientId && router.vpnClient) {
+      const vpnType = (router.vpnClient.vpnType || '').toUpperCase();
+      if (vpnType === 'WIREGUARD') {
+        // VPS gateway IP = billing server
+        const subnet = (router.vpnClient as any).vpnServer?.subnet || '10.200.0.0/24';
+        billingServerIp = subnet.replace(/\.\d+\/\d+$/, '.1');
       } else {
-        // Update existing pool
-        const poolId = existingPool[0]['.id'];
-        await conn.write('/ip/pool/set', [
-          `=.id=${poolId}`,
-          `=ranges=${poolRange}`,
-          `=comment=${comment}`,
-        ]);
+        const radiusServerVpn = await prisma.vpnClient.findFirst({ where: { isRadiusServer: true } });
+        if (radiusServerVpn) billingServerIp = radiusServerVpn.vpnIp;
       }
-
-      // 2. Create PPP Profile 'isolir'
-      const profileName = 'isolir';
-      const allProfiles = await conn.write('/ppp/profile/print');
-      const existingProfile = allProfiles.filter((p: any) => p.name === profileName);
-      const profileExists = existingProfile.length > 0;
-
-      if (!profileExists) {
-        await conn.write('/ppp/profile/add', [
-          `=name=${profileName}`,
-          `=local-address=${gateway}`,
-          `=remote-address=${poolName}`,
-          `=rate-limit=${rateLimit}`,
-          '=only-one=yes',
-          `=comment=${comment}`,
-        ]);
-      } else {
-        // Update existing profile
-        const profileId = existingProfile[0]['.id'];
-        await conn.write('/ppp/profile/set', [
-          `=.id=${profileId}`,
-          `=local-address=${gateway}`,
-          `=remote-address=${poolName}`,
-          `=rate-limit=${rateLimit}`,
-          '=only-one=yes',
-          `=comment=${comment}`,
-        ]);
-      }
-
-      conn.close();
-
-      return NextResponse.json({
-        success: true,
-        message: 'Profile isolir successfully created/updated!',
-        config: {
-          profile: profileName,
-          rateLimit: rateLimit,
-          poolRange: poolRange,
-          gateway: gateway,
-          cidr: isolationCidr,
-        },
-      });
-    } catch (apiError) {
-      conn.close();
-      throw apiError;
     }
+
+    const script = `
+# ============================================
+# SALFANET Isolation Setup Script
+# Router   : ${router.name}
+# NAS IP   : ${nasVpnIp}
+# Isolir IP: ${cidrNetwork}
+# Billing  : ${billingServerIp}
+# Generated: ${new Date().toISOString()}
+# ============================================
+# Jalankan SETELAH script RADIUS selesai.
+# Compatible with RouterOS 6.x and 7.x
+
+# ============================================
+# 1. IP Pool untuk user isolir
+# ============================================
+:if ([:len [/ip pool find name="pool-isolir"]] = 0) do={
+    /ip pool add name=pool-isolir ranges=${poolRange} comment="SALFANET RADIUS - Isolation Pool"
+} else={
+    /ip pool set [find name="pool-isolir"] ranges=${poolRange}
+}
+
+# ============================================
+# 2. PPP Profile isolir
+# local-address = gateway sisi router pada link PPP
+# remote-address = IP pool untuk client isolir
+# ============================================
+:if ([:len [/ppp profile find name="isolir"]] = 0) do={
+    /ppp profile add name=isolir local-address=${gateway} remote-address=pool-isolir rate-limit=${rateLimit} only-one=yes comment="SALFANET RADIUS - Isolation Profile"
+} else={
+    /ppp profile set [find name="isolir"] local-address=${gateway} remote-address=pool-isolir rate-limit=${rateLimit} only-one=yes
+}
+
+# ============================================
+# 3. Firewall — Isolation Redirect & Walled Garden
+# ============================================
+# Hapus rules lama
+/ip firewall filter remove [find where comment~"SALFANET-ISOLIR"]
+/ip firewall nat remove [find where comment~"SALFANET-ISOLIR"]
+
+# Allow DNS untuk user isolated (wajib agar redirect bisa resolve hostname)
+/ip firewall filter add chain=forward protocol=udp dst-port=53 src-address=${cidrNetwork} action=accept comment="SALFANET-ISOLIR Allow DNS UDP"
+/ip firewall filter add chain=forward protocol=tcp dst-port=53 src-address=${cidrNetwork} action=accept comment="SALFANET-ISOLIR Allow DNS TCP"
+
+# Allow akses ke billing server (HTTP + HTTPS)
+/ip firewall filter add chain=forward dst-address=${billingServerIp} dst-port=80,443 protocol=tcp src-address=${cidrNetwork} action=accept comment="SALFANET-ISOLIR Allow billing"
+
+# Blokir semua internet lain untuk user isolated
+/ip firewall filter add chain=forward src-address=${cidrNetwork} action=drop comment="SALFANET-ISOLIR Block internet"
+
+# NAT: Redirect HTTP dari user isolated ke halaman /isolated di billing server
+/ip firewall nat add action=dst-nat chain=dstnat dst-port=80 protocol=tcp src-address=${cidrNetwork} to-addresses=${billingServerIp} to-ports=80 comment="SALFANET-ISOLIR Redirect HTTP to billing"
+
+# ============================================
+# 4. Route VPS (jalankan di VPS, bukan MikroTik)
+# ============================================
+# Agar user isolated bisa diakses dari VPS untuk redirect billing:
+#   sudo ip route add ${cidrNetwork} via ${nasVpnIp} dev wg0
+# Tambahkan ke /etc/rc.local atau /etc/wireguard/wg0.conf [PostUp] agar persisten.
+# ============================================
+
+# ============================================
+# SELESAI! Verifikasi dengan:
+# /ip pool print where name="pool-isolir"
+# /ppp profile print where name="isolir"
+# /ip firewall filter print where comment~"SALFANET-ISOLIR"
+# /ip firewall nat print where comment~"SALFANET-ISOLIR"
+# ============================================
+`.trim();
+
+    return NextResponse.json({
+      success: true,
+      message: 'Script isolir berhasil di-generate. Copy dan paste ke MikroTik Terminal.',
+      script,
+      config: {
+        cidr: cidrNetwork,
+        poolRange,
+        gateway,
+        rateLimit,
+        billingServer: billingServerIp,
+      },
+    });
   } catch (error: any) {
     console.error('Setup isolir error:', error);
     return NextResponse.json(
-      {
-        error: 'Failed to setup isolir profile',
-        details: error.message,
-      },
+      { error: 'Failed to generate isolir script', details: error.message },
       { status: 500 }
     );
   }

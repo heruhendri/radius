@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { showSuccess, showError, showConfirm } from '@/lib/sweetalert';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Server, Plus, Trash2, Edit, CheckCircle, XCircle, Copy, Loader2, Shield, Radio, Wifi, Activity, RefreshCw, Settings, X, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Server, Plus, Trash2, Edit, CheckCircle, XCircle, Copy, Loader2, Shield, Radio, Wifi, Activity, RefreshCw, Settings, X, ChevronDown, ChevronUp, Info, Lock } from 'lucide-react';
 
 interface Router {
   id: string
@@ -87,6 +87,7 @@ export default function RouterPage() {
   const [creating, setCreating] = useState(false)
   // settingUpIsolir removed - isolation uses NAT redirect, not router-based setup
   const [settingUpRadius, setSettingUpRadius] = useState<string | null>(null)
+  const [settingUpIsolir, setSettingUpIsolir] = useState<string | null>(null)
   const [showScriptModal, setShowScriptModal] = useState(false)
   const [showTutorial, setShowTutorial] = useState(true)
   const [scriptModalData, setScriptModalData] = useState<{ script: string; config: any } | null>(null)
@@ -320,6 +321,24 @@ export default function RouterPage() {
       showError(t('network.failedGenerateRadiusScript'))
     } finally {
       setSettingUpRadius(null)
+    }
+  }
+
+  const handleSetupIsolir = async (routerId: string) => {
+    setSettingUpIsolir(routerId)
+    try {
+      const response = await fetch(`/api/network/routers/${routerId}/setup-isolir`, { method: 'POST' })
+      const result = await response.json()
+      if (response.ok) {
+        setScriptModalData({ script: result.script, config: result.config })
+        setShowScriptModal(true)
+      } else {
+        showError(result.error + (result.details ? '\n' + result.details : ''))
+      }
+    } catch (error) {
+      showError(t('network.failedGenerateRadiusScript'))
+    } finally {
+      setSettingUpIsolir(null)
     }
   }
 
@@ -576,6 +595,14 @@ export default function RouterPage() {
                             title="Setup RADIUS Client"
                           >
                             <Radio className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleSetupIsolir(routerData.id)}
+                            disabled={settingUpIsolir === routerData.id}
+                            className="p-2.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 rounded-xl hover:bg-orange-500/20 transition-all disabled:opacity-50"
+                            title="Setup Isolir"
+                          >
+                            <Lock className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => handleEdit(routerData)}

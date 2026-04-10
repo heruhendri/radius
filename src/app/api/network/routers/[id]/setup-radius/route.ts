@@ -120,79 +120,18 @@ ${gatewayRadiusEntry}
     /ip pool add name=pool-radius-default ranges=10.10.10.2-10.10.10.254 comment="SALFANET RADIUS"
 }
 
-# 6. Buat PPP Profile radius-default (jika belum ada)
-:if ([:len [/ppp profile find name="radius-default"]] = 0) do={
-    /ppp profile add name=radius-default local-address=10.10.10.1 remote-address=pool-radius-default comment="SALFANET RADIUS - Default Profile"
-}
-
-# 6b. Buat PPP Profile salfanetradius untuk PPPoE (jika belum ada)
+# 6. Buat PPP Profile salfanetradius (jika belum ada)
 :if ([:len [/ppp profile find name="salfanetradius"]] = 0) do={
-    /ppp profile add name=salfanetradius local-address=10.10.10.1 remote-address=pool-radius-default use-compression=no use-encryption=no comment="SALFANET RADIUS - PPPoE Profile"
+    /ppp profile add name=salfanetradius local-address=10.10.10.1 remote-address=pool-radius-default use-compression=no use-encryption=no comment="SALFANET RADIUS Profile"
 }
 
-# 7. Buat Hotspot User Profile radius-default (jika belum ada)
-:if ([:len [/ip hotspot user profile find name="radius-default"]] = 0) do={
-    /ip hotspot user profile add name=radius-default shared-users=1 rate-limit=""
-}
-
-# 7b. Buat Hotspot User Profile salfanetradius (jika belum ada)
+# 7. Buat Hotspot User Profile salfanetradius (jika belum ada)
 :if ([:len [/ip hotspot user profile find name="salfanetradius"]] = 0) do={
-    /ip hotspot user profile add name=salfanetradius shared-users=1 rate-limit=""
+    /ip hotspot user profile add name=salfanetradius shared-users=1 rate-limit="" comment="SALFANET RADIUS"
 }
 
 # 8. Enable RADIUS untuk semua Hotspot Server Profile
 /ip hotspot profile set [find] use-radius=yes
-
-# ============================================
-# ISOLATION SETUP (Wajib untuk fitur isolir)
-# ============================================
-# Buat IP Pool untuk user yang diisolir (jika belum ada)
-:if ([:len [/ip pool find name="pool-isolir"]] = 0) do={
-    /ip pool add name=pool-isolir ranges=192.168.200.100-192.168.200.200 comment="SALFANET RADIUS - Isolation Pool"
-}
-
-# Buat PPP Profile isolir (jika belum ada)
-# local-address = gateway untuk sisi router PPP link (bukan nama pool!)
-# remote-address = pool untuk IP client
-:if ([:len [/ppp profile find name="isolir"]] = 0) do={
-    /ppp profile add name=isolir local-address=192.168.200.1 remote-address=pool-isolir rate-limit=64k/64k comment="SALFANET RADIUS - Isolation Profile"
-}
-
-# CATATAN: Untuk mengubah rate-limit atau IP pool isolir,
-# pergi ke: Admin → Settings → Isolation → MikroTik Setup
-
-# ============================================
-# PENTING: Route di VPS untuk pool-isolir
-# ============================================
-# Agar user isolated bisa membuka halaman billing, VPS harus bisa
-# meng-route traffic balik ke 192.168.200.0/24 via tunnel VPN ini.
-# Jalankan perintah berikut di VPS (SEKALI SAJA, atau tambahkan ke /etc/rc.local):
-#
-#   sudo ip route add 192.168.200.0/24 via ${nasSrcAddress || router.nasname}
-#
-# Tanpa route ini, user isolated tidak akan ter-redirect ke halaman pembayaran.
-# ============================================
-
-# ============================================
-# ISOLATION FIREWALL — Redirect & Walled Garden
-# ============================================
-# Hapus rules lama (jika ada)
-/ip firewall filter remove [find where comment~"SALFANET-ISOLIR"]
-/ip firewall nat remove [find where comment~"SALFANET-ISOLIR"]
-
-# Allow DNS untuk user isolated (wajib agar redirect bisa resolve hostname)
-/ip firewall filter add chain=forward protocol=udp dst-port=53 src-address=192.168.200.0/24 action=accept comment="SALFANET-ISOLIR Allow DNS UDP"
-/ip firewall filter add chain=forward protocol=tcp dst-port=53 src-address=192.168.200.0/24 action=accept comment="SALFANET-ISOLIR Allow DNS TCP"
-
-# Allow akses ke billing/isolated page (HTTP + HTTPS)
-/ip firewall filter add chain=forward dst-address=${radiusServerIp} dst-port=80,443 protocol=tcp src-address=192.168.200.0/24 action=accept comment="SALFANET-ISOLIR Allow billing HTTP/S"
-
-# Blokir semua internet lain untuk user isolated
-/ip firewall filter add chain=forward src-address=192.168.200.0/24 action=drop comment="SALFANET-ISOLIR Block internet"
-
-# NAT: Redirect HTTP (port 80) dari user isolated ke halaman /isolated di billing server
-# User membuka browser → diarahkan ke https://${radiusServerIp}/isolated?ip=
-/ip firewall nat add action=dst-nat chain=dstnat dst-port=80 protocol=tcp src-address=192.168.200.0/24 to-addresses=${radiusServerIp} to-ports=80 comment="SALFANET-ISOLIR Redirect HTTP to billing"
 
 # ============================================
 # FIREWALL RULES — RADIUS & CoA
@@ -211,9 +150,12 @@ ${gatewayFirewallRule}
 # /radius print
 # /ppp aaa print
 # /radius incoming print
-# /ip firewall filter print where comment~"SALFANET"
-# /ip pool print where name="pool-isolir"
-# /ppp profile print where name="isolir"
+# /ppp profile print where name="salfanetradius"
+# /ip firewall filter print where comment~"SALFANET-RADIUS"
+# ============================================
+# LANGKAH SELANJUTNYA: Setup Isolir
+# Klik tombol "Setup Isolir" pada router ini untuk mendapatkan
+# script firewall isolasi pelanggan.
 # ============================================
 `.trim();
 
