@@ -86,6 +86,9 @@ export default function VpnClientPage() {
   const [wgNewPeerName, setWgNewPeerName] = useState('');
   const [wgGeneratedScript, setWgGeneratedScript] = useState<string | null>(null);
   const [showWgSection, setShowWgSection] = useState(false);
+  // VPS WireGuard server info (fetched from vps-wg-peer GET)
+  const [wgServerInfo, setWgServerInfo] = useState<{ installed: boolean; publicIp?: string; publicKey?: string; listenPort?: number; subnet?: string } | null>(null);
+  const [wgServerInfoLoading, setWgServerInfoLoading] = useState(false);
   // Tutorial toggle
   const [showTutorial, setShowTutorial] = useState(true);
 
@@ -312,8 +315,64 @@ export default function VpnClientPage() {
     }
   }
 
+  const loadWgServerInfo = async () => {
+    if (wgServerInfo !== null) return // already loaded
+    setWgServerInfoLoading(true)
+    try {
+      const res = await fetch('/api/network/vps-wg-peer')
+      const data = await res.json()
+      if (data.installed) {
+        setWgServerInfo({
+          installed: true,
+          publicIp: data.info?.publicIp,
+          publicKey: data.info?.publicKey,
+          listenPort: data.info?.listenPort,
+          subnet: data.info?.subnet,
+        })
+      } else {
+        setWgServerInfo({ installed: false })
+      }
+    } catch {
+      setWgServerInfo({ installed: false })
+    } finally {
+      setWgServerInfoLoading(false)
+    }
+  }
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // VPS WireGuard mode: intercept and use vps-wg-peer flow
+    if (formData.vpnType === 'wireguard' && formData.vpnServerId === '__vps_wg__') {
+      if (!formData.name.trim()) return
+      setWgNewPeerName(formData.name.trim())
+      setShowModal(false)
+      setShowWgSection(true)
+      // Trigger add peer with the name from the form
+      setCreating(true)
+      try {
+        const res = await fetch('/api/network/vps-wg-peer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'add', label: formData.name.trim() }),
+        })
+        const data = await res.json()
+        if (data.success) {
+          setWgGeneratedScript(data.routerosScript || null)
+          await loadWgPeers()
+          showSuccess('WireGuard peer berhasil ditambahkan ke VPS', 'Peer Ditambahkan')
+          setFormData({ name: '', description: '', vpnServerId: '', vpnType: 'l2tp' })
+        } else {
+          showError(data.error || 'Gagal menambahkan WireGuard peer ke VPS')
+        }
+      } catch {
+        showError('Gagal menghubungi VPS')
+      } finally {
+        setCreating(false)
+      }
+      return
+    }
+
     setCreating(true)
 
     try {
@@ -1017,9 +1076,19 @@ ${radiusSection}`.trim()
                     required
                   >
                     <option value="" className="bg-slate-800">{t('network.selectVpnClient')}</option>
+                    {/* VPS WireGuard option — shown when WG selected and VPS has WG installed */}
+                    {formData.vpnType === 'wireguard' && wgServerInfoLoading && (
+                      <option disabled className="bg-slate-800">⏳ Memeriksa VPS WireGuard...</option>
+                    )}
+                    {formData.vpnType === 'wireguard' && wgServerInfo?.installed && (
+                      <option value="__vps_wg__" className="bg-slate-800">
+                        🖥️ VPS WireGuard Server ({wgServerInfo.publicIp || 'VPS'} :{wgServerInfo.listenPort || 51820})
+                      </option>
+                    )}
+                    {/* CHR servers with WG enabled */}
                     {vpnServers
                       .filter(server => {
-                        if (formData.vpnType === 'wireguard') return true  // WireGuard dikelola di VPS, semua server bisa dipilih
+                        if (formData.vpnType === 'wireguard') return server.wgEnabled === true
                         if (formData.vpnType === 'l2tp') return server.l2tpEnabled === true
                         if (formData.vpnType === 'sstp') return server.sstpEnabled === true
                         if (formData.vpnType === 'pptp') return server.pptpEnabled === true
@@ -1027,10 +1096,16 @@ ${radiusSection}`.trim()
                       })
                       .map((server) => (
                         <option key={server.id} value={server.id} className="bg-slate-800">
-                          {server.name} ({server.host}){formData.vpnType === 'wireguard' && server.wgEnabled ? ' ✓ WG' : ''}
+                          🔷 CHR: {server.name} ({server.host})
                         </option>
                       ))}
                   </select>
+                  {formData.vpnType === 'wireguard' && !wgServerInfoLoading && wgServerInfo && !wgServerInfo.installed && vpnServers.filter(s => s.wgEnabled).length === 0 && (
+                    <p className="text-xs text-amber-400 mt-1.5">
+                      ⚠️ WireGuard belum terinstall di VPS dan tidak ada CHR dengan WireGuard aktif.
+                      <a href="/admin/network/vpn-server" className="text-[#00f7ff] underline ml-1">Setup di menu VPN Server</a>.
+                    </p>
+                  )}
                   {formData.vpnType && formData.vpnType !== 'wireguard' && vpnServers.filter(server => {
                     if (formData.vpnType === 'l2tp') return server.l2tpEnabled === true
                     if (formData.vpnType === 'sstp') return server.sstpEnabled === true
@@ -1053,7 +1128,7 @@ ${radiusSection}`.trim()
                       <button
                         key={type}
                         type="button"
-                        onClick={() => setFormData({ ...formData, vpnType: type, vpnServerId: '' })}
+                        onClick={() => { setFormData({ ...formData, vpnType: type, vpnServerId: '' }); if (type === 'wireguard') loadWgServerInfo(); }}
                         className={`px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${formData.vpnType === type
                           ? 'bg-gradient-to-r from-[#00f7ff] to-[#00d4e6] text-black shadow-[0_0_15px_rgba(0,247,255,0.4)]'
                           : 'bg-muted/60 dark:bg-slate-800/60 border border-[#bc13fe]/30 text-foreground hover:bg-[#bc13fe]/20'
