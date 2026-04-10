@@ -43,7 +43,7 @@ print_ok()      { echo "[OK]    $*"; }
 print_warn()    { echo "[WARN]  $*"; }
 print_error()   { echo "[ERROR] $*" >&2; }
 
-gen_password() { tr -dc 'A-Za-z0-9!@#%^&*' < /dev/urandom | head -c 24; }
+gen_password() { tr -dc 'A-Za-z0-9!@#%^&*' < /dev/urandom | head -c 24 || true; }
 
 # Derive IP dari subnet
 derive_ip() {
@@ -91,7 +91,7 @@ print_info "[1/6] Install strongswan + xl2tpd..."
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   strongswan strongswan-pki libcharon-extra-plugins \
-  xl2tpd ppp iptables 2>&1 | grep -E 'install|already|upgrade' || true
+  xl2tpd ppp iptables || { print_error "apt-get install gagal"; exit 1; }
 
 for bin in xl2tpd ipsec; do
   if ! command -v "$bin" &>/dev/null; then
@@ -281,9 +281,10 @@ CHAP_FILE="/etc/ppp/chap-secrets"
 case "${CMD}" in
   add)
     USER="$2"; PASS="$3"; VPN_IP="${4:-*}"
+    CHAP_TMP=$(mktemp)
     # Hapus entry lama dengan username yang sama dulu
-    grep -v "^\"${USER}\"" "${CHAP_FILE}" > /tmp/chap-tmp 2>/dev/null || true
-    mv /tmp/chap-tmp "${CHAP_FILE}" 2>/dev/null || true
+    grep -v "^\"${USER}\"" "${CHAP_FILE}" > "${CHAP_TMP}" 2>/dev/null || true
+    mv "${CHAP_TMP}" "${CHAP_FILE}" 2>/dev/null || true
     # Tambah baru
     echo "\"${USER}\" * \"${PASS}\" ${VPN_IP}" >> "${CHAP_FILE}"
     chmod 600 "${CHAP_FILE}"
@@ -293,8 +294,9 @@ case "${CMD}" in
     ;;
   remove)
     USER="$2"
-    grep -v "^\"${USER}\"" "${CHAP_FILE}" > /tmp/chap-tmp 2>/dev/null || true
-    mv /tmp/chap-tmp "${CHAP_FILE}" 2>/dev/null || true
+    CHAP_TMP=$(mktemp)
+    grep -v "^\"${USER}\"" "${CHAP_FILE}" > "${CHAP_TMP}" 2>/dev/null || true
+    mv "${CHAP_TMP}" "${CHAP_FILE}" 2>/dev/null || true
     chmod 600 "${CHAP_FILE}"
     systemctl reload xl2tpd 2>/dev/null || true
     echo "OK: peer ${USER} dihapus"
