@@ -9,14 +9,75 @@
 
 **Salfanet Radius** adalah sistem billing ISP/RTRW.NET berbasis web dengan integrasi FreeRADIUS penuh. Mendukung PPPoE dan Hotspot, cocok untuk ISP kecil-menengah di Indonesia.
 
-- **Version**: 2.13.2
+- **Version**: 2.16.0
 - **Status**: Production-ready, deployed di VPS
-- **Last Updated**: April 5, 2026
-- **Latest Commit**: `7c85dd3`
+- **Last Updated**: April 10, 2026
+- **Latest Commit**: `57f6169`
 - **GitHub**: https://github.com/s4lfanet/salfanet-radius (public)
-- **Live URL**: https://radius.yourdomain.com
+- **Live URL**: https://radius.hotspotapp.net
 
-### Recent Patch Log (April 2026 — UI Redesign, VPN Fix, Deploy Hardening)
+### Recent Patch Log (April 2026 — PWA Web Push, Teknisi Notifikasi, GitHub Actions)
+
+- **CRITICAL FIX: Push subscription tidak tersimpan ke DB** (`57f6169`, April 10, 2026)
+  - **Root cause**: `fetch('/api/push/technician-subscribe', ...)` tidak menyertakan `credentials: 'same-origin'` sehingga cookie `technician-token` tidak dikirim ke server. Tanpa cookie, admin_user tidak terdeteksi → API cari ID di tabel `technician` → 404 → subscription tidak tersimpan.
+  - **Fix**: Tambah `credentials: 'same-origin'` ke 3 fetch calls di `SidebarPushToggle`: silent sync, subscribe toggle, unsubscribe toggle.
+  - **Files**: `src/app/technician/TechnicianPortalLayout.tsx`
+
+- **CRITICAL FIX: `admin_user` push subscription diabaikan** (`7df3a8f`, April 10, 2026)
+  - **Root cause**: `POST /api/push/technician-subscribe` mengembalikan `{skipped:true}` untuk `admin_user` tanpa menyimpan ke DB.
+  - **Fix**: Tambah model `adminPushSubscription` di schema Prisma → tabel `admin_push_subscriptions`. Route kini menyimpan subscription admin ke tabel ini.
+  - **New functions di push-notification.service.ts**: `upsertAdminPushSubscription()`, `removeAdminPushSubscription()`, `getAdminSubscriptions()`
+  - **Files**: `prisma/schema.prisma`, `src/server/services/push-notification.service.ts`, `src/app/api/push/technician-subscribe/route.ts`, `src/app/api/push/technician-unsubscribe/route.ts`
+
+- **Fix: Dashboard teknisi pakai model ticket** (`1602b7e`, `ed3619b`, April 10, 2026)
+  - Dashboard menggunakan `work_orders` yang sudah dihapus. Dimigrasi ke model `ticket`.
+  - **Files**: `src/app/technician/dashboard/page.tsx`
+
+- **Feat: GitHub Actions auto-deploy** (`e195e4f`, April 2026)
+  - Workflow `.github/workflows/deploy.yml` → auto SSH ke VPS, jalankan `bash scripts/update.sh`, saat push ke `master`.
+
+- **Feat: Toggle push notif sidebar teknisi** (`d0a97ec`, April 2026)
+  - `SidebarPushToggle` komponen di `TechnicianPortalLayout.tsx` — selalu tampil, state ON/OFF jelas.
+  - Mendukung silent sync: saat portal dibuka, jika browser punya push sub aktif, langsung sync ke DB.
+
+- **Feat: Dispatch tiket ke semua teknisi via WA + push** (`1eb9358`, April 2026)
+  - Saat tiket baru dibuat/di-assign, broadcast WA + push notification ke semua teknisi aktif.
+
+- **Fix: update.sh auto-rebuild standalone** (`8ee6c03`, April 2026)
+  - Jika `.next/standalone/server.js` hilang, build dipaksa otomatis.
+  - API check mengembalikan `needsBuild: true`, UI tampilkan tombol "Rebuild Now".
+
+### Push Notification Architecture (Web Push / VAPID)
+
+> **PENTING**: Sistem push ini menggunakan **Web Push API** (VAPID), **BUKAN** Firebase Cloud Messaging (FCM).
+> `fcmTokens` field di `pppoeUser` adalah untuk mobile app Flutter terpisah — tidak terkait dengan sistem push ini.
+
+- **VAPID Keys**: Di `.env`: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_CONTACT_EMAIL`
+- **Service Worker**: `/public/sw.js` — event `push` → `showNotification()`, `notificationclick` → buka URL PWA
+- **Scope**: SW didaftarkan dengan `scope: '/'` via `navigator.serviceWorker.register('/sw.js', { scope: '/' })`
+
+#### Tabel Push Subscriptions (4 tabel):
+
+| Tabel | Portal | Route Registrasi |
+|-------|--------|-----------------|
+| `push_subscriptions` | Customer | `POST /api/push/subscribe` (Bearer token dari localStorage) |
+| `technician_push_subscriptions` | Teknisi | `POST /api/push/technician-subscribe` (cookie `technician-token`, type `technician`) |
+| `admin_push_subscriptions` | Admin via portal teknisi | `POST /api/push/technician-subscribe` (cookie `technician-token`, type `admin_user`) |
+| `agent_push_subscriptions` | Agent | `POST /api/push/agent-subscribe` |
+
+#### Cara Kerja Subscribe (Teknisi/Admin):
+1. SidebarPushToggle memanggil `fetch('/api/push/technician-subscribe', { credentials: 'same-origin', ... })`
+2. Cookie `technician-token` dikirim otomatis → API baca JWT
+3. Jika `payload.type === 'admin_user'` → simpan ke `adminPushSubscription`
+4. Jika `payload.type === 'technician'` → simpan ke `technicianPushSubscription`
+5. **WAJIB `credentials: 'same-origin'`** — tanpa ini, cookie tidak terkirim → subscription gagal
+
+#### Silent Sync:
+- Saat portal dibuka, jika browser masih punya push subscription aktif, langsung re-register ke DB (mengatasi DB restore atau tabel dikosongkan).
+- Customer: `usePushNotification.ts` → `refresh()` → `fetch('/api/push/subscribe', { Authorization: Bearer ... })`
+- Teknisi/Admin: `TechnicianPortalLayout.tsx` → `SidebarPushToggle.refresh()` → `fetch('/api/push/technician-subscribe', { credentials: 'same-origin', ... })`
+
+
 
 - **Redesign UI: Modern Clean Blue/Indigo theme** (`6ec9783`, April 5, 2026)
   - Seluruh halaman login (admin, technician, customer, agent/`agent/page.tsx`) didesain ulang dari cyberpunk/neon ke tampilan modern bersih.
