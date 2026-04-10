@@ -1019,7 +1019,7 @@ ${radiusSection}`.trim()
                     <option value="" className="bg-slate-800">{t('network.selectVpnClient')}</option>
                     {vpnServers
                       .filter(server => {
-                        if (formData.vpnType === 'wireguard') return server.wgEnabled === true
+                        if (formData.vpnType === 'wireguard') return true  // WireGuard dikelola di VPS, semua server bisa dipilih
                         if (formData.vpnType === 'l2tp') return server.l2tpEnabled === true
                         if (formData.vpnType === 'sstp') return server.sstpEnabled === true
                         if (formData.vpnType === 'pptp') return server.pptpEnabled === true
@@ -1027,21 +1027,19 @@ ${radiusSection}`.trim()
                       })
                       .map((server) => (
                         <option key={server.id} value={server.id} className="bg-slate-800">
-                          {server.name} ({server.host})
+                          {server.name} ({server.host}){formData.vpnType === 'wireguard' && server.wgEnabled ? ' ✓ WG' : ''}
                         </option>
                       ))}
                   </select>
-                  {formData.vpnType && vpnServers.filter(server => {
-                    if (formData.vpnType === 'wireguard') return server.wgEnabled === true
+                  {formData.vpnType && formData.vpnType !== 'wireguard' && vpnServers.filter(server => {
                     if (formData.vpnType === 'l2tp') return server.l2tpEnabled === true
                     if (formData.vpnType === 'sstp') return server.sstpEnabled === true
                     if (formData.vpnType === 'pptp') return server.pptpEnabled === true
                     return true
                   }).length === 0 && (
                     <p className="text-xs text-amber-400 mt-1.5 flex items-center gap-1">
-                      ⚠️ Tidak ada VPN Server yang mengaktifkan protokol <strong>{formData.vpnType === 'l2tp' ? 'L2TP' : formData.vpnType === 'wireguard' ? 'WireGuard' : formData.vpnType.toUpperCase()}</strong>.
-                      {formData.vpnType === 'wireguard' && <><span> Aktifkan WireGuard di</span><a href="/admin/network/vpn-server" className="text-[#00f7ff] underline ml-1">menu VPN Server</a>.</>}
-                      {formData.vpnType === 'l2tp' && <><span> Setup L2TP di</span><a href="/admin/network/vpn-server" className="text-[#00f7ff] underline ml-1">menu VPN Server</a>.</>}
+                      ⚠️ Tidak ada VPN Server yang mengaktifkan protokol <strong>{formData.vpnType === 'l2tp' ? 'L2TP' : formData.vpnType.toUpperCase()}</strong>.
+                      <span> Setup di</span><a href="/admin/network/vpn-server" className="text-[#00f7ff] underline ml-1">menu VPN Server</a>.
                     </p>
                   )}
                 </div>
