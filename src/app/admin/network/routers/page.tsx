@@ -126,8 +126,6 @@ export default function RouterPage() {
   }
 
   const handleVpnClientChange = (vpnClientId: string) => {
-    setFormData({ ...formData, vpnClientId })
-
     if (vpnClientId) {
       const vpnClient = vpnClients.find(v => v.id === vpnClientId)
       if (vpnClient) {
@@ -138,6 +136,9 @@ export default function RouterPage() {
           nasname: vpnClient.vpnIp,
         }))
       }
+    } else {
+      // VPN client dihapus — kosongkan IP agar user isi manual
+      setFormData(prev => ({ ...prev, vpnClientId: '', ipAddress: '', nasname: '' }))
     }
   }
 
@@ -232,6 +233,11 @@ export default function RouterPage() {
         setEditingRouter(null)
         resetForm()
         loadRouters()
+        // Auto-tampilkan RADIUS script yang sudah di-update
+        const savedRouterId = data.router?.id || (editingRouter?.id)
+        if (savedRouterId) {
+          handleSetupRadius(savedRouterId)
+        }
       } else {
         showError(data.error || t('network.failedSaveRouter'))
       }

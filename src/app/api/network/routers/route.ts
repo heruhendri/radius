@@ -242,7 +242,10 @@ export async function PUT(request: NextRequest) {
     const isGateway = effectiveType === 'gateway';
 
     // Test connection only for MikroTik routers with changed credentials
-    if (!isGateway && (ipAddress || username || password || port)) {
+    // Skip when vpnClientId is set: IP is a VPN tunnel IP managed by the system,
+    // the connection test is not reliable from arbitrary network contexts.
+    const effectiveVpnClientId = vpnClientId !== undefined ? vpnClientId : currentRouter.vpnClientId
+    if (!isGateway && !effectiveVpnClientId && (username || password || port)) {
       try {
         const conn = new RouterOSAPI({
           host: ipAddress || currentRouter.ipAddress,
@@ -319,7 +322,12 @@ export async function PUT(request: NextRequest) {
       console.error('Activity log error:', logError);
     }
 
-    return NextResponse.json({ success: true, router });
+    // Return updated router with vpnClient included for frontend RADIUS script refresh
+    const updatedRouter = await prisma.router.findUnique({
+      where: { id },
+      include: { vpnClient: { select: { id: true, name: true, vpnIp: true } } },
+    });
+    return NextResponse.json({ success: true, router: updatedRouter ?? router, vpnClientChanged: vpnClientId !== undefined });
   } catch (error) {
     console.error('Update router error:', error);
     return NextResponse.json({ error: 'Failed to update router' }, { status: 500 });
