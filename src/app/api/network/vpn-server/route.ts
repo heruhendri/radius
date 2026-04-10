@@ -44,6 +44,9 @@ export async function GET() {
         pptpEnabled: true,
         openVpnEnabled: true,
         openVpnPort: true,
+        wgEnabled: true,
+        wgPublicKey: true,
+        wgPort: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -86,6 +89,9 @@ export async function POST(request: Request) {
         sstpEnabled: !!data.sstpEnabled,
         pptpEnabled: !!data.pptpEnabled,
         openVpnEnabled: false,
+        wgEnabled: !!data.wgEnabled,
+        wgPublicKey: data.wgPublicKey || null,
+        wgPort: data.wgPort ? parseInt(data.wgPort) : 51820,
       },
     })
 
@@ -123,6 +129,9 @@ export async function PUT(request: Request) {
       sstpEnabled: !!data.sstpEnabled,
       pptpEnabled: !!data.pptpEnabled,
       openVpnEnabled: false,
+      wgEnabled: !!data.wgEnabled,
+      ...(data.wgPublicKey !== undefined ? { wgPublicKey: data.wgPublicKey || null } : {}),
+      ...(data.wgPort !== undefined ? { wgPort: parseInt(data.wgPort) || 51820 } : {}),
     }
 
     // Only update password if provided

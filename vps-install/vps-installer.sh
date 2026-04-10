@@ -369,6 +369,16 @@ Konfigurasi VPN : Edit /etc/vpn/vpn.conf (VPN_SERVER, VPN_USER, VPN_PASS, VPN_SU
 Koneksi VPN     : vpn-connect start
 Status VPN      : vpn-connect status
 
+[>] WIREGUARD VPN SERVER (VPS sebagai server, NAS connect langsung)
+-------------------------------------------------------------------
+Protokol        : WireGuard (UDP 51820) — RouterOS 7.1+
+Subnet          : 10.200.0.0/24
+Install WG      : bash ${APP_DIR}/vps-install/install-wg-server.sh
+Install L2TP    : bash ${APP_DIR}/vps-install/install-l2tp-server.sh  (untuk RouterOS 6)
+Status WG       : wg show wg0
+Manage Peers    : Admin Panel → Network → VPN Server → klik tombol WireGuard
+Info File       : /etc/wireguard/wg-server-info.json
+
 [>] SERVICE STATUS
 -----------------
 MySQL     : $(systemctl is-active mysql 2>/dev/null || echo 'N/A')

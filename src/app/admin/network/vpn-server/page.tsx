@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { showSuccess, showError, showConfirm } from '@/lib/sweetalert';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Shield, Server, Plus, Pencil, Trash2, Zap, Activity, CheckCircle, XCircle, Settings, Terminal, RefreshCw, FileText, X } from 'lucide-react';
+import { Shield, Server, Plus, Pencil, Trash2, Zap, Activity, CheckCircle, XCircle, Settings, Terminal, RefreshCw, FileText, X, Wifi } from 'lucide-react';
 
 interface VpnServer {
   id: string
@@ -18,7 +18,18 @@ interface VpnServer {
   sstpEnabled: boolean
   pptpEnabled: boolean
   openVpnEnabled: boolean
+  wgEnabled: boolean
+  wgPublicKey?: string | null
+  wgPort?: number | null
   isActive: boolean
+}
+
+interface WgPeer {
+  publicKey: string
+  endpoint?: string
+  allowedIps?: string
+  lastHandshake?: string
+  transfer?: string
 }
 
 interface VpnClientData {
@@ -61,6 +72,16 @@ export default function VpnServerPage() {
   const [pptpStatus, setPptpStatus] = useState<any>(null);
   const [pptpLoading, setPptpLoading] = useState(false);
   const [pptpLogs, setPptpLogs] = useState<string[]>([]);
+
+  // WireGuard VPN Server States
+  const [showWgPanel, setShowWgPanel] = useState(false);
+  const [wgPanelServer, setWgPanelServer] = useState<VpnServer | null>(null);
+  const [wgServerInfo, setWgServerInfo] = useState<any>(null);
+  const [wgPeers, setWgPeers] = useState<WgPeer[]>([]);
+  const [wgLoading, setWgLoading] = useState(false);
+  const [wgAddingPeer, setWgAddingPeer] = useState(false);
+  const [wgNewPeerName, setWgNewPeerName] = useState('');
+  const [wgGeneratedScript, setWgGeneratedScript] = useState<string | null>(null);
 
   // --- Modal States --------------------------------------------------------
   const [showL2tpSshModal, setShowL2tpSshModal] = useState(false);
@@ -359,6 +380,99 @@ export default function VpnServerPage() {
     setVpnScriptData({ ros7: ros7Script, ros6: ros6Script });
     setShowVpnScriptModal(true);
   };
+
+  // ── WireGuard Handlers ──────────────────────────────────────────────────
+  const openWgPanel = async (server: VpnServer) => {
+    setWgPanelServer(server);
+    setWgServerInfo(null);
+    setWgPeers([]);
+    setWgGeneratedScript(null);
+    setShowWgPanel(true);
+    setWgLoading(true);
+    try {
+      const res = await fetch('/api/network/vps-wg-peer');
+      const data = await res.json();
+      if (data.installed) {
+        setWgServerInfo(data);
+        setWgPeers(data.peers || []);
+        // Sync publicKey to DB if not yet saved
+        if (data.publicKey && data.publicKey !== server.wgPublicKey) {
+          await fetch('/api/network/vpn-server', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: server.id, name: server.name, host: server.host, username: server.username, apiPort: server.apiPort, subnet: server.subnet, l2tpEnabled: server.l2tpEnabled, sstpEnabled: server.sstpEnabled, pptpEnabled: server.pptpEnabled, wgEnabled: true, wgPublicKey: data.publicKey, wgPort: data.listenPort }),
+          });
+          loadServers();
+        }
+      } else {
+        setWgServerInfo({ installed: false, message: data.message });
+      }
+    } catch (e: any) {
+      addToast({ type: 'error', title: 'Gagal membaca status WireGuard', description: e.message });
+    } finally {
+      setWgLoading(false);
+    }
+  };
+
+  const handleWgAddPeer = async () => {
+    if (!wgNewPeerName.trim()) { addToast({ type: 'error', title: 'Nama NAS wajib diisi' }); return; }
+    setWgAddingPeer(true);
+    try {
+      const res = await fetch('/api/network/vps-wg-peer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', nasName: wgNewPeerName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Gagal tambah peer');
+
+      // Build RouterOS 7 WireGuard setup script
+      const parts = data.vpnIp.split('.');
+      const script = `# WireGuard NAS Setup — ${wgNewPeerName}
+# Generated: ${new Date().toISOString().split('T')[0]}
+# ────────────────────────────────────────────────
+
+/interface/wireguard/add name=wg-salfanet private-key="${data.clientPrivateKey || '<PASTE_NAS_PRIVATE_KEY>'}"
+/interface/wireguard/peers/add interface=wg-salfanet public-key="${data.serverPublicKey}" endpoint-address="${data.serverEndpoint?.split(':')[0]}" endpoint-port=${data.wgPort} allowed-address="${data.allowedIps}" persistent-keepalive=25
+/ip/address/add address=${data.vpnIp}/32 interface=wg-salfanet
+/ip/route/add dst-address=${data.allowedIps.includes('/') ? data.allowedIps : data.allowedIps + '/32'} gateway=wg-salfanet
+
+# FreeRADIUS server source IP via WireGuard
+/radius/add address=${data.allowedIps?.split('/')[0] || data.serverEndpoint?.split(':')[0]} secret=<RADIUS_SECRET> service=ppp,login timeout=3000
+
+# RADIUS auth via WireGuard tunnel
+/ip/firewall/filter/add chain=input src-address=${data.vpnIp}/32 protocol=udp dst-port=1812,1813,3799 action=accept comment="RADIUS via WG"
+`;
+      setWgGeneratedScript(script);
+      setWgNewPeerName('');
+      addToast({ type: 'success', title: `Peer "${wgNewPeerName}" ditambahkan`, description: `VPN IP: ${data.vpnIp}` });
+      // Refresh peer list
+      await openWgPanel(wgPanelServer!);
+    } catch (e: any) {
+      addToast({ type: 'error', title: 'Gagal tambah peer WireGuard', description: e.message });
+    } finally {
+      setWgAddingPeer(false);
+    }
+  };
+
+  const handleWgRemovePeer = async (pubKey: string) => {
+    const confirmed = await showConfirm('Hapus peer WireGuard ini? Koneksi NAS akan terputus.', 'Hapus Peer');
+    if (!confirmed) return;
+    try {
+      const res = await fetch('/api/network/vps-wg-peer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove', publicKey: pubKey }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Gagal hapus peer');
+      addToast({ type: 'success', title: 'Peer dihapus' });
+      setWgPeers(prev => prev.filter(p => p.publicKey !== pubKey));
+    } catch (e: any) {
+      addToast({ type: 'error', title: 'Gagal hapus peer', description: e.message });
+    }
+  };
+  // ── End WireGuard Handlers ──────────────────────────────────────────────
 
   const handleAdd = () => {
     setEditingServer(null);
@@ -841,7 +955,13 @@ export default function VpnServerPage() {
                             PPTP
                           </span>
                         )}
-                        {!server.l2tpEnabled && !server.sstpEnabled && !server.pptpEnabled && (
+                        {server.wgEnabled && (
+                          <span className="px-3 py-1.5 bg-teal-500/20 text-teal-400 border border-teal-500/40 text-xs font-bold rounded-lg shadow-[0_0_15px_rgba(20,184,166,0.2)] flex items-center gap-1">
+                            <Wifi className="w-3 h-3" />
+                            WireGuard
+                          </span>
+                        )}
+                        {!server.l2tpEnabled && !server.sstpEnabled && !server.pptpEnabled && !server.wgEnabled && (
                           <span className="px-3 py-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/40 text-xs font-bold rounded-lg">
                             {t('network.notConfigured')}
                           </span>
@@ -932,6 +1052,15 @@ export default function VpnServerPage() {
                           <span className="text-sm font-medium">L2TP Control</span>
                         </button>
                       )}
+
+                      <button
+                        onClick={() => openWgPanel(server)}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-teal-500/20 border border-teal-500/50 text-teal-300 rounded-xl hover:bg-teal-500/30 transition-all"
+                        title="WireGuard VPN Server (VPS as server)"
+                      >
+                        <Wifi className="w-4 h-4" />
+                        <span className="text-sm font-medium">WireGuard</span>
+                      </button>
 
                       <button
                         onClick={() => handleEdit(server)}
@@ -1111,6 +1240,121 @@ export default function VpnServerPage() {
             </div>
           )
         }
+
+        {/* ── WireGuard Panel Modal ── */}
+        {showWgPanel && wgPanelServer && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-4" onClick={() => setShowWgPanel(false)}>
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-teal-500/50 rounded-2xl max-w-3xl w-full p-6 shadow-[0_0_50px_rgba(20,184,166,0.3)] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-teal-500 to-[#00f7ff] rounded-lg flex items-center justify-center">
+                    <Wifi className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-xl font-bold text-foreground">WireGuard VPN Server — {wgPanelServer.name}</h2>
+                </div>
+                <button onClick={() => setShowWgPanel(false)} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+
+              {wgLoading && <p className="text-sm text-teal-400 animate-pulse">⏳ Membaca status WireGuard dari VPS...</p>}
+
+              {!wgLoading && wgServerInfo && !wgServerInfo.installed && (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 mb-4">
+                  <p className="text-sm text-amber-400 font-bold mb-1">⚠️ WireGuard server belum di-install</p>
+                  <p className="text-xs text-muted-foreground mb-3">{wgServerInfo.message}</p>
+                  <p className="text-xs text-muted-foreground">Jalankan di VPS:</p>
+                  <pre className="text-xs font-mono bg-slate-900 text-green-300 p-3 rounded-lg mt-1 overflow-x-auto">bash /var/www/salfanet-radius/vps-install/install-wg-server.sh</pre>
+                </div>
+              )}
+
+              {!wgLoading && wgServerInfo?.installed && (
+                <>
+                  {/* Server Info */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+                    {[
+                      { label: 'Public IP', value: wgServerInfo.publicIp },
+                      { label: 'Listen Port', value: `${wgServerInfo.listenPort}/UDP` },
+                      { label: 'Subnet', value: wgServerInfo.subnet },
+                      { label: 'Peers Aktif', value: wgPeers.length.toString() },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-3">
+                        <p className="text-teal-400 text-xs uppercase tracking-wider mb-1">{label}</p>
+                        <p className="font-mono text-sm text-foreground">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Server Public Key */}
+                  <div className="mb-5 p-3 rounded-xl bg-slate-900 border border-teal-500/20">
+                    <p className="text-xs text-teal-400 mb-1">Server Public Key (untuk config NAS)</p>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs font-mono text-green-300 flex-1 break-all">{wgServerInfo.publicKey}</code>
+                      <button onClick={() => { navigator.clipboard.writeText(wgServerInfo.publicKey); addToast({ type: 'success', title: 'Public key disalin' }); }} className="text-xs text-[#00f7ff] bg-muted px-2 py-1 rounded shrink-0">Copy</button>
+                    </div>
+                  </div>
+
+                  {/* Peer List */}
+                  <div className="mb-5">
+                    <p className="text-sm font-bold text-teal-300 mb-2">NAS Peers ({wgPeers.length})</p>
+                    {wgPeers.length === 0 ? (
+                      <p className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-xl">Belum ada peer terhubung. Tambahkan NAS di bawah.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {wgPeers.map((peer) => (
+                          <div key={peer.publicKey} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-teal-500/20">
+                            <div>
+                              <p className="text-xs font-mono text-foreground">{peer.allowedIps || '–'}</p>
+                              <p className="text-xs text-muted-foreground">{peer.endpoint || 'no endpoint'} • {peer.transfer || '–'}</p>
+                              <p className="text-xs text-muted-foreground truncate max-w-[200px]">{peer.publicKey}</p>
+                              {peer.lastHandshake && <p className="text-xs text-teal-400">Handshake: {new Date(peer.lastHandshake).toLocaleString('id-ID')}</p>}
+                            </div>
+                            <button onClick={() => handleWgRemovePeer(peer.publicKey)} className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors" title="Hapus peer">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Add New Peer */}
+                  <div className="p-4 rounded-xl border border-teal-500/30 bg-teal-500/5">
+                    <p className="text-sm font-bold text-teal-300 mb-2">Tambah NAS Baru via WireGuard</p>
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                        placeholder="Nama NAS / Router (misal: NAS-Jakarta-01)"
+                        value={wgNewPeerName}
+                        onChange={(e) => setWgNewPeerName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleWgAddPeer()}
+                      />
+                      <button
+                        onClick={handleWgAddPeer}
+                        disabled={wgAddingPeer || !wgNewPeerName.trim()}
+                        className="px-4 py-2 bg-teal-500 text-white text-sm font-bold rounded-lg hover:bg-teal-400 transition-colors disabled:opacity-50"
+                      >
+                        {wgAddingPeer ? '...' : '+ Tambah'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">VPS akan generate keypair dan assign VPN IP. Script RouterOS 7 ditampilkan otomatis.</p>
+                  </div>
+
+                  {/* Generated RouterOS Script */}
+                  {wgGeneratedScript && (
+                    <div className="mt-4 p-4 rounded-xl bg-slate-900 border border-teal-500/30">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-bold text-teal-300">Script RouterOS 7 — Copy ke Winbox Terminal</p>
+                        <button onClick={() => { navigator.clipboard.writeText(wgGeneratedScript); addToast({ type: 'success', title: 'Script disalin!' }); }} className="text-xs text-[#00f7ff] bg-muted px-2 py-1 rounded">Copy</button>
+                      </div>
+                      <pre className="text-xs font-mono text-green-300 whitespace-pre overflow-x-auto max-h-64">{wgGeneratedScript}</pre>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* L2TP Control Modal */}
         {showL2tpControl && editingServer && (
