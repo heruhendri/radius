@@ -43,6 +43,8 @@ function LoginForm() {
   const [tfaToken, setTfaToken] = useState('');
   const [tfaCode, setTfaCode] = useState('');
   const tfaInputRef = useRef<HTMLInputElement>(null);
+  // Guard: prevents useEffect redirect from firing when handleSubmit already pushed
+  const isRedirectingRef = useRef(false);
 
   // Check idle logout
   useEffect(() => {
@@ -72,9 +74,9 @@ function LoginForm() {
       .finally(() => setBrandLoaded(true));
   }, []);
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (e.g. user navigates to /admin/login while already logged in)
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !isRedirectingRef.current) {
       router.push('/admin');
     }
   }, [status, router]);
@@ -126,8 +128,8 @@ function LoginForm() {
         setError(t('auth.loginFailed'));
       } else if (result?.ok) {
         const callbackUrl = searchParams.get('callbackUrl') || '/admin';
+        isRedirectingRef.current = true;
         router.push(callbackUrl);
-        router.refresh();
       }
     } catch (err: any) {
       setError(err.message || t('auth.loginFailed'));
@@ -160,8 +162,8 @@ function LoginForm() {
         tfaInputRef.current?.focus();
       } else if (result?.ok) {
         const callbackUrl = searchParams.get('callbackUrl') || '/admin';
+        isRedirectingRef.current = true;
         router.push(callbackUrl);
-        router.refresh();
       }
     } catch (err: any) {
       setError(err.message || 'Verification failed');
