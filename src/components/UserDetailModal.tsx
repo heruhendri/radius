@@ -7,6 +7,7 @@ import { formatWIB, formatLocalDate } from '@/lib/timezone';
 import { useTranslation } from '@/hooks/useTranslation';
 import { showSuccess, showError, showWarning } from '@/lib/sweetalert';
 import { CameraPhotoInput } from '@/components/CameraPhotoInput';
+import { CameraViewfinder } from '@/components/CameraViewfinder';
 
 interface User {
   id: string;
@@ -101,6 +102,7 @@ export default function UserDetailModal({
 
   const [uploadingIdCard, setUploadingIdCard] = useState(false);
   const [uploadingInstallation, setUploadingInstallation] = useState(false);
+  const [installCameraOpen, setInstallCameraOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -213,6 +215,24 @@ export default function UserDetailModal({
       const result = await res.json();
       if (result.success) { setFormData(prev => ({ ...prev, installationPhotos: [...prev.installationPhotos, result.url] })); }
       else { await showError(result.error || 'Upload foto instalasi gagal'); }
+    } catch { await showError('Upload foto instalasi gagal'); }
+    finally { setUploadingInstallation(false); }
+  };
+
+  const handleCameraInstallation = async (file: File) => {
+    setUploadingInstallation(true);
+    try {
+      const fd = new FormData(); fd.append('file', file); fd.append('type', 'installation');
+      const res = await fetch('/api/upload/pppoe-customer', { method: 'POST', body: fd });
+      const result = await res.json();
+      if (result.success) {
+        setFormData(prev => ({ ...prev, installationPhotos: [...prev.installationPhotos, result.url] }));
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition((p) => {
+            setFormData(prev => ({ ...prev, latitude: p.coords.latitude.toFixed(6), longitude: p.coords.longitude.toFixed(6) }));
+          }, () => {}, { enableHighAccuracy: true, timeout: 10000 });
+        }
+      } else { await showError(result.error || 'Upload foto instalasi gagal'); }
     } catch { await showError('Upload foto instalasi gagal'); }
     finally { setUploadingInstallation(false); }
   };
@@ -655,18 +675,23 @@ export default function UserDetailModal({
               <div className="border border-border dark:border-[#00f7ff]/20 rounded-lg p-4 space-y-3">
                 <p className="text-sm font-semibold text-foreground dark:text-[#e0d0ff]">📷 Foto Instalasi</p>
                 <div>
-                  {/* sr-only (NOT display:none) so iOS Safari honours capture="environment" via label trigger */}
                   <input type="file" accept="image/*" onChange={handleUploadInstallation} disabled={uploadingInstallation} className="sr-only" id="installationUploadEdit" />
-                  <input type="file" accept="image/*" capture="environment" onChange={async (e) => { const hasFile = !!e.target.files?.[0]; await handleUploadInstallation(e); if (hasFile && navigator.geolocation) { navigator.geolocation.getCurrentPosition((p) => { setFormData(prev => ({ ...prev, latitude: p.coords.latitude.toFixed(6), longitude: p.coords.longitude.toFixed(6) })); }, () => {}, { enableHighAccuracy: true, timeout: 10000 }); } }} disabled={uploadingInstallation} className="sr-only" id="installationCameraEdit" />
+                  {installCameraOpen ? (
+                    <CameraViewfinder
+                      onCapture={handleCameraInstallation}
+                      onClose={() => setInstallCameraOpen(false)}
+                    />
+                  ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <label htmlFor={uploadingInstallation ? undefined : 'installationUploadEdit'} className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs border border-border dark:border-[#00f7ff]/30 rounded hover:bg-muted dark:hover:bg-[#00f7ff]/10 text-muted-foreground dark:text-[#e0d0ff]/70 ${uploadingInstallation ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer'}`}>
                       <ImageIcon className="w-3 h-3" /> {uploadingInstallation ? '⏳ Mengupload...' : 'Galeri'}
                     </label>
-                    <label htmlFor={uploadingInstallation ? undefined : 'installationCameraEdit'} className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs border border-primary/30 dark:border-[#00f7ff]/40 rounded hover:bg-primary/5 dark:hover:bg-[#00f7ff]/10 text-primary/70 dark:text-[#00f7ff]/70 ${uploadingInstallation ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer'}`}>
-                      <Camera className="w-3 h-3" /> Kamera HP
-                    </label>
+                    <button type="button" onClick={() => setInstallCameraOpen(true)} disabled={uploadingInstallation} className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs border border-primary/30 dark:border-[#00f7ff]/40 rounded hover:bg-primary/5 dark:hover:bg-[#00f7ff]/10 text-primary/70 dark:text-[#00f7ff]/70 ${uploadingInstallation ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <Camera className="w-3 h-3" /> Kamera
+                    </button>
                   </div>
-                  <p className="text-[9px] text-muted-foreground dark:text-[#e0d0ff]/40 mt-1">Bisa upload beberapa foto. Maks. 5MB per foto. Kamera HP otomatis mengambil GPS.</p>
+                  )}
+                  <p className="text-[9px] text-muted-foreground dark:text-[#e0d0ff]/40 mt-1">Bisa upload beberapa foto. Maks. 5MB per foto. Kamera otomatis mengambil GPS.</p>
                 </div>
                 {formData.installationPhotos.length > 0 && (
                   <div className="grid grid-cols-4 gap-2">

@@ -1,7 +1,7 @@
 'use client';
 
-import { useId, useState } from 'react';
-import { Camera, ImageIcon, X, MapPin, Loader2 } from 'lucide-react';
+import { useId, useRef, useState, useCallback, useEffect } from 'react';
+import { Camera, ImageIcon, X, MapPin, Loader2, SwitchCamera, Circle } from 'lucide-react';
 
 interface CameraPhotoInputProps {
   photoUrl: string;
@@ -28,16 +28,20 @@ export function CameraPhotoInput({
   previewClassName = 'h-28',
   theme = 'light',
 }: CameraPhotoInputProps) {
-  // useId generates a stable unique ID per component instance; prevents
-  // htmlFor collisions when multiple CameraPhotoInput are on the same page.
   const uid = useId();
   const galleryId = `gallery-${uid}`;
-  const cameraId = `camera-${uid}`;
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
 
-  const captureGps = () => {
+  const captureGps = useCallback(() => {
     if (!('geolocation' in navigator)) return;
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
@@ -51,7 +55,7 @@ export function CameraPhotoInput({
       () => setGpsLoading(false),
       { enableHighAccuracy: true, timeout: 10000 }
     );
-  };
+  }, [onGpsCapture]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -66,40 +70,168 @@ export function CameraPhotoInput({
     onRemove();
   };
 
+  // --- Camera API (getUserMedia) ---
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setCameraOpen(false);
+    setCameraError('');
+  }, []);
+
+  const startCamera = useCallback(async (facing: 'environment' | 'user' = facingMode) => {
+    setCameraError('');
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      setCameraOpen(true);
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      });
+    } catch (err: any) {
+      const msg = err?.name === 'NotAllowedError'
+        ? 'Izin kamera ditolak. Buka pengaturan browser → izinkan akses kamera.'
+        : err?.name === 'NotFoundError'
+          ? 'Kamera tidak ditemukan di perangkat ini.'
+          : `Gagal membuka kamera: ${err?.message || err}`;
+      setCameraError(msg);
+    }
+  }, [facingMode]);
+
+  const flipCamera = useCallback(() => {
+    const next = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(next);
+    if (cameraOpen) startCamera(next);
+  }, [facingMode, cameraOpen, startCamera]);
+
+  const takePhoto = useCallback(async () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+
+    stopCamera();
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const url = await onUploadFile(file);
+      if (url) captureGps();
+    }, 'image/jpeg', 0.85);
+  }, [stopCamera, onUploadFile, captureGps]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
+
   const isDark = theme === 'dark';
 
   const gpsBadgeClass = isDark
     ? 'text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30'
     : 'text-green-600 dark:text-[#00ff88] bg-green-50 dark:bg-[#00ff88]/10 border border-green-100 dark:border-[#00ff88]/30';
 
-  // Shared hidden inputs — placed outside conditional branches so the IDs
-  // always exist in the DOM. Using sr-only (not display:none) ensures iOS
-  // Safari honours the capture="environment" attribute when triggered via
-  // their associated <label> elements.
-  const hiddenInputs = (
-    <>
-      {/* Gallery input – no capture attribute → opens photo library */}
-      <input
-        id={galleryId}
-        type="file"
-        accept="image/*"
-        className="sr-only"
-        onChange={handleFile}
-        disabled={uploading}
-      />
-      {/* Camera input – capture="environment" → opens rear camera directly */}
-      <input
-        id={cameraId}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="sr-only"
-        onChange={handleFile}
-        disabled={uploading}
-      />
-    </>
+  const galleryInput = (
+    <input
+      id={galleryId}
+      type="file"
+      accept="image/*"
+      className="sr-only"
+      onChange={handleFile}
+      disabled={uploading}
+    />
   );
 
+  const hiddenCanvas = <canvas ref={canvasRef} className="hidden" />;
+
+  // --- Camera viewfinder ---
+  if (cameraOpen) {
+    return (
+      <div className="space-y-1.5">
+        <div className="relative rounded-xl overflow-hidden border-2 border-[#00f7ff]/60 bg-black">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-48 object-cover"
+          />
+          {/* Controls */}
+          <div className="absolute bottom-0 inset-x-0 flex items-center justify-center gap-6 py-3 bg-gradient-to-t from-black/80 to-transparent">
+            <button
+              type="button"
+              onClick={stopCamera}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-red-500/80 text-white hover:bg-red-600 transition-colors"
+              title="Tutup Kamera"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={takePhoto}
+              className="w-14 h-14 flex items-center justify-center rounded-full bg-white border-4 border-[#00f7ff] hover:bg-[#00f7ff]/20 transition-colors"
+              title="Ambil Foto"
+            >
+              <Circle className="w-7 h-7 text-[#00f7ff] fill-[#00f7ff]" />
+            </button>
+            <button
+              type="button"
+              onClick={flipCamera}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+              title="Ganti Kamera Depan/Belakang"
+            >
+              <SwitchCamera className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        {hiddenCanvas}
+      </div>
+    );
+  }
+
+  // --- Camera error ---
+  if (cameraError) {
+    return (
+      <div className="space-y-1.5">
+        <div className={`rounded-xl border-2 border-dashed p-3 text-center text-xs ${
+          isDark ? 'border-red-500/40 bg-red-500/10 text-red-400' : 'border-red-300 bg-red-50 text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-400'
+        }`}>
+          <p>{cameraError}</p>
+          <div className="flex justify-center gap-2 mt-2">
+            <button type="button" onClick={() => { setCameraError(''); startCamera(); }} className="px-3 py-1 rounded bg-red-500/20 hover:bg-red-500/30 transition-colors">
+              Coba Lagi
+            </button>
+            <button type="button" onClick={() => setCameraError('')} className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 transition-colors">
+              Batal
+            </button>
+          </div>
+        </div>
+        {galleryInput}
+        {hiddenCanvas}
+      </div>
+    );
+  }
+
+  // --- Photo preview ---
   if (photoUrl) {
     return (
       <div className="space-y-1.5">
@@ -121,19 +253,20 @@ export function CameraPhotoInput({
             <X className="w-3 h-3" />
           </button>
           <div className="absolute bottom-1.5 left-1.5 flex gap-1">
-            {/* Using <label> so iOS Safari honours the file input directly */}
             <label
               htmlFor={uploading ? undefined : galleryId}
               className={`flex items-center gap-1 px-2 py-0.5 text-[9px] bg-black/60 text-white rounded-full hover:bg-black/80 backdrop-blur-sm ${uploading ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer'}`}
             >
               <ImageIcon className="w-2.5 h-2.5" /> Ganti
             </label>
-            <label
-              htmlFor={uploading ? undefined : cameraId}
-              className={`flex items-center gap-1 px-2 py-0.5 text-[9px] bg-black/60 text-white rounded-full hover:bg-black/80 backdrop-blur-sm ${uploading ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer'}`}
+            <button
+              type="button"
+              onClick={() => startCamera()}
+              disabled={uploading}
+              className="flex items-center gap-1 px-2 py-0.5 text-[9px] bg-black/60 text-white rounded-full hover:bg-black/80 backdrop-blur-sm disabled:opacity-50"
             >
               <Camera className="w-2.5 h-2.5" /> Kamera
-            </label>
+            </button>
           </div>
         </div>
 
@@ -154,11 +287,13 @@ export function CameraPhotoInput({
           </a>
         )}
 
-        {hiddenInputs}
+        {galleryInput}
+        {hiddenCanvas}
       </div>
     );
   }
 
+  // --- Empty state: Galeri + Kamera buttons ---
   return (
     <div className="space-y-1.5">
       {uploading ? (
@@ -169,7 +304,7 @@ export function CameraPhotoInput({
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2">
-          {/* Gallery button */}
+          {/* Gallery — opens file picker */}
           <label
             htmlFor={galleryId}
             className={`flex flex-col items-center justify-center gap-1 w-full py-3 rounded-xl border-2 border-dashed transition-all text-[11px] cursor-pointer ${
@@ -181,9 +316,10 @@ export function CameraPhotoInput({
             <ImageIcon className="w-5 h-5" />
             Galeri
           </label>
-          {/* Camera button — label directly triggers input with capture="environment" */}
-          <label
-            htmlFor={cameraId}
+          {/* Camera — opens live camera via getUserMedia */}
+          <button
+            type="button"
+            onClick={() => startCamera()}
             className={`flex flex-col items-center justify-center gap-1 w-full py-3 rounded-xl border-2 border-dashed transition-all text-[11px] cursor-pointer ${
               isDark
                 ? 'border-[#00f7ff]/40 text-[#00f7ff]/70 bg-[#0a0520] hover:border-[#00f7ff]/70 hover:text-[#00f7ff]'
@@ -191,14 +327,15 @@ export function CameraPhotoInput({
             }`}
           >
             <Camera className="w-5 h-5" />
-            Kamera HP
-          </label>
+            Kamera
+          </button>
         </div>
       )}
       {hint && (
         <p className={`text-[9px] ${isDark ? 'text-[#e0d0ff]/40' : 'text-muted-foreground'}`}>{hint}</p>
       )}
-      {hiddenInputs}
+      {galleryInput}
+      {hiddenCanvas}
     </div>
   );
 }
