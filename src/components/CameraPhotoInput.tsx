@@ -1,7 +1,8 @@
 'use client';
 
 import { useId, useRef, useState, useCallback, useEffect } from 'react';
-import { Camera, ImageIcon, X, MapPin, Loader2, SwitchCamera, Circle } from 'lucide-react';
+import { Camera, ImageIcon, X, MapPin, Loader2, SwitchCamera, Circle, CheckCircle2 } from 'lucide-react';
+import { compressImage } from '@/lib/utils';
 
 interface CameraPhotoInputProps {
   photoUrl: string;
@@ -59,9 +60,10 @@ export function CameraPhotoInput({
   }, [onGpsCapture]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const raw = e.target.files?.[0];
+    if (!raw) return;
     e.target.value = '';
+    const file = await compressImage(raw);
     const url = await onUploadFile(file);
     if (url) captureGps();
   };
@@ -72,9 +74,10 @@ export function CameraPhotoInput({
   };
 
   const handleCaptureFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const raw = e.target.files?.[0];
+    if (!raw) return;
     e.target.value = '';
+    const file = await compressImage(raw);
     const url = await onUploadFile(file);
     if (url) captureGps();
   };
@@ -128,11 +131,20 @@ export function CameraPhotoInput({
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Scale down to max 1280px before encoding
+    const MAX = 1280;
+    let w = video.videoWidth;
+    let h = video.videoHeight;
+    if (w > MAX || h > MAX) {
+      const ratio = Math.min(MAX / w, MAX / h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+    }
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, w, h);
 
     stopCamera();
 
@@ -141,7 +153,7 @@ export function CameraPhotoInput({
       const file = new File([blob], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
       const url = await onUploadFile(file);
       if (url) captureGps();
-    }, 'image/jpeg', 0.85);
+    }, 'image/jpeg', 0.78);
   }, [stopCamera, onUploadFile, captureGps]);
 
   // Cleanup on unmount
@@ -196,8 +208,15 @@ export function CameraPhotoInput({
             autoPlay
             playsInline
             muted
-            className="w-full h-48 object-cover"
+            className="w-full aspect-[4/3] object-cover"
           />
+          {/* Shooting guide overlay */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-[#00f7ff]/80 rounded-tl" />
+            <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-[#00f7ff]/80 rounded-tr" />
+            <div className="absolute bottom-14 left-2 w-6 h-6 border-b-2 border-l-2 border-[#00f7ff]/80 rounded-bl" />
+            <div className="absolute bottom-14 right-2 w-6 h-6 border-b-2 border-r-2 border-[#00f7ff]/80 rounded-br" />
+          </div>
           {/* Controls */}
           <div className="absolute bottom-0 inset-x-0 flex items-center justify-center gap-6 py-3 bg-gradient-to-t from-black/80 to-transparent">
             <button
@@ -235,37 +254,43 @@ export function CameraPhotoInput({
   if (photoUrl) {
     return (
       <div className="space-y-1.5">
-        <div className="relative">
+        <div className="relative rounded-xl overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={photoUrl}
             alt="Preview"
             className={`w-full ${previewClassName} object-cover rounded-xl border-2 ${
-              isDark ? 'border-[#00ff88]/50' : 'border-border dark:border-[#bc13fe]/30'
+              isDark ? 'border-[#00ff88]/60' : 'border-green-400/60 dark:border-[#00ff88]/60'
             }`}
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
+          {/* Success badge */}
+          <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-2 py-0.5 text-[9px] bg-black/60 text-green-400 rounded-full backdrop-blur-sm">
+            <CheckCircle2 className="w-2.5 h-2.5" /> Foto tersimpan
+          </div>
+          {/* Delete button */}
           <button
             type="button"
             onClick={handleRemove}
-            className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 z-10"
+            className="absolute top-1.5 right-1.5 bg-red-500/90 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 z-10 backdrop-blur-sm"
           >
             <X className="w-3 h-3" />
           </button>
-          <div className="absolute bottom-1.5 left-1.5 flex gap-1">
+          {/* Bottom action bar */}
+          <div className="absolute bottom-0 inset-x-0 flex gap-1.5 px-2 py-1.5 bg-gradient-to-t from-black/70 to-transparent">
             <label
               htmlFor={uploading ? undefined : galleryId}
-              className={`flex items-center gap-1 px-2 py-0.5 text-[9px] bg-black/60 text-white rounded-full hover:bg-black/80 backdrop-blur-sm ${uploading ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer'}`}
+              className={`flex items-center gap-1 px-2.5 py-1 text-[10px] bg-white/10 text-white rounded-full hover:bg-white/20 backdrop-blur-sm ${uploading ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer'}`}
             >
-              <ImageIcon className="w-2.5 h-2.5" /> Ganti
+              <ImageIcon className="w-3 h-3" /> Galeri
             </label>
             <button
               type="button"
               onClick={() => startCamera()}
               disabled={uploading}
-              className="flex items-center gap-1 px-2 py-0.5 text-[9px] bg-black/60 text-white rounded-full hover:bg-black/80 backdrop-blur-sm disabled:opacity-50"
+              className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-white/10 text-white rounded-full hover:bg-white/20 backdrop-blur-sm disabled:opacity-50"
             >
-              <Camera className="w-2.5 h-2.5" /> Kamera
+              <Camera className="w-3 h-3" /> Kamera
             </button>
           </div>
         </div>

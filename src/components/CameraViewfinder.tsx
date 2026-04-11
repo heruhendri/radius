@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { X, SwitchCamera, Circle, Camera } from 'lucide-react';
+import { compressImage } from '@/lib/utils';
 
 interface CameraViewfinderProps {
   /** Called with the captured File when user takes a photo */
@@ -87,11 +88,20 @@ export function CameraViewfinder({ onCapture, onClose }: CameraViewfinderProps) 
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Scale down to max 1280px
+    const MAX = 1280;
+    let w = video.videoWidth;
+    let h = video.videoHeight;
+    if (w > MAX || h > MAX) {
+      const ratio = Math.min(MAX / w, MAX / h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+    }
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, w, h);
 
     stopStream();
 
@@ -100,7 +110,7 @@ export function CameraViewfinder({ onCapture, onClose }: CameraViewfinderProps) 
       const file = new File([blob], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
       onCapture(file);
       onClose();
-    }, 'image/jpeg', 0.85);
+    }, 'image/jpeg', 0.78);
   }, [stopStream, onCapture, onClose]);
 
   const handleClose = useCallback(() => {
@@ -108,9 +118,10 @@ export function CameraViewfinder({ onCapture, onClose }: CameraViewfinderProps) 
     onClose();
   }, [stopStream, onClose]);
 
-  const handleNativeFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) { onClose(); return; }
+  const handleNativeFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.files?.[0];
+    if (!raw) { onClose(); return; }
+    const file = await compressImage(raw);
     onCapture(file);
     onClose();
   }, [onCapture, onClose]);
@@ -169,8 +180,15 @@ export function CameraViewfinder({ onCapture, onClose }: CameraViewfinderProps) 
   // --- Live viewfinder (HTTPS / localhost) ---
   return (
     <div className="relative rounded-lg overflow-hidden border-2 border-[#00f7ff]/60 bg-black">
-      <video ref={videoRef} autoPlay playsInline muted className="w-full h-48 object-cover" />
+      <video ref={videoRef} autoPlay playsInline muted className="w-full aspect-[4/3] object-cover" />
       <canvas ref={canvasRef} className="hidden" />
+      {/* Corner guides */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-[#00f7ff]/80 rounded-tl" />
+        <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-[#00f7ff]/80 rounded-tr" />
+        <div className="absolute bottom-14 left-2 w-6 h-6 border-b-2 border-l-2 border-[#00f7ff]/80 rounded-bl" />
+        <div className="absolute bottom-14 right-2 w-6 h-6 border-b-2 border-r-2 border-[#00f7ff]/80 rounded-br" />
+      </div>
       <div className="absolute bottom-0 inset-x-0 flex items-center justify-center gap-6 py-3 bg-gradient-to-t from-black/80 to-transparent">
         <button type="button" onClick={handleClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-red-500/80 text-white hover:bg-red-600 transition-colors" title="Tutup">
           <X className="w-5 h-5" />
