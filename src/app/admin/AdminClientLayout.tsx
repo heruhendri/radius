@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense, useRef, TouchEvent } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut, SessionProvider } from 'next-auth/react';
 import {
   LayoutDashboard,
@@ -531,6 +531,7 @@ function AdminLayoutContent({
 }) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false); // Default FALSE untuk mobile
   const [mounted, setMounted] = useState(false);
   const [pendingRegistrations, setPendingRegistrations] = useState(0);
@@ -669,6 +670,29 @@ function AdminLayoutContent({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Delayed unauthenticated redirect — avoids spurious full-page reload during
+  // the brief window after signIn() where the outer SessionProvider hasn't yet
+  // received the session broadcast and status is momentarily 'unauthenticated'.
+  const unauthRedirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (status === 'unauthenticated' && !isLoginPage) {
+      unauthRedirectTimerRef.current = setTimeout(() => {
+        router.push('/admin/login');
+      }, 600);
+    } else {
+      if (unauthRedirectTimerRef.current) {
+        clearTimeout(unauthRedirectTimerRef.current);
+        unauthRedirectTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (unauthRedirectTimerRef.current) {
+        clearTimeout(unauthRedirectTimerRef.current);
+        unauthRedirectTimerRef.current = null;
+      }
+    };
+  }, [status, isLoginPage, router]);
 
   // Load user permissions when session is available
   useEffect(() => {
@@ -821,11 +845,8 @@ function AdminLayoutContent({
     );
   }
 
-  // Redirect to login if not authenticated
-  if (status === 'unauthenticated') {
-    if (typeof window !== 'undefined') {
-      window.location.href = `${window.location.origin}/admin/login`;
-    }
+  // Redirect to login if not authenticated (actual redirect handled by useEffect above)
+  if (status === 'unauthenticated' && !isLoginPage) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
         {/* Background effects */}
