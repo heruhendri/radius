@@ -90,7 +90,7 @@ export default function TopUpRequestPage() {
   };
 
   return (
-    <div className="py-6 px-4 md:px-6">
+    <div className="py-6 px-4 md:px-6 max-w-2xl mx-auto">
       {/* Back + Page Header */}
       <div className="mb-6">
         <button

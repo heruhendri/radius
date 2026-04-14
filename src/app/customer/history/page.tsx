@@ -516,7 +516,7 @@ export default function PaymentHistoryPage() {
   const totalPendingAmount = pendingPayments.reduce((s, p) => s + p.amount, 0);
 
   return (
-    <div className="p-4 lg:p-6 space-y-5 pb-28 lg:pb-10">
+    <div className="p-4 lg:p-6 space-y-5 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

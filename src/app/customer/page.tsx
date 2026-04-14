@@ -379,141 +379,205 @@ export default function CustomerDashboard() {
   const daysLeft = Math.ceil((expiredDate.getTime() - nowWIB().getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <div className="p-3 lg:p-6">
-      {/* Profile Card — full width */}
-      <div>
-        <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-primary/30 shadow-[0_0_30px_rgba(188,19,254,0.15)]">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 bg-primary/20 rounded-lg border border-primary/30 shadow-[0_0_10px_rgba(188,19,254,0.3)] flex items-center justify-center">
-              <User className="w-4 h-4 text-primary drop-shadow-[0_0_5px_rgba(188,19,254,0.8)]" />
+    <div className="p-3 lg:p-6 max-w-2xl mx-auto space-y-4">
+      {/* ── Hero Status Card ─────────────────────────────────────────── */}
+      <div className={`rounded-2xl p-5 relative overflow-hidden ${
+        isExpired
+          ? 'bg-gradient-to-br from-red-900/60 to-slate-900 border-2 border-red-500/40'
+          : user.status === 'active'
+          ? 'bg-gradient-to-br from-cyan-900/50 to-slate-900 border-2 border-cyan-500/30'
+          : 'bg-gradient-to-br from-yellow-900/50 to-slate-900 border-2 border-yellow-500/30'
+      }`}>
+        {/* Decorative circles */}
+        <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-white/5 pointer-events-none" />
+        <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-white/5 pointer-events-none" />
+        <div className="relative z-10">
+          {/* Top row: name + status badge */}
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-cyan-400/70">Selamat Datang</p>
+              <h1 className="text-lg font-extrabold text-white mt-0.5 leading-tight">{user.name}</h1>
+              <p className="text-xs text-muted-foreground font-mono">@{user.username}</p>
             </div>
-            <h2 className="text-sm font-bold text-primary uppercase tracking-wider drop-shadow-[0_0_5px_rgba(188,19,254,0.5)]">{t('customer.accountInfo')}</h2>
+            {isExpired
+              ? <span className="px-2.5 py-1 bg-red-500/20 text-red-400 text-[10px] font-bold rounded-full border border-red-500/40">Expired</span>
+              : user.status === 'active'
+              ? <span className="px-2.5 py-1 bg-green-500/20 text-green-400 text-[10px] font-bold rounded-full border border-green-500/40">Aktif</span>
+              : user.status === 'isolated'
+              ? <span className="px-2.5 py-1 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded-full border border-orange-500/40">Terisolir</span>
+              : <span className="px-2.5 py-1 bg-yellow-500/20 text-yellow-400 text-[10px] font-bold rounded-full border border-yellow-500/40">{user.status}</span>
+            }
           </div>
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('common.name')}</span><span className="font-medium text-white">{user.name}</span></div>
-            <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('common.phone')}</span><span className="font-medium text-white">{user.phone}</span></div>
-            <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('auth.username')}</span><span className="font-mono text-[10px] text-white">{user.username}</span></div>
-            <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">ID Pelanggan</span><span className="font-mono text-[10px] text-white">{user.customerId || '-'}</span></div>
-            <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.package')}</span><span className="font-medium text-white">{user.profile.name}</span></div>
-            <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.speed')}</span><span className="font-medium text-white">{user.profile.downloadSpeed}/{user.profile.uploadSpeed} Mbps</span></div>
-            <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('common.status')}</span>
-              {isExpired ? <span className="px-2 py-0.5 bg-destructive/20 text-destructive text-[10px] font-bold rounded border border-destructive/40 shadow-[0_0_5px_rgba(255,51,102,0.3)]">{t('customer.expired')}</span>
-              : user.status === 'active' ? <span className="px-2 py-0.5 bg-success/20 text-success text-[10px] font-bold rounded border border-success/40 shadow-[0_0_5px_rgba(0,255,136,0.3)]">{t('customer.active')}</span>
-              : user.status === 'isolated' ? <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded border border-orange-500/40">Terisolir</span>
-              : user.status === 'suspended' ? <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-[10px] font-bold rounded border border-yellow-500/40">Ditangguhkan</span>
-              : user.status === 'blocked' ? <span className="px-2 py-0.5 bg-destructive/20 text-destructive text-[10px] font-bold rounded border border-destructive/40">Diblokir</span>
-              : user.status === 'stop' ? <span className="px-2 py-0.5 bg-destructive/20 text-destructive text-[10px] font-bold rounded border border-destructive/40">Dihentikan</span>
-              : <span className="px-2 py-0.5 bg-muted text-white text-[10px] font-bold rounded">{user.status}</span>}
+          {/* Package + expiry info */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-white/5 rounded-xl p-2.5">
+              <p className="text-[9px] font-bold uppercase tracking-wide text-cyan-400/70 mb-0.5">Paket</p>
+              <p className="text-sm font-bold text-white leading-tight">{user.profile.name}</p>
+              <p className="text-[10px] text-muted-foreground">{user.profile.downloadSpeed}/{user.profile.uploadSpeed} Mbps</p>
             </div>
-            <div className="col-span-2"><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.expiredDate')}</span>
-              <span className="font-medium text-white">{formatWIB(user.expiredAt, 'd MMMM yyyy')}
-                {!isExpired && <span className="text-muted-foreground ml-1">({daysLeft} {t('customer.daysLeft')})</span>}
-              </span>
+            <div className={`rounded-xl p-2.5 ${isExpired ? 'bg-red-500/10' : 'bg-white/5'}`}>
+              <p className="text-[9px] font-bold uppercase tracking-wide text-cyan-400/70 mb-0.5">Berlaku S/D</p>
+              <p className={`text-sm font-bold leading-tight ${isExpired ? 'text-red-400' : 'text-white'}`}>
+                {formatWIB(user.expiredAt, 'd MMM yyyy')}
+              </p>
+              <p className={`text-[10px] font-medium ${isExpired ? 'text-red-400' : daysLeft <= 7 ? 'text-yellow-400' : 'text-green-400'}`}>
+                {isExpired ? 'Sudah expired' : daysLeft <= 0 ? 'Hari ini!' : `${daysLeft} hari lagi`}
+              </p>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-primary/20 flex gap-2">
-            <CyberButton
+          {/* CTA Buttons */}
+          <div className="flex gap-2">
+            <button
               onClick={() => router.push('/customer/renewal')}
-              className="flex-1"
-              size="sm"
-              variant="cyan"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold rounded-xl transition-all active:scale-95"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Perpanjang
-            </CyberButton>
+            </button>
+            <button
+              onClick={() => router.push('/customer/invoices')}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl transition-all border border-white/20 active:scale-95"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Tagihan
+            </button>
           </div>
-        </CyberCard>
-
+        </div>
       </div>
 
-      {/* Bottom row: ONT/WiFi + Invoices */}
-      <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      {/* ── Quick Actions Grid ────────────────────────────────────────── */}
+      <div>
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 px-1">Menu Cepat</p>
+        <div className="grid grid-cols-4 gap-2">
+          {([
+            { name: 'Riwayat',      href: '/customer/history',       icon: Receipt,       color: 'text-purple-400',  bg: 'bg-purple-500/10 border-purple-500/30' },
+            { name: 'Perpanjang',   href: '/customer/renewal',       icon: RefreshCw,     color: 'text-cyan-400',    bg: 'bg-cyan-500/10 border-cyan-500/30' },
+            { name: 'WiFi',         href: '/customer/wifi',          icon: Wifi,          color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/30' },
+            { name: 'Bantuan',      href: '/customer/tickets',       icon: MessageSquare, color: 'text-yellow-400',  bg: 'bg-yellow-500/10 border-yellow-500/30' },
+            { name: 'Tagihan',      href: '/customer/invoices',      icon: FileText,      color: 'text-green-400',   bg: 'bg-green-500/10 border-green-500/30' },
+            { name: 'Upgrade',      href: '/customer/upgrade',       icon: Package,       color: 'text-orange-400',  bg: 'bg-orange-500/10 border-orange-500/30' },
+            { name: 'Referral',     href: '/customer/referral',      icon: Gift,          color: 'text-pink-400',    bg: 'bg-pink-500/10 border-pink-500/30' },
+            { name: 'Profil',       href: '/customer/profile',       icon: User,          color: 'text-slate-400',   bg: 'bg-slate-500/10 border-slate-500/30' },
+          ] as const).map(({ name, href, icon: Icon, color, bg }) => (
+            <button
+              key={href}
+              onClick={() => router.push(href)}
+              className={`flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border transition-all active:scale-95 ${bg}`}
+            >
+              <Icon className={`w-5 h-5 ${color}`} />
+              <span className={`text-[9px] font-bold text-center leading-tight ${color}`}>{name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Pending Invoice Alert ─────────────────────────────────────── */}
+      {invoices.filter(inv => inv.status === 'PENDING' || inv.status === 'OVERDUE').length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Tagihan Belum Dibayar</p>
+          {invoices.filter(inv => inv.status === 'PENDING' || inv.status === 'OVERDUE').slice(0, 3).map(invoice => (
+            <div key={invoice.id} className={`rounded-xl border-2 p-3 flex items-center gap-3 ${invoice.status === 'OVERDUE' ? 'bg-red-500/5 border-red-500/30' : 'bg-yellow-500/5 border-yellow-500/30'}`}>
+              <div className={`p-2 rounded-lg flex-shrink-0 ${invoice.status === 'OVERDUE' ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
+                <Receipt className={`w-4 h-4 ${invoice.status === 'OVERDUE' ? 'text-red-400' : 'text-yellow-400'}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white font-mono">{invoice.invoiceNumber}</p>
+                <p className="text-[10px] text-muted-foreground">{formatCurrency(invoice.amount)} · JT {formatWIB(invoice.dueDate, 'd MMM')}</p>
+              </div>
+              <div className="flex flex-col gap-1 flex-shrink-0">
+                {invoice.manualPaymentStatus === 'pending' ? (
+                  <span className="text-[9px] text-yellow-400 font-medium">Menunggu...</span>
+                ) : (
+                  <>
+                    {invoice.paymentLink && !invoice.paymentLink.includes('localhost') ? (
+                      <button onClick={() => window.open(invoice.paymentLink ?? undefined, '_blank', 'noopener,noreferrer')}
+                        className="px-2.5 py-1.5 bg-cyan-500 text-black text-[9px] font-bold rounded-lg flex items-center gap-1">
+                        Bayar <ExternalLink className="w-2.5 h-2.5" />
+                      </button>
+                    ) : (
+                      <button onClick={() => handleRegeneratePayment(invoice.id, invoice.invoiceNumber)}
+                        disabled={generatingPayment === invoice.id}
+                        className="px-2.5 py-1.5 bg-yellow-500 text-black text-[9px] font-bold rounded-lg flex items-center gap-1 disabled:opacity-50">
+                        {generatingPayment === invoice.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Zap className="w-2.5 h-2.5" />}
+                        Buat Link
+                      </button>
+                    )}
+                    <button onClick={() => setManualPayModal({ id: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: invoice.amount })}
+                      className="px-2.5 py-1.5 bg-purple-600 text-white text-[9px] font-bold rounded-lg flex items-center gap-1">
+                      <Banknote className="w-2.5 h-2.5" /> Bukti
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+          {invoices.filter(inv => inv.status === 'PENDING' || inv.status === 'OVERDUE').length > 3 && (
+            <button onClick={() => router.push('/customer/invoices')} className="w-full text-center text-xs text-cyan-400 py-1 hover:underline">
+              Lihat semua tagihan →
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── ONT/WiFi + All Invoices (desktop 2-col) ───────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* ONT/WiFi Card */}
         <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-accent/30 shadow-[0_0_30px_rgba(0,247,255,0.15)]">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 bg-accent/20 rounded-lg border border-accent/30 shadow-[0_0_10px_rgba(0,247,255,0.3)] flex items-center justify-center">
-              <Wifi className="w-4 h-4 text-accent drop-shadow-[0_0_5px_rgba(0,247,255,0.8)]" />
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-accent/20 rounded-lg border border-accent/30 flex items-center justify-center">
+                <Wifi className="w-4 h-4 text-accent" />
+              </div>
+              <h2 className="text-sm font-bold text-accent uppercase tracking-wider">{t('customer.ontWifi')}</h2>
             </div>
-            <h2 className="text-sm font-bold text-accent uppercase tracking-wider drop-shadow-[0_0_5px_rgba(0,247,255,0.5)]">{t('customer.ontWifi')}</h2>
+            {ontDevice && (
+              <button onClick={() => router.push('/customer/wifi')} className="text-[10px] text-cyan-400 hover:underline">Detail →</button>
+            )}
           </div>
           
           {loadingOnt ? <div className="text-center py-4"><Loader2 className="w-5 h-5 animate-spin mx-auto text-accent" /></div>
           : !ontDevice ? <div className="text-center py-4 text-muted-foreground text-xs"><Wifi className="w-8 h-8 mx-auto mb-1 opacity-30" /><p>{t('customer.ontNotFound')}</p></div>
           : (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.model')}</span><span className="font-medium text-white">{ontDevice.manufacturer} {ontDevice.model}</span></div>
-                <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.serialNumber')}</span><span className="font-mono text-[10px] text-white">{ontDevice.serialNumber || '-'}</span></div>
-                <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.ontStatus')}</span>
-                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${ontDevice.status === 'Online' ? 'bg-success/20 text-success border-success/40 shadow-[0_0_5px_rgba(0,255,136,0.3)]' : 'bg-destructive/20 text-destructive border-destructive/40 shadow-[0_0_5px_rgba(255,51,102,0.3)]'}`}>{ontDevice.status}</span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-muted/20 rounded-lg p-2"><span className="text-muted-foreground block text-[9px] uppercase font-bold">{t('customer.model')}</span><span className="font-medium text-white text-[11px]">{ontDevice.manufacturer} {ontDevice.model}</span></div>
+                <div className="bg-muted/20 rounded-lg p-2"><span className="text-muted-foreground block text-[9px] uppercase font-bold">{t('customer.ontStatus')}</span>
+                  <span className={`text-[11px] font-bold ${ontDevice.status === 'Online' ? 'text-green-400' : 'text-red-400'}`}>{ontDevice.status}</span>
                 </div>
-                <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">PPPoE</span>
-                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${ontDevice.pppUsername && ontDevice.pppUsername !== '-' ? 'bg-success/20 text-success border-success/40' : 'bg-muted text-muted-foreground'}`}>
-                    {ontDevice.pppUsername && ontDevice.pppUsername !== '-' ? t('customer.connected') : t('customer.disconnected')}
-                  </span>
-                </div>
-                <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.ipPppoe')}</span><span className="font-mono text-[10px] text-white">{ontDevice.ipAddress && ontDevice.ipAddress !== '-' ? ontDevice.ipAddress : '-'}</span></div>
-                <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.softwareVer')}</span><span className="font-mono text-[10px] text-white">{ontDevice.softwareVersion || '-'}</span></div>
-                <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.rxPower')}</span><span className="font-medium text-destructive">{ontDevice.signalStrength?.rxPower && ontDevice.signalStrength.rxPower !== '-' ? ontDevice.signalStrength.rxPower : '-'}</span></div>
-                <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.temperature')}</span><span className="font-medium text-white">{ontDevice.signalStrength?.temperature && ontDevice.signalStrength.temperature !== '-' ? ontDevice.signalStrength.temperature : '-'}</span></div>
-                <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.uptime')}</span><span className="font-medium text-[10px] text-white">{ontDevice.uptime && ontDevice.uptime !== '-' ? ontDevice.uptime : '-'}</span></div>
-                <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.deviceId')}</span><span className="font-mono text-[9px] break-all text-white">{ontDevice._id ? ontDevice._id.substring(0, 12) + '...' : '-'}</span></div>
-                <div><span className="text-accent block text-[10px] font-bold uppercase tracking-wide">{t('customer.connectedDevices')}</span><span className="font-medium text-[10px] text-white">{Array.isArray(ontDevice.connectedHosts) ? ontDevice.connectedHosts.length : 0} device</span></div>
+                <div className="bg-muted/20 rounded-lg p-2"><span className="text-muted-foreground block text-[9px] uppercase font-bold">{t('customer.rxPower')}</span><span className="text-[11px] text-red-300">{ontDevice.signalStrength?.rxPower || '-'}</span></div>
+                <div className="bg-muted/20 rounded-lg p-2"><span className="text-muted-foreground block text-[9px] uppercase font-bold">{t('customer.connectedDevices')}</span><span className="text-[11px] font-bold text-cyan-300">{Array.isArray(ontDevice.connectedHosts) ? ontDevice.connectedHosts.length : 0}</span></div>
               </div>
               
-              {/* WiFi SSIDs — show all, one per row */}
+              {/* WiFi SSIDs */}
               {ontDevice.wlanConfigs && ontDevice.wlanConfigs.length > 0 && (
-                <div className="pt-3 border-t border-accent/20 space-y-3">
-                  <span className="text-[10px] font-bold text-accent uppercase tracking-wide block">{t('customer.wifiSettings')}</span>
-
+                <div className="pt-2 border-t border-accent/20 space-y-2">
+                  <span className="text-[9px] font-bold text-accent uppercase tracking-wide">{t('customer.wifiSettings')}</span>
                   {ontDevice.wlanConfigs.map((wlan: any) => {
                     const isEditing = editingWifi === wlan.index;
                     const wlanDevices = connectedDevices.filter((d: any) => d.associatedDevice === String(wlan.index));
                     return (
                       <div key={wlan.index} className="rounded-lg border border-accent/20 bg-accent/5 p-2 space-y-1.5">
-                        {/* SSID header */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <Wifi className="w-3 h-3 text-accent" />
                             <span className="text-[10px] font-bold text-white truncate max-w-[130px]">{wlan.ssid || '(belum ada SSID)'}</span>
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${wlan.enabled ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'}`}>
-                              {wlan.band || (wlan.index >= 5 ? '5GHz' : '2.4GHz')}
-                            </span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${wlan.enabled ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'}`}>{wlan.band || (wlan.index >= 5 ? '5GHz' : '2.4GHz')}</span>
                           </div>
                           {!isEditing && (
-                            <button
-                              onClick={() => { setEditingWifi(wlan.index); setWifiForm({ ssid: wlan.ssid || '', password: '' }); }}
-                              className="text-[10px] text-primary flex items-center gap-0.5 shrink-0"
-                            >
+                            <button onClick={() => { setEditingWifi(wlan.index); setWifiForm({ ssid: wlan.ssid || '', password: '' }); }} className="text-[10px] text-primary flex items-center gap-0.5 shrink-0">
                               <Edit2 className="w-2.5 h-2.5" />{t('common.edit')}
                             </button>
                           )}
                         </div>
-
-                        {/* Edit form */}
                         {isEditing && (
                           <div className="space-y-1.5 pt-1">
                             <div>
                               <label className="text-[10px] text-muted-foreground mb-0.5 block">{t('customer.wifiName')}</label>
-                              <input
-                                type="text"
-                                value={wifiForm.ssid}
-                                onChange={(e) => setWifiForm({ ...wifiForm, ssid: e.target.value })}
-                                className="w-full px-2 py-1 text-xs border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                placeholder={t('customer.wifiNamePlaceholder')}
-                                autoComplete="off"
-                              />
+                              <input type="text" value={wifiForm.ssid} onChange={(e) => setWifiForm({ ...wifiForm, ssid: e.target.value })} className="w-full px-2 py-1 text-xs border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder={t('customer.wifiNamePlaceholder')} autoComplete="off" />
                             </div>
                             <div>
                               <label className="text-[10px] text-muted-foreground mb-0.5 block">{t('customer.wifiPassword')}</label>
-                              <input
-                                type="text"
-                                value={wifiForm.password}
-                                onChange={(e) => setWifiForm({ ...wifiForm, password: e.target.value })}
-                                className="w-full px-2 py-1 text-xs border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                placeholder={t('customer.wifiPasswordPlaceholder')}
-                                autoComplete="off"
-                              />
+                              <input type="text" value={wifiForm.password} onChange={(e) => setWifiForm({ ...wifiForm, password: e.target.value })} className="w-full px-2 py-1 text-xs border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder={t('customer.wifiPasswordPlaceholder')} autoComplete="off" />
                               <p className="text-[9px] text-muted-foreground mt-0.5">{t('customer.securityModeNote')}</p>
                             </div>
                             <div className="flex gap-1">
@@ -524,21 +588,17 @@ export default function CustomerDashboard() {
                             </div>
                           </div>
                         )}
-
-                        {/* Connected devices for this SSID */}
                         {wlanDevices.length > 0 && (
                           <div className="pt-1 border-t border-border/50 space-y-1">
                             <p className="text-[9px] text-muted-foreground">{wlanDevices.length} perangkat terhubung</p>
                             {wlanDevices.map((device: any, idx: number) => (
                               <div key={idx} className="flex items-center gap-2 bg-muted/50 rounded px-2 py-1">
-                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0"></div>
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-[10px] font-medium truncate">{device.hostname && device.hostname !== '-' ? device.hostname : device.macAddress}</p>
                                   <p className="text-[9px] text-muted-foreground font-mono truncate">{device.ipAddress && device.ipAddress !== '-' ? device.ipAddress : device.macAddress}</p>
                                 </div>
-                                {device.signalStrength && device.signalStrength !== '-' && (
-                                  <span className="text-[9px] text-muted-foreground shrink-0">{device.signalStrength}</span>
-                                )}
+                                {device.signalStrength && device.signalStrength !== '-' && <span className="text-[9px] text-muted-foreground shrink-0">{device.signalStrength}</span>}
                               </div>
                             ))}
                           </div>
@@ -552,77 +612,60 @@ export default function CustomerDashboard() {
           )}
         </CyberCard>
 
-        {/* Invoices Card */}
+        {/* All Invoices Card */}
         <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-success/30 shadow-[0_0_30px_rgba(0,255,136,0.15)]">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 bg-success/20 rounded-lg border border-success/30 shadow-[0_0_10px_rgba(0,255,136,0.3)] flex items-center justify-center">
-              <Receipt className="w-4 h-4 text-success drop-shadow-[0_0_5px_rgba(0,255,136,0.8)]" />
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-success/20 rounded-lg border border-success/30 flex items-center justify-center">
+                <Receipt className="w-4 h-4 text-success" />
+              </div>
+              <h2 className="text-sm font-bold text-success uppercase tracking-wider">{t('customer.invoices')}</h2>
             </div>
-            <h2 className="text-sm font-bold text-success uppercase tracking-wider drop-shadow-[0_0_5px_rgba(0,255,136,0.5)]">{t('customer.invoices')}</h2>
+            <button onClick={() => router.push('/customer/invoices')} className="text-[10px] text-cyan-400 hover:underline">Semua →</button>
           </div>
           
           {invoices.length === 0 ? <div className="text-center py-4 text-muted-foreground text-xs"><Receipt className="w-8 h-8 mx-auto mb-1 opacity-30" /><p>{t('customer.noInvoices')}</p></div>
           : (
             <div className="space-y-2">
-              {invoices.map((invoice) => {
-                const dueDate = new Date(invoice.dueDate);
+              {invoices.slice(0, 5).map((invoice) => {
                 const isPaid = invoice.status === 'PAID';
                 const isPending = invoice.status === 'PENDING';
                 const isOverdue = invoice.status === 'OVERDUE';
                 const isCancelled = invoice.status === 'CANCELLED';
-                
                 return (
-                  <div key={invoice.id} className="border border-primary/30 rounded-lg p-2.5 bg-card/60 backdrop-blur-sm">
+                  <div key={invoice.id} className="border border-border/30 rounded-xl p-2.5 bg-card/60">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="font-mono text-xs font-semibold text-white">{invoice.invoiceNumber}</p>
-                          {isPaid ? <span className="px-1.5 py-0.5 bg-success/20 text-success text-[10px] rounded border border-success/40 font-bold">{t('customer.paid')}</span>
-                          : isCancelled ? <span className="px-1.5 py-0.5 bg-muted text-muted-foreground text-[10px] rounded border border-muted/40 font-bold">{t('customer.cancelled')}</span>
-                          : isOverdue ? <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive text-[10px] rounded border border-destructive/40 font-bold">{t('customer.overdue')}</span>
-                          : <span className="px-1.5 py-0.5 bg-warning/20 text-warning text-[10px] rounded border border-warning/40 font-bold">{t('customer.unpaid')}</span>}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <p className="font-mono text-xs font-semibold text-white truncate">{invoice.invoiceNumber}</p>
+                          {isPaid ? <span className="px-1.5 py-0.5 bg-success/20 text-success text-[9px] rounded-full font-bold flex-shrink-0">Lunas</span>
+                          : isCancelled ? <span className="px-1.5 py-0.5 bg-muted text-muted-foreground text-[9px] rounded-full font-bold flex-shrink-0">Batal</span>
+                          : isOverdue ? <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[9px] rounded-full font-bold flex-shrink-0">Terlambat</span>
+                          : <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 text-[9px] rounded-full font-bold flex-shrink-0">Belum Bayar</span>}
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className="text-[10px] text-accent">{t('customer.dueDate')}: {formatWIB(invoice.dueDate, 'd MMM yyyy')}</p>
+                          <p className="text-[9px] text-muted-foreground">JT {formatWIB(invoice.dueDate, 'd MMM yyyy')}</p>
                           <p className="text-xs font-bold text-white">{formatCurrency(invoice.amount)}</p>
                         </div>
                       </div>
-                      {!isPaid && !isCancelled && (isPending || isOverdue) && (
-                        <div className="flex flex-col gap-1">
-                          {invoice.manualPaymentStatus !== 'pending' && (
-                            <>
-                              {invoice.paymentLink && invoice.paymentLink.trim() !== '' && !invoice.paymentLink.includes('localhost') ? (
-                                <button
-                                  onClick={() => window.open(invoice.paymentLink ?? undefined, '_blank', 'noopener,noreferrer')}
-                                  className="flex items-center gap-1 px-2.5 py-1.5 bg-accent hover:bg-accent/90 text-black text-[10px] font-bold rounded whitespace-nowrap transition shadow-[0_0_10px_rgba(0,247,255,0.3)]"
-                                >
-                                  {t('customer.payNow')} <ExternalLink className="w-3 h-3" />
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleRegeneratePayment(invoice.id, invoice.invoiceNumber)}
-                                  disabled={generatingPayment === invoice.id}
-                                  className="flex items-center gap-1 px-2.5 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-black text-[10px] font-bold rounded whitespace-nowrap transition disabled:opacity-50"
-                                >
-                                  {generatingPayment === invoice.id ? (
-                                    <><Loader2 className="w-3 h-3 animate-spin" /> {t('customer.processing')}</>
-                                  ) : (
-                                    <><Zap className="w-3 h-3" /> {t('customer.generateLink')}</>
-                                  )}
-                                </button>
-                              )}
-                              <button
-                                onClick={() => setManualPayModal({ id: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: invoice.amount })}
-                                className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold rounded whitespace-nowrap transition"
-                              >
-                                <Banknote className="w-3 h-3" /> Kirim Bukti
-                              </button>
-                            </>
+                      {!isPaid && !isCancelled && invoice.manualPaymentStatus !== 'pending' && (isPending || isOverdue) && (
+                        <div className="flex flex-col gap-1 ml-1 flex-shrink-0">
+                          {invoice.paymentLink && !invoice.paymentLink.includes('localhost') ? (
+                            <button onClick={() => window.open(invoice.paymentLink ?? undefined, '_blank', 'noopener,noreferrer')} className="px-2 py-1 bg-cyan-500 text-black text-[9px] font-bold rounded-lg flex items-center gap-0.5">
+                              Bayar <ExternalLink className="w-2.5 h-2.5" />
+                            </button>
+                          ) : (
+                            <button onClick={() => handleRegeneratePayment(invoice.id, invoice.invoiceNumber)} disabled={generatingPayment === invoice.id} className="px-2 py-1 bg-yellow-500 text-black text-[9px] font-bold rounded-lg disabled:opacity-50">
+                              {generatingPayment === invoice.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Zap className="w-2.5 h-2.5" />}
+                            </button>
                           )}
-                          {invoice.manualPaymentStatus === 'pending' && (
-                            <span className="text-[10px] text-yellow-400 font-medium text-right">Menunggu konfirmasi…</span>
-                          )}
+                          <button onClick={() => setManualPayModal({ id: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: invoice.amount })} className="px-2 py-1 bg-purple-600 text-white text-[9px] font-bold rounded-lg">
+                            <Banknote className="w-2.5 h-2.5" />
+                          </button>
                         </div>
+                      )}
+                      {!isPaid && !isCancelled && invoice.manualPaymentStatus === 'pending' && (
+                        <span className="text-[9px] text-yellow-400 font-medium ml-1">Menunggu...</span>
                       )}
                     </div>
                   </div>
@@ -632,115 +675,3 @@ export default function CustomerDashboard() {
           )}
         </CyberCard>
       </div>
-
-      {/* Quick Actions */}
-      <div className="mt-3">
-        <CyberCard className="p-3 bg-card/80 backdrop-blur-xl border-2 border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 bg-cyan-500/20 rounded-lg border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.3)] flex items-center justify-center">
-              <Zap className="w-3.5 h-3.5 text-cyan-400 drop-shadow-[0_0_5px_rgba(6,182,212,0.8)]" />
-            </div>
-            <h2 className="text-xs font-bold text-cyan-400 uppercase tracking-wider drop-shadow-[0_0_5px_rgba(6,182,212,0.5)]">Menu Cepat</h2>
-          </div>
-          <div className="grid grid-cols-4 gap-1.5">
-            {([
-              { name: 'Semua Tagihan',  href: '/customer/invoices',      icon: FileText,      bg: 'bg-success/10',   border: 'border-success/30',   text: 'text-success' },
-              { name: 'Perpanjang',     href: '/customer/renewal',       icon: RefreshCw,     bg: 'bg-cyan-500/10',  border: 'border-cyan-500/30',  text: 'text-cyan-400' },
-              { name: 'Riwayat Bayar', href: '/customer/history',       icon: Receipt,       bg: 'bg-accent/10',    border: 'border-accent/30',    text: 'text-accent' },
-              { name: 'WiFi',          href: '/customer/wifi',          icon: Wifi,          bg: 'bg-blue-500/10',  border: 'border-blue-500/30',  text: 'text-blue-400' },
-              { name: 'Tiket Support', href: '/customer/tickets',       icon: MessageSquare, bg: 'bg-yellow-500/10',border: 'border-yellow-500/30',text: 'text-yellow-400' },
-              { name: 'Referral',      href: '/customer/referral',      icon: Gift,          bg: 'bg-pink-500/10',  border: 'border-pink-500/30',  text: 'text-pink-400' },
-              { name: 'Profil Akun',   href: '/customer/profile',       icon: User,          bg: 'bg-muted/50',     border: 'border-muted',        text: 'text-muted-foreground' },
-            ] as const).map((action) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={action.href}
-                  onClick={() => router.push(action.href)}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all duration-200 hover:scale-105 active:scale-95 ${action.bg} ${action.border}`}
-                >
-                  <Icon className={`w-4 h-4 ${action.text}`} />
-                  <span className={`text-[9px] font-bold text-center leading-tight ${action.text}`}>{action.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </CyberCard>
-      </div>
-
-      {/* Manual Payment Proof Modal */}
-      {manualPayModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-card dark:bg-slate-900 border border-purple-500/30 rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="p-5 border-b border-border/50 dark:border-slate-700/50">
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Banknote className="w-5 h-5 text-purple-400" />
-                Kirim Bukti Transfer
-              </h2>
-              <p className="text-xs text-slate-400 mt-1">
-                {manualPayModal.invoiceNumber} · Rp {manualPayModal.amount.toLocaleString('id-ID')}
-              </p>
-            </div>
-            <div className="p-5 space-y-3">
-              <div>
-                <label className="text-xs font-medium text-foreground dark:text-slate-300 block mb-1.5">Nama Bank <span className="text-red-400">*</span></label>
-                <input
-                  type="text"
-                  placeholder="cth: BCA, Mandiri, BRI…"
-                  value={manualForm.bankName}
-                  onChange={e => setManualForm(f => ({ ...f, bankName: e.target.value }))}
-                  className="w-full bg-background dark:bg-slate-800 border border-border dark:border-slate-600 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/60"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-foreground dark:text-slate-300 block mb-1.5">Nama Pengirim <span className="text-red-400">*</span></label>
-                <input
-                  type="text"
-                  placeholder="Nama sesuai rekening pengirim"
-                  value={manualForm.accountName}
-                  onChange={e => setManualForm(f => ({ ...f, accountName: e.target.value }))}
-                  className="w-full bg-background dark:bg-slate-800 border border-border dark:border-slate-600 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/60"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-foreground dark:text-slate-300 block mb-1.5">Bukti Transfer (Opsional)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={e => setManualForm(f => ({ ...f, file: e.target.files?.[0] ?? null }))}
-                  className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-purple-500/20 file:text-purple-300 file:text-xs file:font-medium hover:file:bg-purple-500/30 cursor-pointer"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-foreground dark:text-slate-300 block mb-1.5">Catatan (Opsional)</label>
-                <textarea
-                  placeholder="Informasi tambahan…"
-                  value={manualForm.notes}
-                  onChange={e => setManualForm(f => ({ ...f, notes: e.target.value }))}
-                  rows={2}
-                  className="w-full bg-background dark:bg-slate-800 border border-border dark:border-slate-600 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/60 resize-none"
-                />
-              </div>
-            </div>
-            <div className="p-5 flex gap-3 border-t border-border/50 dark:border-slate-700/50">
-              <button
-                onClick={() => { setManualPayModal(null); setManualForm({ bankName: '', accountName: '', notes: '', file: null }); }}
-                disabled={submittingManual}
-                className="flex-1 py-2.5 rounded-xl border border-border dark:border-slate-600 text-foreground dark:text-slate-300 text-sm font-medium hover:bg-muted/50 transition-colors disabled:opacity-50"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleSubmitManual}
-                disabled={submittingManual || !manualForm.bankName.trim() || !manualForm.accountName.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {submittingManual ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Banknote className="w-4 h-4" />Kirim</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}

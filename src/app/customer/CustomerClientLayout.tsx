@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Home, MessageSquare, User, Receipt, Shield, Menu, X, Package, Clock, LogOut, Bell, CheckCircle2, XCircle, RefreshCw, Trash2, Wifi, FileText, PauseCircle, Gift, Sun, Moon, RefreshCcw } from 'lucide-react';
+import { Home, MessageSquare, User, Receipt, Shield, Menu, X, Package, Clock, LogOut, Bell, CheckCircle2, XCircle, RefreshCw, Trash2, Wifi, FileText, PauseCircle, Gift, Sun, Moon, RefreshCcw, MoreHorizontal } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { CyberToastProvider, useToast } from '@/components/cyberpunk/CyberToast';
@@ -527,9 +527,42 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 relative z-10 pb-6">
+        <main className="flex-1 relative z-10 pb-20 lg:pb-6">
           {children}
         </main>
+
+        {/* ── MOBILE BOTTOM NAV ─────────────────────────────────── */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-xl border-t border-cyan-500/20 shadow-[0_-4px_20px_rgba(6,182,212,0.15)]">
+          <div className="flex items-center justify-around px-1 py-1.5 safe-area-pb">
+            {[
+              { href: '/customer',          icon: Home,        label: 'Beranda' },
+              { href: '/customer/invoices', icon: FileText,    label: 'Tagihan' },
+              { href: '/customer/renewal',  icon: RefreshCcw,  label: 'Perpanjang' },
+              { href: '/customer/tickets',  icon: MessageSquare, label: 'Bantuan' },
+              { href: '/customer/profile',  icon: User,        label: 'Akun' },
+            ].map(({ href, icon: Icon, label }) => {
+              const active = isActive(href);
+              return (
+                <button
+                  key={href}
+                  onClick={() => router.push(href)}
+                  className={cn(
+                    'flex flex-col items-center gap-0.5 py-1 px-2 min-w-[56px] rounded-xl transition-all',
+                    active ? 'text-cyan-400' : 'text-muted-foreground/60'
+                  )}
+                >
+                  <span className={cn(
+                    'p-1.5 rounded-xl transition-all',
+                    active ? 'bg-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.4)]' : ''
+                  )}>
+                    <Icon className="w-5 h-5" />
+                  </span>
+                  <span className="text-[9px] font-bold tracking-wide leading-none">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
       </div>
 
 

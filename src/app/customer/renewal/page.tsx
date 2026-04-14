@@ -13,10 +13,11 @@ import { formatWIB } from '@/lib/timezone';
 
 export const dynamic = 'force-dynamic';
 
-const BANK_OPTIONS = [
-  'BCA', 'BNI', 'BRI', 'Mandiri', 'BSI',
-  'CIMB Niaga', 'Dana', 'OVO', 'GoPay', 'ShopeePay',
-];
+interface AdminBankAccount {
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+}
 
 interface UserInfo {
   id: string;
@@ -73,6 +74,10 @@ export default function RenewalPage() {
   const [selectedGateway, setSelectedGateway] = useState('');
   const [processingGateway, setProcessingGateway] = useState(false);
 
+  // Admin bank accounts
+  const [adminBankAccounts, setAdminBankAccounts] = useState<AdminBankAccount[]>([]);
+  const [selectedAdminBank, setSelectedAdminBank] = useState<AdminBankAccount | null>(null);
+
   // Manual payment state
   const [bankName, setBankName] = useState('');
   const [customBank, setCustomBank] = useState('');
@@ -98,17 +103,23 @@ export default function RenewalPage() {
     if (!token) return;
     setLoading(true);
     try {
-      const [meRes, pkgRes, gwRes, renewRes] = await Promise.all([
+      const [meRes, pkgRes, gwRes, renewRes, companyRes] = await Promise.all([
         fetch('/api/customer/me', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/customer/packages', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/public/payment-gateways'),
         fetch('/api/customer/renewal', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/company/info'),
       ]);
 
       const meData = await meRes.json();
       const pkgData = await pkgRes.json();
       const gwData = await gwRes.json();
       const renewData = await renewRes.json();
+      const companyData = await companyRes.json();
+
+      if (companyData.success && Array.isArray(companyData.data?.bankAccounts)) {
+        setAdminBankAccounts(companyData.data.bankAccounts);
+      }
 
       if (meData.user || meData.id) {
         const u = meData.user || meData;
@@ -203,7 +214,7 @@ export default function RenewalPage() {
   const handleSubmitManual = async () => {
     if (!createdInvoice) return;
     const finalBank = customBank.trim() || bankName;
-    if (!finalBank) { toast('warning', 'Wajib Diisi', 'Pilih atau masukkan metode pembayaran/nama bank'); return; }
+    if (!finalBank) { toast('warning', 'Wajib Diisi', 'Pilih atau masukkan metode pembayaran/nama bank pengirim'); return; }
     if (!accountName.trim()) { toast('warning', 'Wajib Diisi', 'Masukkan nama lengkap pengirim'); return; }
     if (!proofFile) { toast('warning', 'Bukti Transfer', 'Upload bukti transfer diperlukan'); return; }
 
@@ -512,20 +523,46 @@ export default function RenewalPage() {
             <span className="text-sm font-bold text-white">Upload Bukti Transfer</span>
           </div>
 
-          <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-purple-500/30 space-y-3">
-            {/* Bank Name */}
-            <div>
-              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block mb-1.5">Metode / Bank Pengirim *</label>
-              <div className="grid grid-cols-3 gap-1.5 mb-2">
-                {BANK_OPTIONS.map(b => (
-                  <button key={b} type="button" onClick={() => { setBankName(b); setCustomBank(''); }}
-                    className={`px-2 py-1.5 text-[10px] rounded-lg border-2 transition font-medium ${bankName === b && !customBank ? 'border-purple-400 bg-purple-500/20 text-purple-300' : 'border-border/40 text-muted-foreground hover:border-purple-500/40'}`}>
-                    {b}
+          {/* Admin Bank Accounts — transfer destination */}
+          {adminBankAccounts.length > 0 && (
+            <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-cyan-500/30">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-1.5 bg-cyan-500/20 rounded-lg border border-cyan-500/30">
+                  <Building2 className="w-3.5 h-3.5 text-cyan-400" />
+                </div>
+                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Tujuan Transfer</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground mb-3">Silakan transfer ke salah satu rekening berikut:</p>
+              <div className="space-y-2">
+                {adminBankAccounts.map((acc, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSelectedAdminBank(acc === selectedAdminBank ? null : acc)}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${
+                      selectedAdminBank === acc
+                        ? 'border-cyan-400 bg-cyan-500/10'
+                        : 'border-border/40 bg-muted/10 hover:border-cyan-500/30'
+                    }`}
+                  >
+                    <div>
+                      <p className="text-xs font-bold text-white">{acc.bankName}</p>
+                      <p className="text-sm font-mono font-bold text-cyan-300 mt-0.5">{acc.accountNumber}</p>
+                      <p className="text-[10px] text-muted-foreground">{acc.accountName}</p>
+                    </div>
+                    {selectedAdminBank === acc && <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />}
                   </button>
                 ))}
               </div>
-              <input type="text" placeholder="Atau ketik nama bank lain..."
-                value={customBank} onChange={e => { setCustomBank(e.target.value); setBankName(''); }}
+            </CyberCard>
+          )}
+
+          <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-purple-500/30 space-y-3">
+            {/* Bank Sender Name */}
+            <div>
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block mb-1.5">Metode / Bank Pengirim *</label>
+              <input type="text" placeholder="Nama bank / metode transfer (cth: BCA, GoPay)"
+                value={customBank || bankName} onChange={e => { setCustomBank(e.target.value); setBankName(''); }}
                 className="w-full px-3 py-2 text-xs border border-border rounded-lg bg-muted/20 focus:outline-none focus:border-purple-400" />
             </div>
 

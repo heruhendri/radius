@@ -108,7 +108,7 @@ export default function CustomerTicketsPage() {
   };
 
   return (
-    <div className="p-3 space-y-3">
+    <div className="p-3 lg:p-5 space-y-3 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
