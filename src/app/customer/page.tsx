@@ -135,6 +135,8 @@ export default function CustomerDashboard() {
   const [manualPayModal, setManualPayModal] = useState<{id: string; invoiceNumber: string; amount: number} | null>(null);
   const [manualForm, setManualForm] = useState({ bankName: '', accountName: '', notes: '', file: null as File | null });
   const [submittingManual, setSubmittingManual] = useState(false);
+  const [adminBankAccounts, setAdminBankAccounts] = useState<{bankName: string; accountNumber: string; accountName: string}[]>([]);
+  const [selectedAdminBank, setSelectedAdminBank] = useState<{bankName: string; accountNumber: string; accountName: string} | null>(null);
 
   useEffect(() => {
     loadCompanyName();
@@ -227,10 +229,17 @@ export default function CustomerDashboard() {
 
   const loadCompanyName = async () => {
     try {
-      const res = await fetch('/api/public/company');
-      const data = await res.json();
-      if (data.success && data.company.name) setCompanyName(data.company.name);
-    } catch (error) { console.error('Load company name error:', error); }
+      const [pubRes, infoRes] = await Promise.all([
+        fetch('/api/public/company'),
+        fetch('/api/company/info'),
+      ]);
+      const pubData = await pubRes.json();
+      if (pubData.success && pubData.company?.name) setCompanyName(pubData.company.name);
+      const infoData = await infoRes.json();
+      if (infoData.success && Array.isArray(infoData.data?.bankAccounts)) {
+        setAdminBankAccounts(infoData.data.bankAccounts);
+      }
+    } catch (error) { console.error('Load company info error:', error); }
   };
 
   const loadUserData = async () => {
@@ -271,9 +280,10 @@ export default function CustomerDashboard() {
     const token = localStorage.getItem('customer_token');
     if (!token) { router.push('/customer/login'); return; }
     setSubmittingManual(true);
+    const finalBankName = selectedAdminBank ? selectedAdminBank.bankName : manualForm.bankName.trim();
     try {
       const body = new FormData();
-      body.append('bankName', manualForm.bankName.trim());
+      body.append('bankName', finalBankName);
       body.append('accountName', manualForm.accountName.trim());
       if (manualForm.notes.trim()) body.append('notes', manualForm.notes.trim());
       if (manualForm.file) body.append('file', manualForm.file);
@@ -287,6 +297,7 @@ export default function CustomerDashboard() {
         toast('success', 'Bukti Transfer Terkirim', 'Admin akan mengkonfirmasi dalam 1×24 jam');
         setManualPayModal(null);
         setManualForm({ bankName: '', accountName: '', notes: '', file: null });
+        setSelectedAdminBank(null);
         loadInvoices();
       } else {
         toast('error', 'Gagal', data.error || 'Gagal mengirim bukti transfer');
@@ -691,9 +702,37 @@ export default function CustomerDashboard() {
                 </button>
               </div>
               <div className="space-y-3">
+                {/* Admin bank account selector */}
                 <div>
-                  <label className="text-xs font-bold text-white mb-1.5 block">Nama Bank / Metode Transfer *</label>
-                  <input type="text" placeholder="Contoh: BCA, BNI, Mandiri, GoPay..." value={manualForm.bankName} onChange={e => setManualForm(f => ({ ...f, bankName: e.target.value }))} className="w-full px-3 py-2 bg-muted/20 border border-border/50 rounded-lg text-xs text-white placeholder-muted-foreground focus:outline-none focus:border-primary/60" />
+                  <label className="text-xs font-bold text-white mb-1.5 block">Transfer ke Rekening *</label>
+                  {adminBankAccounts.length > 0 ? (
+                    <div className="space-y-2">
+                      {adminBankAccounts.map((acc, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            setSelectedAdminBank(acc === selectedAdminBank ? null : acc);
+                            setManualForm(f => ({ ...f, bankName: acc === selectedAdminBank ? '' : acc.bankName }));
+                          }}
+                          className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${
+                            selectedAdminBank === acc
+                              ? 'border-cyan-400 bg-cyan-500/10'
+                              : 'border-border/40 bg-muted/10 hover:border-cyan-500/40'
+                          }`}
+                        >
+                          <div>
+                            <p className="text-xs font-bold text-white">{acc.bankName}</p>
+                            <p className="font-mono text-sm text-cyan-300 tracking-wider mt-0.5">{acc.accountNumber}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">a/n {acc.accountName}</p>
+                          </div>
+                          {selectedAdminBank === acc && <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <input type="text" placeholder="Contoh: BCA, BNI, Mandiri..." value={manualForm.bankName} onChange={e => setManualForm(f => ({ ...f, bankName: e.target.value }))} className="w-full px-3 py-2 bg-muted/20 border border-border/50 rounded-lg text-xs text-white placeholder-muted-foreground focus:outline-none focus:border-primary/60" />
+                  )}
                 </div>
                 <div>
                   <label className="text-xs font-bold text-white mb-1.5 block">Nama Pengirim *</label>
@@ -710,10 +749,10 @@ export default function CustomerDashboard() {
                 </div>
               </div>
               <div className="flex gap-2 mt-4">
-                <button onClick={() => { setManualPayModal(null); setManualForm({ bankName: '', accountName: '', notes: '', file: null }); }} className="flex-1 py-2.5 bg-muted/20 hover:bg-muted/30 border border-border/50 rounded-lg text-xs font-bold text-muted-foreground transition-colors">
+                <button onClick={() => { setManualPayModal(null); setManualForm({ bankName: '', accountName: '', notes: '', file: null }); setSelectedAdminBank(null); }} className="flex-1 py-2.5 bg-muted/20 hover:bg-muted/30 border border-border/50 rounded-lg text-xs font-bold text-muted-foreground transition-colors">
                   Batal
                 </button>
-                <button onClick={handleSubmitManual} disabled={submittingManual || !manualForm.bankName.trim() || !manualForm.accountName.trim() || !manualForm.file} className="flex-1 py-2.5 bg-primary/20 hover:bg-primary/30 border border-primary/40 rounded-lg text-xs font-bold text-primary transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                <button onClick={handleSubmitManual} disabled={submittingManual || !(selectedAdminBank || manualForm.bankName.trim()) || !manualForm.accountName.trim() || !manualForm.file} className="flex-1 py-2.5 bg-primary/20 hover:bg-primary/30 border border-primary/40 rounded-lg text-xs font-bold text-primary transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                   {submittingManual ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Mengirim...</> : <><Upload className="w-3.5 h-3.5" />Kirim Bukti</>}
                 </button>
               </div>
