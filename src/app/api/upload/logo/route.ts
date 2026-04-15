@@ -1,10 +1,10 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
+import { writeFile } from 'fs/promises';
 import path from 'path';
 import { nanoid } from 'nanoid';
+import { getUploadDir } from '@/lib/upload-dir';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,11 +40,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create uploads directory if not exists
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'logos');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
-    }
+    const uploadsDir = getUploadDir('logos');
 
     // Generate unique filename
     const extension = file.name.split('.').pop();

@@ -3,6 +3,7 @@ import { prisma } from '@/server/db/client';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { rateLimit } from '@/server/middleware/rate-limit';
+import { getUploadDir } from '@/lib/upload-dir';
 
 export async function POST(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, { max: 5, windowMs: 60 * 1000 });
@@ -55,17 +56,7 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(bytes);
 
       const filename = `topup-${pppoeUser.id}-${timestamp}-${proofFile.name}`;
-      const uploadsDir = join(process.cwd(), 'public', 'uploads', 'topup-proofs');
-      
-      // Create directory if not exists
-      try {
-        const fs = require('fs');
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
-        }
-      } catch (err) {
-        console.error('Error creating upload directory:', err);
-      }
+      const uploadsDir = getUploadDir('topup-proofs');
 
       const filepath = join(uploadsDir, filename);
       await writeFile(filepath, buffer);

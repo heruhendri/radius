@@ -1,10 +1,10 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { randomBytes } from 'crypto';
-import { existsSync } from 'fs';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
+import { getUploadDir } from '@/lib/upload-dir';
 
 // POST - Upload foto pelanggan (KTP atau foto instalasi)
 // FormData: file (File), type ('idCard' | 'installation')
@@ -53,10 +53,7 @@ export async function POST(request: NextRequest) {
     const prefix = type === 'idCard' ? 'ktp' : 'install';
     const filename = `${prefix}-${timestamp}-${uniqueId}.${extension}`;
 
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'pppoe-customers', subfolder);
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
+    const uploadDir = getUploadDir('pppoe-customers', subfolder);
 
     const filepath = join(uploadDir, filename);
     await writeFile(filepath, buffer);

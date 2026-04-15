@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/client';
 import { writeFile } from 'fs/promises';
 import path from 'path';
-import fs from 'fs';
+import { getUploadDir } from '@/lib/upload-dir';
 
 async function verifyCustomerToken(request: NextRequest) {
   const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -90,10 +90,7 @@ export async function POST(
 
       const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const filename = `manual-proof-${invoiceId}-${Date.now()}.${ext}`;
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'payment-proofs');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
+      const uploadDir = getUploadDir('payment-proofs');
       const bytes = await file.arrayBuffer();
       await writeFile(path.join(uploadDir, filename), Buffer.from(bytes));
       receiptImage = `/uploads/payment-proofs/${filename}`;

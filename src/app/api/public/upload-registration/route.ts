@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { randomBytes } from 'crypto';
-import { existsSync } from 'fs';
+import { getUploadDir } from '@/lib/upload-dir';
 
 // POST - Public upload for registration ID card photos (no auth required)
 // Rate-limited by file size and type checks only
@@ -41,10 +41,7 @@ export async function POST(request: NextRequest) {
     const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
     const filename = `reg-ktp-${timestamp}-${uniqueId}.${extension}`;
 
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'registrations');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
+    const uploadDir = getUploadDir('registrations');
 
     const filepath = join(uploadDir, filename);
     await writeFile(filepath, buffer);

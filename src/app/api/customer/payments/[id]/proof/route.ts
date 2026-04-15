@@ -94,14 +94,9 @@ export async function POST(
     // Generate unique filename
     const ext = file.name.split('.').pop();
     const filename = `payment-proof-${paymentId}-${Date.now()}.${ext}`;
-    const filepath = path.join(process.cwd(), 'public', 'uploads', 'payments', filename);
-
-    // Ensure directory exists
-    const dir = path.dirname(filepath);
-    const fs = require('fs');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    const { getUploadDir } = require('@/lib/upload-dir');
+    const uploadDir = getUploadDir('payments');
+    const filepath = path.join(uploadDir, filename);
 
     // Save file
     const bytes = await file.arrayBuffer();

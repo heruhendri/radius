@@ -106,27 +106,36 @@ if [ -n "$USE_BRANCH" ]; then
         print_success "Backup saved to $BACKUP_DIR"
     fi
 
-    # ─── Preserve user-uploaded files (logos, KTP, payment proofs, dll) ───
-    # git reset --hard + git clean -fd akan menghapus file yang tidak di-track git.
-    # Meski public/uploads/ ada di .gitignore, kita tetap backup manual agar aman.
-    UPLOADS_GIT_TMP=""
-    if [ -d "$APP_DIR/public/uploads" ]; then
-        UPLOADS_GIT_TMP=$(mktemp -d)
-        cp -r "$APP_DIR/public/uploads/." "$UPLOADS_GIT_TMP/"
-        print_info "uploads/ saved — will be restored after git sync"
+    # ─── Migrate uploads to persistent directory ───────────────────────
+    # Uploads now live in /var/data/salfanet/uploads/ (outside git/build).
+    # Migrate any remaining files from legacy public/uploads/ location.
+    UPLOAD_DIR="${UPLOAD_DIR:-/var/data/salfanet/uploads}"
+    mkdir -p "$UPLOAD_DIR"
+
+    # Add UPLOAD_DIR to .env if not present
+    if [ -f "$APP_DIR/.env" ] && ! grep -q '^UPLOAD_DIR=' "$APP_DIR/.env"; then
+        echo "" >> "$APP_DIR/.env"
+        echo "# Persistent upload directory (survives rebuilds)" >> "$APP_DIR/.env"
+        echo "UPLOAD_DIR=$UPLOAD_DIR" >> "$APP_DIR/.env"
+        print_success "UPLOAD_DIR added to .env"
+    fi
+
+    # One-time migration from public/uploads/ to persistent dir
+    if [ -d "$APP_DIR/public/uploads" ] && [ "$(ls -A "$APP_DIR/public/uploads" 2>/dev/null)" ]; then
+        for subdir in "$APP_DIR/public/uploads"/*/; do
+            [ -d "$subdir" ] || continue
+            dirname=$(basename "$subdir")
+            if [ "$(ls -A "$subdir" 2>/dev/null)" ]; then
+                mkdir -p "$UPLOAD_DIR/$dirname"
+                cp -rn "$subdir"* "$UPLOAD_DIR/$dirname/" 2>/dev/null || true
+            fi
+        done
+        print_success "Uploads migrated to $UPLOAD_DIR (safe from rebuilds)"
     fi
 
     git fetch origin
     git reset --hard "origin/$USE_BRANCH"
     git clean -fd
-
-    # Restore uploads (logos, foto KTP pelanggan, bukti bayar, dll)
-    if [ -n "$UPLOADS_GIT_TMP" ]; then
-        mkdir -p "$APP_DIR/public/uploads"
-        cp -r "$UPLOADS_GIT_TMP/." "$APP_DIR/public/uploads/"
-        rm -rf "$UPLOADS_GIT_TMP"
-        print_success "uploads/ restored (logos, foto KTP, bukti bayar aman)"
-    fi
 
     print_step "Installing dependencies"
     npm ci --omit=dev
@@ -292,17 +301,24 @@ if [ -f "$APP_DIR/.env" ]; then
     cp "$APP_DIR/.env" "$ENV_FILE"
 fi
 
-# Preserve uploads/
-UPLOADS_TMP=""
-if [ -d "$APP_DIR/public/uploads" ]; then
-    UPLOADS_TMP=$(mktemp -d)
-    cp -r "$APP_DIR/public/uploads/." "$UPLOADS_TMP/"
+# Migrate uploads to persistent directory before replacing files
+UPLOAD_DIR="${UPLOAD_DIR:-/var/data/salfanet/uploads}"
+mkdir -p "$UPLOAD_DIR"
+if [ -d "$APP_DIR/public/uploads" ] && [ "$(ls -A "$APP_DIR/public/uploads" 2>/dev/null)" ]; then
+    for subdir in "$APP_DIR/public/uploads"/*/; do
+        [ -d "$subdir" ] || continue
+        dirname=$(basename "$subdir")
+        if [ "$(ls -A "$subdir" 2>/dev/null)" ]; then
+            mkdir -p "$UPLOAD_DIR/$dirname"
+            cp -rn "$subdir"* "$UPLOAD_DIR/$dirname/" 2>/dev/null || true
+        fi
+    done
+    print_success "Uploads migrated to $UPLOAD_DIR"
 fi
 
 # Replace app files (keep a few runtime dirs)
 rsync -a --delete \
     --exclude='.env' \
-    --exclude='public/uploads' \
     "$STAGED_DIR/" "$APP_DIR/"
 
 # Restore .env
@@ -312,12 +328,12 @@ if [ -n "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then
     print_success ".env restored"
 fi
 
-# Restore uploads
-if [ -n "$UPLOADS_TMP" ]; then
-    mkdir -p "$APP_DIR/public/uploads"
-    cp -r "$UPLOADS_TMP/." "$APP_DIR/public/uploads/"
-    rm -rf "$UPLOADS_TMP"
-    print_success "uploads/ restored"
+# Ensure UPLOAD_DIR in .env
+if [ -f "$APP_DIR/.env" ] && ! grep -q '^UPLOAD_DIR=' "$APP_DIR/.env"; then
+    echo "" >> "$APP_DIR/.env"
+    echo "# Persistent upload directory (survives rebuilds)" >> "$APP_DIR/.env"
+    echo "UPLOAD_DIR=$UPLOAD_DIR" >> "$APP_DIR/.env"
+    print_success "UPLOAD_DIR added to .env"
 fi
 
 # ─── Run DB migrations ────────────────────────────────────────────────────

@@ -32,6 +32,7 @@ lerna-debug.log*
 
 # Runtime user-uploaded files — jangan di-commit, JANGAN dihapus saat update
 public/uploads/
+data/uploads/
 
 # TypeScript
 *.tsbuildinfo

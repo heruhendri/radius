@@ -223,6 +223,37 @@ fi
 # ── Clean stale build artifacts ──────────────────────────
 rm -rf .next 2>/dev/null || true
 
+# ── Migrate uploads to persistent directory ──────────────
+UPLOAD_DIR="${UPLOAD_DIR:-/var/data/salfanet/uploads}"
+echo ""
+log "Ensuring persistent upload directory: $UPLOAD_DIR"
+mkdir -p "$UPLOAD_DIR"
+
+# Add UPLOAD_DIR to .env if not present
+if [ -f "$APP_DIR/.env" ] && ! grep -q '^UPLOAD_DIR=' "$APP_DIR/.env"; then
+  echo "" >> "$APP_DIR/.env"
+  echo "# Persistent upload directory (survives rebuilds)" >> "$APP_DIR/.env"
+  echo "UPLOAD_DIR=$UPLOAD_DIR" >> "$APP_DIR/.env"
+  ok "UPLOAD_DIR added to .env"
+fi
+
+# One-time migration: move files from public/uploads/ to persistent dir
+if [ -d "$APP_DIR/public/uploads" ] && [ "$(ls -A "$APP_DIR/public/uploads" 2>/dev/null)" ]; then
+  MIGRATED=0
+  for subdir in "$APP_DIR/public/uploads"/*/; do
+    [ -d "$subdir" ] || continue
+    dirname=$(basename "$subdir")
+    if [ "$(ls -A "$subdir" 2>/dev/null)" ]; then
+      mkdir -p "$UPLOAD_DIR/$dirname"
+      # Copy only files that don't exist in destination (preserve newer)
+      cp -rn "$subdir"* "$UPLOAD_DIR/$dirname/" 2>/dev/null && MIGRATED=1
+    fi
+  done
+  if [ "$MIGRATED" = "1" ]; then
+    ok "Existing uploads migrated to $UPLOAD_DIR"
+  fi
+fi
+
 # ── Build ─────────────────────────────────────────────────
 echo ""
 log "Building application (this takes ~60s)..."

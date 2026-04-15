@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
+import { UPLOAD_DIR } from '@/lib/upload-dir';
 
 export async function GET(
   request: NextRequest,
@@ -32,15 +33,19 @@ export async function GET(
       return new NextResponse('Unsupported file type', { status: 400 });
     }
 
-    const filepath = path.join(process.cwd(), 'public', 'uploads', 'logos', filename);
+    const filepath = path.join(UPLOAD_DIR, 'logos', filename);
+
+    // Fallback to legacy location
+    const legacyPath = path.join(process.cwd(), 'public', 'uploads', 'logos', filename);
+    const resolvedPath = existsSync(filepath) ? filepath : legacyPath;
 
     // Check if file exists
-    if (!existsSync(filepath)) {
+    if (!existsSync(resolvedPath)) {
       return new NextResponse('File not found', { status: 404 });
     }
 
     // Read file
-    const fileBuffer = await readFile(filepath);
+    const fileBuffer = await readFile(resolvedPath);
 
     const contentType = contentTypes[ext];
 

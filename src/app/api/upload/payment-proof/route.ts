@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { randomBytes } from 'crypto';
-import { existsSync } from 'fs';
+import { getUploadDir } from '@/lib/upload-dir';
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,12 +43,7 @@ export async function POST(request: NextRequest) {
     const extension = file.name.split('.').pop();
     const filename = `payment-proof-${timestamp}-${uniqueId}.${extension}`;
     
-    // Create upload directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'payment-proofs');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-    
+    const uploadDir = getUploadDir('payment-proofs');
     const filepath = join(uploadDir, filename);
     await writeFile(filepath, buffer);
     
