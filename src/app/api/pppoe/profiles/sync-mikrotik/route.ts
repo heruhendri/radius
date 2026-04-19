@@ -74,7 +74,9 @@ export async function PUT(request: NextRequest) {
 
     for (const port of portsToTry) {
       const useTls = port === 8729 || (router.apiPort && port === router.apiPort && port !== (router.port || 8728));
-      const api = new RouterOSAPI({ host, port, user: router.username, password: router.password, timeout: 10, tls: !!useTls });
+      const apiOpts: any = { host, port, user: router.username, password: router.password, timeout: 10 };
+      if (useTls) apiOpts.tls = { rejectUnauthorized: false };
+      const api = new RouterOSAPI(apiOpts);
       const r: PortResult = { port, success: false };
       try {
         await Promise.race([
@@ -199,7 +201,9 @@ export async function POST(request: NextRequest) {
       const tryPort = async (port: number): Promise<{ port: number; action: string; profileName: string; debug: string[]; warnings: string[] }> => {
         // port 8729 is API-SSL — requires TLS; port 8728 is plain API
         const useTls = port === 8729 || (router.apiPort && port === router.apiPort && port !== router.port);
-        const api = new RouterOSAPI({ host, port, user: router.username, password: router.password, timeout: 15, tls: !!useTls });
+        const apiOpts: any = { host, port, user: router.username, password: router.password, timeout: 15 };
+        if (useTls) apiOpts.tls = { rejectUnauthorized: false };
+        const api = new RouterOSAPI(apiOpts);
         const debug: string[] = [];
         const warnings: string[] = [];
 
