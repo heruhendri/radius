@@ -20,7 +20,7 @@ interface PPPoEProfile {
   id: string; name: string; description: string | null; price: number;
   hpp?: number | null; ppnActive?: boolean; ppnRate?: number | null;
   downloadSpeed: number; uploadSpeed: number; groupName: string;
-  mikrotikProfileName?: string | null; ipPoolName?: string | null;
+  mikrotikProfileName?: string | null; ipPoolName?: string | null; ipPoolRange?: string | null;
   localAddress?: string | null; lastRouterId?: string | null;
   rateLimit?: string;
   validityValue: number; validityUnit: 'DAYS' | 'MONTHS';
@@ -269,7 +269,7 @@ export default function PPPoEProfilesPage() {
     setSyncMikrotikTarget(profile);
     setSyncIpPoolName(profile.ipPoolName || '');
     setSyncLocalAddress(profile.localAddress || '');
-    setSyncPoolRanges('');
+    setSyncPoolRanges(profile.ipPoolRange || '');
     setSyncLockedRouter(false);
     // Always reload router list fresh when opening the modal
     setLoadingRouters(true);
@@ -302,10 +302,11 @@ export default function PPPoEProfilesPage() {
       if (result.savedProfile) {
         setProfiles(prev => prev.map(p =>
           p.id === target.id
-            ? { ...p, ipPoolName: result.savedProfile.ipPoolName, localAddress: result.savedProfile.localAddress }
+            ? { ...p, ipPoolName: result.savedProfile.ipPoolName, ipPoolRange: result.savedProfile.ipPoolRange, localAddress: result.savedProfile.localAddress }
             : p
         ));
         setSyncIpPoolName(result.savedProfile.ipPoolName || '');
+        setSyncPoolRanges(result.savedProfile.ipPoolRange || '');
         setSyncLocalAddress(result.savedProfile.localAddress || '');
       }
       loadProfiles();

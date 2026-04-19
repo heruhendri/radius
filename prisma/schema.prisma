@@ -459,6 +459,7 @@ model pppoeProfile {
   groupName      String
   mikrotikProfileName String?
   ipPoolName     String?
+  ipPoolRange    String?  // IP range untuk pool MikroTik (contoh: 192.168.10.100-192.168.10.200)
   localAddress   String?  // IP lokal PPP profile MikroTik
   lastRouterId   String?  // Router terakhir yang digunakan sync MikroTik
   hpp            Int?                        // Harga Modal / Biaya Pokok Penjualan

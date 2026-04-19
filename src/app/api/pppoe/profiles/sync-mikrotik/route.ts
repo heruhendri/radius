@@ -332,6 +332,7 @@ export async function POST(request: NextRequest) {
         data: {
           mikrotikProfileName: resolvedMikrotikProfileName,
           ipPoolName: resolvedIpPoolName || null,
+          ipPoolRange: resolvedPoolRanges || null,
           localAddress: resolvedLocalAddress || null,
         },
       });
@@ -372,6 +373,7 @@ export async function POST(request: NextRequest) {
       // Return saved values so frontend can update local state immediately
       savedProfile: {
         ipPoolName: resolvedIpPoolName || null,
+        ipPoolRange: resolvedPoolRanges || null,
         localAddress: resolvedLocalAddress || null,
         mikrotikProfileName: resolvedMikrotikProfileName,
       },
