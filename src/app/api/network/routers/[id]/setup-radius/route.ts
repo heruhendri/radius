@@ -125,12 +125,7 @@ ${gatewayRadiusEntry}
     /ppp profile add name=salfanetradius local-address=10.10.10.1 remote-address=pool-radius-default use-compression=no use-encryption=no comment="SALFANET RADIUS Profile"
 }
 
-# 7. Buat Hotspot User Profile salfanetradius (jika belum ada)
-:if ([:len [/ip hotspot user profile find name="salfanetradius"]] = 0) do={
-    /ip hotspot user profile add name=salfanetradius shared-users=1 rate-limit="" comment="SALFANET RADIUS"
-}
-
-# 8. Enable RADIUS untuk semua Hotspot Server Profile
+# 7. Enable RADIUS untuk semua Hotspot Server Profile
 /ip hotspot profile set [find] use-radius=yes
 
 # ============================================
@@ -146,12 +141,32 @@ ${gatewayFirewallRule}
 /ip firewall filter add chain=input protocol=udp src-address=${radiusServerIp} dst-port=${radiusAuthPort},${radiusAcctPort} action=accept comment="SALFANET-RADIUS Auth/Acct from ${radiusServerIp}"
 
 # ============================================
+# KEEPALIVE & NETWATCH — Deteksi putus lebih cepat
+# ============================================
+# Netwatch: monitor RADIUS server setiap 30 detik
+# Jika RADIUS tidak reachable → log warning otomatis
+/tool netwatch remove [find where comment~"SALFANET"]
+/tool netwatch add host=${radiusServerIp} interval=30s timeout=5s \
+    down-script="/log warning message=\\"SALFANET: RADIUS server ${radiusServerIp} tidak reachable\\"" \
+    up-script="/log info message=\\"SALFANET: RADIUS server ${radiusServerIp} kembali online\\"" \
+    comment="SALFANET RADIUS Monitor"
+
+# PPP keepalive — deteksi sesi putus dalam 30 detik (bukan 5 menit)
+# Ini mencegah sesi zombie di RADIUS saat PPPoE client disconnect tiba-tiba
+/ppp profile set salfanetradius keepalive-timeout=30
+
+# L2TP keepalive (untuk VPN tunnel ke VPS — uncomment jika pakai L2TP)
+# /interface l2tp-client set [find] keepalive-timeout=30
+# /interface l2tp-client set [find] dial-on-demand=no
+
+# ============================================
 # SELESAI! Verifikasi dengan:
 # /radius print
 # /ppp aaa print
 # /radius incoming print
 # /ppp profile print where name="salfanetradius"
 # /ip firewall filter print where comment~"SALFANET-RADIUS"
+# /tool netwatch print
 # ============================================
 # LANGKAH SELANJUTNYA: Setup Isolir
 # Klik tombol "Setup Isolir" pada router ini untuk mendapatkan
