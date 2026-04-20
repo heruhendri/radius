@@ -2,7 +2,7 @@
 
 Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with FreeRADIUS integration supporting PPPoE and Hotspot authentication.
 
-> **Latest:** v2.17.0 — Kamera HP langsung + GPS otomatis di semua form foto pelanggan (Apr 10, 2026)
+> **Latest:** v2.20.0 — Fix script RADIUS (src-address, address IP, hotspot profile), Netwatch monitor, RADIUS keepalive alignment (Apr 20, 2026)
 
 ---
 
