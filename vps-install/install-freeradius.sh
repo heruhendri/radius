@@ -323,6 +323,28 @@ configure_clients_d() {
 EOF
     fi
 
+    # Add vps_self client entry so radtest/health-checks via LAN IP work.
+    # FreeRADIUS only listens on known clients — without this, any radtest
+    # sent to the VPS LAN IP (not 127.0.0.1) returns "unknown client" and
+    # is silently dropped. Must be added BEFORE $INCLUDE clients.d/ line.
+    if [ -n "${VPS_IP:-}" ] && ! grep -q "vps_self" ${FR_CONFIG_DIR}/clients.conf; then
+        cat >> ${FR_CONFIG_DIR}/clients.conf <<EOF
+
+# VPS self — used by local radtest and app health-check
+# Proxmox LXC note: if Proxmox host NATs RADIUS traffic, also add the
+# Proxmox bridge gateway IP (usually VPS_IP with last octet = 1) here.
+client vps_self {
+    ipaddr = ${VPS_IP}
+    secret = testing123
+    shortname = vps-self
+    nas_type = other
+    require_message_authenticator = no
+    limit_proxy_state = no
+}
+EOF
+        print_success "vps_self client added to clients.conf (${VPS_IP})"
+    fi
+
     # Ensure $INCLUDE clients.d/ is in clients.conf
     if ! grep -q 'INCLUDE clients.d/' ${FR_CONFIG_DIR}/clients.conf; then
         echo '' >> ${FR_CONFIG_DIR}/clients.conf

@@ -139,9 +139,10 @@ port      = 3306
 
 **`read_clients = no`** — NAS clients are NOT read from the `nas` DB table.
 Instead, the app's `syncNasClients()` cron writes them to `clients.d/nas-from-db.conf`
-every 5 minutes (part of `freeradiusHealthCheck()`). FreeRADIUS is reloaded with
-`systemctl reload freeradius` (SIGHUP) only when the file changes — active sessions
-are NOT dropped.
+every 5 minutes (part of `freeradiusHealthCheck()`). When the file changes,
+`systemctl restart freeradius` is called (NOT reload/SIGHUP — FreeRADIUS 3.x
+SIGHUP does NOT reload `clients.conf` or `clients.d/`). Active PPPoE/Hotspot
+sessions survive a brief restart since MikroTik maintains them independently.
 
 ---
 
@@ -220,7 +221,7 @@ echo "User-Name = testuser" | radclient -x 127.0.0.1:3799 disconnect testing123 
 
 journalctl -u freeradius -n 50 --no-pager     # check logs
 
-systemctl reload freeradius                    # reload config (SIGHUP, no session drop)
+systemctl restart freeradius                   # restart to reload clients.conf (SIGHUP/reload does NOT reload clients)
 ```
 
 ---
