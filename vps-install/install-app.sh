@@ -129,6 +129,10 @@ NEXT_PUBLIC_APP_URL="${APP_BASE_URL}"
 NEXTAUTH_SECRET="${NEXTAUTH_SECRET}"
 NEXTAUTH_URL="${APP_BASE_URL}"
 
+# RADIUS Server IP — used by setup-radius route to generate NAS config
+# Set automatically to detected VPS/server IP during installation
+RADIUS_SERVER_IP="${VPS_IP}"
+
 # Agent Portal JWT
 AGENT_JWT_SECRET="${AGENT_JWT_SECRET}"
 

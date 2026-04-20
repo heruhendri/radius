@@ -611,6 +611,35 @@ EOF
     fi
 }
 
+# ============================================================================
+# WATCHDOG INSTALLATION
+# ============================================================================
+
+install_watchdog() {
+    print_info "Installing vpn-watchdog.sh and cron job..."
+
+    local WATCHDOG_SRC="${APP_DIR}/vpn-watchdog.sh"
+    local WATCHDOG_DST="/usr/local/bin/vpn-watchdog.sh"
+    local CRON_LINE="*/2 * * * * /usr/local/bin/vpn-watchdog.sh >> /var/log/vpn-watchdog.log 2>&1"
+
+    if [ ! -f "$WATCHDOG_SRC" ]; then
+        print_warning "vpn-watchdog.sh not found in $APP_DIR — skipping (non-critical)"
+        return 0
+    fi
+
+    cp "$WATCHDOG_SRC" "$WATCHDOG_DST"
+    chmod +x "$WATCHDOG_DST"
+    print_success "vpn-watchdog.sh installed → $WATCHDOG_DST"
+
+    # Add cron job for root (idempotent: only add if not already present)
+    if ! crontab -l 2>/dev/null | grep -qF "$WATCHDOG_DST"; then
+        ( crontab -l 2>/dev/null; echo "$CRON_LINE" ) | crontab -
+        print_success "Cron job added: $CRON_LINE"
+    else
+        print_info "Cron job already exists — skipped"
+    fi
+}
+
 install_freeradius() {
     print_step "Step 5: Installing FreeRADIUS"
     
@@ -630,6 +659,7 @@ install_freeradius() {
     configure_openssl_mschapv2
     configure_firewall
     configure_sudoers
+    install_watchdog
     # Fix file ownership BEFORE starting FreeRADIUS.
     # All cp/cat/sed operations above ran as root, so files are root-owned.
     # FreeRADIUS daemon runs as 'freerad' and cannot read root-owned config files,
