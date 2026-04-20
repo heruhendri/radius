@@ -502,6 +502,22 @@ export default function RouterPage() {
                   <div className="mt-4 p-3 rounded-xl border border-[#00f7ff]/20 bg-[#00f7ff]/5">
                     <p className="text-xs text-[#00f7ff]/80"><span className="font-bold">ℹ️ Tentang NAS/Router:</span> NAS (Network Access Server) adalah MikroTik router di lokasi pelanggan yang menangani autentikasi PPPoE atau Hotspot. Setiap NAS harus terdaftar di sini agar RADIUS server SALFANET dapat mengenali request autentikasi dari NAS tersebut.</p>
                   </div>
+
+                  {/* Troubleshooting: unknown client */}
+                  <div className="mt-3 p-4 rounded-xl border border-amber-500/30 bg-amber-500/5">
+                    <p className="text-xs font-bold text-amber-400 mb-2">⚠️ Troubleshooting — FreeRADIUS: &quot;unknown client&quot;</p>
+                    <p className="text-xs text-muted-foreground mb-3">Jika FreeRADIUS menolak request NAS dengan error <code className="bg-slate-800 px-1 rounded text-amber-300">Ignoring request from unknown client X.X.X.X</code>, lakukan langkah berikut:</p>
+                    <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
+                      <li>Pastikan NAS sudah ditambahkan lewat halaman ini (bukan langsung ke database). Jika baru saja di-INSERT manual ke DB, hapus dan tambah ulang via UI.</li>
+                      <li>Cek IP di kolom <span className="text-foreground font-medium">IP NAS</span> sesuai dengan IP yang dikirim router ke FreeRADIUS (bisa berupa IP VPN atau IP LAN).</li>
+                      <li>Klik <span className="text-amber-400 font-medium">RADIUS Script</span> → copy script → paste di terminal MikroTik NAS. Pastikan <code className="bg-slate-800 px-1 rounded text-green-400">src-address</code> pada script sama dengan IP NAS yang terdaftar.</li>
+                      <li>Cek Log FreeRADIUS di menu <a href="/admin/freeradius/logs" className="text-[#00f7ff] underline">FreeRADIUS → Log Langsung</a>. Error &quot;unknown client&quot; berarti IP pengirim tidak cocok dengan nasname di DB.</li>
+                      <li>Jika NAS menggunakan VPN, pastikan VPN Client sudah terhubung dan IP VPN-nya terdaftar. Cek di menu <a href="/admin/network/vpn-client" className="text-[#00f7ff] underline">VPN Client</a>.</li>
+                    </ol>
+                    <p className="text-xs text-muted-foreground mt-2 border-t border-amber-500/20 pt-2">
+                      Setelah memperbaiki, FreeRADIUS akan otomatis sinkronisasi dalam maks. <span className="text-foreground font-medium">5 menit</span> (cron interval). Untuk sinkronisasi segera, restart FreeRADIUS via menu <a href="/admin/freeradius" className="text-[#00f7ff] underline">FreeRADIUS → Status</a>.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
