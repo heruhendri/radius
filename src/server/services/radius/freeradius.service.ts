@@ -28,30 +28,39 @@ const NAS_CLIENTS_FILE = '/etc/freeradius/3.0/clients.d/nas-from-db.conf';
  */
 export async function syncNasClients(): Promise<boolean> {
   try {
-    // Fetch all active NAS entries with their VPN client → VPN server chain
-    const nasEntries = await prisma.router.findMany({
-      where: { isActive: true },
-      select: {
-        nasname: true,
-        shortname: true,
-        secret: true,
-        type: true,
-        vpnClientId: true,
-        vpnClient: {
-          select: {
-            vpnIp: true,
-            isRadiusServer: true,
-            vpnServer: {
-              select: {
-                id: true,
-                name: true,
-                subnet: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    // Use raw SQL to avoid Prisma silently dropping rows that have NULL in
+    // non-nullable app columns (port, apiPort, username, password).
+    // These fields are irrelevant for RADIUS sync but a Prisma findMany()
+    // returns only rows it can fully deserialize — rows with NULL in non-nullable
+    // Int/String fields are silently omitted, causing "unknown client" errors.
+    const nasEntries: Array<{
+      nasname: string;
+      shortname: string | null;
+      secret: string;
+      type: string | null;
+      vpnClientId: string | null;
+      vpnIp: string | null;
+      isRadiusServer: boolean | null;
+      vpnServerId: string | null;
+      vpnServerName: string | null;
+      vpnServerSubnet: string | null;
+    }> = await prisma.$queryRaw`
+      SELECT
+        r.nasname,
+        r.shortname,
+        r.secret,
+        r.type,
+        r.vpnClientId,
+        vc.vpnIp,
+        vc.isRadiusServer,
+        vs.id   AS vpnServerId,
+        vs.name AS vpnServerName,
+        vs.subnet AS vpnServerSubnet
+      FROM nas r
+      LEFT JOIN vpn_clients vc ON vc.id = r.vpnClientId
+      LEFT JOIN vpn_servers vs ON vs.id = vc.vpnServerId
+      WHERE r.isActive = 1
+    `;
 
     if (nasEntries.length === 0) return false;
 
@@ -78,24 +87,23 @@ export async function syncNasClients(): Promise<boolean> {
       lines.push('');
 
       // Collect VPN server gateway info (skip the VPS itself = isRadiusServer)
-      if (nas.vpnClient && nas.vpnClient.vpnServer && !nas.vpnClient.isRadiusServer) {
-        const server = nas.vpnClient.vpnServer;
-        if (!vpnGateways.has(server.id)) {
+      if (nas.vpnClientId && nas.vpnServerId && !nas.isRadiusServer) {
+        if (!vpnGateways.has(nas.vpnServerId)) {
           // Derive gateway IP: subnet "10.20.30.0/24" → gateway "10.20.30.1"
-          const subnetBase = server.subnet.split('/')[0]; // "10.20.30.0"
+          const subnetBase = (nas.vpnServerSubnet || '').split('/')[0]; // "10.20.30.0"
           const parts = subnetBase.split('.');
           parts[3] = '1';
           const gatewayIp = parts.join('.');
-          const safeName = server.name.replace(/[^a-z0-9_-]/gi, '_').toLowerCase();
+          const safeName = (nas.vpnServerName || nas.vpnServerId).replace(/[^a-z0-9_-]/gi, '_').toLowerCase();
 
-          vpnGateways.set(server.id, {
+          vpnGateways.set(nas.vpnServerId, {
             gatewayIp,
             secrets: new Set([nas.secret]),
             serverName: safeName,
           });
         } else {
           // Collect all distinct secrets so we can detect mismatches
-          vpnGateways.get(server.id)!.secrets.add(nas.secret);
+          vpnGateways.get(nas.vpnServerId)!.secrets.add(nas.secret);
         }
       }
     }
