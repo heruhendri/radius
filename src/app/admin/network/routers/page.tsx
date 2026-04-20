@@ -91,7 +91,6 @@ export default function RouterPage() {
   const [showScriptModal, setShowScriptModal] = useState(false)
   const [showTutorial, setShowTutorial] = useState(true)
   const [scriptModalData, setScriptModalData] = useState<{ script: string; scriptRos6?: string; scriptRos7?: string; config: any } | null>(null)
-  const [scriptRosTab, setScriptRosTab] = useState<6 | 7>(7tRos7?: string; config: any } | null>(null)
   const [scriptRosTab, setScriptRosTab] = useState<6 | 7>(7)
 
   useEffect(() => {
