@@ -63,7 +63,7 @@ interface Stats {
 }
 
 interface DispatchFormData {
-  customerId: string;
+  customerId: string | null;
   customerName: string;
   customerPhone: string;
   customerAddress: string;
@@ -102,9 +102,10 @@ export default function AdminTicketsPage() {
   const [dispatchDataLoading, setDispatchDataLoading] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerSearchLoading, setCustomerSearchLoading] = useState(false);
+  const [customerLockedIn, setCustomerLockedIn] = useState(false);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [form, setForm] = useState<DispatchFormData>({
-    customerId: '', customerName: '', customerPhone: '', customerAddress: '',
+    customerId: null, customerName: '', customerPhone: '', customerAddress: '',
     subject: '', description: '', categoryId: '', priority: 'MEDIUM',
     routerId: '', oltId: '', odcId: '', odpId: '',
   });
@@ -121,6 +122,7 @@ export default function AdminTicketsPage() {
 
   const handleCustomerSearchChange = useCallback((value: string) => {
     setCustomerSearch(value);
+    setCustomerLockedIn(false);
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     if (!value.trim()) {
       // Clear customer list when search is empty
@@ -147,13 +149,15 @@ export default function AdminTicketsPage() {
   const selectCustomer = (c: DispatchDataResult['customers'][0]) => {
     setForm(f => ({
       ...f,
-      customerId: c.id,
+      // customerId must reference pppoeUser.id — billing customers don't have one
+      customerId: c._source === 'billing' ? null : c.id,
       customerName: c.name || c.username,
       customerPhone: c.phone || '',
       customerAddress: c.address || '',
       odpId: c.odpAssignment?.odpId || f.odpId,
     }));
     setCustomerSearch(c.name || c.username);
+    setCustomerLockedIn(true);
   };
 
   const handleDispatch = async () => {
@@ -172,8 +176,9 @@ export default function AdminTicketsPage() {
       if (!res.ok) throw new Error(data.error || 'Gagal');
       showSuccess('Tiket Terkirim', `#${data.ticket.ticketNumber} dikirim ke ${data.notified} teknisi`);
       setShowDispatch(false);
-      setForm({ customerId: '', customerName: '', customerPhone: '', customerAddress: '', subject: '', description: '', categoryId: '', priority: 'MEDIUM', routerId: '', oltId: '', odcId: '', odpId: '' });
+      setForm({ customerId: null, customerName: '', customerPhone: '', customerAddress: '', subject: '', description: '', categoryId: '', priority: 'MEDIUM', routerId: '', oltId: '', odcId: '', odpId: '' });
       setCustomerSearch('');
+      setCustomerLockedIn(false);
       setCustomerSearchLoading(false);
       fetchTickets();
       fetchStats();
@@ -596,7 +601,7 @@ export default function AdminTicketsPage() {
                         <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-muted-foreground" />
                       )}
                     </div>
-                    {dispatchData?.customers && dispatchData.customers.length > 0 && customerSearch && !form.customerId && (
+                    {dispatchData?.customers && dispatchData.customers.length > 0 && customerSearch && !customerLockedIn && (
                       <div className="mt-1 bg-background border border-border rounded-lg max-h-44 overflow-y-auto shadow-lg z-10">
                         {dispatchData.customers.map(c => (
                           <button key={c.id} onClick={() => selectCustomer(c)} className="w-full text-left px-3 py-2.5 text-xs hover:bg-muted transition flex items-center justify-between gap-2">
@@ -611,11 +616,11 @@ export default function AdminTicketsPage() {
                         ))}
                       </div>
                     )}
-                    {customerSearch && !form.customerId && !customerSearchLoading && dispatchData?.customers?.length === 0 && (
+                    {customerSearch && !customerLockedIn && !customerSearchLoading && dispatchData?.customers?.length === 0 && (
                       <p className="mt-1 text-xs text-muted-foreground px-1">Tidak ada pelanggan ditemukan untuk &quot;{customerSearch}&quot;</p>
                     )}
-                    {form.customerId && (
-                      <button onClick={() => setForm(f => ({ ...f, customerId: '' }))} className="mt-1 text-[10px] text-[#bc13fe] hover:underline">
+                    {customerLockedIn && (
+                      <button onClick={() => { setForm(f => ({ ...f, customerId: null })); setCustomerLockedIn(false); setCustomerSearch(''); }} className="mt-1 text-[10px] text-[#bc13fe] hover:underline">
                         Ganti pelanggan
                       </button>
                     )}
