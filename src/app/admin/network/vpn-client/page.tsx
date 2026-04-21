@@ -75,11 +75,16 @@ export default function VpnClientPage() {
   const [applyRoutingForm, setApplyRoutingForm] = useState({ host: '', port: '22', username: 'root', password: '' });
   const [applyRoutingOutput, setApplyRoutingOutput] = useState('');
   const [applyRoutingRunning, setApplyRoutingRunning] = useState(false);
+  // Edit IP state
+  const [editingIpClientId, setEditingIpClientId] = useState<string | null>(null);
+  const [editingIpValue, setEditingIpValue] = useState('');
+  const [editingIpLoading, setEditingIpLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     vpnServerId: '',
     vpnType: 'l2tp' as 'l2tp' | 'pptp' | 'sstp' | 'wireguard',
+    customVpnIp: '',
   });
   // WireGuard NAS Peers (VPS as WG server)
   const [wgPeers, setWgPeers] = useState<{ publicKey: string; endpoint?: string; allowedIps?: string; lastHandshake?: string }[]>([]);
@@ -499,8 +504,8 @@ export default function VpnClientPage() {
         setSelectedVpnType(createdType === 'pptp' || createdType === 'sstp' ? createdType : 'l2tp');
         setShowCredentials(true);
         setShowModal(false);
+        setFormData({ name: '', description: '', vpnServerId: '', vpnType: 'l2tp', customVpnIp: '' });
         loadClients();
-
         showSuccess(t('network.clientCredentialsDisplayed'), t('network.vpnClientCreated'));
       } else {
         showError(result.error || t('network.failedCreateClient'));
@@ -554,6 +559,30 @@ export default function VpnClientPage() {
       showError(t('network.anErrorOccurred'));
     }
   }
+
+  const handleEditIpSave = async (clientId: string) => {
+    if (!editingIpValue.trim()) return;
+    setEditingIpLoading(true);
+    try {
+      const res = await fetch('/api/network/vpn-client', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: clientId, vpnIp: editingIpValue.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showSuccess(`IP berhasil diubah ke ${data.newIp}`);
+        setEditingIpClientId(null);
+        loadClients();
+      } else {
+        showError(data.error || 'Gagal mengubah IP');
+      }
+    } catch {
+      showError('Gagal menghubungi server');
+    } finally {
+      setEditingIpLoading(false);
+    }
+  };
 
   const viewCredentials = (client: VpnClient) => {
     const server = vpnServers.find(s => s.id === client.vpnServerId)
@@ -1044,7 +1073,45 @@ ${vpnCmd}
                           </div>
                           <div>
                             <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('network.vpnIp')}</p>
-                            <p className="font-mono text-foreground text-sm">{client.vpnIp}</p>
+                            {editingIpClientId === client.id ? (
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  value={editingIpValue}
+                                  onChange={(e) => setEditingIpValue(e.target.value)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleEditIpSave(client.id); if (e.key === 'Escape') setEditingIpClientId(null); }}
+                                  className="w-32 px-2 py-1 text-xs font-mono bg-background border border-[#00f7ff]/50 rounded-lg text-foreground focus:border-[#00f7ff] focus:ring-1 focus:ring-[#00f7ff]/30 outline-none"
+                                  autoFocus
+                                  placeholder={client.vpnIp}
+                                />
+                                <button
+                                  onClick={() => handleEditIpSave(client.id)}
+                                  disabled={editingIpLoading}
+                                  className="p-1 bg-green-500/20 border border-green-500/40 text-green-400 rounded-lg hover:bg-green-500/30 transition-all"
+                                  title="Simpan"
+                                >
+                                  {editingIpLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                                </button>
+                                <button
+                                  onClick={() => setEditingIpClientId(null)}
+                                  className="p-1 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/20 transition-all"
+                                  title="Batal"
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <p className="font-mono text-foreground text-sm">{client.vpnIp}</p>
+                                <button
+                                  onClick={() => { setEditingIpClientId(client.id); setEditingIpValue(client.vpnIp); }}
+                                  className="p-1 bg-[#00f7ff]/10 border border-[#00f7ff]/30 text-[#00f7ff] rounded-lg hover:bg-[#00f7ff]/20 transition-all opacity-60 hover:opacity-100"
+                                  title="Edit IP"
+                                >
+                                  <Key className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                           <div>
                             <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('network.username')}</p>
@@ -1298,6 +1365,29 @@ ${vpnCmd}
                     rows={3}
                   />
                 </div>
+
+                {/* Custom VPN IP — only for non-VPS WG (VPS WG assigns IPs automatically) */}
+                {formData.vpnServerId && formData.vpnServerId !== '__vps_wg__' && (
+                  <div>
+                    <label className="block text-sm font-medium text-[#00f7ff] mb-1">
+                      IP VPN Client <span className="text-muted-foreground font-normal">(opsional — kosongkan untuk auto)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.customVpnIp}
+                      onChange={(e) => setFormData({ ...formData, customVpnIp: e.target.value })}
+                      className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 font-mono focus:border-[#00f7ff] focus:ring-2 focus:ring-[#00f7ff]/30 transition-all"
+                      placeholder="cth: 10.20.30.15 (kosong = auto-assign)"
+                    />
+                    {(() => {
+                      const srv = vpnServers.find(s => s.id === formData.vpnServerId);
+                      const sub = srv?.subnet;
+                      if (!sub) return null;
+                      const base = sub.split('/')[0].split('.').slice(0, 3).join('.');
+                      return <p className="text-xs text-muted-foreground mt-1">Subnet server: <span className="text-[#00f7ff] font-mono">{sub}</span> — IP harus dalam range <span className="font-mono">{base}.10</span> – <span className="font-mono">{base}.254</span></p>;
+                    })()}
+                  </div>
+                )}
 
                 <div className="flex gap-3 pt-4">
                   <button

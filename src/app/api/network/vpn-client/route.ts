@@ -191,7 +191,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name, description, vpnServerId, vpnType: rawVpnType } = await request.json()
+    const { name, description, vpnServerId, vpnType: rawVpnType, customVpnIp } = await request.json()
     const normalizedType = String(rawVpnType || 'l2tp').toLowerCase()
     const vpnType: 'l2tp' | 'pptp' | 'sstp' | 'wireguard' =
       normalizedType === 'pptp' || normalizedType === 'sstp' || normalizedType === 'wireguard' ? normalizedType as any : 'l2tp'
@@ -222,8 +222,23 @@ export async function POST(request: Request) {
     const apiUsername = `api-${name.toLowerCase().replace(/\s+/g, '-')}`
     const apiPassword = generatePassword(16)
     
-    // Get available IP and port FOR THIS SERVER
-    const vpnIp = await getNextAvailableIP(vpnServerId, vpnServer.subnet)
+    // Resolve VPN IP: use customVpnIp if provided, else auto-assign
+    let vpnIp: string
+    if (customVpnIp && customVpnIp.trim()) {
+      // Validate format
+      const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/
+      if (!ipRegex.test(customVpnIp.trim())) {
+        return NextResponse.json({ error: 'Format IP tidak valid' }, { status: 400 })
+      }
+      // Check not already in use for this server
+      const existing = await prisma.vpnClient.findFirst({ where: { vpnServerId, vpnIp: customVpnIp.trim() } })
+      if (existing) {
+        return NextResponse.json({ error: `IP ${customVpnIp.trim()} sudah digunakan oleh client lain` }, { status: 409 })
+      }
+      vpnIp = customVpnIp.trim()
+    } else {
+      vpnIp = await getNextAvailableIP(vpnServerId, vpnServer.subnet)
+    }
     const winboxPort = vpnType !== 'wireguard' ? await getNextWinboxPort(vpnServerId) : null
 
     console.log('Creating VPN client:', { username, vpnIp, winboxPort, vpnType })
@@ -501,6 +516,68 @@ ${radiusSection}
       { error: error.message || 'Failed to create client' },
       { status: 500 }
     )
+  }
+}
+
+// PATCH - Update VPN client IP address
+export async function PATCH(request: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
+    const { id, vpnIp } = await request.json()
+    if (!id || !vpnIp) return NextResponse.json({ error: 'id dan vpnIp wajib diisi' }, { status: 400 })
+
+    // Validate IP format
+    if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(vpnIp.trim())) {
+      return NextResponse.json({ error: 'Format IP tidak valid' }, { status: 400 })
+    }
+
+    const client = await prisma.vpnClient.findUnique({ where: { id }, include: { vpnServer: true } })
+    if (!client) return NextResponse.json({ error: 'Client tidak ditemukan' }, { status: 404 })
+
+    // Check IP not used by another client on same server
+    const conflict = await prisma.vpnClient.findFirst({
+      where: { vpnServerId: client.vpnServerId, vpnIp: vpnIp.trim(), id: { not: id } },
+    })
+    if (conflict) return NextResponse.json({ error: `IP ${vpnIp} sudah digunakan oleh "${conflict.name}"` }, { status: 409 })
+
+    const newIp = vpnIp.trim()
+    const vpnServer = client.vpnServer as any
+
+    // Update PPP remote-address on MikroTik (non-WireGuard only)
+    if (client.vpnType?.toUpperCase() !== 'WIREGUARD' && vpnServer) {
+      try {
+        const mtik = new MikroTikConnection({
+          host: vpnServer.host,
+          username: vpnServer.username,
+          password: decryptPassword(vpnServer.password),
+          port: vpnServer.apiPort,
+          timeout: 10000,
+        })
+        await mtik.connect()
+        const secrets = await mtik.execute('/ppp/secret/print', [`?name=${client.username}`])
+        if (secrets && secrets.length > 0) {
+          await mtik.execute('/ppp/secret/set', [`=.id=${secrets[0]['.id']}`, `=remote-address=${newIp}`])
+        }
+        // Update IP pool / nat rule if exists
+        const nats = await mtik.execute('/ip/firewall/nat/print', [`?comment=SALFANET-VPN-${client.username}`])
+        for (const nat of (nats || [])) {
+          await mtik.execute('/ip/firewall/nat/set', [`=.id=${nat['.id']}`, `=to-addresses=${newIp}`])
+        }
+        await mtik.disconnect()
+      } catch (mikrotikErr: any) {
+        console.warn('[VPN PATCH] MikroTik update skipped:', mikrotikErr.message)
+        // Don't fail — just update DB (user may update MikroTik manually)
+      }
+    }
+
+    // Update DB
+    const updated = await prisma.vpnClient.update({ where: { id }, data: { vpnIp: newIp } })
+    return NextResponse.json({ success: true, client: updated, newIp })
+  } catch (error: any) {
+    console.error('PATCH vpn-client error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
 
