@@ -414,7 +414,7 @@ export default function VpnClientPage() {
           setWgGeneratedScript(data.routerosScript || null)
           await loadWgPeers()
           showSuccess('WireGuard peer berhasil ditambahkan ke VPS', 'Peer Ditambahkan')
-          setFormData({ name: '', description: '', vpnServerId: '', vpnType: 'l2tp' })
+          setFormData({ name: '', description: '', vpnServerId: '', vpnType: 'l2tp', customVpnIp: '' })
 
           // Auto-show credentials with generated script so user can copy it immediately
           const wgSubnet = data.vpnSubnet || wgServerInfo?.subnet || '10.200.0.0/24'
@@ -475,7 +475,7 @@ export default function VpnClientPage() {
           setWgGeneratedScript(data.routerosScript || null)
           setShowWgSection(true)
           showSuccess('L2TP user berhasil ditambahkan ke VPS', 'Berhasil')
-          setFormData({ name: '', description: '', vpnServerId: '', vpnType: 'l2tp' })
+          setFormData({ name: '', description: '', vpnServerId: '', vpnType: 'l2tp', customVpnIp: '' })
         } else {
           showError(data.error || 'Gagal menambahkan L2TP user ke VPS')
         }
@@ -816,7 +816,7 @@ ${vpnCmd}
               </div>
               <button
                 onClick={() => {
-                  setFormData({ name: '', description: '', vpnServerId: '', vpnType: 'l2tp' })
+                  setFormData({ name: '', description: '', vpnServerId: '', vpnType: 'l2tp', customVpnIp: '' })
                   setShowModal(true)
                 }}
                 className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#00f7ff] to-[#00d4e6] text-black font-bold rounded-xl hover:shadow-[0_0_30px_rgba(0,247,255,0.5)] transition-all duration-300 transform hover:scale-105"
@@ -1033,7 +1033,7 @@ ${vpnCmd}
               </p>
               <button
                 onClick={() => {
-                  setFormData({ name: '', description: '', vpnServerId: '', vpnType: 'l2tp' })
+                  setFormData({ name: '', description: '', vpnServerId: '', vpnType: 'l2tp', customVpnIp: '' })
                   setShowModal(true)
                 }}
                 className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#00f7ff] to-[#00d4e6] text-black font-bold rounded-xl hover:shadow-[0_0_30px_rgba(0,247,255,0.5)] transition-all duration-300 transform hover:scale-105"

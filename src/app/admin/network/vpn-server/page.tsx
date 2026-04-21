@@ -14,9 +14,9 @@ interface VpnServer {
   username: string
   apiPort: number
   subnet: string
-  poolStart?: string | null
-  poolEnd?: string | null
-  gateway?: string | null
+  poolStart: number
+  poolEnd: number
+  gateway: string | null
   l2tpEnabled: boolean
   sstpEnabled: boolean
   pptpEnabled: boolean
@@ -127,8 +127,8 @@ export default function VpnServerPage() {
     password: '',
     apiPort: '8728',
     subnet: '10.20.30.0/24',
-    poolStart: '',
-    poolEnd: '',
+    poolStart: '10',
+    poolEnd: '254',
     gateway: '',
     l2tpEnabled: false,
     sstpEnabled: false,
@@ -484,14 +484,14 @@ export default function VpnServerPage() {
   const handleAdd = () => {
     setEditingServer(null);
     setTestResult(null);
-    setFormData({ name: '', host: '', username: 'admin', password: '', apiPort: '8728', subnet: '10.20.30.0/24', poolStart: '', poolEnd: '', gateway: '', l2tpEnabled: false, sstpEnabled: false, pptpEnabled: false, openVpnEnabled: false });
+    setFormData({ name: '', host: '', username: 'admin', password: '', apiPort: '8728', subnet: '10.20.30.0/24', poolStart: '10', poolEnd: '254', gateway: '', l2tpEnabled: false, sstpEnabled: false, pptpEnabled: false, openVpnEnabled: false });
     setShowModal(true);
   }
 
   const handleEdit = (server: VpnServer) => {
     setEditingServer(server)
     setTestResult(null)
-    setFormData({ name: server.name, host: server.host, username: server.username, password: '', apiPort: server.apiPort.toString(), subnet: server.subnet, poolStart: server.poolStart || '', poolEnd: server.poolEnd || '', gateway: server.gateway || '', l2tpEnabled: server.l2tpEnabled, sstpEnabled: server.sstpEnabled, pptpEnabled: server.pptpEnabled, openVpnEnabled: server.openVpnEnabled })
+    setFormData({ name: server.name, host: server.host, username: server.username, password: '', apiPort: server.apiPort.toString(), subnet: server.subnet, poolStart: String(server.poolStart ?? 10), poolEnd: String(server.poolEnd ?? 254), gateway: server.gateway ?? '', l2tpEnabled: server.l2tpEnabled, sstpEnabled: server.sstpEnabled, pptpEnabled: server.pptpEnabled, openVpnEnabled: server.openVpnEnabled })
     setShowModal(true)
   }
 
@@ -1048,15 +1048,13 @@ export default function VpnServerPage() {
                         <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('network.vpnSubnet')}</p>
                         <p className="font-mono text-foreground text-sm">{server.subnet}</p>
                       </div>
-                      {(server.poolStart || server.poolEnd || server.gateway) && (
-                        <div className="col-span-2">
-                          <p className="text-[#bc13fe] text-xs uppercase tracking-wider mb-1">IP Pool</p>
-                          <p className="font-mono text-foreground text-sm">
-                            {server.poolStart || '—'} – {server.poolEnd || '—'}
-                            {server.gateway && <span className="text-muted-foreground ml-2">| GW: {server.gateway}</span>}
-                          </p>
-                        </div>
-                      )}
+                    </div>
+
+                    {/* Pool Config Info */}
+                    <div className="mb-4 px-4 py-3 rounded-xl bg-[#00f7ff]/5 border border-[#00f7ff]/20 flex flex-wrap gap-4 text-xs">
+                      <span className="text-muted-foreground">Pool IP: <span className="font-mono text-foreground">{server.subnet.split('.').slice(0,3).join('.')}.{server.poolStart ?? 10} – {server.subnet.split('.').slice(0,3).join('.')}.{server.poolEnd ?? 254}</span></span>
+                      <span className="text-muted-foreground">Gateway: <span className="font-mono text-foreground">{server.gateway || (server.subnet.split('.').slice(0,3).join('.') + '.1')}</span></span>
+                      <button onClick={() => handleEdit(server)} className="ml-auto text-[#00f7ff] hover:underline flex items-center gap-1"><Settings className="w-3 h-3" /> Edit Pool</button>
                     </div>
 
                     {/* Action Buttons */}
@@ -1242,49 +1240,53 @@ export default function VpnServerPage() {
                     />
                   </div>
 
-                  {/* IP Pool Configuration */}
-                  <div className="rounded-xl border border-[#bc13fe]/30 bg-[#bc13fe]/5 p-4 space-y-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-2 h-2 rounded-full bg-[#bc13fe]" />
-                      <p className="text-sm font-bold text-[#bc13fe]">Konfigurasi IP Pool</p>
-                      <span className="text-xs text-muted-foreground">(opsional — kosong = auto dari subnet)</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
+                  {/* Pool Config */}
+                  <div className="p-4 rounded-xl border border-[#00f7ff]/20 bg-[#00f7ff]/5">
+                    <label className="block text-sm font-semibold text-[#00f7ff] mb-3">Konfigurasi Pool IP</label>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1">IP Awal Pool</label>
-                        <input
-                          type="text"
-                          value={formData.poolStart}
-                          onChange={(e) => setFormData({ ...formData, poolStart: e.target.value })}
-                          className="w-full px-3 py-2.5 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/20 transition-all font-mono text-sm"
-                          placeholder="cth: 10.20.30.10"
-                        />
+                        <label className="block text-xs text-muted-foreground mb-1">IP Mulai (pool start)</label>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground font-mono">x.x.x.</span>
+                          <input
+                            type="number"
+                            min={2}
+                            max={253}
+                            value={formData.poolStart}
+                            onChange={(e) => setFormData({ ...formData, poolStart: e.target.value })}
+                            className="flex-1 px-3 py-2 bg-input border border-border rounded-lg text-foreground font-mono focus:border-[#00f7ff] focus:ring-1 focus:ring-[#00f7ff]/30 transition-all"
+                            placeholder="10"
+                          />
+                        </div>
                       </div>
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1">IP Akhir Pool</label>
-                        <input
-                          type="text"
-                          value={formData.poolEnd}
-                          onChange={(e) => setFormData({ ...formData, poolEnd: e.target.value })}
-                          className="w-full px-3 py-2.5 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/20 transition-all font-mono text-sm"
-                          placeholder="cth: 10.20.30.254"
-                        />
+                        <label className="block text-xs text-muted-foreground mb-1">IP Akhir (pool end)</label>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground font-mono">x.x.x.</span>
+                          <input
+                            type="number"
+                            min={3}
+                            max={254}
+                            value={formData.poolEnd}
+                            onChange={(e) => setFormData({ ...formData, poolEnd: e.target.value })}
+                            className="flex-1 px-3 py-2 bg-input border border-border rounded-lg text-foreground font-mono focus:border-[#00f7ff] focus:ring-1 focus:ring-[#00f7ff]/30 transition-all"
+                            placeholder="254"
+                          />
+                        </div>
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs text-muted-foreground mb-1">Gateway VPN</label>
+                      <label className="block text-xs text-muted-foreground mb-1">Gateway Override <span className="text-gray-500">(kosongkan = otomatis .1 dari subnet)</span></label>
                       <input
                         type="text"
                         value={formData.gateway}
                         onChange={(e) => setFormData({ ...formData, gateway: e.target.value })}
-                        className="w-full px-3 py-2.5 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/20 transition-all font-mono text-sm"
-                        placeholder="cth: 10.20.30.1"
+                        className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground font-mono placeholder-gray-500 focus:border-[#00f7ff] focus:ring-1 focus:ring-[#00f7ff]/30 transition-all"
+                        placeholder="mis. 10.20.30.1 (opsional)"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">Digunakan sebagai RADIUS server IP dan gateway routing VPN. Kosongkan untuk pakai default (.1 dari subnet).</p>
                     </div>
+                    <p className="mt-2 text-xs text-muted-foreground">Pool: x.x.x.<strong>{formData.poolStart || '10'}</strong> – x.x.x.<strong>{formData.poolEnd || '254'}</strong> · Gateway: <strong>{formData.gateway || (formData.subnet ? formData.subnet.split('.').slice(0,3).join('.') + '.1' : 'auto')}</strong></p>
                   </div>
-
-                  {/* Protocol Toggles */}
                   <div>
                     <label className="block text-sm font-medium text-[#00f7ff] mb-3">Protokol VPN</label>
                     <div className="grid grid-cols-2 gap-3">
