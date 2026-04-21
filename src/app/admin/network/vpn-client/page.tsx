@@ -421,7 +421,7 @@ export default function VpnClientPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Gagal simpan');
-      setWgServerInfo(prev => prev ? { ...prev, poolStart: data.poolStart, poolEnd: data.poolEnd, gatewayIp: data.gatewayIp } : prev);
+      setWgServerInfo(prev => prev ? { ...prev, poolStart: data.poolStart, poolEnd: data.poolEnd, gatewayIp: data.gatewayIp, subnet: data.subnet ?? prev.subnet } : prev);
       setWgPoolEdit(false);
       showSuccess('Konfigurasi pool WireGuard disimpan');
     } catch (e: any) {
@@ -1047,7 +1047,7 @@ ${vpnCmd}
                           </div>
                         </div>
                       )}
-                      <p className="text-xs text-muted-foreground mt-2">Pool subnet: <span className="font-mono text-teal-300">{(() => { const s = wgServerInfo.poolStart; const b = (typeof s === 'string' && s.includes('.')) ? s.split('.').slice(0,3).join('.') : wgServerInfo.subnet?.split('/')[0].split('.').slice(0,3).join('.'); return b ? `${b}.0/24` : wgServerInfo.subnet || '-'; })()}</span> · WG iface: <span className="font-mono text-teal-300/60">{wgServerInfo.subnet}</span> · Server: {wgServerInfo.publicIp}:{wgServerInfo.listenPort}</p>
+                      <p className="text-xs text-muted-foreground mt-2">Pool subnet: <span className="font-mono text-teal-300">{(() => { const s = wgServerInfo.poolStart; const b = (typeof s === 'string' && s.includes('.')) ? s.split('.').slice(0,3).join('.') : wgServerInfo.subnet?.split('/')[0].split('.').slice(0,3).join('.'); return b ? `${b}.0/24` : wgServerInfo.subnet || '-'; })()}</span> · Server: {wgServerInfo.publicIp}:{wgServerInfo.listenPort}</p>
                     </div>
                   ) : (
                     <div className="p-4 rounded-xl border border-slate-700/40 bg-slate-900/40 text-center">

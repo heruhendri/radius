@@ -465,8 +465,35 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'poolStart harus lebih kecil dari poolEnd' }, { status: 400 })
   }
 
+  // Derive new subnet from gatewayIp (or from poolStart prefix if no gatewayIp)
+  const newGateway = info.gatewayIp as string | undefined
+  if (newGateway && IP_RE.test(newGateway)) {
+    const newBase = newGateway.split('.').slice(0, 3).join('.')
+    const newSubnet = `${newBase}.0/24`
+    // Update subnet in info file
+    info.subnet = newSubnet
+    // Update [Interface] Address in wg0.conf
+    try {
+      let conf = await readFile(WG_CONF, 'utf8')
+      conf = conf.replace(/^(Address\s*=\s*)[\d./]+/m, `$1${newGateway}/24`)
+      await writeFile(WG_CONF, conf, 'utf8')
+      // Reload WireGuard interface (zero-downtime)
+      try {
+        await exec(`wg syncconf ${WG_IFACE} <(wg-quick strip ${WG_IFACE})`, { shell: '/bin/bash' })
+      } catch {
+        try { await exec(`ip addr flush dev ${WG_IFACE} && ip addr add ${newGateway}/24 dev ${WG_IFACE}`) } catch { /* ignore */ }
+      }
+    } catch (e) {
+      console.error('[vps-wg-peer] PATCH: failed to update wg0.conf:', e)
+    }
+  } else if (info.poolStart && typeof info.poolStart === 'string' && info.poolStart.includes('.')) {
+    // Derive subnet from poolStart if no gatewayIp set
+    const newBase = (info.poolStart as string).split('.').slice(0, 3).join('.')
+    info.subnet = `${newBase}.0/24`
+  }
+
   await writeFile(WG_INFO, JSON.stringify(info, null, 2), 'utf8')
-  return NextResponse.json({ success: true, poolStart: info.poolStart, poolEnd: info.poolEnd, gatewayIp: info.gatewayIp })
+  return NextResponse.json({ success: true, poolStart: info.poolStart, poolEnd: info.poolEnd, gatewayIp: info.gatewayIp, subnet: info.subnet })
 }
 
 function formatBytes(b: number): string {
