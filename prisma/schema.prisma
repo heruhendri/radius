@@ -267,6 +267,9 @@ model vpnServer {
   password       String
   apiPort        Int         @default(8728)
   subnet         String
+  poolStart      String?     // First assignable IP in pool (e.g. 10.20.30.10)
+  poolEnd        String?     // Last assignable IP in pool (e.g. 10.20.30.254)
+  gateway        String?     // VPN gateway IP (e.g. 10.20.30.1)
   l2tpEnabled    Boolean     @default(false)
   sstpEnabled    Boolean     @default(false)
   pptpEnabled    Boolean     @default(false)

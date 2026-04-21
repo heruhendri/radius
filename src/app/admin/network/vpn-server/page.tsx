@@ -14,6 +14,9 @@ interface VpnServer {
   username: string
   apiPort: number
   subnet: string
+  poolStart?: string | null
+  poolEnd?: string | null
+  gateway?: string | null
   l2tpEnabled: boolean
   sstpEnabled: boolean
   pptpEnabled: boolean
@@ -124,6 +127,9 @@ export default function VpnServerPage() {
     password: '',
     apiPort: '8728',
     subnet: '10.20.30.0/24',
+    poolStart: '',
+    poolEnd: '',
+    gateway: '',
     l2tpEnabled: false,
     sstpEnabled: false,
     pptpEnabled: false,
@@ -478,14 +484,14 @@ export default function VpnServerPage() {
   const handleAdd = () => {
     setEditingServer(null);
     setTestResult(null);
-    setFormData({ name: '', host: '', username: 'admin', password: '', apiPort: '8728', subnet: '10.20.30.0/24', l2tpEnabled: false, sstpEnabled: false, pptpEnabled: false, openVpnEnabled: false });
+    setFormData({ name: '', host: '', username: 'admin', password: '', apiPort: '8728', subnet: '10.20.30.0/24', poolStart: '', poolEnd: '', gateway: '', l2tpEnabled: false, sstpEnabled: false, pptpEnabled: false, openVpnEnabled: false });
     setShowModal(true);
   }
 
   const handleEdit = (server: VpnServer) => {
     setEditingServer(server)
     setTestResult(null)
-    setFormData({ name: server.name, host: server.host, username: server.username, password: '', apiPort: server.apiPort.toString(), subnet: server.subnet, l2tpEnabled: server.l2tpEnabled, sstpEnabled: server.sstpEnabled, pptpEnabled: server.pptpEnabled, openVpnEnabled: server.openVpnEnabled })
+    setFormData({ name: server.name, host: server.host, username: server.username, password: '', apiPort: server.apiPort.toString(), subnet: server.subnet, poolStart: server.poolStart || '', poolEnd: server.poolEnd || '', gateway: server.gateway || '', l2tpEnabled: server.l2tpEnabled, sstpEnabled: server.sstpEnabled, pptpEnabled: server.pptpEnabled, openVpnEnabled: server.openVpnEnabled })
     setShowModal(true)
   }
 
@@ -1042,6 +1048,15 @@ export default function VpnServerPage() {
                         <p className="text-[#00f7ff] text-xs uppercase tracking-wider mb-1">{t('network.vpnSubnet')}</p>
                         <p className="font-mono text-foreground text-sm">{server.subnet}</p>
                       </div>
+                      {(server.poolStart || server.poolEnd || server.gateway) && (
+                        <div className="col-span-2">
+                          <p className="text-[#bc13fe] text-xs uppercase tracking-wider mb-1">IP Pool</p>
+                          <p className="font-mono text-foreground text-sm">
+                            {server.poolStart || '—'} – {server.poolEnd || '—'}
+                            {server.gateway && <span className="text-muted-foreground ml-2">| GW: {server.gateway}</span>}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Action Buttons */}
@@ -1225,6 +1240,48 @@ export default function VpnServerPage() {
                       placeholder={t('network.vpnSubnetPlaceholder')}
                       required
                     />
+                  </div>
+
+                  {/* IP Pool Configuration */}
+                  <div className="rounded-xl border border-[#bc13fe]/30 bg-[#bc13fe]/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2 h-2 rounded-full bg-[#bc13fe]" />
+                      <p className="text-sm font-bold text-[#bc13fe]">Konfigurasi IP Pool</p>
+                      <span className="text-xs text-muted-foreground">(opsional — kosong = auto dari subnet)</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1">IP Awal Pool</label>
+                        <input
+                          type="text"
+                          value={formData.poolStart}
+                          onChange={(e) => setFormData({ ...formData, poolStart: e.target.value })}
+                          className="w-full px-3 py-2.5 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/20 transition-all font-mono text-sm"
+                          placeholder="cth: 10.20.30.10"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1">IP Akhir Pool</label>
+                        <input
+                          type="text"
+                          value={formData.poolEnd}
+                          onChange={(e) => setFormData({ ...formData, poolEnd: e.target.value })}
+                          className="w-full px-3 py-2.5 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/20 transition-all font-mono text-sm"
+                          placeholder="cth: 10.20.30.254"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-muted-foreground mb-1">Gateway VPN</label>
+                      <input
+                        type="text"
+                        value={formData.gateway}
+                        onChange={(e) => setFormData({ ...formData, gateway: e.target.value })}
+                        className="w-full px-3 py-2.5 bg-input border border-border rounded-xl text-foreground placeholder-gray-500 focus:border-[#bc13fe] focus:ring-2 focus:ring-[#bc13fe]/20 transition-all font-mono text-sm"
+                        placeholder="cth: 10.20.30.1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Digunakan sebagai RADIUS server IP dan gateway routing VPN. Kosongkan untuk pakai default (.1 dari subnet).</p>
+                    </div>
                   </div>
 
                   {/* Protocol Toggles */}

@@ -62,10 +62,14 @@ function generateWireGuardKeys(): { privateKey: string; publicKey: string } {
 }
 
 // Helper: Get next available IP from pool (per server)
-async function getNextAvailableIP(vpnServerId: string, subnet: string): Promise<string> {
+async function getNextAvailableIP(vpnServerId: string, subnet: string, poolStart?: string | null, poolEnd?: string | null): Promise<string> {
   const [network] = subnet.split('/')
   const parts = network.split('.')
   const baseNetwork = `${parts[0]}.${parts[1]}.${parts[2]}`
+
+  // Parse pool range — use configured values or fall back to .10–.254
+  const startOctet = poolStart ? parseInt(poolStart.split('.')[3], 10) : 10
+  const endOctet   = poolEnd   ? parseInt(poolEnd.split('.')[3], 10)   : 254
 
   // Get all used IPs for THIS server only
   const clients = await prisma.vpnClient.findMany({
@@ -74,15 +78,15 @@ async function getNextAvailableIP(vpnServerId: string, subnet: string): Promise<
   })
   const usedIPs = new Set(clients.map((c: { vpnIp: string }) => c.vpnIp))
 
-  // Find first available IP (starting from .10)
-  for (let i = 10; i <= 254; i++) {
+  // Find first available IP within configured range
+  for (let i = startOctet; i <= endOctet; i++) {
     const ip = `${baseNetwork}.${i}`
     if (!usedIPs.has(ip)) {
       return ip
     }
   }
 
-  throw new Error('No available IP in pool')
+  throw new Error(`No available IP in pool (${baseNetwork}.${startOctet}–${baseNetwork}.${endOctet})`)
 }
 
 // Helper: Get next available Winbox port (sequential in limited range for Docker port mapping)
@@ -125,6 +129,7 @@ export async function GET() {
 
     const vpnServers = await prisma.vpnServer.findMany({
       where: { isActive: true },
+      select: { id: true, name: true, host: true, subnet: true, poolStart: true, poolEnd: true, gateway: true, l2tpEnabled: true, sstpEnabled: true, pptpEnabled: true, wgEnabled: true, wgPublicKey: true, wgPort: true },
       orderBy: { name: 'asc' },
     })
 
@@ -222,11 +227,11 @@ export async function POST(request: Request) {
     const apiUsername = `api-${name.toLowerCase().replace(/\s+/g, '-')}`
     const apiPassword = generatePassword(16)
     
-    // Resolve VPN IP: use customVpnIp if provided, else auto-assign
+    // Resolve VPN IP: use customVpnIp if provided, else auto-assign from pool
     let vpnIp: string
     if (customVpnIp && customVpnIp.trim()) {
       // Validate format
-      const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/
+      const ipRegex = /(\d{1,3}\.){3}\d{1,3}$/
       if (!ipRegex.test(customVpnIp.trim())) {
         return NextResponse.json({ error: 'Format IP tidak valid' }, { status: 400 })
       }
@@ -237,7 +242,7 @@ export async function POST(request: Request) {
       }
       vpnIp = customVpnIp.trim()
     } else {
-      vpnIp = await getNextAvailableIP(vpnServerId, vpnServer.subnet)
+      vpnIp = await getNextAvailableIP(vpnServerId, vpnServer.subnet, (vpnServer as any).poolStart, (vpnServer as any).poolEnd)
     }
     const winboxPort = vpnType !== 'wireguard' ? await getNextWinboxPort(vpnServerId) : null
 
