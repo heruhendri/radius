@@ -197,6 +197,30 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.oltManagement', href: '/admin/network/olts', requiredPermission: 'network.view' },
         ],
       },
+      {
+        titleKey: 'nav.genieacs',
+        icon: <Router className="w-4 h-4" />,
+        requiredPermission: 'settings.genieacs',
+        children: [
+          { titleKey: 'nav.devices', href: '/admin/genieacs/devices', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.tasks', href: '/admin/genieacs/tasks', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.virtualParameters', href: '/admin/genieacs/virtual-parameters', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.parameterConfig', href: '/admin/genieacs/parameter-config', requiredPermission: 'settings.genieacs' },
+        ],
+      },
+      {
+        titleKey: 'nav.freeradius',
+        icon: <Server className="w-4 h-4" />,
+        requiredPermission: 'settings.view',
+        children: [
+          { titleKey: 'nav.radiusStatus', href: '/admin/freeradius/status', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.radiusConfig', href: '/admin/freeradius/config', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.radTest', href: '/admin/freeradius/radtest', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.radCheck', href: '/admin/freeradius/radcheck', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.radiusLogs', href: '/admin/freeradius/logs', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.radiusBackup', href: '/admin/freeradius/backup', requiredPermission: 'settings.view' },
+        ],
+      },
     ],
   },
   {
@@ -222,30 +246,6 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.fiberCores', href: '/admin/network/fiber-cores', requiredPermission: 'network.view' },
           { titleKey: 'nav.splicePoints', href: '/admin/network/splice-points', requiredPermission: 'network.view' },
           { titleKey: 'nav.jointClosures', href: '/admin/network/fiber-joint-closures', requiredPermission: 'network.view' },
-        ],
-      },
-      {
-        titleKey: 'nav.genieacs',
-        icon: <Router className="w-4 h-4" />,
-        requiredPermission: 'settings.genieacs',
-        children: [
-          { titleKey: 'nav.devices', href: '/admin/genieacs/devices', requiredPermission: 'settings.genieacs' },
-          { titleKey: 'nav.tasks', href: '/admin/genieacs/tasks', requiredPermission: 'settings.genieacs' },
-          { titleKey: 'nav.virtualParameters', href: '/admin/genieacs/virtual-parameters', requiredPermission: 'settings.genieacs' },
-          { titleKey: 'nav.parameterConfig', href: '/admin/genieacs/parameter-config', requiredPermission: 'settings.genieacs' },
-        ],
-      },
-      {
-        titleKey: 'nav.freeradius',
-        icon: <Server className="w-4 h-4" />,
-        requiredPermission: 'settings.view',
-        children: [
-          { titleKey: 'nav.radiusStatus', href: '/admin/freeradius/status', requiredPermission: 'settings.view' },
-          { titleKey: 'nav.radiusConfig', href: '/admin/freeradius/config', requiredPermission: 'settings.view' },
-          { titleKey: 'nav.radTest', href: '/admin/freeradius/radtest', requiredPermission: 'settings.view' },
-          { titleKey: 'nav.radCheck', href: '/admin/freeradius/radcheck', requiredPermission: 'settings.view' },
-          { titleKey: 'nav.radiusLogs', href: '/admin/freeradius/logs', requiredPermission: 'settings.view' },
-          { titleKey: 'nav.radiusBackup', href: '/admin/freeradius/backup', requiredPermission: 'settings.view' },
         ],
       },
     ],
@@ -366,7 +366,7 @@ function CategoryItem({ titleKey, items, pendingCount, manualPaymentsCount, unre
   const hasActiveItem = items.some(item =>
     item.href === pathname || item.children?.some(c => c.href === pathname)
   );
-  const [isOpen, setIsOpen] = useState(hasActiveItem);
+  const [isOpen, setIsOpen] = useState(true);
 
   const visibleItems = items
     .filter(item => !item.requiredPermission || userPermissions.includes(item.requiredPermission))
@@ -418,9 +418,9 @@ function CategoryItem({ titleKey, items, pendingCount, manualPaymentsCount, unre
 }
 
 function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications, collapsed, t, onNavigate }: { item: MenuItem; pendingCount: number; manualPaymentsCount: number; unreadNotifications: number; collapsed?: boolean; t: (key: string, params?: Record<string, string | number>) => string; onNavigate?: () => void }) {
-  const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const isActive = item.href === pathname || item.children?.some(c => c.href === pathname);
+  const [isOpen, setIsOpen] = useState(isActive);
 
   if (item.children) {
     return (
