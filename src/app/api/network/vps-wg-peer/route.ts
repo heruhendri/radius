@@ -183,9 +183,23 @@ async function syncPeersToDB(
 ): Promise<void> {
   if (confPeers.size === 0) return
   try {
-    // vpnServer harus sudah ada. syncPeersToDB tidak membuat vpnServer baru.
+    // VPS WG adalah server itu sendiri — auto-create vpnServer dari info file jika belum ada.
     const serverExists = await prisma.vpnServer.findUnique({ where: { id: VPS_WG_SERVER_ID }, select: { id: true } })
-    if (!serverExists) return // belum di-setup, skip sync
+    if (!serverExists) {
+      await prisma.vpnServer.create({
+        data: {
+          id: VPS_WG_SERVER_ID,
+          name: 'VPS WireGuard Server',
+          host: info.publicIp || 'vps',
+          username: 'vps',
+          password: 'vps',
+          subnet: info.subnet,
+          wgEnabled: true,
+          wgPublicKey: info.publicKey,
+          wgPort: info.listenPort,
+        },
+      })
+    }
 
     // For each conf peer not yet in DB, create a record
     const existingByPubKey = await prisma.vpnClient.findMany({
@@ -301,13 +315,23 @@ export async function POST(req: NextRequest) {
     let apiUsernameForResponse: string | undefined
     let apiPasswordForResponse: string | undefined
 
-    // vpnServer harus sudah ada (dibuat via VPN Server setup). Jangan buat dari sini.
+    // VPS WG adalah server itu sendiri — auto-create vpnServer dari file info jika belum ada.
+    // Data diambil dari wg-server-info.json (sumber otoritatif), bukan dari input user.
     const existingWgServer = await prisma.vpnServer.findUnique({ where: { id: VPS_WG_SERVER_ID } })
     if (!existingWgServer) {
-      return NextResponse.json(
-        { error: 'VPS WireGuard Server belum dikonfigurasi. Setup VPN Server terlebih dahulu sebelum menambah client.' },
-        { status: 400 },
-      )
+      await prisma.vpnServer.create({
+        data: {
+          id: VPS_WG_SERVER_ID,
+          name: 'VPS WireGuard Server',
+          host: info.publicIp || 'vps',
+          username: 'vps',
+          password: 'vps',
+          subnet: info.subnet,
+          wgEnabled: true,
+          wgPublicKey: info.publicKey,
+          wgPort: info.listenPort,
+        },
+      })
     }
 
     try {
