@@ -246,11 +246,11 @@ export async function GET() {
     })
   }
 
-  // Parse conf for peer names (needed for sync + enrichment)
+  // Parse conf for peer names (needed for enrichment only)
   const confPeers = await parsePeerNamesFromConf()
 
-  // Sync any conf peers not yet in DB (background, fire-and-forget)
-  syncPeersToDB(info, confPeers).catch(() => {})
+  // NOTE: syncPeersToDB dihapus — vpnClient hanya dibuat via tombol Tambah VPN Client,
+  // bukan otomatis saat page load.
 
   // Parse live peers from `wg show`
   let peers: Array<{ publicKey: string; name?: string; endpoint?: string; allowedIps?: string; lastHandshake?: string; transfer?: string }> = []
@@ -315,23 +315,14 @@ export async function POST(req: NextRequest) {
     let apiUsernameForResponse: string | undefined
     let apiPasswordForResponse: string | undefined
 
-    // VPS WG adalah server itu sendiri — auto-create vpnServer dari file info jika belum ada.
-    // Data diambil dari wg-server-info.json (sumber otoritatif), bukan dari input user.
+    // vpnServer harus sudah ada — dibuat via halaman VPN Server (simpan pool config).
+    // POST add client tidak boleh membuat vpnServer.
     const existingWgServer = await prisma.vpnServer.findUnique({ where: { id: VPS_WG_SERVER_ID } })
     if (!existingWgServer) {
-      await prisma.vpnServer.create({
-        data: {
-          id: VPS_WG_SERVER_ID,
-          name: 'VPS WireGuard Server',
-          host: info.publicIp || 'vps',
-          username: 'vps',
-          password: 'vps',
-          subnet: info.subnet,
-          wgEnabled: true,
-          wgPublicKey: info.publicKey,
-          wgPort: info.listenPort,
-        },
-      })
+      return NextResponse.json(
+        { error: 'VPS WireGuard Server belum dikonfigurasi. Buka halaman VPN Server dan simpan konfigurasi pool IP terlebih dahulu.' },
+        { status: 400 },
+      )
     }
 
     try {
@@ -529,11 +520,23 @@ export async function PATCH(req: NextRequest) {
 
   await writeFile(WG_INFO, JSON.stringify(info, null, 2), 'utf8')
 
-  // Update vpnServer subnet in DB (only if record already exists — PATCH never creates vpnServer)
+  // Upsert vpnServer subnet di DB — PATCH adalah satu-satunya trigger create vpnServer yang sah
+  // (dipanggil dari halaman VPN Server saat admin simpan konfigurasi pool)
   try {
-    await prisma.vpnServer.updateMany({
+    await prisma.vpnServer.upsert({
       where: { id: VPS_WG_SERVER_ID },
-      data: {
+      create: {
+        id: VPS_WG_SERVER_ID,
+        name: 'VPS WireGuard Server',
+        host: info.publicIp || 'vps',
+        username: 'vps',
+        password: 'vps',
+        subnet: info.subnet,
+        wgEnabled: true,
+        wgPublicKey: info.publicKey || undefined,
+        wgPort: info.listenPort ?? 51820,
+      },
+      update: {
         subnet: info.subnet,
         ...(info.publicIp ? { host: info.publicIp } : {}),
       },

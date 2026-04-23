@@ -148,30 +148,17 @@ export async function POST(req: NextRequest) {
     // Persist L2TP peer to DB so FreeRADIUS NAS config includes this NAS
     let nasSecretForResponse: string | undefined
 
-    // VPS L2TP adalah server itu sendiri — auto-create vpnServer dari file info jika belum ada.
-    // Data diambil dari l2tp-server-info.json (sumber otoritatif), bukan dari input user.
-    const poolBase = typeof info.poolStart === 'string' && info.poolStart.includes('.')
-      ? info.poolStart.split('.').slice(0, 3).join('.')
-      : (info.subnet || '10.201.0.0/24').split('/')[0].split('.').slice(0, 3).join('.')
-    const serverSubnet = `${poolBase}.0/24`
-
+    // vpnServer harus sudah ada — dibuat via halaman VPN Server (simpan pool config).
+    // POST add client tidak boleh membuat vpnServer.
     const existingL2tpServer = await prisma.vpnServer.findUnique({ where: { id: VPS_L2TP_SERVER_ID } })
     if (!existingL2tpServer) {
-      await prisma.vpnServer.create({
-        data: {
-          id: VPS_L2TP_SERVER_ID,
-          name: 'VPS L2TP Server',
-          host: info.publicIp || 'vps-l2tp',
-          username: 'vps',
-          password: 'vps',
-          subnet: serverSubnet,
-          l2tpEnabled: true,
-        },
-      })
+      return NextResponse.json(
+        { error: 'VPS L2TP Server belum dikonfigurasi. Buka halaman VPN Server dan simpan konfigurasi pool IP terlebih dahulu.' },
+        { status: 400 },
+      )
     }
 
     try {
-
       // Upsert VPN client record
       const dbClient = await prisma.vpnClient.upsert({
         where: { vpnServerId_vpnIp: { vpnServerId: VPS_L2TP_SERVER_ID, vpnIp } },
@@ -300,15 +287,24 @@ export async function PATCH(req: NextRequest) {
     } catch { /* ignore */ }
   }
 
-  // Update vpnServer subnet in DB (only if record already exists — PATCH never creates vpnServer)
+  // Upsert vpnServer subnet di DB — PATCH adalah satu-satunya trigger create vpnServer yang sah
   try {
     const poolBase = typeof info.poolStart === 'string' && info.poolStart.includes('.')
       ? info.poolStart.split('.').slice(0, 3).join('.')
       : (info.subnet || '10.201.0.0/24').split('/')[0].split('.').slice(0, 3).join('.')
     const derivedSubnet = `${poolBase}.0/24`
-    await prisma.vpnServer.updateMany({
+    await prisma.vpnServer.upsert({
       where: { id: VPS_L2TP_SERVER_ID },
-      data: {
+      create: {
+        id: VPS_L2TP_SERVER_ID,
+        name: 'VPS L2TP Server',
+        host: info.publicIp || 'vps-l2tp',
+        username: 'vps',
+        password: 'vps',
+        subnet: derivedSubnet,
+        l2tpEnabled: true,
+      },
+      update: {
         subnet: derivedSubnet,
         ...(info.publicIp ? { host: info.publicIp } : {}),
       },
