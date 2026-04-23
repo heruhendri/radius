@@ -4,11 +4,12 @@ import { authOptions } from '@/server/auth/config'
 import { exec as execCb } from 'child_process'
 import { promisify } from 'util'
 import { readFile, writeFile } from 'fs/promises'
+import { prisma } from '@/server/db/client'
 
+// Fixed DB ID for VPS L2TP virtual server entry
+const VPS_L2TP_SERVER_ID = '__vps_l2tp_server__'
 const exec = promisify(execCb)
 const L2TP_INFO_FILE = '/etc/salfanet/l2tp/l2tp-server-info.json'
-
-function generatePassword(len = 16): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
   let out = ''
   for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)]
@@ -130,7 +131,82 @@ export async function POST(req: NextRequest) {
       label,
     })
 
-    return NextResponse.json({ success: true, username, password, vpnIp, routerosScript })
+    // Persist L2TP peer to DB so FreeRADIUS NAS config includes this NAS
+    let nasSecretForResponse: string | undefined
+    try {
+      const poolBase = typeof info.poolStart === 'string' && info.poolStart.includes('.')
+        ? info.poolStart.split('.').slice(0, 3).join('.')
+        : (info.subnet || '10.201.0.0/24').split('/')[0].split('.').slice(0, 3).join('.')
+      const serverSubnet = `${poolBase}.0/24`
+
+      // Upsert virtual L2TP server record
+      await prisma.vpnServer.upsert({
+        where: { id: VPS_L2TP_SERVER_ID },
+        create: {
+          id: VPS_L2TP_SERVER_ID,
+          name: 'VPS L2TP Server',
+          host: info.publicIp || 'vps-l2tp',
+          username: 'vps',
+          password: 'vps',
+          subnet: serverSubnet,
+          l2tpEnabled: true,
+        },
+        update: { host: info.publicIp || undefined, subnet: serverSubnet },
+      })
+
+      // Upsert VPN client record
+      const dbClient = await prisma.vpnClient.upsert({
+        where: { vpnServerId_vpnIp: { vpnServerId: VPS_L2TP_SERVER_ID, vpnIp } },
+        create: {
+          name: label,
+          vpnServerId: VPS_L2TP_SERVER_ID,
+          vpnIp,
+          username,
+          password,
+          vpnType: 'L2TP',
+          isActive: true,
+        },
+        update: { name: label, username, password, isActive: true },
+      })
+
+      // Upsert router (NAS) record for FreeRADIUS NAS discovery
+      const nasSecret = generatePassword(16)
+      const existingNas = await prisma.router.findFirst({ where: { nasname: vpnIp } })
+      if (existingNas) {
+        nasSecretForResponse = existingNas.secret
+        await prisma.router.update({
+          where: { id: existingNas.id },
+          data: { vpnClientId: dbClient.id },
+        })
+      } else {
+        nasSecretForResponse = nasSecret
+        await prisma.router.create({
+          data: {
+            id: require('crypto').randomUUID(),
+            name: label,
+            nasname: vpnIp,
+            shortname: label.substring(0, 32).replace(/[^a-z0-9]/gi, ''),
+            type: 'mikrotik',
+            ipAddress: vpnIp,
+            username: `api-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+            password: generatePassword(16),
+            secret: nasSecretForResponse,
+            ports: 1812,
+            vpnClientId: dbClient.id,
+            description: `Auto-created NAS for L2TP VPS client '${label}'`,
+          },
+        })
+      }
+
+      // Trigger FreeRADIUS NAS config regeneration
+      const { syncNasClients, reloadFreeRadius } = await import('@/server/services/radius/freeradius.service')
+      const changed = await syncNasClients()
+      if (changed) reloadFreeRadius().catch(() => {})
+    } catch (dbErr) {
+      console.error('[vps-l2tp-peer] POST: failed to save to DB (non-fatal):', dbErr)
+    }
+
+    return NextResponse.json({ success: true, username, password, vpnIp, routerosScript, nasSecret: nasSecretForResponse })
   }
 
   if (action === 'remove') {
@@ -187,6 +263,36 @@ export async function PATCH(req: NextRequest) {
   }
 
   await writeFile(L2TP_INFO_FILE, JSON.stringify(info, null, 2), 'utf8')
+
+  // Sync vpnServer subnet in DB so syncNasClients() derives correct FreeRADIUS gateway IP
+  try {
+    const poolBase = typeof info.poolStart === 'string' && info.poolStart.includes('.')
+      ? info.poolStart.split('.').slice(0, 3).join('.')
+      : (info.subnet || '10.201.0.0/24').split('/')[0].split('.').slice(0, 3).join('.')
+    const derivedSubnet = `${poolBase}.0/24`
+    await prisma.vpnServer.upsert({
+      where: { id: VPS_L2TP_SERVER_ID },
+      create: {
+        id: VPS_L2TP_SERVER_ID,
+        name: 'VPS L2TP Server',
+        host: info.publicIp || 'vps-l2tp',
+        username: 'vps',
+        password: 'vps',
+        subnet: derivedSubnet,
+        l2tpEnabled: true,
+      },
+      update: {
+        subnet: derivedSubnet,
+        ...(info.publicIp ? { host: info.publicIp } : {}),
+      },
+    })
+    const { syncNasClients, reloadFreeRadius } = await import('@/server/services/radius/freeradius.service')
+    const changed = await syncNasClients()
+    if (changed) reloadFreeRadius().catch(() => {})
+  } catch (e) {
+    console.error('[vps-l2tp-peer] PATCH: DB/FreeRADIUS sync failed (non-fatal):', e)
+  }
+
   return NextResponse.json({ success: true, poolStart: info.poolStart, poolEnd: info.poolEnd, gateway: info.gateway })
 }
 

@@ -493,6 +493,34 @@ export async function PATCH(req: NextRequest) {
   }
 
   await writeFile(WG_INFO, JSON.stringify(info, null, 2), 'utf8')
+
+  // Sync vpnServer subnet in DB so syncNasClients() derives correct FreeRADIUS gateway IP
+  try {
+    await prisma.vpnServer.upsert({
+      where: { id: VPS_WG_SERVER_ID },
+      create: {
+        id: VPS_WG_SERVER_ID,
+        name: 'VPS WireGuard Server',
+        host: info.publicIp || 'vps',
+        username: 'vps',
+        password: 'vps',
+        subnet: info.subnet,
+        wgEnabled: true,
+        wgPublicKey: info.publicKey || undefined,
+        wgPort: info.listenPort ?? 51820,
+      },
+      update: {
+        subnet: info.subnet,
+        ...(info.publicIp ? { host: info.publicIp } : {}),
+      },
+    })
+    const { syncNasClients, reloadFreeRadius } = await import('@/server/services/radius/freeradius.service')
+    const changed = await syncNasClients()
+    if (changed) reloadFreeRadius().catch(() => {})
+  } catch (e) {
+    console.error('[vps-wg-peer] PATCH: DB/FreeRADIUS sync failed (non-fatal):', e)
+  }
+
   return NextResponse.json({ success: true, poolStart: info.poolStart, poolEnd: info.poolEnd, gatewayIp: info.gatewayIp, subnet: info.subnet })
 }
 
