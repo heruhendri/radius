@@ -10,6 +10,8 @@ import { prisma } from '@/server/db/client'
 const VPS_L2TP_SERVER_ID = '__vps_l2tp_server__'
 const exec = promisify(execCb)
 const L2TP_INFO_FILE = '/etc/salfanet/l2tp/l2tp-server-info.json'
+
+function generatePassword(len = 16): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
   let out = ''
   for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)]
