@@ -514,6 +514,18 @@ export async function PATCH(req: NextRequest) {
     // Derive subnet from poolStart if no gatewayIp set
     const newBase = (info.poolStart as string).split('.').slice(0, 3).join('.')
     info.subnet = `${newBase}.0/24`
+
+    // gatewayIp unchanged — ensure iptables rules are still active (idempotent)
+    const wgRules = [
+      `FORWARD -i ${WG_IFACE} -j ACCEPT`,
+      `FORWARD -o ${WG_IFACE} -j ACCEPT`,
+      `INPUT -i ${WG_IFACE} -p udp -m multiport --dports 1812,1813,3799 -j ACCEPT`,
+    ]
+    for (const rule of wgRules) {
+      try {
+        await exec(`iptables -C ${rule} 2>/dev/null || iptables -I ${rule}`, { shell: '/bin/bash' })
+      } catch { /* ignore */ }
+    }
   }
 
   await writeFile(WG_INFO, JSON.stringify(info, null, 2), 'utf8')

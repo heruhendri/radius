@@ -278,6 +278,24 @@ export async function PATCH(req: NextRequest) {
 
   await writeFile(L2TP_INFO_FILE, JSON.stringify(info, null, 2), 'utf8')
 
+  // Restart xl2tpd/strongSwan when gateway/pool changes so new IPs take effect
+  try {
+    await exec('systemctl restart xl2tpd 2>/dev/null || true')
+    await exec('ipsec reload 2>/dev/null || true')
+  } catch { /* non-fatal */ }
+
+  // Ensure iptables rules allow PPP traffic to reach RADIUS (idempotent)
+  const pppRules = [
+    'FORWARD -i ppp+ -j ACCEPT',
+    'FORWARD -o ppp+ -j ACCEPT',
+    'INPUT -i ppp+ -p udp -m multiport --dports 1812,1813,3799 -j ACCEPT',
+  ]
+  for (const rule of pppRules) {
+    try {
+      await exec(`iptables -C ${rule} 2>/dev/null || iptables -I ${rule}`, { shell: '/bin/bash' })
+    } catch { /* ignore */ }
+  }
+
   // Sync vpnServer subnet in DB so syncNasClients() derives correct FreeRADIUS gateway IP
   try {
     const poolBase = typeof info.poolStart === 'string' && info.poolStart.includes('.')
