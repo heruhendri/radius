@@ -281,10 +281,10 @@ export default function VpnClientPage() {
   // Helper: resolve vpnServer info termasuk VPS built-in yang tidak ada di vpnServers list
   const resolveServer = (vpnServerId: string) => {
     if (vpnServerId === '__vps_wg_server__') {
-      return { name: 'VPS WireGuard Server', host: wgServerInfo?.publicIp || '103.151.140.110', subnet: wgServerInfo?.subnet || '172.16.212.0/24' }
+      return { name: 'VPS WireGuard Server', host: wgServerInfo?.publicIp || '103.151.140.110', subnet: wgServerInfo?.subnet || '172.16.212.0/24', wgPublicKey: wgServerInfo?.publicKey || null, wgPort: wgServerInfo?.listenPort || 51820, wgEnabled: true, l2tpEnabled: false }
     }
     if (vpnServerId === '__vps_l2tp_server__') {
-      return { name: 'VPS L2TP Server', host: l2tpServerInfo?.publicIp || '103.151.140.110', subnet: l2tpServerInfo?.subnet || '10.201.0.0/24' }
+      return { name: 'VPS L2TP Server', host: l2tpServerInfo?.publicIp || '103.151.140.110', subnet: l2tpServerInfo?.subnet || '10.201.0.0/24', wgPublicKey: null, wgPort: null, wgEnabled: false, l2tpEnabled: true }
     }
     return vpnServers.find(s => s.id === vpnServerId) || null
   }
