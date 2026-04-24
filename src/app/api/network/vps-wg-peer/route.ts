@@ -315,14 +315,23 @@ export async function POST(req: NextRequest) {
     let apiUsernameForResponse: string | undefined
     let apiPasswordForResponse: string | undefined
 
-    // vpnServer harus sudah ada — dibuat via halaman VPN Server (simpan pool config).
-    // POST add client tidak boleh membuat vpnServer.
+    // VPS WG adalah server built-in — auto-create vpnServer dari info file jika belum ada di DB.
+    // Tidak perlu setup manual di halaman VPN Server terlebih dahulu.
     const existingWgServer = await prisma.vpnServer.findUnique({ where: { id: VPS_WG_SERVER_ID } })
     if (!existingWgServer) {
-      return NextResponse.json(
-        { error: 'VPS WireGuard Server belum dikonfigurasi. Buka halaman VPN Server dan simpan konfigurasi pool IP terlebih dahulu.' },
-        { status: 400 },
-      )
+      await prisma.vpnServer.create({
+        data: {
+          id: VPS_WG_SERVER_ID,
+          name: 'VPS WireGuard Server',
+          host: info.publicIp || 'vps',
+          username: 'vps',
+          password: 'vps',
+          subnet: info.subnet,
+          wgEnabled: true,
+          wgPublicKey: info.publicKey,
+          wgPort: info.listenPort,
+        },
+      })
     }
 
     try {
