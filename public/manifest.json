@@ -6,10 +6,12 @@
   "start_url": "/customer",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#03131d",
   "theme_color": "#06b6d4",
   "lang": "id-ID",
+  "prefer_related_applications": false,
   "categories": [
     "business",
     "utilities"
@@ -48,22 +50,6 @@
       "description": "Buka portal pelanggan",
       "url": "/customer",
       "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }]
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/pwa/screenshot-wide.svg",
-      "sizes": "1280x720",
-      "type": "image/svg+xml",
-      "form_factor": "wide",
-      "label": "Dashboard Salfanet Radius"
-    },
-    {
-      "src": "/pwa/screenshot-narrow.svg",
-      "sizes": "540x720",
-      "type": "image/svg+xml",
-      "form_factor": "narrow",
-      "label": "Portal pelanggan Salfanet"
     }
   ]
 }

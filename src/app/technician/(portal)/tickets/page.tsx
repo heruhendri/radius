@@ -174,7 +174,7 @@ export default function TechnicianTicketsPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="p-4 lg:p-6 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
