@@ -1306,6 +1306,8 @@
     "kickUserButton": "KICK USER",
     "deleteButton": "HAPUS",
     "resyncButton": "SINKRON ULANG",
+    "syncComplete": "Sinkronisasi selesai, data sesi diperbarui",
+    "syncFailed": "Sinkronisasi gagal",
     "activeSessions": "Sesi Aktif",
     "totalUpload": "Total Upload",
     "totalDownload": "Total Download",

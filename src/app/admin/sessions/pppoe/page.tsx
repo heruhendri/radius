@@ -68,6 +68,7 @@ export default function PPPoESessionsPage() {
   const [pageSize, setPageSize] = useState<number>(10);
   const [now, setNow] = useState(() => Date.now());
   const [fetchedAt, setFetchedAt] = useState(() => Date.now());
+  const [syncing, setSyncing] = useState(false);
 
   // 1-second ticker for live uptime counter
   useEffect(() => {
@@ -194,8 +195,20 @@ export default function PPPoESessionsPage() {
     }
   };
 
-  const handleExportExcel = async () => {
+  const handleSync = async () => {
+    setSyncing(true);
     try {
+      await fetch('/api/sessions/sync?type=pppoe', { method: 'POST' });
+      await fetchSessions(1);
+      addToast({ type: 'success', title: t('common.success'), description: t('sessions.syncComplete') });
+    } catch {
+      addToast({ type: 'error', title: t('common.error'), description: t('sessions.syncFailed') });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleExportExcel = async () => {    try {
       const params = new URLSearchParams();
       params.set('format', 'excel');
       params.set('mode', 'active');
@@ -252,11 +265,12 @@ export default function PPPoESessionsPage() {
             {t('sessions.deleteButton')}
           </button>
           <button
-            onClick={() => fetchSessions(1)}
-            className="px-3 py-1.5 text-xs font-medium bg-warning hover:bg-warning/90 text-warning-foreground rounded-lg flex items-center gap-1.5"
+            onClick={handleSync}
+            disabled={syncing}
+            className="px-3 py-1.5 text-xs font-medium bg-warning hover:bg-warning/90 text-warning-foreground rounded-lg flex items-center gap-1.5 disabled:opacity-50"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            {t('sessions.resyncButton')}
+            <RotateCcw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? t('common.loading') : t('sessions.resyncButton')}
           </button>
         </div>
       </div>

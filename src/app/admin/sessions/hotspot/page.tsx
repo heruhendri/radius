@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Power, RefreshCw, WifiOff, Search } from 'lucide-react';
+import { Power, RefreshCw, WifiOff, Search, RotateCcw } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import { useTranslation } from '@/hooks/useTranslation';
 import { formatWIB, nowWIB } from '@/lib/timezone';
@@ -74,6 +74,20 @@ export default function HotspotSessionsPage() {
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 25, totalPages: 1 });
   const [pageSize, setPageSize] = useState<number>(25);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await fetch('/api/sessions/sync?type=hotspot', { method: 'POST' });
+      await fetchSessions(1);
+      addToast({ type: 'success', title: t('common.success'), description: t('sessions.syncComplete') });
+    } catch {
+      addToast({ type: 'error', title: t('common.error'), description: t('sessions.syncFailed') });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const fetchSessions = useCallback(async (page: number = 1) => {
     try {
@@ -227,11 +241,12 @@ export default function HotspotSessionsPage() {
               {t('sessions.disconnect')} ({selectedSessions.size})
             </button>
             <button
-              onClick={() => fetchSessions(1)}
-              className="px-3 py-1.5 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground text-white rounded-lg flex items-center gap-1.5"
+              onClick={handleSync}
+              disabled={syncing}
+              className="px-3 py-1.5 text-xs font-medium bg-warning hover:bg-warning/90 text-warning-foreground rounded-lg flex items-center gap-1.5 disabled:opacity-50"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              {t('common.refresh')}
+              <RotateCcw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? t('common.loading') : t('sessions.resyncButton')}
             </button>
           </div>
         </div>
