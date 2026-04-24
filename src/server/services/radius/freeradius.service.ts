@@ -75,8 +75,6 @@ export async function syncNasClients(): Promise<boolean> {
     // Track VPN server gateways to generate gateway client entries.
     // gatewaySecrets maps serverId → Set of unique NAS secrets.
     const vpnGateways = new Map<string, { gatewayIp: string; secrets: Set<string>; serverName: string }>();
-    // Track all registered IPs to avoid duplicates
-    const registeredIPs = new Set<string>();
 
     for (const nas of nasEntries) {
       const safeShort = (nas.shortname || nas.nasname).replace(/[^a-z0-9_-]/gi, '_');
@@ -89,25 +87,6 @@ export async function syncNasClients(): Promise<boolean> {
       lines.push(`    limit_proxy_state = no`);
       lines.push(`}`);
       lines.push('');
-      registeredIPs.add(nas.nasname);
-
-      // If the router's management IP (ipAddress) differs from nasname,
-      // also register it as a client. This handles cases where MikroTik
-      // Hotspot sends RADIUS auth from the local LAN interface IP instead
-      // of the VPN tunnel IP (nasname). Both IPs share the same secret.
-      if (nas.ipAddress && nas.ipAddress !== nas.nasname && !registeredIPs.has(nas.ipAddress)) {
-        lines.push(`# ${safeShort} local interface — hotspot/accounting may use this IP`);
-        lines.push(`client nas_${safeShort}_localip {`);
-        lines.push(`    ipaddr = ${nas.ipAddress}`);
-        lines.push(`    secret = ${nas.secret}`);
-        lines.push(`    shortname = ${safeShort}_localip`);
-        lines.push(`    nas_type = other`);
-        lines.push(`    require_message_authenticator = no`);
-        lines.push(`    limit_proxy_state = no`);
-        lines.push(`}`);
-        lines.push('');
-        registeredIPs.add(nas.ipAddress);
-      }
 
       // Collect VPN server gateway info (skip the VPS itself = isRadiusServer)
       if (nas.vpnClientId && nas.vpnServerId && !nas.isRadiusServer) {
