@@ -529,23 +529,12 @@ export async function PATCH(req: NextRequest) {
 
   await writeFile(WG_INFO, JSON.stringify(info, null, 2), 'utf8')
 
-  // Upsert vpnServer subnet di DB — PATCH adalah satu-satunya trigger create vpnServer yang sah
-  // (dipanggil dari halaman VPN Server saat admin simpan konfigurasi pool)
+  // Update subnet di DB hanya jika vpnServer sudah ada (dibuat saat pertama tambah client).
+  // PATCH tidak pernah create vpnServer baru — create terjadi via POST add client.
   try {
-    await prisma.vpnServer.upsert({
+    await prisma.vpnServer.updateMany({
       where: { id: VPS_WG_SERVER_ID },
-      create: {
-        id: VPS_WG_SERVER_ID,
-        name: 'VPS WireGuard Server',
-        host: info.publicIp || 'vps',
-        username: 'vps',
-        password: 'vps',
-        subnet: info.subnet,
-        wgEnabled: true,
-        wgPublicKey: info.publicKey || undefined,
-        wgPort: info.listenPort ?? 51820,
-      },
-      update: {
+      data: {
         subnet: info.subnet,
         ...(info.publicIp ? { host: info.publicIp } : {}),
       },

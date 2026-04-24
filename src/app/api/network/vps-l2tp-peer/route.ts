@@ -297,24 +297,16 @@ export async function PATCH(req: NextRequest) {
     } catch { /* ignore */ }
   }
 
-  // Upsert vpnServer subnet di DB — PATCH adalah satu-satunya trigger create vpnServer yang sah
+  // Update subnet di DB hanya jika vpnServer sudah ada (dibuat saat pertama tambah client).
+  // PATCH tidak pernah create vpnServer baru — create terjadi via POST add client.
   try {
     const poolBase = typeof info.poolStart === 'string' && info.poolStart.includes('.')
       ? info.poolStart.split('.').slice(0, 3).join('.')
       : (info.subnet || '10.201.0.0/24').split('/')[0].split('.').slice(0, 3).join('.')
     const derivedSubnet = `${poolBase}.0/24`
-    await prisma.vpnServer.upsert({
+    await prisma.vpnServer.updateMany({
       where: { id: VPS_L2TP_SERVER_ID },
-      create: {
-        id: VPS_L2TP_SERVER_ID,
-        name: 'VPS L2TP Server',
-        host: info.publicIp || 'vps-l2tp',
-        username: 'vps',
-        password: 'vps',
-        subnet: derivedSubnet,
-        l2tpEnabled: true,
-      },
-      update: {
+      data: {
         subnet: derivedSubnet,
         ...(info.publicIp ? { host: info.publicIp } : {}),
       },
