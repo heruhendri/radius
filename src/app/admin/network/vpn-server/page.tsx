@@ -46,6 +46,129 @@ interface VpnClientData {
   isRadiusServer: boolean
 }
 
+// ── Redundansi RADIUS Info Panel ────────────────────────────────────────────
+function VpnServerRedundancyPanel() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-8">
+      <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl border border-green-500/30 rounded-2xl overflow-hidden">
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-green-500/5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-green-500/20 rounded-lg flex items-center justify-center">
+              <Shield className="w-4 h-4 text-green-400" />
+            </div>
+            <div>
+              <span className="text-sm font-bold text-green-400 uppercase tracking-wider">Redundansi RADIUS — WireGuard Primary + L2TP Backup</span>
+              <span className="ml-2 text-xs text-muted-foreground">— otomatis failover saat WireGuard putus</span>
+            </div>
+          </div>
+          {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </button>
+        {open && (
+          <div className="px-6 pb-6 border-t border-green-500/10 pt-5 space-y-5">
+
+            {/* Peran VPN Server dalam Redundansi */}
+            <div>
+              <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-3">Peran VPN Server dalam Arsitektur Redundansi</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-4 rounded-xl border border-teal-500/30 bg-teal-500/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wifi className="w-4 h-4 text-teal-300" />
+                    <p className="text-xs font-bold text-teal-300">WireGuard Server (Primary)</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">VPS menjalankan WireGuard server (<span className="font-mono text-teal-300">wg0</span>). Setiap NAS/MikroTik connect sebagai peer. RADIUS request dikirim melalui tunnel ini sebagai jalur utama (distance=1).</p>
+                  <div className="mt-2 p-2 rounded-lg bg-teal-500/10 font-mono text-xs text-teal-300">172.16.212.1 (VPS wg0)</div>
+                </div>
+                <div className="p-4 rounded-xl border border-[#bc13fe]/30 bg-[#bc13fe]/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="w-4 h-4 text-[#d060ff]" />
+                    <p className="text-xs font-bold text-[#d060ff]">L2TP/IPsec LNS (Backup)</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">VPS juga menjalankan L2TP server (<span className="font-mono text-[#bc13fe]">xl2tpd</span> + <span className="font-mono text-[#bc13fe]">strongswan</span>). MikroTik connect sebagai L2TP client. Jika WireGuard drop, jalur ini aktif otomatis (distance=10).</p>
+                  <div className="mt-2 p-2 rounded-lg bg-[#bc13fe]/10 font-mono text-xs text-[#bc13fe]">172.16.211.1 (VPS l2tp)</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Diagram Topologi */}
+            <div>
+              <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-3">Topologi Jalur RADIUS</p>
+              <div className="p-4 rounded-xl border border-slate-600/30 bg-slate-800/30 font-mono text-xs space-y-1 text-muted-foreground">
+                <p><span className="text-[#00f7ff]">MikroTik NAS</span> ──[wg0, dist=1]──▶ <span className="text-teal-300">VPS:172.16.212.1</span> ──▶ FreeRADIUS:1812 <span className="text-green-400">← UTAMA</span></p>
+                <p className="pl-14 text-slate-500">↘ [check-gateway=ping ~30s]</p>
+                <p><span className="text-[#00f7ff]">MikroTik NAS</span> ──[l2tp, dist=10]─▶ <span className="text-[#bc13fe]">VPS:172.16.211.1</span> ──▶ FreeRADIUS:1812 <span className="text-amber-400">← BACKUP</span></p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Watchdog service di VPS memantau status peer WireGuard setiap 15 detik. Saat WG drop, routing reply paket RADIUS otomatis dialihkan ke interface L2TP.</p>
+            </div>
+
+            {/* Setup VPS Side */}
+            <div>
+              <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-3">Setup VPS Side (Sudah Tersedia)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[
+                  { icon: '⚙️', label: 'xl2tpd', desc: 'L2TP server — menerima koneksi backup dari MikroTik', color: 'border-teal-500/30 bg-teal-500/5 text-teal-300' },
+                  { icon: '🔒', label: 'strongswan/IPsec', desc: 'Enkripsi tunnel L2TP/IPsec dengan PSK otomatis', color: 'border-[#bc13fe]/30 bg-[#bc13fe]/5 text-[#d060ff]' },
+                  { icon: '👁️', label: 'salfanet-radius-watchdog', desc: 'Systemd service — memantau WG peer, switch route saat failover', color: 'border-green-500/30 bg-green-500/5 text-green-400' },
+                  { icon: '🛣️', label: 'ip-up/ip-down hooks', desc: 'Script PPP otomatis tambah/hapus route saat L2TP connect/disconnect', color: 'border-amber-500/30 bg-amber-500/5 text-amber-400' },
+                ].map(item => (
+                  <div key={item.label} className={`flex items-start gap-2 p-3 rounded-xl border ${item.color.split(' ').slice(0,2).join(' ')}`}>
+                    <span className="text-base shrink-0">{item.icon}</span>
+                    <div>
+                      <p className={`text-xs font-bold font-mono ${item.color.split(' ')[2]}`}>{item.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 p-3 rounded-xl border border-slate-600/30 bg-slate-800/30">
+                <p className="text-xs text-muted-foreground">Untuk install/setup komponen redundansi di VPS baru, jalankan script:</p>
+                <p className="font-mono text-xs text-green-300 mt-1">bash scripts/setup-radius-redundancy.sh &lt;nama&gt; &lt;wg-ip&gt; &lt;vps-ip&gt;</p>
+              </div>
+            </div>
+
+            {/* Setup MikroTik Side */}
+            <div>
+              <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-3">Setup MikroTik Side (3 Perintah)</p>
+              <div className="space-y-2">
+                <div className="p-3 rounded-xl border border-[#00f7ff]/20 bg-[#00f7ff]/5">
+                  <p className="text-xs font-bold text-[#00f7ff] mb-1">1. Tambah L2TP client backup</p>
+                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">{`/interface/l2tp-client/add name=l2tp-vps-backup connect-to=<VPS-IP> \\
+  user="l2tp-<nama>" password="<password>" \\
+  use-ipsec=yes ipsec-secret="<psk>" \\
+  profile=default-encryption disabled=no`}</pre>
+                </div>
+                <div className="p-3 rounded-xl border border-[#bc13fe]/20 bg-[#bc13fe]/5">
+                  <p className="text-xs font-bold text-[#d060ff] mb-1">2. Tambah backup route ke VPS via L2TP</p>
+                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">{`/ip/route/add dst-address=<WG-SERVER-IP>/32 \\
+  gateway=l2tp-vps-backup distance=10 \\
+  check-gateway=ping comment=RADIUS-BACKUP-L2TP`}</pre>
+                </div>
+                <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5">
+                  <p className="text-xs font-bold text-amber-400 mb-1">3. Aktifkan check-gateway pada route WireGuard</p>
+                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">{`/ip/route/set [find gateway~"wg"] check-gateway=ping`}</pre>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Credentials (username, password, IPsec PSK) tersimpan di VPS: <span className="font-mono text-green-300">/etc/salfanet/l2tp-redundancy/&lt;nama&gt;.conf</span></p>
+            </div>
+
+            {/* Link ke VPN Client */}
+            <div className="p-3 rounded-xl border border-[#00f7ff]/20 bg-[#00f7ff]/5">
+              <p className="text-xs text-[#00f7ff]">
+                Detail lengkap, diagram, dan jawaban FAQ tersedia di menu{' '}
+                <a href="/admin/network/vpn-client" className="font-bold underline hover:text-white">VPN Client → panel Redundansi RADIUS</a>.
+              </p>
+            </div>
+
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function VpnServerPage() {
   const { t } = useTranslation();
   const { addToast } = useToast();
@@ -915,6 +1038,9 @@ export default function VpnServerPage() {
               )}
             </div>
           </div>
+
+          {/* ── Redundansi RADIUS Panel ───────────────────────────────── */}
+          <VpnServerRedundancyPanel />
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
