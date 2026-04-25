@@ -307,6 +307,24 @@ export async function POST(req: NextRequest) {
       clientPublicKey = kp.publicKey
     }
 
+    // Bersihkan peer orphan di wg.conf (peer yang IP-nya sudah tidak ada di DB)
+    // agar IP pool bisa dipakai ulang oleh client baru
+    try {
+      const dbClients = await prisma.vpnClient.findMany({
+        where: { vpnServerId: VPS_WG_SERVER_ID },
+        select: { vpnIp: true },
+      })
+      const dbIps = new Set(dbClients.map((c: { vpnIp: string }) => c.vpnIp))
+      const confPeers = await parsePeerNamesFromConf()
+      for (const [pubKey, { vpnIp: peerIp }] of confPeers) {
+        if (!dbIps.has(peerIp)) {
+          await removePeerFromConf(pubKey)
+        }
+      }
+    } catch (e) {
+      console.error('[vps-wg-peer] cleanup orphan peers error (lanjutkan):', e)
+    }
+
     const vpnIp = await nextAvailableIp(info.subnet, info.poolStart ?? 2, info.poolEnd ?? 254)
     await addPeerToConf(clientPublicKey, vpnIp, nasName)
 
