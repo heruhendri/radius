@@ -87,6 +87,9 @@ log "Applying code update..."
 git reset --hard origin/master 2>&1 || err "git reset --hard failed"
 ok "Code updated to $NEW_SHORT"
 
+# Make all scripts in scripts/ executable
+chmod +x "$APP_DIR"/scripts/*.sh 2>/dev/null || true
+
 # ── Deploy VPN / system config files (production/) ────────
 echo ""
 log "Checking VPN config files for changes..."
