@@ -51,6 +51,7 @@ interface Credentials {
   vpnType?: string
   nasSecret?: string        // RADIUS shared secret for this NAS
   radiusServerIp?: string  // RADIUS server VPN IP
+  ipsecPsk?: string                 // IPsec pre-shared key for L2TP
   clientPrivateKey?: string | null  // WireGuard private key
   serverPublicKey?: string | null   // WireGuard server public key
   wgPort?: number | null            // WireGuard listen port
@@ -767,12 +768,22 @@ export default function VpnClientPage() {
         const data = await res.json()
         if (data.success) {
           setShowModal(false)
+          const ipsecPsk = data.ipsecPsk || l2tpServerInfo?.ipsecPsk || ''
+          const nasDisplayName = formData.name.trim()
+          const safeApiUser = `api-${nasDisplayName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+          const safeApiPass = data.apiPassword || Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10)
           setCredentials({
             server: l2tpServerInfo?.publicIp || 'VPS',
+            serverHost: l2tpServerInfo?.publicIp || 'VPS',
             username: data.username,
             password: data.password,
             vpnIp: data.vpnIp,
             vpnType: 'l2tp',
+            nasName: nasDisplayName,
+            ipsecPsk,
+            apiUsername: safeApiUser,
+            apiPassword: data.apiPassword || safeApiPass,
+            nasSecret: data.nasSecret || undefined,
           })
           setSelectedVpnType('l2tp')
           setShowCredentials(true)
@@ -914,6 +925,7 @@ export default function VpnClientPage() {
       vpnType: clientVpnType,
       nasSecret: client.nasSecret || undefined,
       radiusServerIp: (!client.isRadiusServer && radiusServer) ? radiusServer.vpnIp : undefined,
+      ipsecPsk: String(client.vpnType || '').toLowerCase() === 'l2tp' ? (l2tpServerInfo?.ipsecPsk || '') : undefined,
       clientPrivateKey: client.clientPrivateKey || null,
       serverPublicKey: server.wgPublicKey || null,
       wgPort: server.wgPort || null,
@@ -967,9 +979,10 @@ ${vpnCmd}
     }
 
     const nasDisplayName = credentials.nasName || credentials.username
+    const l2tpIpsecSecret = credentials.ipsecPsk || 'salfanet-vpn-secret'
     if (selectedVpnType === 'l2tp') {
       return scriptBase(
-        `add connect-to=${credentials.server} user=${credentials.username} password=${credentials.password} disabled=no name=${toSafeIfaceName('l2tp', nasDisplayName)} use-ipsec=yes ipsec-secret=salfanet-vpn-secret add-default-route=no allow=mschap2 comment="SALFANET VPN"`,
+        `add connect-to=${credentials.server} user=${credentials.username} password="${credentials.password}" disabled=no name=${toSafeIfaceName('l2tp', nasDisplayName)} use-ipsec=yes ipsec-secret="${l2tpIpsecSecret}" add-default-route=no allow=mschap2 comment="SALFANET VPN"`,
         'l2tp-client'
       )
     } else if (selectedVpnType === 'sstp') {

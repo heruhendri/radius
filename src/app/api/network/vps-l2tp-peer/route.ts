@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
       console.error('[vps-l2tp-peer] POST: failed to save to DB (non-fatal):', dbErr)
     }
 
-    return NextResponse.json({ success: true, username, password, vpnIp, routerosScript, nasSecret: nasSecretForResponse })
+    return NextResponse.json({ success: true, username, password, vpnIp, ipsecPsk: info.ipsecPsk || '', routerosScript, nasSecret: nasSecretForResponse })
   }
 
   if (action === 'remove') {
@@ -332,14 +332,12 @@ function generateL2tpScript({ serverIp, username, password, ipsecPsk, vpnIp, lab
   const ifaceName = toL2tpIfaceName(label)
   return `# ═══════════════════════════════════════════════════════
 # SALFANET — Script L2TP/IPsec ke VPS
-# Server : ${serverIp}
-# NAS IP : ${vpnIp}
+# Server VPS : ${serverIp}
+# NAS IP VPN : ${vpnIp}
+# Interface  : ${ifaceName}
 # ═══════════════════════════════════════════════════════
 
-# [1] Tambah profile L2TP
-/ppp/profile/add name=salfanet-l2tp local-address=${vpnIp} use-encryption=yes
-
-# [2] Tambah interface L2TP Client
+# [1] Tambah interface L2TP Client ke VPS
 /interface/l2tp-client/add \\
   name=${ifaceName} \\
   connect-to=${serverIp} \\
@@ -347,14 +345,26 @@ function generateL2tpScript({ serverIp, username, password, ipsecPsk, vpnIp, lab
   password="${password}" \\
   use-ipsec=yes \\
   ipsec-secret="${ipsecPsk}" \\
-  profile=salfanet-l2tp \\
-  disabled=no
+  profile=default-encryption \\
+  add-default-route=no \\
+  disabled=no \\
+  comment="SALFANET VPN"
 
-# [3] Tunggu koneksi terbentuk (~15 detik), lalu cek:
+# [2] Tunggu koneksi terbentuk (~15 detik), lalu cek:
 # /interface/l2tp-client/print
 # Pastikan status = "connected"
 
-# [4] Route traffic ke RADIUS server via VPN
-/ip/route/add dst-address=0.0.0.0/0 gateway=${ifaceName} comment="SALFANET-VPN"
+# [3] Setup API User untuk remote management MikroTik
+/user/group/add name=api-users policy=read,write,policy,test,sensitive,api comment="Limited API Access Group"
+/user/add name=api-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 16)} group=api-users comment="API User SALFANET"
+# (set password sendiri via WinBox: menu Users)
+
+# ═══════════════════════════════════════════════════════
+# LANGKAH SELANJUTNYA:
+# 1. Pergi ke menu Routers/NAS di dashboard
+# 2. Pilih router ini → klik tombol Setup RADIUS (ikon sinyal)
+# 3. Copy dan paste script RADIUS ke terminal MikroTik
+# 4. Setelah RADIUS selesai → klik tombol Setup Isolir (ikon gembok)
+# ═══════════════════════════════════════════════════════
 `
 }
