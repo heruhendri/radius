@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { execSync } from 'child_process';
+import { existsSync } from 'fs';
 import path from 'path';
 import { getAppDir, getBackupDir, SAFE_BACKUP_FILENAME } from '../route';
 
