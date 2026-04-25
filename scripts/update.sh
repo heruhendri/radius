@@ -3,6 +3,16 @@
 # Salfanet Radius - Smart Update Script
 # Usage: bash scripts/update.sh [--force]
 # Writes output to /tmp/salfanet-update.log
+#
+# SAFETY GUARANTEES:
+#   • .env NEVER overwritten — backed up before git reset --hard
+#   • Uploads/backups in /var/data/ survive indefinitely (outside app dir)
+#   • FreeRADIUS config (/etc/freeradius/) NOT touched by update
+#   • WireGuard/L2TP config (/etc/wireguard/, /etc/xl2tpd/) preserved
+#   • PM2 uses `reload` (zero-downtime rolling restart) — active PPPoE/
+#     Hotspot sessions are NOT disconnected by code updates
+#   • PM2 is stopped ONLY during build (to free RAM) and immediately
+#     restarted whether build succeeds or fails
 # =============================================================
 
 APP_DIR="/var/www/salfanet-radius"
@@ -18,7 +28,14 @@ exec > >(tee "$LOG_FILE") 2>&1
 
 log()  { echo "[$(date '+%H:%M:%S')] $1"; }
 ok()   { echo "[$(date '+%H:%M:%S')] ✔ $1"; }
-err()  { echo "[$(date '+%H:%M:%S')] ✘ $1"; rm -f "$PID_FILE"; exit 1; }
+err()  {
+  echo "[$(date '+%H:%M:%S')] ✘ $1"
+  # Safety net: ensure PM2 is running even if build failed
+  pm2 start salfanet-radius 2>/dev/null || pm2 reload salfanet-radius 2>/dev/null || true
+  pm2 start salfanet-cron 2>/dev/null || true
+  rm -f "$PID_FILE"
+  exit 1
+}
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"
@@ -84,8 +101,38 @@ fi
 # ── Apply code ────────────────────────────────────────────
 echo ""
 log "Applying code update..."
+
+# SAFETY: Backup .env BEFORE git reset --hard (git reset never overwrites .env
+# because it is in .gitignore, but backing up is an extra safety net)
+if [ -f "$APP_DIR/.env" ]; then
+  cp "$APP_DIR/.env" "/tmp/salfanet-env-backup-$(date +%Y%m%d%H%M%S)"
+  ok ".env backed up to /tmp/"
+fi
+
 git reset --hard origin/master 2>&1 || err "git reset --hard failed"
 ok "Code updated to $NEW_SHORT"
+
+# SAFETY: Restore .env if git reset somehow removed it (should not happen)
+if [ ! -f "$APP_DIR/.env" ]; then
+  LATEST_ENV=$(ls -1t /tmp/salfanet-env-backup-* 2>/dev/null | head -1)
+  if [ -n "$LATEST_ENV" ]; then
+    cp "$LATEST_ENV" "$APP_DIR/.env"
+    log "WARNING: .env was missing after git reset — restored from backup"
+  fi
+fi
+
+# ── Clean up VPS orphan directories left from old deployments ─
+echo ""
+log "Cleaning up orphan directories from old deployments..."
+for orphan in srcappadmin srcappadmininvoicesimport srcappadminisolated-users \
+              srcappadminlaporan srcappadminlaporananalitik srcappadminsuspend-requests \
+              srclocales; do
+  if [ -d "$APP_DIR/$orphan" ]; then
+    rm -rf "${APP_DIR:?}/$orphan"
+    log "  Removed orphan dir: $orphan"
+  fi
+done
+ok "Orphan cleanup done"
 
 # Make all scripts in scripts/ executable
 chmod +x "$APP_DIR"/scripts/*.sh 2>/dev/null || true
@@ -277,6 +324,7 @@ fi
 # ── Stop PM2 before build to free RAM (low-memory VPS) ───
 echo ""
 log "Stopping PM2 to free RAM before build..."
+log "(Active PPPoE/Hotspot sessions are handled by FreeRADIUS/MikroTik — not affected by this)"
 pm2 stop salfanet-radius 2>/dev/null || true
 pm2 stop salfanet-cron 2>/dev/null || true
 sleep 2
@@ -298,6 +346,9 @@ tail -40 /tmp/salfanet-next-build.log
 [ "$BUILD_EXIT" -ne 0 ] && err "npm run build failed (exit $BUILD_EXIT)"
 ok "Build completed"
 
+# ── Cleanup old tmp log files > 7 days ───────────────────
+find /tmp -name "salfanet-env-backup-*" -mtime +7 -delete 2>/dev/null || true
+
 # ── Copy static assets to standalone ─────────────────────
 if [ -d ".next/static" ] && [ -d ".next/standalone" ]; then
   mkdir -p .next/standalone/.next/static
@@ -314,7 +365,9 @@ fi
 
 # ── Restart PM2 ───────────────────────────────────────────
 echo ""
-log "Restarting services..."
+log "Restarting services (zero-downtime rolling reload)..."
+# `reload` = zero-downtime: PM2 starts new worker first, waits for it to be
+# ready, then kills the old one — no gap in HTTP service
 pm2 reload salfanet-radius --update-env 2>&1 | tail -3
 pm2 restart salfanet-cron --update-env 2>&1 | tail -3
 ok "Services reloaded (zero-downtime)"

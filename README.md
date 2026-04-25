@@ -2,7 +2,7 @@
 
 Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with FreeRADIUS integration supporting PPPoE and Hotspot authentication.
 
-> **Latest:** v2.21.0 — VPS Built-in VPN pool IP config (WireGuard & L2TP): full IP input, correct subnet routing, auto-sync wg0.conf (Apr 22, 2026)
+> **Latest:** v2.22.0 — Safe zero-downtime update, FreeRADIUS backup & restore, VPN client fixes (Apr 26, 2026)
 
 ---
 
