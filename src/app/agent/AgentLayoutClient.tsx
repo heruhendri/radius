@@ -88,31 +88,31 @@ function AgentSidebar({
       {/* Sidebar */}
       <aside className={cn(
         'fixed top-0 left-0 h-full z-50 transition-all duration-300 ease-in-out',
-        'w-64 bg-white dark:bg-[#0b1120]/95 backdrop-blur-xl border-r border-slate-200 dark:border-cyan-500/20',
-        'shadow-[5px_0_15px_rgba(0,0,0,0.08)] dark:shadow-[5px_0_30px_rgba(6,182,212,0.15)]',
+        'w-64 bg-sidebar border-r border-sidebar-border',
+        'shadow-[5px_0_20px_rgba(0,0,0,0.25)]',
         'flex flex-col',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:translate-x-0' // Always visible on desktop
       )}>
         {/* Logo */}
-        <div className="flex-shrink-0 p-4 border-b border-slate-200 dark:border-cyan-500/20">
+        <div className="flex-shrink-0 p-4 border-b border-sidebar-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.5)] flex items-center justify-center">
                 <Ticket className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-base font-bold text-cyan-700 dark:text-transparent dark:bg-gradient-to-r dark:from-cyan-400 dark:to-blue-400 dark:bg-clip-text">
+                <h1 className="text-base font-bold text-sidebar-primary">
                   {t('agent.portal.title')}
                 </h1>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">{t('agent.portal.subtitle')}</p>
+                <p className="text-[10px] text-sidebar-foreground/60">{t('agent.portal.subtitle')}</p>
               </div>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="p-1.5 hover:bg-cyan-500/20 rounded-lg lg:hidden"
+              className="p-1.5 hover:bg-sidebar-accent rounded-lg lg:hidden"
             >
-              <X className="w-4 h-4 text-slate-300" />
+              <X className="w-4 h-4 text-sidebar-foreground/60" />
             </button>
           </div>
         </div>
@@ -120,9 +120,9 @@ function AgentSidebar({
         {/* Balance Card */}
         {agent && (
           <div className="flex-shrink-0 p-4">
-            <div className="bg-gradient-to-br from-cyan-500/20 to-blue-500/20 dark:from-cyan-500/30 dark:to-blue-500/30 rounded-xl p-3 border border-cyan-200 dark:border-cyan-500/30">
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('agent.portal.yourBalance')}</p>
-              <p className="text-lg font-bold text-cyan-500 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]">
+            <div className="bg-sidebar-primary/15 rounded-xl p-3 border border-sidebar-primary/30">
+              <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">{t('agent.portal.yourBalance')}</p>
+              <p className="text-lg font-bold text-sidebar-primary">
                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(agent.balance || 0)}
               </p>
             </div>
@@ -139,15 +139,15 @@ function AgentSidebar({
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 group',
                 pathname === item.href
-                  ? 'text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-300 dark:border-cyan-500/30 shadow-sm dark:shadow-[0_0_15px_rgba(6,182,212,0.15)]'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-cyan-500/10 border border-transparent hover:border-slate-200 dark:hover:border-cyan-500/20',
+                  ? 'text-sidebar-primary bg-sidebar-accent border border-sidebar-primary/30 shadow-sm'
+                  : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border',
               )}
             >
               <span className={cn(
                 'p-1.5 rounded-lg transition-all duration-300 flex items-center justify-center',
                 pathname === item.href 
-                  ? 'text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10' 
-                  : 'text-slate-400 dark:text-slate-400 group-hover:text-cyan-500'
+                  ? 'text-sidebar-primary bg-sidebar-primary/20' 
+                  : 'text-sidebar-foreground/40 group-hover:text-sidebar-primary'
               )}>
                 {item.icon}
               </span>
@@ -157,16 +157,16 @@ function AgentSidebar({
         </nav>
 
         {/* User Info & Logout */}
-        <div className="flex-shrink-0 p-4 border-t border-slate-200 dark:border-cyan-500/20 bg-slate-50/80 dark:bg-[#0b1120]/50">
+        <div className="flex-shrink-0 p-4 border-t border-sidebar-border">
           {agent && (
             <div className="mb-3">
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-cyan-500/10 border border-slate-200 dark:border-cyan-500/20">
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-sidebar-accent border border-sidebar-border">
                 <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
                   <User className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{agent.name}</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{agent.phone}</p>
+                  <p className="text-xs font-bold text-sidebar-foreground truncate">{agent.name}</p>
+                  <p className="text-[10px] text-sidebar-foreground/60 truncate">{agent.phone}</p>
                 </div>
               </div>
             </div>

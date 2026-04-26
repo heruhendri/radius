@@ -310,6 +310,26 @@
   color: var(--muted-foreground) !important;
 }
 
+/* Preserve white text inside agent/technician sidebars (sidebar is always dark navy bg-sidebar) */
+:root:not(.dark) [data-role="agent"] aside .text-white,
+:root:not(.dark) [data-role="technician"] aside .text-white {
+  color: #ffffff !important;
+}
+
+/* Preserve icon colors inside the gradient badge divs in both sidebars */
+:root:not(.dark) [data-role="agent"] aside [class*="bg-gradient-to"] *,
+:root:not(.dark) [data-role="technician"] aside [class*="bg-gradient-to"] * {
+  color: #ffffff !important;
+}
+
+/* Inputs/selects inside content area (not sidebar) must keep readable colors */
+:root:not(.dark) [data-role="agent"] aside input,
+:root:not(.dark) [data-role="agent"] aside select,
+:root:not(.dark) [data-role="technician"] aside input,
+:root:not(.dark) [data-role="technician"] aside select {
+  color: var(--sidebar-foreground) !important;
+}
+
 /* No theme transition (instant switch) */
 html.theme-transitioning,
 html.theme-transitioning *,

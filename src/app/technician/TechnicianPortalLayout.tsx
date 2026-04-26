@@ -219,16 +219,16 @@ function SidebarPushToggle({ techId }: { techId: string }) {
       className={cn(
         'w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 border',
         isOn
-          ? 'text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10 border-cyan-300 dark:border-cyan-500/30 shadow-sm dark:shadow-[0_0_15px_rgba(6,182,212,0.15)]'
+          ? 'text-sidebar-primary bg-sidebar-accent border-sidebar-primary/30 shadow-sm'
           : isDenied || !isSupported
-          ? 'text-slate-400 dark:text-slate-500 border-transparent opacity-60 cursor-not-allowed'
-          : 'text-slate-600 dark:text-slate-300 border-transparent hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-cyan-500/10 hover:border-slate-200 dark:hover:border-cyan-500/20',
+          ? 'text-sidebar-foreground/40 border-transparent opacity-60 cursor-not-allowed'
+          : 'text-sidebar-foreground/70 border-transparent hover:text-sidebar-foreground hover:bg-sidebar-accent hover:border-sidebar-border',
       )}
     >
       <span
         className={cn(
           'p-1.5 rounded-lg flex-shrink-0 flex items-center justify-center transition-all duration-300',
-          isOn ? 'text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10' : 'text-slate-400 dark:text-slate-400',
+          isOn ? 'text-sidebar-primary bg-sidebar-primary/20' : 'text-sidebar-foreground/40',
         )}
       >
         {loading ? (
@@ -247,10 +247,10 @@ function SidebarPushToggle({ techId }: { techId: string }) {
           className={cn(
             'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 transition-all duration-300',
             isOn
-              ? 'border-cyan-500 bg-cyan-500'
+              ? 'border-sidebar-primary bg-sidebar-primary'
               : isDenied
-              ? 'border-slate-400 dark:border-slate-600 bg-slate-300 dark:bg-slate-700'
-              : 'border-slate-400 dark:border-slate-500 bg-slate-200 dark:bg-slate-600',
+              ? 'border-sidebar-foreground/20 bg-sidebar-foreground/10'
+              : 'border-sidebar-foreground/20 bg-sidebar-foreground/10',
           )}
         >
           <span
@@ -414,33 +414,32 @@ function TechSidebar({
       <aside
         className={cn(
           'fixed top-0 left-0 h-full z-50 transition-all duration-300 ease-in-out',
-          'w-64 bg-white dark:bg-[#0b1120]/95 backdrop-blur-xl',
-          'border-r border-slate-200 dark:border-cyan-500/20',
-          'shadow-[5px_0_15px_rgba(0,0,0,0.08)] dark:shadow-[5px_0_30px_rgba(6,182,212,0.15)]',
+          'w-64 bg-sidebar border-r border-sidebar-border',
+          'shadow-[5px_0_20px_rgba(0,0,0,0.25)]',
           'overflow-y-auto flex flex-col',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
           'lg:translate-x-0',
         )}
       >
         {/* Logo */}
-        <div className="p-4 border-b border-slate-200 dark:border-cyan-500/20 flex-shrink-0">
+        <div className="p-4 border-b border-sidebar-border flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.5)] flex items-center justify-center">
                 <Wrench className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-base font-bold text-cyan-700 dark:text-transparent dark:bg-gradient-to-r dark:from-cyan-400 dark:to-blue-400 dark:bg-clip-text">
+                <h1 className="text-base font-bold text-sidebar-primary">
                   {t('techPortal.title')}
                 </h1>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">{t('techPortal.subtitle')}</p>
+                <p className="text-[10px] text-sidebar-foreground/60">{t('techPortal.subtitle')}</p>
               </div>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-cyan-500/20 rounded-lg lg:hidden transition-colors"
+              className="p-1.5 hover:bg-sidebar-accent rounded-lg lg:hidden transition-colors"
             >
-              <X className="w-4 h-4 text-slate-500 dark:text-slate-300" />
+              <X className="w-4 h-4 text-sidebar-foreground/60" />
             </button>
           </div>
         </div>
@@ -448,14 +447,14 @@ function TechSidebar({
         {/* Technician info card */}
         {tech && (
           <div className="p-4 flex-shrink-0">
-            <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 dark:from-cyan-500/20 dark:to-blue-500/20 rounded-xl p-3 border border-cyan-200 dark:border-cyan-500/30">
+            <div className="bg-sidebar-primary/15 rounded-xl p-3 border border-sidebar-primary/30">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex-shrink-0 flex items-center justify-center">
                   <User className="w-3 h-3 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{tech.name}</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                  <p className="text-xs font-bold text-sidebar-foreground truncate">{tech.name}</p>
+                  <p className="text-[10px] text-sidebar-foreground/60 flex items-center gap-1 truncate">
                     <Phone className="w-2.5 h-2.5 flex-shrink-0" />
                     {tech.phoneNumber}
                   </p>
@@ -477,16 +476,16 @@ function TechSidebar({
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 group',
                   isActive
-                    ? 'text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-300 dark:border-cyan-500/30 shadow-sm dark:shadow-[0_0_15px_rgba(6,182,212,0.15)]'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-cyan-500/10 border border-transparent hover:border-slate-200 dark:hover:border-cyan-500/20',
+                    ? 'text-sidebar-primary bg-sidebar-accent border border-sidebar-primary/30 shadow-sm'
+                    : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border',
                 )}
               >
                 <span
                   className={cn(
                     'p-1.5 rounded-lg transition-all duration-300 flex-shrink-0 flex items-center justify-center',
                     isActive
-                      ? 'text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
-                      : 'text-slate-400 dark:text-slate-400 group-hover:text-cyan-500',
+                      ? 'text-sidebar-primary bg-sidebar-primary/20'
+                      : 'text-sidebar-foreground/40 group-hover:text-sidebar-primary',
                   )}
                 >
                   {item.icon}
@@ -499,12 +498,12 @@ function TechSidebar({
         </nav>
 
         {/* Profile Link + Logout */}
-        <div className="p-3 border-t border-slate-200 dark:border-cyan-500/20 flex-shrink-0 space-y-2">
+        <div className="p-3 border-t border-sidebar-border flex-shrink-0 space-y-2">
           <Link
             href="/technician/profile"
-            className="flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-cyan-500/10 border border-transparent hover:border-slate-200 dark:hover:border-cyan-500/20"
+            className="flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border"
           >
-            <span className="p-1.5 rounded-lg text-slate-400 dark:text-slate-400">
+            <span className="p-1.5 rounded-lg text-sidebar-foreground/40">
               <User className="w-4 h-4" />
             </span>
             <span className="tracking-wide">{t('techPortal.profile')}</span>
