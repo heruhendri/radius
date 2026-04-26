@@ -429,108 +429,141 @@ Dashboard · PPPoE · Hotspot · Agent · Invoice · Payment · Keuangan · Sess
 
 ## 📝 Changelog
 
-### v2.24.0 — April 26, 2026
-- **Removed: Update otomatis via web panel** — Fitur SSE update browser dihapus karena bash script selalu mati saat `pm2 stop` dipanggil dari dalam Next.js, menyebabkan 502. Halaman `/admin/system` diganti menjadi info sistem + panduan SSH siap-copy.
-- **Fix: `updater.sh` default `--branch master`** — `bash updater.sh` tanpa flag sebelumnya 404 karena masuk mode GitHub Releases yang tidak dipakai. Sekarang otomatis pakai git branch master.
+Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di GitHub.
 
-### v2.23.0 — April 26, 2026
-- **Removed:** Coordinator role, Firebase/FCM — hapus portal coordinator, API Firebase, dependency firebase-admin
-- **Added:** `src/cron/runner.ts` tsx-based cron runner, `production/ecosystem.config.js` PM2 template, `vps-install/cleanup-refactor.sh` idempotent cleanup script
-- **Changed:** `update.sh` & `updater.sh` refactor-aware (copy ecosystem, cleanup stale, PM2 cron migration)
+<!-- AUTO-CHANGELOG:START -->
 
-### v2.20.0 — April 20, 2026
-- **Fix: Script RADIUS `address=127.0.0.1`** — Fallback chain diperbarui: `RADIUS_SERVER_IP` → `VPS_IP` → hostname dari `NEXTAUTH_URL` → `127.0.0.1`. Instalasi tanpa env var eksplisit (VPS lokal/LXC) kini otomatis pakai IP yang benar.
-- **Fix: Script RADIUS `src-address` hilang untuk non-VPN router** — Tanpa `src-address`, MikroTik memilih source IP otomatis yang bisa berbeda dari `nasname` di FreeRADIUS → ditolak sebagai "unknown client". Sekarang selalu di-set untuk semua router.
-- **Fix: Script RADIUS hapus perintah `rate-limit=""` di hotspot user profile** — Command menyebabkan error `expected end of command` di RouterOS karena bukan parameter valid.
-- **Fix: Script RADIUS hapus `keepalive-timeout` dan `lcp-echo`** — Kedua parameter tidak dikenal di `/ppp profile set` pada RouterOS.
-- **Added: Netwatch monitor RADIUS** — Generated script kini menyertakan `/tool netwatch` yang memonitor RADIUS server setiap 30 detik dengan log warning/info otomatis.
-- **Added: `vpn-watchdog.sh` RADIUS health check** — Watchdog kini cek service `freeradius` + port UDP 1812 dan auto-restart jika mati. Log rotation otomatis.
-- **Changed: `Acct-Interim-Interval` 60 → 300 detik** — Selaras dengan `interim-update=5m` MikroTik, kurangi beban DB.
-- **Changed: Stale session threshold 1 HOUR → 30 MINUTE** — Deteksi sesi zombie lebih cepat (6× interval), tapi tetap beri window reconnect VPN.
+### v2.25.1 — 2026-04-26
 
-### v2.17.0 — April 10, 2026
-- **Feat: Kamera HP langsung + GPS otomatis di semua form foto pelanggan** — Komponen baru `CameraPhotoInput` dengan tombol [🖼 Galeri] / [📷 Kamera HP] side-by-side. Tombol *Kamera HP* pakai `capture="environment"` sehingga langsung membuka kamera belakang tanpa file picker. Setelah foto diupload, GPS otomatis ditangkap via `navigator.geolocation` dan ditampilkan sebagai badge 📍 lat,lng clickable ke Google Maps.
-- **Files diperbarui:** `src/components/CameraPhotoInput.tsx` (baru), `src/app/daftar/page.tsx`, `src/app/admin/pppoe/users/page.tsx` (AddPppoeUserModal), `src/app/technician/(portal)/register/page.tsx`, `src/components/UserDetailModal.tsx`
+### Added
+- **`vps-install/install-security.sh` — Modul keamanan server otomatis** — Script baru yang dipanggil di Step 8 installer dan setiap `updater.sh`. Memasang tiga lapisan perlindungan secara otomatis:
+  - **fail2ban**: ban IP brute-force SSH setelah 5x gagal dalam 10 menit (ban 2 jam). Jail aktif: `sshd`, `nginx-http-auth`, `nginx-limit-req`. IP jaringan lokal (`192.168.x.x`, `10.x.x.x`) tidak pernah di-ban.
+  - **UFW Firewall**: default deny semua incoming, allow hanya port yang dibutuhkan: 22/TCP (SSH), 80/TCP (HTTP), 443/TCP (HTTPS), 1812-1813/UDP (RADIUS), 3799/UDP (RADIUS CoA). Di-skip otomatis untuk LXC container (pakai Proxmox host firewall).
+  - **Disk cleanup cronjob**: script `/usr/local/bin/salfanet-cleanup.sh` berjalan otomatis setiap hari jam 02:00. Membersihkan: journal systemd (max 200MB/7 hari), syslog lama, btmp (truncate jika >50MB), APT cache, tmp files, PM2 logs besar, Gradle cache >30 hari, APK build temp.
+  - Bisa dijalankan manual: `bash vps-install/install-security.sh`
+  - Log cleanup: `/var/log/salfanet-cleanup.log` (auto-trim jika >5MB)
 
-### v2.16.0 — April 10, 2026
-- **Feat: PWA Web Push penuh (VAPID)** — notifikasi push browser bekerja di semua portal (customer, teknisi, admin). Subscribe/unsubscribe toggle di sidebar teknisi berhasil menyimpan subscription ke DB.
-- **Fix: Push subscription tidak tersimpan (credentials:same-origin)** — root cause: fetch ke `/api/push/technician-subscribe` tidak menyertakan cookie `technician-token`. Fix: tambah `credentials: 'same-origin'` ke semua 3 fetch call (silent sync, subscribe, unsubscribe).
-- **Fix: `admin_user` push subscription diabaikan** — route mengembalikan `{skipped:true}` untuk admin tanpa simpan. Fix: tambah model `adminPushSubscription` + tabel `admin_push_subscriptions`, route kini menyimpan subscription admin.
-- **Feat: Dispatch tiket ke semua teknisi via WA + push** — saat tiket dibuat/di-assign, broadcast WA + push notification ke semua teknisi aktif.
-- **Feat: GitHub Actions auto-deploy** — workflow `.github/workflows/deploy.yml` → SSH ke VPS + `update.sh` saat push ke `master`.
-- **Fix: update.sh auto-rebuild standalone** — jika `.next/standalone/server.js` hilang, build otomatis dipaksa.
-- **Fix: Dashboard teknisi pakai model `ticket`** — sebelumnya masih referensi model `work_orders` yang sudah dihapus.
+### Fixed
+- **Disk penuh 100% menyebabkan MySQL deadlock & API 500** — Disk VPS publik penuh akibat log systemd journal (~2.9GB) dan syslog (~2.2GB) menumpuk. MySQL tidak bisa commit karena disk penuh → semua query FreeRADIUS (`radpostauth`, `radacct`) stuck "waiting for handler commit" → Prisma connection pool exhausted (P2024) → semua API endpoint 500. Diatasi dengan cleanup log + install cronjob harian.
+- **Build APK customer/technician/agent: connection pool exhausted saat 3 build serentak** — Menjalankan Gradle build untuk 3 role sekaligus menyebabkan VPS overload. Prisma connection pool (limit 10) habis karena server tidak bisa melayani request DB selama build berjalan. Build sebenarnya tetap berjalan di background; yang "berhenti" hanya tampilan UI karena polling API gagal 500.
 
-### v2.15.0 — January 2026
-- **Fix: Cron Job & Backup System Audit** — audit dan perbaikan menyeluruh sistem cron job + backup + Telegram:
-  - `backupTopicId` non-nullable → nullable (penyebab utama settings gagal tersimpan)
-  - `MYSQL_PWD` shell syntax → env option (aman untuk password dengan karakter khusus)
-  - `/api/cron/telegram` GET undefined status → panggil `getTelegramCronStatus()`
-  - `/api/cron` POST tanpa auth → tambah CRON_SECRET + User-Agent + session check
-  - Double cron execution dihapus (initCronJobs hanya untuk Telegram cron)
-  - Placeholder `/api/backup/telegram/settings` → implementasi penuh dari DB
-  - Health report Telegram lebih lengkap (sessions, users, invoices)
-  - Validasi 50MB Telegram file size limit
+### Changed
+- **`vps-install/vps-installer.sh`: tambah Step 8 (Security)** — Installer utama kini memanggil `install-security.sh` secara otomatis setelah Step 7 (PM2 & Build). Instalasi baru langsung terlindungi fail2ban + UFW + cleanup cron tanpa langkah manual.
+- **`vps-install/updater.sh`: security check saat setiap update** — Setiap kali `bash updater.sh` dijalankan, script memastikan: (1) cleanup cronjob terpasang, (2) fail2ban dalam keadaan running. Idempotent — aman dijalankan berulang kali.
 
-### v2.14.0 — January 2026
-- **Feat: ID Pelanggan di semua notifikasi** — `{{customerId}}` ditambahkan ke semua template WA & email (registration approval, invoice reminder, payment success, auto-renewal, manual payment approval/rejection, account info, admin create user)
-- **Feat: Area pelanggan di notifikasi** — `{{area}}` ditambahkan ke admin-create-user, payment-success, auto-renewal-success templates
-- **Fix: Seed template selalu update message** — bug di `whatsapp-templates.ts` & `email-templates.ts` di mana `message`/`htmlBody` tidak diupdate tanpa flag `--force-templates` sudah diperbaiki; sekarang selalu update
-- **Fix: update.sh selalu jalankan seed** — seed tidak lagi bersyarat pada file diff, selalu berjalan dengan `stdbuf` untuk output real-time
-- **Infra: stdbuf untuk live log** — gunakan `stdbuf -oL npm run db:seed` agar log seed muncul secara real-time di admin panel
+---
 
-### v2.13.1 — April 5, 2026
-- **Fix: Wablas send gagal** — ganti dari `POST /api/v2/send-message` ke `GET /api/send-message?token=...` (v1 simple endpoint, kompatibel semua server Wablas). API key format: `token.secret_key`
-- **Clarify: Hint form Wablas** diperjelas format API key `token.secret_key`
+### v2.25.0 — 2026-04-26
 
-### v2.13.0 — April 5, 2026
-- **Feat: Kirimi.id native broadcast** — broadcast menggunakan `/v1/broadcast-message`, 1 penerima otomatis pakai `/v1/send-message`. Delay 30 detik (rekomendasi resmi)
-- **Feat: WhatsApp webhook endpoint** — `POST /api/whatsapp/webhook` menerima pesan masuk, dicatat ke `whatsapp_history`. Panel webhook URL + tombol copy di halaman Providers
-- **Feat: Per-provider error detail** — saat semua provider gagal, response menyertakan detail error per provider
-- **Fix: Kirimi.id endpoint** — `/send-message` → `/v1/send-message`, field `number` → `receiver`
-- **Fix: Broadcast response** — tambah `successCount`/`failCount` di top-level response agar toast UI tidak menampilkan `undefined`
-- **Fix: HTTP status** — catch block WhatsApp send 502 → 500
+### Added
+- **Build APK Android langsung di server VPS** ([`91a45d5`]) — Fitur baru di halaman `/admin/download-apk`: build APK Android Kotlin (WebView wrapper) langsung di server menggunakan Gradle, tanpa perlu upload ke GitHub atau install Android Studio. APK tersimpan di server dan bisa didownload kapan saja.
+  - `GET /api/admin/apk/trigger` — cek ketersediaan Java JDK dan Android SDK di server
+  - `POST /api/admin/apk/trigger?role=admin|customer|technician|agent` — mulai build di background (detached process, tidak timeout)
+  - `GET /api/admin/apk/status?role=...` — polling status build: `idle` / `building` / `done` / `failed` / `stale`
+  - `GET /api/admin/apk/file?role=...` — download APK hasil build
+  - UI polling otomatis setiap 3 detik selama build berjalan
+  - Deteksi stale build: jika status masih `building` setelah 15 menit, otomatis ditandai `stale`
+  - Panduan install Android SDK ditampilkan di UI jika environment belum siap (copy-able bash command)
+  - Fallback ZIP download tetap tersedia via collapsible section
+- **Setup Android SDK di VPS** (manual, satu kali) — Jalankan command berikut via SSH sebelum menggunakan fitur build:
+  ```bash
+  apt-get update && apt-get install -y openjdk-17-jdk wget unzip && \
+  mkdir -p /opt/android/cmdline-tools && \
+  wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip && \
+  unzip -q /tmp/cmdtools.zip -d /opt/android/cmdline-tools && \
+  mv /opt/android/cmdline-tools/cmdline-tools /opt/android/cmdline-tools/latest && \
+  yes | /opt/android/cmdline-tools/latest/bin/sdkmanager --licenses && \
+  /opt/android/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" && \
+  echo 'export ANDROID_HOME=/opt/android' >> /etc/environment && \
+  echo 'Selesai!'
+  ```
+  Build pertama ±3–5 menit (download Gradle dependencies). Build berikutnya ±1 menit (Gradle cache di `/var/data/salfanet/gradle-cache`).
 
-### v2.12.0 — April 2, 2026
-- Fix: PPPoE isolasi manual — `radusergroup` tidak lagi dioverwrite saat edit user tanpa ubah status isolir
-- Fix: CoA/disconnect MikroTik — tambah `-d /usr/share/freeradius` ke perintah `radclient disconnect`
-- Fix: `setup-isolir` hardcoded IP pool → baca dari DB company settings
+---
 
-### v2.11.7 — March 29, 2026
-- **Fix: PWA manifest 404 pada fresh install** — nginx `alias` + regex + `try_files` diganti `root /var/www/salfanet-radius/public` (sesuai VPS production)
-- **Fix: `cp -r public` nesting bug** — `cp -r public .next/standalone/public/` → `cp -r public/. .next/standalone/public/` (hindari nested `public/public/`)
-- **Rewrite: `fix-pwa-nginx.sh`** — script perbaikan otomatis ditulis ulang dengan pendekatan yang benar
-- Files: `install-nginx.sh`, `install-pm2.sh`, `fix-pwa-nginx.sh`, `nginx-salfanet-radius.conf`
+### v2.24.0 — 2026-04-26
 
-### v2.11.5 — March 20, 2026
-- Fix: ghost sessions filtered from session list (sessions not in `pppoeUser` or `hotspotVoucher` are hidden)
-- Fix: RADIUS authorize now returns explicit REJECT for unregistered users (was allowing access via empty `{}`)
-- Fix: dashboard hotspot count cross-referenced against `hotspotVoucher` table (no more phantom counts)
-- Fix: `src/app/global-error.tsx` created to prevent Next.js 16 prerender crash on `/_global-error`
-- Fix: customer WiFi page card padding (explicit `p-4 sm:p-5` on all CyberCard instances)
-- Chore: restore `scripts/scan-api-endpoints.js` and `scripts/test-all-apis.js`
-- Chore: fix deploy script paths, add cross-platform `scripts/run-deploy.js` wrapper
-- Chore: add `npm run clean:local` and `clean:all` scripts, tidy `.gitignore`
+### Removed
+- **Update otomatis via web panel dihapus** ([`4692059`]) — Fitur update via browser (SSE live log, tombol Apply Update / Force Rebuild) dihapus karena tidak reliable: bash script `update.sh` selalu mati saat `pm2 stop` dipanggil dari dalam Next.js process group, menyebabkan `.next` terhapus dan server 502 yang harus dipulihkan manual. File yang dihapus:
+  - `scripts/update.sh` — script update yang dipanggil via API
+  - `src/app/api/admin/system/update/route.ts` — SSE API endpoint (GET stream + POST trigger)
+  - Halaman `/admin/system` diganti menjadi halaman **Informasi Sistem** statis: versi, commit, Node.js, uptime, banner update tersedia, dan panduan SSH siap-copy untuk update manual
 
-### v2.11.0 — March 17, 2026
-- System Update admin hardened (spawn fd fix, app root resolver, sanitized env)
-- Live update log stabilized (SSE heartbeat, anti-buffering, auto reconnect)
-- Nginx manifest handling fixed for all manifest files
-- Zero-downtime reload on update (`pm2 reload salfanet-radius`)
-- Admin UI card spacing polish (Push Notifications, Manual Payments, Network Trace)
-- Fix: hotspot profile modal showing raw i18n key (`hotspot.evoucherAccess` case fix)
-- Fix: dashboard SESI HOTSPOT AKTIF counting 0 despite active sessions (classification logic simplified)
+### Fixed
+- **`vps-install/updater.sh`: default ke `--branch master`** ([`5aa05b7`]) — Menjalankan `bash updater.sh` tanpa flag sebelumnya masuk ke Mode B (GitHub Releases) yang langsung error 404 karena repo tidak menggunakan GitHub Releases. Sekarang jika tidak ada `--branch` maupun `--version`, script otomatis pakai `--branch master`.
 
-### v2.10.28 — March 12, 2026
-- Bank Accounts moved to Payment menu as separate page
+---
 
-### v2.10.x — March 2026 (Performance)
-- Fixed N+1 query in PPPoE user listing (1 query instead of N+1)
-- Invoice stats now parallel (`Promise.all`) — ~7x faster
-- cron_history auto-cleanup (daily 4 AM, keep last 50 per job type)
-- MySQL auto-tuned to server RAM during install
-- Nginx global tuning: upstream keepalive, epoll, open_file_cache
-- PM2: removed `--optimize-for-size`, increased heap
+### v2.23.0 — 2026-04-26
+
+### Removed
+- **Coordinator role dihapus sepenuhnya** ([`e0cd701`]) — Role coordinator adalah fitur yang tidak pernah selesai diimplementasi. Semua endpoint API tidak pernah dibuat, sehingga halaman-halamannya selalu error. File yang dihapus:
+  - `src/app/coordinator/` — seluruh direktori portal coordinator (dashboard, tasks)
+  - `src/app/admin/coordinators/` — halaman manajemen coordinator di admin panel
+  - `src/locales/id.json` — key `coordinator`, `coordinatorLogin`, `manageCoordinators`, namespace `"coordinator"` (~40 key), dan `"senderType_COORDINATOR"` dihapus
+  - `src/app/admin/tickets/[id]/page.tsx` — `COORDINATOR` dihapus dari `SenderType` union type dan dari objek styling `getSenderBadgeColor()`
+- **Firebase Admin SDK & FCM dihapus** ([`fdc730b`]) — Seluruh integrasi Firebase Cloud Messaging dihapus. Push notification kini menggunakan VAPID Web Push murni (tidak ada dependency firebase-admin). File yang dihapus: `src/server/push.service.ts`, `firebase-service-account.json`. Stub `firebase-admin` di `src/lib/` digantikan dengan implementasi VAPID native.
+
+### Added
+- **`src/cron/runner.ts` — Cron runner baru berbasis tsx** ([`fdc730b`]) — Menggantikan `cron-service.js` (Node.js CJS) dengan TypeScript runner yang dijalankan via `npx tsx`. 16 cron jobs diload dari satu entry point, distributed locking tetap aktif. FreeRADIUS Health Check berjalan 5 detik setelah startup.
+- **`production/ecosystem.config.js` — Template konfigurasi PM2** ([`fdc730b`]) — File baru sebagai source of truth untuk konfigurasi PM2. `salfanet-cron` kini berjalan sebagai proses fork (`npx tsx src/cron/runner.ts`) dengan `NODE_OPTIONS: '--conditions=react-server'` (wajib agar `server-only` package tidak throw di luar Next.js).
+- **`vps-install/cleanup-refactor.sh` — Script cleanup instalasi lama** ([`f71256c`], [`c41f44f`]) — Script idempotent untuk membersihkan file-file stale dari instalasi sebelum refactor. Fitur:
+  - Support `--dry-run` (preview tanpa hapus)
+  - Phase 1: cleanup Firebase/FCM push service, firebase-service-account.json
+  - Phase 3: sync `ecosystem.config.js` dari `production/` (migrasi cron-service.js → tsx runner)
+  - Phase 8: hapus `src/app/coordinator/`, `src/app/admin/coordinators/`
+  - Auto-deteksi jika `salfanet-cron` masih pakai `cron-service.js` → migrate ke tsx runner otomatis
+  - Usage: `bash vps-install/cleanup-refactor.sh [--dry-run] [--app-dir=/path]`
+
+### Changed
+- **`scripts/update.sh`: refactor-aware** ([`f71256c`]) — Update script (dipanggil via admin panel → `/api/admin/system/update`) ditingkatkan:
+  - Setelah `git reset --hard`, otomatis copy `production/ecosystem.config.js` → root (file ini untracked, tidak tereset oleh git)
+  - Cleanup stale files dari Phase 1-8 refactor (push.service.ts, coordinator, firebase, dll.) di setiap update
+  - PM2 cron restart: jika `ecosystem.config.js` berubah → `pm2 delete` + `pm2 start` ulang (bukan sekedar `pm2 restart`)
+  - `pm2 save` otomatis setelah restart
+- **`vps-install/updater.sh`: refactor-aware** ([`f71256c`]) — CLI update script ditingkatkan:
+  - `npm ci` dengan fallback ke `npm install --production=false` jika lock file tidak sinkron (umum terjadi setelah refactor)
+  - Copy `production/ecosystem.config.js` setelah `git clean -fd`
+  - Cleanup stale files refactor (list sama dengan update.sh)
+  - Copy static assets ke `.next/standalone` setelah build
+  - PM2 cron: deteksi perubahan script → `pm2 delete` + `pm2 start` jika perlu
+
+### Fixed
+- **`cleanup-refactor.sh`: `set -e` safe** ([`c41f44f`]) — Fungsi `remove_path()` sebelumnya `return 1` saat file tidak ditemukan → script keluar prematur karena `set -e`. Diperbaiki ke `return 0`. Kondisi `diff` juga diperbaiki (inversi `!` yang salah menyebabkan ecosystem.config.js tidak pernah disync).
+
+---
+
+### v2.22.0 — 2026-04-26
+
+### Added
+- **Script `scripts/backup-freeradius-local.sh`** ([`8652ea4`]) — Script bash untuk membuat arsip `.tar.gz` seluruh direktori `/etc/freeradius/3.0/` ke `backups/freeradius/` dengan nama file bertimestamp (`freeradius-config-YYYYMMDD-HHMMSS.tar.gz`). Otomatis cleanup backup lama (simpan 10 terbaru). Output baris `BACKUP_FILE: <nama>` di akhir agar UI polling bisa deteksi selesai. Script sebelumnya tidak ada sehingga tombol "Buat Backup" selalu gagal dengan error `Script not found`.
+
+### Fixed
+- **Restore FreeRADIUS: error "same file" saat restore `mods-enabled/`** ([`c268123`]) — File `mods-enabled/sql` dan `mods-enabled/rest` di FreeRADIUS adalah **symlink** ke `../mods-available/sql`. Saat tar mengekstrak backup, symlink tetap sebagai symlink. Perintah `cp symlink dest` gagal karena keduanya resolve ke file fisik yang sama (`cp: ... are the same file`). Fix: cek tipe file via `stat -c '%F'` sebelum restore — jika `symbolic link`, gunakan `ln -sf <target> <dest>` alih-alih `cp`.
+- **Build VPS: OOM (Out of Memory) saat fase TypeScript check** ([`0aee02f`]) — Build `npm run build` menjalankan TypeScript type-checker (`tsc`) setelah compile selesai. Pada VPS 4GB dengan PM2 berjalan, proses `tsc` membutuhkan heap hingga 1.6GB dan di-kill oleh OOM killer (`FATAL ERROR: Ineffective mark-compacts near heap limit`). Fix: set `typescript.ignoreBuildErrors: true` di `next.config.ts` untuk skip fase `tsc` saat build produksi (type error tetap terdeteksi di development/editor).
+- **Build VPS: OOM saat build karena PM2 mengonsumsi RAM** ([`08eba82`]) — PM2 process salfanet-radius mengonsumsi ~500MB RAM saat berjalan. Dengan heap build 1536MB (bawaan `npm run build`), total RAM yang dibutuhkan melebihi 4GB. Fix: `update.sh` kini stop PM2 sebelum build dan gunakan `npm run build:low-mem` (heap 1024MB). PM2 distart kembali setelah build selesai (atau gagal).
+- **Build VPS: script baru tidak executable setelah `git reset --hard`** ([`8ce6421`]) — Script yang ditambahkan via commit baru tidak otomatis dapat izin execute di VPS setelah `git reset --hard`. Fix: tambah `chmod +x scripts/*.sh` di `update.sh` setelah git reset.
+- **VPN Client: list tidak refresh setelah tambah client** ([`b55d3e6`]) — Setelah berhasil tambah WireGuard atau L2TP client, list VPN tidak diperbarui otomatis. Fix: panggil `loadClients()` di success path WireGuard dan L2TP.
+- **VPN Client: modal tidak menutup / formData tidak ter-reset setelah submit** ([`b55d3e6`]) — Form WireGuard menggunakan `formData.name` setelah `formData` di-clear sehingga nama yang dikirim ke credentials dialog kosong. Fix: simpan nama ke variabel lokal `peerName` sebelum clear, gunakan `peerName` di credentials dialog.
+- **VPN Client: IP pool tidak bisa dipakai ulang (orphan WG peers)** ([`288a094`]) — Peer WireGuard yang dihapus dari DB tetap tersisa di `wg.conf`. Saat tambah client baru, `nextAvailableIp` membaca `wg.conf` dan skip IP yang sebenarnya sudah bebas. Fix: tambah langkah cleanup orphan peers di `wg.conf` (compare dengan DB) sebelum alokasi IP baru.
+- **VPN Client delete: peer tidak dihapus dari `wg.conf` di VPS** ([`db9ae7a`]) — Handler DELETE untuk `vpnServerId === '__vps_wg_server__'` hanya menghapus record DB tanpa menghapus `[Peer]` di `wg0.conf`. Fix: tambah call ke `POST /api/network/vps-wg-peer` dengan `action: 'remove'` sebelum delete DB.
+- **Auto-create NAS/router saat tambah VPN client WireGuard** ([`701bfb7`]) — Endpoint `vps-wg-peer` secara otomatis membuat NAS record dan router saat tambah peer. Fix: hapus blok auto-create — NAS dikelola terpisah.
+- **Auto-create NAS/router saat tambah VPN client L2TP** ([`8303308`]) — Sama seperti WireGuard, endpoint `vps-l2tp-peer` juga membuat NAS otomatis. Fix: hapus blok auto-create.
+- **Panel redundansi di halaman VPN Client & VPN Server masih tampil** ([`8303308`], [`096d446`]) — Panel "Setup RADIUS Redundancy" yang sudah diputuskan untuk dihapus masih ter-render karena ada sisa JSX dan komponen stub. Fix: komponen `VpnServerRedundancyPanel` dijadikan stub `return null`, semua JSX orphan dibersihkan.
+
+### Changed
+- **`update.sh`: safe zero-downtime update** ([`08eba82`], [`8ce6421`], sesi ini) — Perbaikan menyeluruh pada script update:
+  - `.env` di-backup ke `/tmp/salfanet-env-backup-<timestamp>` sebelum `git reset --hard` (extra safety meski `.env` ada di `.gitignore`)
+  - Jika `.env` hilang setelah git reset, otomatis restore dari backup terakhir
+  - Cleanup direktori orphan dari deployment lama (`srcappadmin`, `srclocales`, dll.) otomatis tiap update
+  - PM2 `reload` (rolling zero-downtime) tetap digunakan saat restart — sesi PPPoE/Hotspot aktif tidak terputus oleh update kode
+  - PM2 direstart (safety net) bahkan jika build gagal — server tidak dibiarkan mati
+  - Tmp env backup lama (>7 hari) dibersihkan otomatis
+  - Komentar safety guarantee ditambahkan di header script
+
+---
+
+<!-- AUTO-CHANGELOG:END -->
 
 See full changelog: [docs/getting-started/CHANGELOG.md](docs/getting-started/CHANGELOG.md)
 
