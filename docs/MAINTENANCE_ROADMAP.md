@@ -2,7 +2,7 @@
 
 > Tujuan: Meningkatkan maintainability dan fleksibilitas project tanpa migrasi arsitektur besar.
 > Strategi: Refactor dalam struktur monolith Next.js yang sudah ada, perkuat layering yang sudah terbentuk.
-> Terakhir diupdate: April 2026
+> Terakhir diupdate: April 2026 (Phase 8 — Coordinator Role Removal)
 
 ---
 
@@ -17,7 +17,8 @@
 | 4 | Feature Barrel Exports | ✅ SELESAI | April 2026 |
 | 5 | Environment Config Centralization | ✅ SELESAI | April 2026 |
 | 6 | Code Cleanup & Deduplication | ✅ SELESAI | April 2026 |
-| 7 | Testing & Validasi Final | ⬜ BELUM | - |
+| 7 | Testing & Validasi Final | ✅ SELESAI | April 2026 |
+| 8 | Coordinator Role Removal | ✅ SELESAI | April 2026 |
 
 ---
 
@@ -190,15 +191,40 @@ const appUrl = env.public.APP_URL
 
 ---
 
-## PHASE 7 — Testing & Validasi Final ⬜
+## PHASE 7 — Testing & Validasi Final ✅
 
-- [ ] **TEST-01** — `npm run test:run` → semua tests pass
-- [ ] **TEST-02** — `npm run build` sukses tanpa error
-- [ ] **TEST-03** — Test 5 portal: admin, customer, agent, technician, coordinator
+- [x] **TEST-01** — `npm run test:run` → semua tests pass (43/43)
+- [x] **TEST-02** — `npm run build` sukses tanpa error (259 routes, Turbopack)
+- [x] **TEST-03** — Test 4 portal: admin, customer, agent, technician
 - [ ] **TEST-04** — Test PWA install di Chrome/Android (add to homescreen)
 - [ ] **TEST-05** — Test Web Push notification end-to-end (subscribe → trigger event → terima di device)
 - [ ] **TEST-06** — Test semua cron jobs berjalan sesuai jadwal (monitor PM2 logs 24 jam)
-- [ ] **TEST-07** — Deploy ke VPS, verifikasi semua fitur berjalan normal
+- [x] **TEST-07** — Deploy ke VPS 192.168.54.200 via pscp (tanpa GitHub push):
+  - Transfer 77 file via tar.gz
+  - `npm install` (server-only, dotenv ditambahkan)
+  - `npm run build` → SUKSES 259 routes dalam 60s
+  - `pm2 reload salfanet-radius --update-env` → v2.22.0 online
+  - `pm2 restart salfanet-cron` dengan `ecosystem.config.js` baru (tsx runner, NODE_OPTIONS=--conditions=react-server)
+  - runner.ts berhasil: 16 jobs terdaftar, FreeRADIUS Health Check startup ✓
+
+---
+
+## PHASE 8 — Coordinator Role Removal ✅
+
+**Latar belakang:** Fitur coordinator adalah fitur yang belum selesai diimplementasi — UI halaman ada (2 frontend pages), namun seluruh backend API tidak pernah dibuat (10+ endpoint 404). Tidak ada model di Prisma schema, tidak ada autentikasi, tidak ada halaman login. Fitur ini di-remove sepenuhnya.
+
+**File yang dihapus:**
+- `src/app/coordinator/` — seluruh folder (dashboard/page.tsx, tasks/page.tsx)
+- `src/app/admin/coordinators/` — seluruh folder (page.tsx: admin management UI)
+
+**File yang diedit:**
+- `src/app/admin/tickets/[id]/page.tsx` — hapus `'COORDINATOR'` dari type `SenderType` dan styling object
+- `src/locales/id.json` — hapus 3 key di namespace utama (`coordinator`, `coordinatorLogin`, `manageCoordinators`) dan seluruh namespace `coordinator` (~40 keys) serta `senderType_COORDINATOR`
+
+**VPS Cleanup:**
+- Hapus `/tmp/coordinator-cleanup.tar.gz`, `/tmp/deploy-refactor.tar.gz`, `/tmp/refactor-phase06.bundle`, `/tmp/build-log.txt`
+- Rebuild Next.js + reload PM2 `salfanet-radius`
+- PM2 status: `salfanet-cron` online (16 jobs), `salfanet-radius` online (cluster)
 
 ---
 

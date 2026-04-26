@@ -50,6 +50,7 @@ module.exports = {
       ],
       env: {
         NODE_ENV: 'production',
+        NODE_OPTIONS: '--conditions=react-server', // Makes 'server-only' resolve to empty.js via tsx
         TZ: 'Asia/Jakarta',
       },
       error_file: './logs/cron-error.log',

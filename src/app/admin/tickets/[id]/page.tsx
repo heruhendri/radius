@@ -10,7 +10,7 @@ import { formatWIB } from '@/lib/timezone';
 
 type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_CUSTOMER' | 'RESOLVED' | 'CLOSED';
 type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-type SenderType = 'CUSTOMER' | 'ADMIN' | 'COORDINATOR' | 'TECHNICIAN' | 'SYSTEM';
+type SenderType = 'CUSTOMER' | 'ADMIN' | 'TECHNICIAN' | 'SYSTEM';
 
 interface Message {
   id: string;
@@ -207,7 +207,6 @@ export default function AdminTicketDetailPage() {
     const colors = {
       CUSTOMER: 'bg-info/10 text-info',
       ADMIN: 'bg-primary/10 text-primary',
-      COORDINATOR: 'bg-primary/10 text-primary',
       TECHNICIAN: 'bg-success/10 text-success',
       SYSTEM: 'bg-muted text-muted-foreground',
     };

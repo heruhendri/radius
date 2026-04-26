@@ -1,8 +1,0 @@
-C:\Users\yanz\Downloads\salfanet-radius-main\src\server\auth\config.ts
-C:\Users\yanz\Downloads\salfanet-radius-main\src\server\jobs\auto-renewal.ts
-C:\Users\yanz\Downloads\salfanet-radius-main\src\server\jobs\freeradius-health.ts
-C:\Users\yanz\Downloads\salfanet-radius-main\src\server\jobs\helpers.ts
-C:\Users\yanz\Downloads\salfanet-radius-main\src\server\jobs\pppoe-session-sync.ts
-C:\Users\yanz\Downloads\salfanet-radius-main\src\server\jobs\pppoe-sync.ts
-C:\Users\yanz\Downloads\salfanet-radius-main\src\server\jobs\voucher-sync.ts
-C:\Users\yanz\Downloads\salfanet-radius-main\src\server\services\mikrotik\client.ts
