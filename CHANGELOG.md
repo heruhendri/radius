@@ -6,6 +6,34 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.25.0] — 2026-04-26
+
+### Added
+- **Build APK Android langsung di server VPS** ([`91a45d5`]) — Fitur baru di halaman `/admin/download-apk`: build APK Android Kotlin (WebView wrapper) langsung di server menggunakan Gradle, tanpa perlu upload ke GitHub atau install Android Studio. APK tersimpan di server dan bisa didownload kapan saja.
+  - `GET /api/admin/apk/trigger` — cek ketersediaan Java JDK dan Android SDK di server
+  - `POST /api/admin/apk/trigger?role=admin|customer|technician|agent` — mulai build di background (detached process, tidak timeout)
+  - `GET /api/admin/apk/status?role=...` — polling status build: `idle` / `building` / `done` / `failed` / `stale`
+  - `GET /api/admin/apk/file?role=...` — download APK hasil build
+  - UI polling otomatis setiap 3 detik selama build berjalan
+  - Deteksi stale build: jika status masih `building` setelah 15 menit, otomatis ditandai `stale`
+  - Panduan install Android SDK ditampilkan di UI jika environment belum siap (copy-able bash command)
+  - Fallback ZIP download tetap tersedia via collapsible section
+- **Setup Android SDK di VPS** (manual, satu kali) — Jalankan command berikut via SSH sebelum menggunakan fitur build:
+  ```bash
+  apt-get update && apt-get install -y openjdk-17-jdk wget unzip && \
+  mkdir -p /opt/android/cmdline-tools && \
+  wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip && \
+  unzip -q /tmp/cmdtools.zip -d /opt/android/cmdline-tools && \
+  mv /opt/android/cmdline-tools/cmdline-tools /opt/android/cmdline-tools/latest && \
+  yes | /opt/android/cmdline-tools/latest/bin/sdkmanager --licenses && \
+  /opt/android/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" && \
+  echo 'export ANDROID_HOME=/opt/android' >> /etc/environment && \
+  echo 'Selesai!'
+  ```
+  Build pertama ±3–5 menit (download Gradle dependencies). Build berikutnya ±1 menit (Gradle cache di `/var/data/salfanet/gradle-cache`).
+
+---
+
 ## [2.24.0] — 2026-04-26
 
 ### Removed

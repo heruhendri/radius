@@ -2,7 +2,7 @@
 
 Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with FreeRADIUS integration supporting PPPoE and Hotspot authentication.
 
-> **Latest:** v2.24.0 — Hapus update via web (ganti ke SSH manual), fix updater.sh default branch (Apr 26, 2026)
+> **Latest:** v2.25.0 — Build APK Android langsung di server VPS, download APK tanpa GitHub Actions (Apr 26, 2026)
 
 ---
 
@@ -35,8 +35,9 @@ Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with Free
 | **Bahasa** | Bahasa Indonesia (full) |
 | **PWA** | Installable di semua portal (admin, customer, agent, technician), offline fallback, service worker cache |
 | **Web Push** | VAPID-based browser push notifications, subscribe/unsubscribe toggle, admin broadcast |
-| **System Update** | One-click update dari GitHub via admin panel, live log streaming, no SSH required |
+| **System Update** | Update via SSH menggunakan `updater.sh`, tidak ada web-based update |
 | **Mobile App** | Flutter customer portal (WiFi control, invoice, payment) |
+| **Android APK Builder** | Build APK Android (WebView wrapper) langsung di server VPS untuk 4 portal (Admin/Customer/Technician/Agent), download APK tanpa GitHub Actions |
 
 ---
 
@@ -235,7 +236,73 @@ All jobs can be triggered manually from **Settings → Cron** in the admin panel
 
 ---
 
-## 🛠️ Common Commands
+## � Android APK Builder
+
+Buat APK Android (WebView wrapper) untuk 4 portal langsung di server VPS — tanpa GitHub Actions, tanpa Android Studio.
+
+### 1) Setup Android SDK (satu kali via SSH)
+
+```bash
+apt-get update && apt-get install -y openjdk-17-jdk wget unzip && \
+mkdir -p /opt/android/cmdline-tools && \
+wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip && \
+unzip -q /tmp/cmdtools.zip -d /opt/android/cmdline-tools && \
+mv /opt/android/cmdline-tools/cmdline-tools /opt/android/cmdline-tools/latest && \
+yes | /opt/android/cmdline-tools/latest/bin/sdkmanager --licenses && \
+/opt/android/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" && \
+echo 'export ANDROID_HOME=/opt/android' >> /etc/environment && \
+echo 'Selesai!'
+```
+
+> **Perkiraan waktu:** ~5–10 menit (download ~500MB). Disk yang dibutuhkan: ~2GB.
+
+### 2) Build APK via Admin Panel
+
+Buka **Admin → Download Aplikasi Android** → klik **Build APK** pada role yang diinginkan.
+
+- Build berjalan di background (tidak timeout meski butuh beberapa menit)
+- Status diperbarui otomatis setiap 3 detik
+- Setelah selesai, tombol **Download APK** muncul
+
+### 3) Build via API (opsional)
+
+```bash
+# Cek environment
+curl http://YOUR_VPS/api/admin/apk/trigger
+
+# Mulai build (role: admin | customer | technician | agent)
+curl -X POST http://YOUR_VPS/api/admin/apk/trigger?role=customer \
+  -H "Cookie: next-auth.session-token=..."
+
+# Cek status
+curl http://YOUR_VPS/api/admin/apk/status?role=customer
+
+# Download APK
+curl -OJ http://YOUR_VPS/api/admin/apk/file?role=customer \
+  -H "Cookie: next-auth.session-token=..."
+```
+
+### Storage APK
+
+| Path | Keterangan |
+|------|------------|
+| `/var/data/salfanet/apk/{role}/app.apk` | File APK hasil build |
+| `/var/data/salfanet/apk/{role}/status.json` | Status & metadata build |
+| `/var/data/salfanet/apk/{role}/build.log` | Log Gradle |
+| `/var/data/salfanet/gradle-cache` | Cache Gradle (mempercepat build berikutnya) |
+
+### Paket Aplikasi
+
+| Role | Package ID | Warna |
+|------|-----------|-------|
+| Admin | `net.salfanet.admin` | Biru |
+| Customer | `net.salfanet.customer` | Cyan |
+| Technician | `net.salfanet.technician` | Hijau |
+| Agent | `net.salfanet.agent` | Ungu |
+
+---
+
+## �🛠️ Common Commands
 
 ```bash
 # PM2
