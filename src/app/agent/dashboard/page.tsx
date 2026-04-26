@@ -597,11 +597,11 @@ export default function AgentDashboardPage() {
   return (
     <div className="p-4 lg:p-6 space-y-5">
       {/* Balance Card - Desktop: smaller, Mobile: full */}
-      <div className="bg-gradient-to-r from-[#bc13fe] to-[#00f7ff] rounded-2xl shadow-[0_0_40px_rgba(188,19,254,0.3)] p-4 lg:p-5 text-white">
+      <div className="bg-gradient-to-r from-[#bc13fe] to-[#00f7ff] rounded-2xl shadow-[0_0_40px_rgba(188,19,254,0.3)] p-4 lg:p-5 text-slate-900 dark:text-white">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <p className="text-xs lg:text-sm opacity-90 uppercase tracking-wider">{t('agent.portal.yourBalance')}</p>
-            <p className="text-2xl lg:text-3xl font-bold mt-1 drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]">{formatCurrency(agent.balance || 0)}</p>
+            <p className="text-2xl lg:text-3xl font-bold mt-1 dark:drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]">{formatCurrency(agent.balance || 0)}</p>
             {agent.minBalance > 0 && (
               <p className="text-[10px] lg:text-xs opacity-75 mt-1">{t('agent.portal.minBalance')}: {formatCurrency(agent.minBalance)}</p>
             )}
