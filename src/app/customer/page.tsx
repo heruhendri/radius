@@ -391,14 +391,14 @@ export default function CustomerDashboard() {
   const daysLeft = Math.ceil((expiredDate.getTime() - nowWIB().getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <div className="p-3 lg:p-6 max-w-4xl mx-auto space-y-4">
+    <div className="p-3 lg:p-6 max-w-5xl mx-auto space-y-4">
       {/* ── Hero Status Card ─────────────────────────────────────────── */}
       <div className={`rounded-2xl p-5 relative overflow-hidden ${
         isExpired
-          ? 'bg-gradient-to-br from-red-500/15 to-red-500/5 dark:from-red-900/60 dark:to-slate-900 border-2 border-red-500/40'
+          ? 'bg-card dark:bg-gradient-to-br dark:from-red-900/60 dark:to-slate-900 border-2 border-red-500/40'
           : user.status === 'active'
-          ? 'bg-gradient-to-br from-primary/15 to-primary/5 dark:from-cyan-900/50 dark:to-slate-900 border-2 border-primary/30 dark:border-cyan-500/30'
-          : 'bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 dark:from-yellow-900/50 dark:to-slate-900 border-2 border-yellow-500/30'
+          ? 'bg-card dark:bg-gradient-to-br dark:from-cyan-900/50 dark:to-slate-900 border-2 border-primary/40 dark:border-cyan-500/30'
+          : 'bg-card dark:bg-gradient-to-br dark:from-yellow-900/50 dark:to-slate-900 border-2 border-yellow-500/30'
       }`}>
         {/* Decorative circles */}
         <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-foreground/5 pointer-events-none" />
@@ -407,8 +407,8 @@ export default function CustomerDashboard() {
           {/* Top row: name + status badge */}
           <div className="flex items-start justify-between mb-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Selamat Datang</p>
-              <h1 className="text-lg font-extrabold text-foreground mt-0.5 leading-tight">{user.name}</h1>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-primary">Selamat Datang</p>
+              <h1 className="text-lg lg:text-xl font-extrabold text-foreground mt-0.5 leading-tight">{user.name}</h1>
               <p className="text-xs text-muted-foreground font-mono">@{user.username}</p>
             </div>
             {isExpired

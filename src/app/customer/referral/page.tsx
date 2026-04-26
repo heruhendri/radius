@@ -187,7 +187,7 @@ export default function CustomerReferralPage() {
 
   if (!config?.enabled) {
     return (
-      <div className="p-4 space-y-4 max-w-2xl mx-auto">
+      <div className="p-4 space-y-4 max-w-5xl mx-auto">
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">Referral</h1>
         <CyberCard>
           <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -205,7 +205,7 @@ export default function CustomerReferralPage() {
   }
 
   return (
-    <div className="p-4 space-y-4 max-w-2xl mx-auto">
+    <div className="p-4 space-y-4 max-w-5xl mx-auto">
       <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
         <Gift className="w-5 h-5 text-cyan-500" />
         Program Referral

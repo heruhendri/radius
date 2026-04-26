@@ -124,12 +124,12 @@ export default function CustomerSuspendPage() {
   }
 
   return (
-    <div className="p-4 max-w-lg mx-auto space-y-4">
+    <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <PauseCircle className="w-8 h-8 text-[#00f7ff]" />
         <div>
-          <h1 className="text-xl font-bold text-white">Suspend Sementara</h1>
+          <h1 className="text-xl font-bold text-foreground">Suspend Sementara</h1>
           <p className="text-sm text-[#e0d0ff]/60">Ajukan jeda layanan internet sementara</p>
         </div>
       </div>
@@ -184,11 +184,11 @@ export default function CustomerSuspendPage() {
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
               <p className="text-[#e0d0ff]/40 text-xs">Mulai</p>
-              <p className="text-white font-medium">{fmt(current.startDate)}</p>
+              <p className="text-foreground font-medium">{fmt(current.startDate)}</p>
             </div>
             <div>
               <p className="text-[#e0d0ff]/40 text-xs">Selesai</p>
-              <p className="text-white font-medium">{fmt(current.endDate)}</p>
+              <p className="text-foreground font-medium">{fmt(current.endDate)}</p>
             </div>
           </div>
           {current.reason && (

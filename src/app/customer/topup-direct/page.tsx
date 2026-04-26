@@ -240,7 +240,7 @@ export default function TopUpDirectPage() {
   }
 
   return (
-    <div className="p-3 lg:p-6 space-y-5 max-w-2xl mx-auto">
+    <div className="p-3 lg:p-6 space-y-5 max-w-5xl mx-auto">
       {/* Back + Page Header */}
       <div className="flex items-center gap-3 mb-2">
         <button

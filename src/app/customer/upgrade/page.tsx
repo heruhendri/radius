@@ -224,7 +224,7 @@ export default function UpgradePackagePage() {
   }
 
   return (
-    <div className="p-3 lg:p-6 space-y-5 max-w-2xl mx-auto">
+    <div className="p-3 lg:p-6 space-y-5 max-w-5xl mx-auto">
       {/* Page Header */}
       <div>
         <h1 className="text-lg font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">{t('customer.upgradePackage')}</h1>
