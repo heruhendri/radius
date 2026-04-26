@@ -67,32 +67,37 @@
 }
 
 /* ===========================================
-   MODERN CLEAN THEME — Blue/Indigo Professional
-   Dark: Slate-950 base + Blue-500 accent
-   Light: White base + Blue-600 accent
+   MODERN BRAND THEME — Cyan/Violet Dynamic
+   Dark: Deep Navy + Cyan-500 + Violet-500 accent
+   Light: Slate-50 + Cyan-600 + Violet-600 accent
+   Brand color: #06b6d4 (matches PWA themeColor)
    =========================================== */
 
 :root {
   --radius: 0.625rem;
 
-  --background: #0f172a;
-  --foreground: #f1f5f9;
+  /* Deep navy with subtle blue tint — richer than plain slate-950 */
+  --background: #0a1428;
+  --foreground: #e8eef9;
 
-  --card: #1e293b;
-  --card-foreground: #f1f5f9;
-  --popover: #1e293b;
-  --popover-foreground: #f1f5f9;
+  /* Elevated card — visible hierarchy from background */
+  --card: #162033;
+  --card-foreground: #e8eef9;
+  --popover: #162033;
+  --popover-foreground: #e8eef9;
 
-  --primary: #3b82f6;
+  /* Brand primary: cyan-500 (matches themeColor #06b6d4) */
+  --primary: #06b6d4;
   --primary-foreground: #ffffff;
 
-  --secondary: #334155;
-  --secondary-foreground: #f1f5f9;
+  --secondary: #1e2a44;
+  --secondary-foreground: #e8eef9;
 
-  --muted: #334155;
-  --muted-foreground: #94a3b8;
+  --muted: #1e2a44;
+  --muted-foreground: #9ba8c4;
 
-  --accent: #6366f1;
+  /* Violet accent — dynamic complement to cyan */
+  --accent: #8b5cf6;
   --accent-foreground: #ffffff;
 
   --destructive: #ef4444;
@@ -101,45 +106,48 @@
   --success-foreground: #ffffff;
   --warning: #f59e0b;
   --warning-foreground: #ffffff;
-  --info: #3b82f6;
+  --info: #06b6d4;
   --info-foreground: #ffffff;
 
-  --border: #334155;
-  --input: #1e293b;
-  --ring: #3b82f6;
+  /* More visible borders for card/layout separation */
+  --border: #27374f;
+  --input: #1e2a44;
+  --ring: #06b6d4;
 
-  --chart-1: #3b82f6;
-  --chart-2: #6366f1;
-  --chart-3: #8b5cf6;
+  /* Cyan/violet/teal chart palette — dynamic and brand-aligned */
+  --chart-1: #06b6d4;
+  --chart-2: #8b5cf6;
+  --chart-3: #f59e0b;
   --chart-4: #10b981;
-  --chart-5: #f59e0b;
+  --chart-5: #ec4899;
 
-  --sidebar: #0f172a;
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-primary: #3b82f6;
+  /* Sidebar deeper than bg for visual hierarchy */
+  --sidebar: #091020;
+  --sidebar-foreground: #e8eef9;
+  --sidebar-primary: #06b6d4;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #f1f5f9;
-  --sidebar-border: #334155;
-  --sidebar-ring: #3b82f6;
+  --sidebar-accent: #162033;
+  --sidebar-accent-foreground: #e8eef9;
+  --sidebar-border: #27374f;
+  --sidebar-ring: #06b6d4;
 
   color-scheme: dark;
 }
 
 .dark {
-  --background: #0f172a;
-  --foreground: #f1f5f9;
-  --card: #1e293b;
-  --card-foreground: #f1f5f9;
-  --popover: #1e293b;
-  --popover-foreground: #f1f5f9;
-  --primary: #3b82f6;
+  --background: #0a1428;
+  --foreground: #e8eef9;
+  --card: #162033;
+  --card-foreground: #e8eef9;
+  --popover: #162033;
+  --popover-foreground: #e8eef9;
+  --primary: #06b6d4;
   --primary-foreground: #ffffff;
-  --secondary: #334155;
-  --secondary-foreground: #f1f5f9;
-  --muted: #334155;
-  --muted-foreground: #94a3b8;
-  --accent: #6366f1;
+  --secondary: #1e2a44;
+  --secondary-foreground: #e8eef9;
+  --muted: #1e2a44;
+  --muted-foreground: #9ba8c4;
+  --accent: #8b5cf6;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
@@ -147,30 +155,30 @@
   --success-foreground: #ffffff;
   --warning: #f59e0b;
   --warning-foreground: #ffffff;
-  --info: #3b82f6;
+  --info: #06b6d4;
   --info-foreground: #ffffff;
-  --border: #334155;
-  --input: #1e293b;
-  --ring: #3b82f6;
-  --chart-1: #3b82f6;
-  --chart-2: #6366f1;
-  --chart-3: #8b5cf6;
+  --border: #27374f;
+  --input: #1e2a44;
+  --ring: #06b6d4;
+  --chart-1: #06b6d4;
+  --chart-2: #8b5cf6;
+  --chart-3: #f59e0b;
   --chart-4: #10b981;
-  --chart-5: #f59e0b;
-  --sidebar: #0f172a;
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-primary: #3b82f6;
+  --chart-5: #ec4899;
+  --sidebar: #091020;
+  --sidebar-foreground: #e8eef9;
+  --sidebar-primary: #06b6d4;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #f1f5f9;
-  --sidebar-border: #334155;
-  --sidebar-ring: #3b82f6;
+  --sidebar-accent: #162033;
+  --sidebar-accent-foreground: #e8eef9;
+  --sidebar-border: #27374f;
+  --sidebar-ring: #06b6d4;
   color-scheme: dark;
 }
 
 /* ===========================================
-   LIGHT MODE — Modern Clean Professional
-   Slate-50 base + Blue-600/Indigo accents, Navy sidebar
+   LIGHT MODE — Modern Clean Brand-Aligned
+   Slate-50 base + Cyan-600/Violet-600 accents
    =========================================== */
 :root:not(.dark) {
   --background: #f8fafc;    /* slate-50: off-white so cards/inputs float */
@@ -181,16 +189,17 @@
   --popover: #ffffff;
   --popover-foreground: #0f172a;
 
-  --primary: #2563eb;
+  /* Brand cyan-600 — same family as PWA themeColor */
+  --primary: #0891b2;
   --primary-foreground: #ffffff;
 
-  --secondary: #e0e7ff;           /* indigo-100 — blue-tinted secondary */
-  --secondary-foreground: #3730a3; /* indigo-800 */
+  --secondary: #ecfeff;           /* cyan-50 — brand-tinted secondary */
+  --secondary-foreground: #0e7490; /* cyan-700 */
 
   --muted: #f1f5f9;
-  --muted-foreground: #475569;    /* slate-600 — was #64748b, more readable */
+  --muted-foreground: #475569;    /* slate-600 — readable */
 
-  --accent: #4f46e5;
+  --accent: #7c3aed;              /* violet-600 — dynamic complement */
   --accent-foreground: #ffffff;
 
   --destructive: #dc2626;
@@ -199,28 +208,29 @@
   --success-foreground: #ffffff;
   --warning: #d97706;
   --warning-foreground: #ffffff;
-  --info: #2563eb;
+  --info: #0891b2;
   --info-foreground: #ffffff;
 
-  --border: #cbd5e1;              /* slate-300 — more visible card/layout lines */
+  --border: #cbd5e1;              /* slate-300 — visible card lines */
   --input: #ffffff;               /* white inputs on slate-50 bg */
-  --ring: #4f46e5;                /* indigo focus ring */
+  --ring: #0891b2;                /* cyan focus ring */
 
-  --chart-1: #2563eb;
-  --chart-2: #4f46e5;
-  --chart-3: #7c3aed;
+  /* Chart palette aligned with brand cyan/violet */
+  --chart-1: #0891b2;
+  --chart-2: #7c3aed;
+  --chart-3: #d97706;
   --chart-4: #059669;
-  --chart-5: #d97706;
+  --chart-5: #db2777;
 
-  /* Navy sidebar — consistent with dark mode for brand identity */
-  --sidebar: #0f172a;
-  --sidebar-foreground: #e2e8f0;
-  --sidebar-primary: #3b82f6;
+  /* Navy sidebar — brand consistency with dark mode */
+  --sidebar: #091020;
+  --sidebar-foreground: #e8eef9;
+  --sidebar-primary: #06b6d4;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #e2e8f0;
-  --sidebar-border: #334155;
-  --sidebar-ring: #3b82f6;
+  --sidebar-accent: #162033;
+  --sidebar-accent-foreground: #e8eef9;
+  --sidebar-border: #27374f;
+  --sidebar-ring: #06b6d4;
 
   color-scheme: light;
 }

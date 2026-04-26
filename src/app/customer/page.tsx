@@ -474,10 +474,10 @@ export default function CustomerDashboard() {
             <button
               key={href}
               onClick={() => router.push(href)}
-              className={`flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border transition-all active:scale-95 ${bg}`}
+              className={`flex flex-col items-center justify-center gap-2 py-3 px-2 min-h-[80px] rounded-xl border transition-all active:scale-95 ${bg}`}
             >
-              <Icon className={`w-5 h-5 ${color}`} />
-              <span className={`text-[9px] font-bold text-center leading-tight ${color}`}>{name}</span>
+              <Icon className={`w-5 h-5 shrink-0 ${color}`} />
+              <span className={`text-[10px] font-bold text-center leading-tight break-words ${color}`}>{name}</span>
             </button>
           ))}
         </div>

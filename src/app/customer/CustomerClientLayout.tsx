@@ -57,6 +57,11 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
   const lastCheckedRef = useRef<string>(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { addToast } = useToast();
+  // Stable ref to addToast — prevents poll() recreation when context re-renders
+  const addToastRef = useRef(addToast);
+  useEffect(() => { addToastRef.current = addToast; }, [addToast]);
+  // Dedup: track event IDs that already triggered a toast to prevent doubles
+  const shownEventIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     setNow(new Date());
@@ -116,31 +121,42 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       localStorage.setItem('customer_notif_last_checked', lastCheckedRef.current);
       const events: NotifEvent[] = data.events;
 
-      setUnreadCount(prev => prev + events.length);
-      setNotifHistory(prev => [...events, ...prev].slice(0, 20));
+      // Dedup: filter out events whose IDs already triggered a toast in this session
+      const newEvents = events.filter(e => !shownEventIdsRef.current.has(e.id));
+      if (newEvents.length === 0) return;
+
+      setUnreadCount(prev => prev + newEvents.length);
+      setNotifHistory(prev => {
+        // Also dedup history by id
+        const existingIds = new Set(prev.map(p => p.id));
+        const fresh = newEvents.filter(e => !existingIds.has(e.id));
+        return [...fresh, ...prev].slice(0, 20);
+      });
 
       // Trigger auto-refresh on all customer pages that are listening
       window.dispatchEvent(new CustomEvent('customer-data-refresh'));
 
-      for (const event of events) {
+      for (const event of newEvents) {
+        shownEventIdsRef.current.add(event.id);
+        const fire = addToastRef.current;
         if (event.type === 'payment_success') {
-          addToast({ type: 'success', title: event.title, description: event.message, duration: 8000 });
+          fire({ type: 'success', title: event.title, description: event.message, duration: 8000 });
         } else if (event.type === 'payment_rejected') {
-          addToast({ type: 'error', title: event.title, description: event.message, duration: 12000 });
+          fire({ type: 'error', title: event.title, description: event.message, duration: 12000 });
         } else if (event.type === 'package_changed') {
-          addToast({ type: 'success', title: event.title, description: event.message, duration: 10000 });
+          fire({ type: 'success', title: event.title, description: event.message, duration: 10000 });
         } else if (event.type === 'ticket_reply') {
-          addToast({ type: 'info', title: event.title, description: event.message, duration: 10000 });
+          fire({ type: 'info', title: event.title, description: event.message, duration: 10000 });
         } else if (event.type === 'ticket_resolved') {
-          addToast({ type: 'success', title: event.title, description: event.message, duration: 10000 });
+          fire({ type: 'success', title: event.title, description: event.message, duration: 10000 });
         } else {
-          addToast({ type: 'info', title: event.title, description: event.message, duration: 7000 });
+          fire({ type: 'info', title: event.title, description: event.message, duration: 7000 });
         }
       }
     } catch {
       // silently ignore
     }
-  }, [addToast]);
+  }, []);
 
   useEffect(() => {
     // Load from cache immediately to prevent logo flash / layout shift
@@ -547,17 +563,17 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
                   key={href}
                   onClick={() => router.push(href)}
                   className={cn(
-                    'flex flex-col items-center gap-0.5 py-1 px-2 min-w-[56px] rounded-xl transition-all',
+                    'flex flex-col items-center justify-center gap-1 py-1.5 px-2 min-w-[56px] min-h-[52px] rounded-xl transition-all',
                     active ? 'text-cyan-400' : 'text-muted-foreground/60'
                   )}
                 >
                   <span className={cn(
-                    'p-1.5 rounded-xl transition-all',
+                    'flex items-center justify-center p-1.5 rounded-xl transition-all',
                     active ? 'bg-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.4)]' : ''
                   )}>
                     <Icon className="w-5 h-5" />
                   </span>
-                  <span className="text-[9px] font-bold tracking-wide leading-none">{label}</span>
+                  <span className="text-[10px] font-bold tracking-wide leading-none text-center">{label}</span>
                 </button>
               );
             })}
