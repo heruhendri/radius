@@ -458,8 +458,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
   - Membuat fallback `superadmin` hanya jika database benar-benar kosong
 - **Self-heal PM2 app mode** — `updater.sh` kini mendeteksi proses PM2 legacy yang masih jalan via `next start`/`npm start`, lalu migrasi otomatis ke `.next/standalone/server.js` dari `ecosystem.config.js`.
 
----
-
 ### v2.25.0 — 2026-04-26
 
 ### Added
@@ -486,8 +484,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
   ```
   Build pertama ±3–5 menit (download Gradle dependencies). Build berikutnya ±1 menit (Gradle cache di `/var/data/salfanet/gradle-cache`).
 
----
-
 ### v2.24.0 — 2026-04-26
 
 ### Removed
@@ -498,8 +494,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 ### Fixed
 - **`vps-install/updater.sh`: default ke `--branch master`** ([`5aa05b7`]) — Menjalankan `bash updater.sh` tanpa flag sebelumnya masuk ke Mode B (GitHub Releases) yang langsung error 404 karena repo tidak menggunakan GitHub Releases. Sekarang jika tidak ada `--branch` maupun `--version`, script otomatis pakai `--branch master`.
-
----
 
 ### v2.23.0 — 2026-04-26
 
@@ -538,8 +532,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 ### Fixed
 - **`cleanup-refactor.sh`: `set -e` safe** ([`c41f44f`]) — Fungsi `remove_path()` sebelumnya `return 1` saat file tidak ditemukan → script keluar prematur karena `set -e`. Diperbaiki ke `return 0`. Kondisi `diff` juga diperbaiki (inversi `!` yang salah menyebabkan ecosystem.config.js tidak pernah disync).
 
----
-
 ### v2.22.0 — 2026-04-26
 
 ### Added
@@ -567,8 +559,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
   - PM2 direstart (safety net) bahkan jika build gagal — server tidak dibiarkan mati
   - Tmp env backup lama (>7 hari) dibersihkan otomatis
   - Komentar safety guarantee ditambahkan di header script
-
----
 
 <!-- AUTO-CHANGELOG:END -->
 
