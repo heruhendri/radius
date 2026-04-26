@@ -9,6 +9,7 @@ import {
 import { join } from 'path';
 import { spawn, exec } from 'child_process';
 import { promisify } from 'util';
+import { deflateSync } from 'zlib';
 
 const execAsync = promisify(exec);
 
@@ -283,15 +284,54 @@ function writeProjectToDisk(
   writeFileSync(join(projectDir, 'app/src/main/res/values/colors.xml'), colorsXml(cfg.color));
   writeFileSync(join(projectDir, 'app/src/main/res/values/themes.xml'), themesXml());
 
-  // Placeholder icons
-  const iconPng = Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADklEQVQI12NgYGD4DwABBAEAwS2OUQAAAABJRU5ErkJggg==',
-    'base64',
-  );
-  for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+  // Placeholder icons — valid PNG per density (required by AAPT2)
+  const densitySizes: Record<string, number> = {
+    mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192,
+  };
+  // parse hex color to rgb
+  const hex = role.color.replace('#', '');
+  const ir = parseInt(hex.slice(0, 2), 16);
+  const ig = parseInt(hex.slice(2, 4), 16);
+  const ib = parseInt(hex.slice(4, 6), 16);
+  for (const [density, size] of Object.entries(densitySizes)) {
+    const iconPng = makePlaceholderPng(size, size, ir, ig, ib);
     writeFileSync(join(projectDir, `app/src/main/res/mipmap-${density}/ic_launcher.png`), iconPng);
     writeFileSync(join(projectDir, `app/src/main/res/mipmap-${density}/ic_launcher_round.png`), iconPng);
   }
+}
+
+// ─── PNG generator (valid PNG, no external deps) ─────────────────────────────
+
+function crc32(buf: Buffer): number {
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < buf.length; i++) {
+    crc ^= buf[i];
+    for (let j = 0; j < 8; j++) crc = (crc & 1) ? (0xEDB88320 ^ (crc >>> 1)) : (crc >>> 1);
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const tb = Buffer.from(type, 'ascii');
+  const len = Buffer.alloc(4); len.writeUInt32BE(data.length, 0);
+  const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([tb, data])), 0);
+  return Buffer.concat([len, tb, data, crc]);
+}
+
+function makePlaceholderPng(w: number, h: number, r: number, g: number, b: number): Buffer {
+  const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8; ihdr[9] = 2; // bit depth=8, color type=RGB
+  const lines: Buffer[] = [];
+  for (let y = 0; y < h; y++) {
+    const row = Buffer.alloc(1 + w * 3);
+    row[0] = 0; // filter none
+    for (let x = 0; x < w; x++) { row[1+x*3]=r; row[2+x*3]=g; row[3+x*3]=b; }
+    lines.push(row);
+  }
+  const idat = deflateSync(Buffer.concat(lines), { level: 1 });
+  return Buffer.concat([sig, pngChunk('IHDR', ihdr), pngChunk('IDAT', idat), pngChunk('IEND', Buffer.alloc(0))]);
 }
 
 // ─── detect JAVA_HOME ────────────────────────────────────────────────────────
