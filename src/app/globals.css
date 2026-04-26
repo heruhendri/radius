@@ -997,6 +997,31 @@ html.theme-transitioning *::after {
 :root:not(.dark) .text-teal-200 { color: #0d9488 !important; }
 :root:not(.dark) .text-indigo-200 { color: #4f46e5 !important; }
 
+/* --- 60. GRAY-400/500 TEXT → readable in light mode --- */
+/* gray-400 (#9ca3af) on white = ~2.5:1 contrast — WCAG FAIL; override to gray-600 */
+:root:not(.dark) .text-gray-400 { color: #4b5563 !important; } /* gray-600: ~7:1 on white */
+:root:not(.dark) .text-gray-500 { color: #374151 !important; } /* gray-700: ~9:1 on white */
+
+/* --- 61. BORDER-GRAY-700/800 → themed border in light mode --- */
+/* gray-700/800 borders appear near-invisible or wrong contrast on light bg */
+:root:not(.dark) .border-gray-700,
+:root:not(.dark) [class*="border-gray-7"] {
+  border-color: var(--border) !important;
+}
+:root:not(.dark) .border-gray-800,
+:root:not(.dark) [class*="border-gray-8"] {
+  border-color: var(--border) !important;
+}
+
+/* --- 62. BG-GRAY-800\/ BG-GRAY-900\/ opacity variants → light in light mode --- */
+/* e.g. bg-gray-800/50 used in modals / code blocks → should be light gray */
+:root:not(.dark) [class*="bg-gray-800\/"] {
+  background-color: rgba(241, 245, 249, 0.8) !important;
+}
+:root:not(.dark) [class*="bg-gray-900\/"] {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+}
+
 /* =====================================================
    DARK MODE — Remap legacy cyberpunk neon → Modern Blue
    Prevents jarring neon purple/cyan in dark mode.
