@@ -2,7 +2,7 @@
 
 Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with FreeRADIUS integration supporting PPPoE and Hotspot authentication.
 
-> **Latest:** v2.22.0 — Safe zero-downtime update, FreeRADIUS backup & restore, VPN client fixes (Apr 26, 2026)
+> **Latest:** v2.23.0 — Refactor besar (Phase 1-8): hapus coordinator role, migrasi cron ke tsx runner, cleanup Firebase/FCM, update scripts refactor-safe (Apr 26, 2026)
 
 ---
 
@@ -28,13 +28,13 @@ Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with Free
 | **Network (FTTH)** | OLT/ODC/ODP management, customer port assignment, network map, distance calculation |
 | **GenieACS TR-069** | CPE/ONT management, WiFi config (SSID/password), device status & uptime |
 | **Isolation** | Auto-isolate expired customers, customizable WhatsApp/Email/HTML landing page templates |
-| **Cron Jobs** | 16 automated background jobs with history, distributed locking, manual trigger |
-| **Roles & Permissions** | 53 permissions, 6 role templates (SuperAdmin/Finance/CS/Technician/Marketing/Viewer) |
+| **Cron Jobs** | 16 automated background jobs (tsx runner via PM2 fork), history, distributed locking, manual trigger |
+| **Roles & Permissions** | 53 permissions, 5 portals (Admin/Customer/Agent/Technician + SuperAdmin) |
 | **Activity Log** | Audit trail with auto-cleanup (30 days) |
 | **Security** | Session timeout 30 min, idle warning, RBAC, HTTPS/SSL |
 | **Bahasa** | Bahasa Indonesia (full) |
 | **PWA** | Installable di semua portal (admin, customer, agent, technician), offline fallback, service worker cache |
-| **Web Push** | VAPID-based browser push notifications, subscribe/unsubscribe toggle, admin broadcast, FCM parallel |
+| **Web Push** | VAPID-based browser push notifications, subscribe/unsubscribe toggle, admin broadcast |
 | **System Update** | One-click update dari GitHub via admin panel, live log streaming, no SSH required |
 | **Mobile App** | Flutter customer portal (WiFi control, invoice, payment) |
 
@@ -65,7 +65,6 @@ salfanet-radius/
 │   │   ├── agent/          # Agent/reseller portal
 │   │   ├── api/            # API route handlers
 │   │   ├── customer/       # Customer self-service portal
-│   │   ├── coordinator/    # Coordinator portal
 │   │   └── technician/     # Technician portal
 │   ├── server/             # DB, services, jobs, cache, auth
 │   ├── features/           # Vertical slices (queries, schemas, types)
