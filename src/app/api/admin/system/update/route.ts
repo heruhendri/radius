@@ -205,7 +205,26 @@ export async function POST(request: Request) {
     if (process.env.NVM_DIR) cleanEnv.NVM_DIR = process.env.NVM_DIR;
     if (process.env.NODE_EXTRA_CA_CERTS) cleanEnv.NODE_EXTRA_CA_CERTS = process.env.NODE_EXTRA_CA_CERTS;
 
-    const child = spawn('bash', [scriptPath, ...args], {
+    // Use `setsid` to launch the update script in a completely NEW process
+    // session (setsid(2)). This is critical: when PM2 stops the Next.js worker
+    // (SIGTERM), all processes in the same session are also signalled. By using
+    // setsid, the bash script gets its own session and survives pm2 stop/reload
+    // even though it was spawned from inside a PM2 cluster worker.
+    //
+    // Fallback: if setsid is not available (unlikely on Linux), fall back to
+    // plain bash with detached: true (best-effort orphan behaviour).
+    let spawnCmd: string;
+    let spawnArgs: string[];
+    try {
+      execSync('which setsid', { stdio: 'ignore' });
+      spawnCmd = 'setsid';
+      spawnArgs = ['bash', scriptPath, ...args];
+    } catch {
+      spawnCmd = 'bash';
+      spawnArgs = [scriptPath, ...args];
+    }
+
+    const child = spawn(spawnCmd, spawnArgs, {
       detached: true,
       stdio: ['ignore', logFd, logFd],
       cwd: appDir,

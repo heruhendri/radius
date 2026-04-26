@@ -23,6 +23,12 @@ FORCE=${1:-""}
 # Write PID for "is running" check
 echo $$ > "$PID_FILE"
 
+# Survive parent process death (e.g. pm2 stop killing the Node.js worker that
+# spawned this script). SIGHUP is sent when the controlling terminal/session
+# leader dies. We ignore it so the update continues even after the server stops.
+# SIGTERM is NOT ignored — it allows graceful kill if needed.
+trap '' SIGHUP
+
 # Redirect all output to log file (and stdout)
 exec > >(tee "$LOG_FILE") 2>&1
 
