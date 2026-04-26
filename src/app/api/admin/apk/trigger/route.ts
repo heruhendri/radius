@@ -238,12 +238,13 @@ exec "$JAVACMD" "-Dorg.gradle.appname=$(basename "$0")" -classpath "$CLASSPATH" 
 
 // ─── write project to disk ───────────────────────────────────────────────────
 
-function writeProjectToDisk(
+async function writeProjectToDisk(
   projectDir: string,
   role: RoleKey,
   appName: string,
   startUrl: string,
   baseUrl: string,
+  logoPath: string | null = null,
 ) {
   const cfg = ROLES[role];
   const pkgPath = cfg.pkg.replace(/\./g, '/');
@@ -284,19 +285,38 @@ function writeProjectToDisk(
   writeFileSync(join(projectDir, 'app/src/main/res/values/colors.xml'), colorsXml(cfg.color));
   writeFileSync(join(projectDir, 'app/src/main/res/values/themes.xml'), themesXml());
 
-  // Placeholder icons — valid PNG per density (required by AAPT2)
+  // Icons per density — use company logo if available, fallback to solid color
   const densitySizes: Record<string, number> = {
     mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192,
   };
-  // parse hex color to rgb
-  const hex = cfg.color.replace('#', '');
-  const ir = parseInt(hex.slice(0, 2), 16);
-  const ig = parseInt(hex.slice(2, 4), 16);
-  const ib = parseInt(hex.slice(4, 6), 16);
-  for (const [density, size] of Object.entries(densitySizes)) {
-    const iconPng = makePlaceholderPng(size, size, ir, ig, ib);
-    writeFileSync(join(projectDir, `app/src/main/res/mipmap-${density}/ic_launcher.png`), iconPng);
-    writeFileSync(join(projectDir, `app/src/main/res/mipmap-${density}/ic_launcher_round.png`), iconPng);
+
+  let logoConverted = false;
+  if (logoPath && existsSync(logoPath)) {
+    try {
+      await execAsync('which convert', { timeout: 3000 });
+      for (const [density, size] of Object.entries(densitySizes)) {
+        const outPng = join(projectDir, `app/src/main/res/mipmap-${density}/ic_launcher.png`);
+        await execAsync(
+          `convert "${logoPath}" -thumbnail ${size}x${size} -background white -gravity center -extent ${size}x${size} "${outPng}"`,
+          { timeout: 20000 },
+        );
+        copyFileSync(outPng, join(projectDir, `app/src/main/res/mipmap-${density}/ic_launcher_round.png`));
+      }
+      logoConverted = true;
+    } catch { /* ImageMagick not available or resize failed — fall through */ }
+  }
+
+  if (!logoConverted) {
+    // Fallback: solid color placeholder
+    const hex = cfg.color.replace('#', '');
+    const ir = parseInt(hex.slice(0, 2), 16);
+    const ig = parseInt(hex.slice(2, 4), 16);
+    const ib = parseInt(hex.slice(4, 6), 16);
+    for (const [density, size] of Object.entries(densitySizes)) {
+      const iconPng = makePlaceholderPng(size, size, ir, ig, ib);
+      writeFileSync(join(projectDir, `app/src/main/res/mipmap-${density}/ic_launcher.png`), iconPng);
+      writeFileSync(join(projectDir, `app/src/main/res/mipmap-${density}/ic_launcher_round.png`), iconPng);
+    }
   }
 }
 
@@ -434,15 +454,35 @@ export async function POST(req: NextRequest) {
     } catch { /* ignore */ }
   }
 
-  // Fetch company name and base URL
+  // Fetch company name, base URL, and logo path
   let baseUrl = (process.env.NEXTAUTH_URL || process.env.APP_URL || 'https://your-vps.com').replace(/\/$/, '');
   let appName = ROLES[role].label;
+  let logoPath: string | null = null;
   try {
-    const company = await prisma.company.findFirst({ select: { name: true } });
+    const company = await prisma.company.findFirst({ select: { name: true, logo: true, baseUrl: true } });
     if (company?.name) {
       appName = `${company.name} ${role.charAt(0).toUpperCase() + role.slice(1)}`;
     }
-  } catch { /* use default */ }
+    if (company?.baseUrl) {
+      baseUrl = company.baseUrl.replace(/\/$/, '');
+    }
+    if (company?.logo) {
+      // logo stored as e.g. "/api/uploads/logos/logo-abc.png" — resolve to filesystem path
+      const filename = company.logo.split('/').pop();
+      if (filename && /^[a-zA-Z0-9._-]+$/.test(filename)) {
+        const uploadDir = process.env.UPLOAD_DIR ||
+          (process.env.NODE_ENV === 'production' ? '/var/data/salfanet/uploads' : join(process.cwd(), 'data', 'uploads'));
+        const candidate = join(uploadDir, 'logos', filename);
+        if (existsSync(candidate)) {
+          logoPath = candidate;
+        } else {
+          // Legacy location
+          const legacy = join(process.cwd(), 'public', 'uploads', 'logos', filename);
+          if (existsSync(legacy)) logoPath = legacy;
+        }
+      }
+    }
+  } catch { /* use defaults */ }
 
   const startUrl   = `${baseUrl}${ROLES[role].pathSuffix}`;
   const startedAt  = new Date().toISOString();
@@ -453,7 +493,7 @@ export async function POST(req: NextRequest) {
 
   // Write project files
   try {
-    writeProjectToDisk(projectDir, role, appName, startUrl, baseUrl);
+    await writeProjectToDisk(projectDir, role, appName, startUrl, baseUrl, logoPath);
   } catch (err) {
     writeFileSync(statusFile, JSON.stringify({
       status: 'failed', startedAt, finishedAt: new Date().toISOString(),
