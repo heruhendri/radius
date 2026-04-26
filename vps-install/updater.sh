@@ -55,6 +55,11 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
+# Default to git branch mode (no GitHub Releases used)
+if [ -z "$USE_BRANCH" ] && [ -z "$TARGET_VERSION" ]; then
+    USE_BRANCH="master"
+fi
+
 # ─── Sanity checks ─────────────────────────────────────────────────────────
 if [ "$EUID" -ne 0 ]; then
     print_error "Run as root: sudo bash updater.sh"
