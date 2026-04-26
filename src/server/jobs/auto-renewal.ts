@@ -1,4 +1,5 @@
-﻿import { prisma } from '@/server/db/client'
+import 'server-only'
+import { prisma } from '@/server/db/client'
 import { nanoid } from 'nanoid'
 import { sendAutoRenewalSuccess } from '@/server/services/notifications/whatsapp-templates.service'
 import { sendAutoRenewalEmail } from '@/server/services/notifications/email.service'
@@ -244,7 +245,7 @@ async function payInvoiceFromBalance(user: any, invoice: any) {
         }
       })
 
-      console.log(`[Auto-Payment] ✅ User ${user.username} - Paid ${packagePrice} from balance. New balance: ${updatedUser.balance}. New expiry: ${newExpiredAt.toISOString()}`)
+      console.log(`[Auto-Payment] ? User ${user.username} - Paid ${packagePrice} from balance. New balance: ${updatedUser.balance}. New expiry: ${newExpiredAt.toISOString()}`)
 
       return { user: updatedUser, newExpiredAt }
     })
@@ -306,7 +307,7 @@ async function payInvoiceFromBalance(user: any, invoice: any) {
         console.error('[Auto-Payment] Push notification error:', pushError.message)
       }
 
-      console.log(`[Auto-Payment] ✅ Notifications sent to ${user.username}`)
+      console.log(`[Auto-Payment] ? Notifications sent to ${user.username}`)
     } catch (notifError: any) {
       console.error('[Auto-Payment] Notification error:', notifError.message)
       // Don't fail the transaction - notifications are optional
@@ -347,7 +348,7 @@ async function restoreUserInRADIUS(username: string, groupName?: string, ipAddre
       INSERT INTO radusergroup (username, groupname, priority)
       VALUES (${username}, ${groupName}, 1)
     `
-    console.log(`[RADIUS] Restored ${username} radusergroup → ${groupName}`)
+    console.log(`[RADIUS] Restored ${username} radusergroup ? ${groupName}`)
   } else {
     console.warn(`[RADIUS] No groupName for ${username} — radusergroup left empty`)
   }
@@ -372,5 +373,5 @@ async function restoreUserInRADIUS(username: string, groupName?: string, ipAddre
     console.error(`[RADIUS] Disconnect failed for ${username}:`, coaError.message)
   }
 
-  console.log(`[RADIUS] ✅ Fully restored ${username}`)
+  console.log(`[RADIUS] ? Fully restored ${username}`)
 }

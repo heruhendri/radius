@@ -1,4 +1,5 @@
-﻿import { NextAuthOptions } from 'next-auth';
+import 'server-only'
+import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { NextRequest, NextResponse } from 'next/server';
@@ -55,7 +56,7 @@ export const authOptions: NextAuthOptions = {
         tfaCode: { label: '2FA Code', type: 'text' },
       },
       async authorize(credentials) {
-        // ── Branch A: Two-Factor verification step ──────────────────────────
+        // -- Branch A: Two-Factor verification step --------------------------
         if (credentials?.tfaToken && credentials?.tfaCode) {
           const pending = await prisma.adminTwoFactorPending.findUnique({
             where: { token: credentials.tfaToken },
@@ -96,7 +97,7 @@ export const authOptions: NextAuthOptions = {
           return { id: user.id, username: user.username, email: user.email, name: user.name, role: user.role };
         }
 
-        // ── Branch B: Initial credential check ──────────────────────────────
+        // -- Branch B: Initial credential check ------------------------------
         if (!credentials?.username || !credentials?.password) {
           throw new Error('Username and password are required');
         }
@@ -122,7 +123,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid username or password');
         }
 
-        // ── 2FA gate: if enabled, block direct signIn() bypass ───────────────
+        // -- 2FA gate: if enabled, block direct signIn() bypass ---------------
         // The 2FA pending token is created by /api/admin/auth/pre-login.
         // If someone tries to call signIn() directly (bypassing pre-login),
         // we block the login by returning null.

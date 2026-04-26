@@ -1,3 +1,4 @@
+import 'server-only'
 /**
  * SSE Manager for Broadcasting Real-time Updates
  * Manages Server-Sent Events connections and broadcasts

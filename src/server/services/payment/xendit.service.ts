@@ -1,3 +1,4 @@
+import 'server-only'
 import { Xendit } from 'xendit-node'
 import { prisma } from '@/server/db/client'
 

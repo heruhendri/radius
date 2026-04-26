@@ -1,3 +1,4 @@
+import 'server-only'
 import { prisma } from '@/server/db/client';
 import { NextRequest } from 'next/server';
 import { nowWIB } from '@/lib/timezone';

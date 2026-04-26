@@ -1,3 +1,4 @@
+import 'server-only'
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 

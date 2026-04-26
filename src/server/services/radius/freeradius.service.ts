@@ -1,3 +1,4 @@
+import 'server-only'
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { writeFile, readFile } from 'fs/promises';

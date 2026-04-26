@@ -6,6 +6,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: [],
+    include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    exclude: ['node_modules/', '.next/', 'billing-radius/', 'mobile-app/'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

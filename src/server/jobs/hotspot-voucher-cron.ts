@@ -1,4 +1,5 @@
-﻿import { prisma } from '@/server/db/client'
+import 'server-only'
+import { prisma } from '@/server/db/client'
 import { nanoid } from 'nanoid'
 import { sendCoADisconnect } from '@/server/services/radius/coa-handler.service'
 import { sseManager } from '@/server/services/sse-manager.service'
@@ -26,7 +27,7 @@ async function disconnectHotspotViaAPI(
     }
     for (const user of activeUsers) {
       await api.write('/ip/hotspot/active/remove', [`=.id=${user['.id']}`])
-      console.log(`[Voucher Cron] 🔌 Disconnected ${username} via MikroTik API (.id=${user['.id']})`)
+      console.log(`[Voucher Cron] ?? Disconnected ${username} via MikroTik API (.id=${user['.id']})`)
     }
     await api.close()
     return activeUsers.length > 0
@@ -48,18 +49,18 @@ let isVoucherCronRunning = false
  * 
  * Workflow Voucher Hotspot:
  * 
- * 1. CREATED → Status: WAITING
+ * 1. CREATED ? Status: WAITING
  *    - Voucher baru dibuat dengan status WAITING
  *    - Sudah sync ke radcheck/radusergroup/radgroupreply
  *    - Session-Timeout diset berdasarkan validityValue profil
  * 
- * 2. WAITING → ACTIVE (First Login Detection)
+ * 2. WAITING ? ACTIVE (First Login Detection)
  *    - Cron check radacct untuk session baru
- *    - Jika ditemukan acctstarttime → voucher sedang digunakan
+ *    - Jika ditemukan acctstarttime ? voucher sedang digunakan
  *    - Update: firstLoginAt = firstSession, expiresAt = firstLoginAt + validity
  *    - Status berubah ke ACTIVE
  * 
- * 3. ACTIVE → EXPIRED (Expiration Check)
+ * 3. ACTIVE ? EXPIRED (Expiration Check)
  *    - Cron check expiresAt < NOW()
  *    - Atau total acctsessiontime >= usageDuration (jika ada limit durasi)
  *    - Status berubah ke EXPIRED
@@ -132,7 +133,7 @@ export async function runHotspotVoucherCron(): Promise<VoucherCronResult> {
 
   try {
     // ========================================
-    // PHASE 1: WAITING → ACTIVE (First Login Detection)
+    // PHASE 1: WAITING ? ACTIVE (First Login Detection)
     // ========================================
     console.log('[Voucher Cron] Phase 1: Checking WAITING vouchers for first login...')
     
@@ -192,12 +193,12 @@ export async function runHotspotVoucherCron(): Promise<VoucherCronResult> {
         })
 
         activatedCount++
-        console.log(`[Voucher Cron] ✅ ${voucher.code} activated: login=${firstLoginAt.toISOString()}, expires=${expiresAt.toISOString()}`)
+        console.log(`[Voucher Cron] ? ${voucher.code} activated: login=${firstLoginAt.toISOString()}, expires=${expiresAt.toISOString()}`)
       }
     }
 
     // ========================================
-    // PHASE 2: ACTIVE → EXPIRED (Expiration Check)
+    // PHASE 2: ACTIVE ? EXPIRED (Expiration Check)
     // ========================================
     console.log('[Voucher Cron] Phase 2: Checking ACTIVE vouchers for expiration...')
 
@@ -356,18 +357,18 @@ export async function runHotspotVoucherCron(): Promise<VoucherCronResult> {
               )
             }
           } catch (disconnectErr: any) {
-            console.error(`[Voucher Cron] ⚠️  Disconnect failed for ${voucher.code}:`, disconnectErr.message)
+            console.error(`[Voucher Cron] ??  Disconnect failed for ${voucher.code}:`, disconnectErr.message)
           }
 
           sessionsMarkedCount++
-          console.log(`[Voucher Cron] 📴 Session ${voucher.code} marked stopped (${sessionDuration}s)`)
+          console.log(`[Voucher Cron] ?? Session ${voucher.code} marked stopped (${sessionDuration}s)`)
         }
 
         expiredCount++
-        console.log(`[Voucher Cron] ✅ ${voucher.code} EXPIRED and removed from RADIUS`)
+        console.log(`[Voucher Cron] ? ${voucher.code} EXPIRED and removed from RADIUS`)
 
       } catch (err: any) {
-        console.error(`[Voucher Cron] ❌ Error processing ${voucher.code}:`, err.message)
+        console.error(`[Voucher Cron] ? Error processing ${voucher.code}:`, err.message)
       }
     }
 
@@ -408,7 +409,7 @@ export async function runHotspotVoucherCron(): Promise<VoucherCronResult> {
         }
 
         cleanedUpCount++
-        console.log(`[Voucher Cron] 🧹 ${voucher.code} cleaned from RADIUS (stale)`)
+        console.log(`[Voucher Cron] ?? ${voucher.code} cleaned from RADIUS (stale)`)
       }
 
       // Also check for any stale active sessions
@@ -438,12 +439,12 @@ export async function runHotspotVoucherCron(): Promise<VoucherCronResult> {
               session.acctsessionid,
               session.framedipaddress
             )
-            console.log(`[Voucher Cron] 🔌 Disconnected stale session ${voucher.code} via MikroTik API`)
+            console.log(`[Voucher Cron] ?? Disconnected stale session ${voucher.code} via MikroTik API`)
           } else {
-            console.log(`[Voucher Cron] ⚠️  NAS not found for ${session.nasipaddress}`)
+            console.log(`[Voucher Cron] ??  NAS not found for ${session.nasipaddress}`)
           }
         } catch (disconnectErr: any) {
-          console.error(`[Voucher Cron] ⚠️  Disconnect failed for stale ${voucher.code}:`, disconnectErr.message)
+          console.error(`[Voucher Cron] ??  Disconnect failed for stale ${voucher.code}:`, disconnectErr.message)
         }
 
         // Then mark session stopped with WIB time
@@ -471,7 +472,7 @@ export async function runHotspotVoucherCron(): Promise<VoucherCronResult> {
         })
 
         sessionsMarkedCount++
-        console.log(`[Voucher Cron] 📴 Stale session ${voucher.code} marked stopped (${sessionDuration}s)`)
+        console.log(`[Voucher Cron] ?? Stale session ${voucher.code} marked stopped (${sessionDuration}s)`)
       }
     }
 
@@ -539,9 +540,9 @@ export async function runHotspotVoucherCron(): Promise<VoucherCronResult> {
           timestamp: new Date().toISOString(),
         })
 
-        console.log('[Voucher Cron] 📡 SSE broadcast sent')
+        console.log('[Voucher Cron] ?? SSE broadcast sent')
       } catch (sseError: any) {
-        console.error('[Voucher Cron] ⚠️  SSE broadcast failed:', sseError.message)
+        console.error('[Voucher Cron] ??  SSE broadcast failed:', sseError.message)
         // Don't fail the cron if SSE fails
       }
     }
@@ -556,7 +557,7 @@ export async function runHotspotVoucherCron(): Promise<VoucherCronResult> {
     }
 
   } catch (error: any) {
-    console.error('[Voucher Cron] ❌ Fatal error:', error)
+    console.error('[Voucher Cron] ? Fatal error:', error)
 
     const completedAt = new Date()
     await prisma.cronHistory.update({
@@ -698,11 +699,11 @@ export async function syncVoucherToRadius(voucherId: string): Promise<{ success:
       ],
     })
 
-    console.log(`[RADIUS Sync] ✅ ${voucher.code} synced to RADIUS (group: ${uniqueGroupName})`)
+    console.log(`[RADIUS Sync] ? ${voucher.code} synced to RADIUS (group: ${uniqueGroupName})`)
     return { success: true, groupName: uniqueGroupName }
 
   } catch (error: any) {
-    console.error('[RADIUS Sync] ❌ Error:', error)
+    console.error('[RADIUS Sync] ? Error:', error)
     return { success: false, error: error.message }
   }
 }
@@ -735,11 +736,11 @@ export async function removeVoucherFromRadius(code: string): Promise<{ success: 
       })
     }
 
-    console.log(`[RADIUS Sync] 🗑️ ${code} removed from RADIUS`)
+    console.log(`[RADIUS Sync] ??? ${code} removed from RADIUS`)
     return { success: true }
 
   } catch (error: any) {
-    console.error('[RADIUS Sync] ❌ Error removing:', error)
+    console.error('[RADIUS Sync] ? Error removing:', error)
     return { success: false, error: error.message }
   }
 }

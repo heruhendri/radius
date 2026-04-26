@@ -1,3 +1,4 @@
+import 'server-only'
 import { z, ZodSchema } from 'zod';
 import { badRequest, validationError } from './api-response';
 

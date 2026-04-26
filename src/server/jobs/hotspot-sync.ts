@@ -1,4 +1,5 @@
-﻿import { prisma } from '@/server/db/client'
+import 'server-only'
+import { prisma } from '@/server/db/client'
 import { nanoid } from 'nanoid'
 import { sendCoADisconnect } from '@/server/services/radius/coa-handler.service'
 import { RouterOSAPI } from 'node-routeros'
@@ -52,7 +53,7 @@ async function disconnectHotspotViaMikrotikAPI(
     // Remove (disconnect) each matching session
     for (const user of activeUsers) {
       await api.write('/ip/hotspot/active/remove', [`=.id=${user['.id']}`])
-      console.log(`[Hotspot Sync] 🔌 Disconnected ${username} via MikroTik API (.id=${user['.id']})`)
+      console.log(`[Hotspot Sync] ?? Disconnected ${username} via MikroTik API (.id=${user['.id']})`)
     }
 
     await api.close()
@@ -83,7 +84,7 @@ async function disconnectHotspotViaMikrotikAPI(
  * 
  * This cron job:
  * 1. Scans radacct for new sessions from WAITING vouchers
- * 2. Updates usedAt and expiredAt based on first login (WAITING → USED)
+ * 2. Updates usedAt and expiredAt based on first login (WAITING ? USED)
  * 3. Checks for expired vouchers and updates status to EXPIRED
  * 4. Cleans up EXPIRED vouchers from FreeRADIUS tables
  * 
@@ -119,7 +120,7 @@ export async function syncHotspotWithRadius(): Promise<{
     console.log('[Hotspot Sync] Starting hotspot voucher sync...')
 
     // ========================================
-    // PART 1: Check for first login (WAITING → ACTIVE)
+    // PART 1: Check for first login (WAITING ? ACTIVE)
     // ========================================
     const waitingVouchers = await prisma.hotspotVoucher.findMany({
       where: {
@@ -195,19 +196,19 @@ export async function syncHotspotWithRadius(): Promise<{
               },
             })
           } catch (notifError) {
-            console.error(`⚠️ Failed to create notification for agent:`, notifError)
+            console.error(`?? Failed to create notification for agent:`, notifError)
           }
         }
 
         activatedCount++
         console.log(
-          `✅ [Hotspot Sync] ${voucher.code} activated (first login: ${firstLoginAt.toISOString()}, expires: ${expiresAt.toISOString()})`
+          `? [Hotspot Sync] ${voucher.code} activated (first login: ${firstLoginAt.toISOString()}, expires: ${expiresAt.toISOString()})`
         )
       }
     }
 
     // ========================================
-    // PART 2: Check for expired vouchers (ACTIVE → EXPIRED)
+    // PART 2: Check for expired vouchers (ACTIVE ? EXPIRED)
     // ========================================
     // Get current time from database server to match timezone
     const dbTime = await prisma.$queryRaw<{ now: Date }[]>`SELECT NOW() as now`
@@ -260,7 +261,7 @@ export async function syncHotspotWithRadius(): Promise<{
               },
             })
           } catch (notifError) {
-            console.error(`⚠️ Failed to create notification for agent:`, notifError)
+            console.error(`?? Failed to create notification for agent:`, notifError)
           }
         }
 
@@ -311,12 +312,12 @@ export async function syncHotspotWithRadius(): Promise<{
               activeSession?.framedipaddress,
             )
             if (disconnectResult.success) {
-              console.log(`🔌 [Hotspot Sync] Disconnected expired session: ${voucher.code}`)
+              console.log(`?? [Hotspot Sync] Disconnected expired session: ${voucher.code}`)
             } else {
-              console.log(`⚠️ [Hotspot Sync] Disconnect note for ${voucher.code}: ${disconnectResult.error}`)
+              console.log(`?? [Hotspot Sync] Disconnect note for ${voucher.code}: ${disconnectResult.error}`)
             }
           } else {
-            console.log(`⚠️ [Hotspot Sync] No NAS found to disconnect ${voucher.code}`)
+            console.log(`?? [Hotspot Sync] No NAS found to disconnect ${voucher.code}`)
           }
 
           // STEP 2: Mark session as stopped in radacct (if still open)
@@ -339,10 +340,10 @@ export async function syncHotspotWithRadius(): Promise<{
                 acctsessiontime: sessionDuration,
               },
             })
-            console.log(`📴 [Hotspot Sync] Session ${voucher.code} marked stopped in radacct (${sessionDuration}s)`)
+            console.log(`?? [Hotspot Sync] Session ${voucher.code} marked stopped in radacct (${sessionDuration}s)`)
           }
         } catch (disconnectError: any) {
-          console.error(`⚠️ [Hotspot Sync] Disconnect error for ${voucher.code}:`, disconnectError.message)
+          console.error(`?? [Hotspot Sync] Disconnect error for ${voucher.code}:`, disconnectError.message)
         }
 
         // Cleanup from FreeRADIUS tables
@@ -404,15 +405,15 @@ export async function syncHotspotWithRadius(): Promise<{
             })
           }
 
-          console.log(`🧹 [Hotspot Sync] ${voucher.code} marked as EXPIRED with Reply-Message in radreply`)
+          console.log(`?? [Hotspot Sync] ${voucher.code} marked as EXPIRED with Reply-Message in radreply`)
         } catch (cleanupError: any) {
-          console.error(`⚠️ [Hotspot Sync] Failed to cleanup ${voucher.code}:`, cleanupError.message)
+          console.error(`?? [Hotspot Sync] Failed to cleanup ${voucher.code}:`, cleanupError.message)
         }
 
         expiredCount++
-        console.log(`✅ [Hotspot Sync] ${voucher.code} marked as EXPIRED`)
+        console.log(`? [Hotspot Sync] ${voucher.code} marked as EXPIRED`)
       } catch (error: any) {
-        console.error(`❌ [Hotspot Sync] Failed to expire ${voucher.code}:`, error.message)
+        console.error(`? [Hotspot Sync] Failed to expire ${voucher.code}:`, error.message)
       }
     }
 
@@ -432,7 +433,7 @@ export async function syncHotspotWithRadius(): Promise<{
       },
     })
 
-    console.log(`[Hotspot Sync] ✅ Completed in ${duration}ms: ${message}`)
+    console.log(`[Hotspot Sync] ? Completed in ${duration}ms: ${message}`)
 
     return {
       success: true,
@@ -441,7 +442,7 @@ export async function syncHotspotWithRadius(): Promise<{
       message,
     }
   } catch (error: any) {
-    console.error('[Hotspot Sync] ❌ Error:', error)
+    console.error('[Hotspot Sync] ? Error:', error)
 
     const duration = new Date().getTime() - startedAt.getTime()
     await prisma.cronHistory.update({

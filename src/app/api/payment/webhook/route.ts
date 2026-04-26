@@ -664,7 +664,6 @@ async function handleVoucherOrder(
                 htmlBody = htmlBody.replace(regex, value);
               });
 
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
               const nodemailer = require('nodemailer');
               const transporter = nodemailer.createTransport({
                 host: emailSettings.smtpHost,
@@ -827,7 +826,6 @@ async function handleAgentDeposit(
         if (emailSettings?.enabled) {
           const company = await prisma.company.findFirst();
 
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
           const nodemailer = require('nodemailer');
           const transporter = nodemailer.createTransport({
             host: emailSettings.smtpHost,
@@ -1072,7 +1070,6 @@ async function handleCustomerTopUp(
           if (emailSettings?.enabled) {
             const company = await prisma.company.findFirst();
 
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
             const nodemailer = require('nodemailer');
             const transporter = nodemailer.createTransport({
               host: emailSettings.smtpHost,
@@ -1473,7 +1470,6 @@ async function handleInvoicePayment(
                   htmlBody = htmlBody.replace(regex, value);
                 });
 
-                // eslint-disable-next-line @typescript-eslint/no-require-imports
                 const nodemailer = require('nodemailer');
                 const transporter = nodemailer.createTransport({
                   host: emailSettings.smtpHost,

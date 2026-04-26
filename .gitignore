@@ -94,8 +94,11 @@ test3-result.txt
 # Vercel
 .vercel
 
-# Firebase service account (jangan di-commit)
+# Firebase / Google credentials (jangan di-commit)
 *firebase-service-account*.json
 salfanet-radius-firebase-adminsdk*.json
 google-services.json
+google-services-desktop.json
+*-adminsdk-*.json
+GoogleService-Info.plist
 

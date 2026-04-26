@@ -529,7 +529,7 @@ model pppoeUser {
   balance              Int        @default(0) // Saldo deposit (prepaid)
   autoRenewal          Boolean    @default(false) // Auto renew from balance
   connectionType       ConnectionType @default(PPPOE)
-  fcmTokens            String?    @db.Text // FCM tokens for push notifications (JSON array)
+  fcmTokens            String?    @db.Text // @deprecated — FCM removed, digantikan Web Push (pushSubscriptions). Kolom ini akan di-drop di migrasi berikutnya.
 
   // Customer document & installation fields (from billing-radius)
   idCardNumber         String?    @db.VarChar(50) // NIK KTP

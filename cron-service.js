@@ -3,8 +3,15 @@
 /**
  * Standalone Cron Service for SALFANET RADIUS
  *
- * This script runs independently from Next.js server
- * Start with: pm2 start cron-service.js --name salfanet-cron
+ * DEPRECATED: Penggunaan HTTP polling ke /api/cron.
+ * Sebaiknya gunakan runner langsung: npx tsx src/cron/runner.ts
+ * (sudah dikonfigurasi di production/ecosystem.config.js)
+ *
+ * File ini dipertahankan sebagai FALLBACK jika tsx tidak tersedia di VPS.
+ * Untuk migrasi ke runner baru, jalankan:
+ *   pm2 delete salfanet-cron
+ *   pm2 start production/ecosystem.config.js --only salfanet-cron
+ *   pm2 save
  */
 
 const cron = require('node-cron');

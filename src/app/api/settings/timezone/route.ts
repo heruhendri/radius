@@ -191,14 +191,25 @@ log_bin_trust_function_creators = 1
         await execFileAsync('sudo', ['cp', tempConfigPath, '/etc/mysql/mysql.conf.d/timezone.cnf']);
         await fs.unlink(tempConfigPath).catch(() => undefined);
         
-        // Get MySQL credentials from environment
-        const dbUser = process.env.DATABASE_USER || 'salfanet_user';
-        const dbPassword = process.env.DATABASE_PASSWORD || 'salfanetradius123';
+        // Get MySQL credentials from DATABASE_URL (same source as Prisma)
+        let dbUser = 'root';
+        let dbPassword = '';
+        try {
+          const dbUrlStr = process.env.DATABASE_URL || '';
+          const dbUrl = new URL(dbUrlStr.replace(/^mysql:\/\//, 'http://'));
+          dbUser = dbUrl.username || 'root';
+          dbPassword = decodeURIComponent(dbUrl.password || '');
+        } catch {
+          // fallback to env vars if DATABASE_URL parse fails
+          dbUser = process.env.DATABASE_USER || 'root';
+          dbPassword = process.env.DATABASE_PASSWORD || '';
+        }
         
         // Set timezone immediately without restart
+        const mysqlArgs = [`-u${dbUser}`];
+        if (dbPassword) mysqlArgs.push(`-p${dbPassword}`);
         await execFileAsync('mysql', [
-          `-u${dbUser}`,
-          `-p${dbPassword}`,
+          ...mysqlArgs,
           '-e',
           `SET GLOBAL time_zone = '${mysqlOffset}';`
         ]);

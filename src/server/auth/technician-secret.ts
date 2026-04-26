@@ -1,3 +1,4 @@
+import 'server-only'
 import { TextEncoder } from 'util';
 
 /** Resolved JWT secret — falls back to dev-only default in non-production. */

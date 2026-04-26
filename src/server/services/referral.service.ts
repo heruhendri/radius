@@ -1,3 +1,4 @@
+import 'server-only'
 /**
  * Referral code utilities for Salfanet RADIUS
  *

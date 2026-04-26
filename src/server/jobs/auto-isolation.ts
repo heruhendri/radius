@@ -1,4 +1,5 @@
-﻿import { prisma } from '@/server/db/client';
+import 'server-only'
+import { prisma } from '@/server/db/client';
 import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
 import { EmailService } from '@/server/services/notifications/email.service';
 import { sendPushToUser } from '@/server/services/notifications/push-templates.service';
@@ -48,7 +49,7 @@ export async function autoIsolateExpiredUsers() {
     });
 
     if (expiredUsers.length === 0) {
-      console.log('[AUTO-ISOLATE] ✅ No users to isolate');
+      console.log('[AUTO-ISOLATE] ? No users to isolate');
       return {
         success: true,
         isolatedCount: 0,
@@ -116,9 +117,9 @@ export async function autoIsolateExpiredUsers() {
           // Use CoA disconnect (handles DB + CoA + API fallback internally)
           const { disconnectPPPoEUser } = await import('@/server/services/radius/coa-handler.service');
           await disconnectPPPoEUser(user.username);
-          console.log(`[AUTO-ISOLATE] ✅ Disconnected ${user.username} via CoA`);
+          console.log(`[AUTO-ISOLATE] ? Disconnected ${user.username} via CoA`);
         } catch (coaError: any) {
-          console.log(`[AUTO-ISOLATE] ❌ Disconnect failed: ${coaError.message}`);
+          console.log(`[AUTO-ISOLATE] ? Disconnect failed: ${coaError.message}`);
         }
 
         // 6. Close session in radacct
@@ -145,18 +146,18 @@ export async function autoIsolateExpiredUsers() {
         }).catch(() => {}); // Ignore if activityLog doesn't exist
 
         isolatedCount++;
-        console.log(`[AUTO-ISOLATE] ✅ Successfully isolated ${user.username}`);
+        console.log(`[AUTO-ISOLATE] ? Successfully isolated ${user.username}`);
 
         // 8. Send notification (optional)
         try {
           await sendIsolationNotification(user);
         } catch (notifError) {
-          console.log(`[AUTO-ISOLATE] ⚠️ Notification failed for ${user.username}`);
+          console.log(`[AUTO-ISOLATE] ?? Notification failed for ${user.username}`);
         }
 
       } catch (userError: any) {
         const errorMsg = `Failed to isolate ${user.username}: ${userError.message}`;
-        console.error(`[AUTO-ISOLATE] ❌ ${errorMsg}`);
+        console.error(`[AUTO-ISOLATE] ? ${errorMsg}`);
         errors.push(errorMsg);
       }
     }
@@ -169,11 +170,11 @@ export async function autoIsolateExpiredUsers() {
       message: `Successfully isolated ${isolatedCount} out of ${expiredUsers.length} users`,
     };
 
-    console.log(`[AUTO-ISOLATE] ✅ Complete: ${JSON.stringify(result)}`);
+    console.log(`[AUTO-ISOLATE] ? Complete: ${JSON.stringify(result)}`);
     return result;
 
   } catch (error: any) {
-    console.error('[AUTO-ISOLATE] ❌ Fatal error:', error);
+    console.error('[AUTO-ISOLATE] ? Fatal error:', error);
     return {
       success: false,
       error: error.message,
@@ -219,7 +220,7 @@ export async function sendIsolationNotification(user: {
       companyEmail: company.email || '',
     };
 
-    // ── WhatsApp ────────────────────────────────────────────────────────────
+    // -- WhatsApp ------------------------------------------------------------
     if (company.isolationNotifyWhatsapp && user.phone) {
       try {
         // Prefer DB isolation template; fall back to plain message
@@ -235,23 +236,23 @@ export async function sendIsolationNotification(user: {
           }
         } else {
           message =
-            `🚫 *Layanan Internet Diisolir*\n\n` +
+            `?? *Layanan Internet Diisolir*\n\n` +
             `Halo ${templateVars.customerName},\n\n` +
             `Akun internet Anda (*${user.username}*) telah diisolir karena masa berlangganan habis.\n\n` +
-            `📅 Expired: ${expiredDate}\n\n` +
-            `Untuk mengaktifkan kembali, buka halaman berikut dan lakukan pembayaran:\n🔗 ${isolatedUrl}\n\n` +
-            `Butuh bantuan?\n📞 ${company.phone || '-'}\n\n` +
+            `?? Expired: ${expiredDate}\n\n` +
+            `Untuk mengaktifkan kembali, buka halaman berikut dan lakukan pembayaran:\n?? ${isolatedUrl}\n\n` +
+            `Butuh bantuan?\n?? ${company.phone || '-'}\n\n` +
             `Terima kasih,\n*${company.name}*`;
         }
 
         await WhatsAppService.sendMessage({ phone: user.phone, message });
-        console.log(`[Isolation] ✅ WhatsApp sent to ${user.username} (${user.phone})`);
+        console.log(`[Isolation] ? WhatsApp sent to ${user.username} (${user.phone})`);
       } catch (err: any) {
-        console.error(`[Isolation] ⚠️ WhatsApp failed for ${user.username}:`, err.message);
+        console.error(`[Isolation] ?? WhatsApp failed for ${user.username}:`, err.message);
       }
     }
 
-    // ── Email ───────────────────────────────────────────────────────────────
+    // -- Email ---------------------------------------------------------------
     if (company.isolationNotifyEmail && user.email) {
       try {
         const emailTemplate = await prisma.isolationTemplate.findFirst({
@@ -262,13 +263,13 @@ export async function sendIsolationNotification(user: {
         let subject: string;
         if (emailTemplate?.message) {
           htmlBody = emailTemplate.message;
-          subject = emailTemplate.subject || `⚠️ Akun Anda Telah Diisolir - ${user.username}`;
+          subject = emailTemplate.subject || `?? Akun Anda Telah Diisolir - ${user.username}`;
           for (const [key, val] of Object.entries(templateVars)) {
             htmlBody = htmlBody.replace(new RegExp(`{{${key}}}`, 'g'), val);
             subject = subject.replace(new RegExp(`{{${key}}}`, 'g'), val);
           }
         } else {
-          subject = `⚠️ Layanan Internet Diisolir - ${user.username}`;
+          subject = `?? Layanan Internet Diisolir - ${user.username}`;
           htmlBody = `
             <h2>Layanan Internet Diisolir</h2>
             <p>Halo <strong>${templateVars.customerName}</strong>,</p>
@@ -287,13 +288,13 @@ export async function sendIsolationNotification(user: {
           subject,
           html: htmlBody,
         });
-        console.log(`[Isolation] ✅ Email sent to ${user.username} (${user.email})`);
+        console.log(`[Isolation] ? Email sent to ${user.username} (${user.email})`);
       } catch (err: any) {
-        console.error(`[Isolation] ⚠️ Email failed for ${user.username}:`, err.message);
+        console.error(`[Isolation] ?? Email failed for ${user.username}:`, err.message);
       }
     }
 
-    // ── Web/FCM Push ────────────────────────────────────────────────────────
+    // -- Web/FCM Push --------------------------------------------------------
     try {
       // Find the first overdue invoice for this user (for amount/dueDate in push body)
       const overdueInvoice = await prisma.invoice.findFirst({
@@ -311,12 +312,12 @@ export async function sendIsolationNotification(user: {
         companyName: company.name || '',
         companyPhone: company.phone || '',
       });
-      console.log(`[Isolation] ✅ Push sent to ${user.username}`);
+      console.log(`[Isolation] ? Push sent to ${user.username}`);
     } catch (err: any) {
-      console.error(`[Isolation] ⚠️ Push failed for ${user.username}:`, err.message);
+      console.error(`[Isolation] ?? Push failed for ${user.username}:`, err.message);
     }
   } catch (error: any) {
-    console.error(`[Isolation] ⚠️ Notification error for ${user.username}:`, error.message);
+    console.error(`[Isolation] ?? Notification error for ${user.username}:`, error.message);
   }
 }
 

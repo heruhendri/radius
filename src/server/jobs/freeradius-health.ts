@@ -1,4 +1,5 @@
-﻿/**
+import 'server-only'
+/**
  * FreeRADIUS Health Check Cron Job
  * 
  * Monitors FreeRADIUS service health and automatically restarts if needed
@@ -197,7 +198,7 @@ async function sendAlert(message: string, severity: 'warning' | 'critical') {
                         toName: admin.name || 'Admin',
                         subject: `FreeRADIUS ${severity === 'critical' ? 'CRITICAL' : 'Warning'}: Service Alert`,
                         html: `
-                            <h2>🚨 FreeRADIUS Service Alert</h2>
+                            <h2>?? FreeRADIUS Service Alert</h2>
                             <p><strong>Severity:</strong> ${severity.toUpperCase()}</p>
                             <p><strong>Message:</strong></p>
                             <p>${message}</p>

@@ -1,3 +1,4 @@
+import 'server-only'
 /**
  * Hotspot Repository — Data Access Layer
  *

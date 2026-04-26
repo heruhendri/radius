@@ -1,3 +1,4 @@
+import 'server-only'
 import { RouterOSAPI } from 'node-routeros';
 
 export interface HotspotRouterConnection {

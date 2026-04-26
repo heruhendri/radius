@@ -1,3 +1,4 @@
+import 'server-only'
 import { getServerSession, Session } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { hasPermission, isSuperAdmin } from '@/server/auth/permissions';

@@ -1,4 +1,5 @@
-﻿import { prisma } from '@/server/db/client';
+import 'server-only'
+import { prisma } from '@/server/db/client';
 import { nanoid } from 'nanoid';
 
 export async function saveCronHistory(data: {

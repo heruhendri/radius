@@ -1,3 +1,4 @@
+import 'server-only'
 /**
  * Payment Repository — Data Access Layer
  *

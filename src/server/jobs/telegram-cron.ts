@@ -1,4 +1,5 @@
-﻿import cron, { ScheduledTask } from 'node-cron';
+import 'server-only'
+import cron, { ScheduledTask } from 'node-cron';
 import { prisma } from '@/server/db/client';
 import { nanoid } from 'nanoid';
 import { sendBackupToTelegram, sendHealthReport } from '@/server/services/notifications/telegram.service';

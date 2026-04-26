@@ -1,4 +1,5 @@
-﻿import { prisma } from '@/server/db/client'
+import 'server-only'
+import { prisma } from '@/server/db/client'
 import { nanoid } from 'nanoid'
 import { RouterOSAPI } from 'node-routeros'
 import { getIsolationSettings } from '@/server/services/isolation.service'
@@ -108,7 +109,7 @@ export async function disconnectViaMikrotikAPI(username: string) {
     // Try API-SSL first (8729), then plaintext (8728) — 5s hard timeout each
     const first = await withTimeout(tryDisconnect(primaryPort), 5000, `API ${host}:${primaryPort}`)
     if (first.success) {
-      console.log(`[MikroTik API] ✅ Disconnected ${username} on ${router.name} (${host}:${primaryPort})`)
+      console.log(`[MikroTik API] ? Disconnected ${username} on ${router.name} (${host}:${primaryPort})`)
       return
     }
 
@@ -116,7 +117,7 @@ export async function disconnectViaMikrotikAPI(username: string) {
       console.log(`[MikroTik API] Retry disconnect on fallback port ${fallbackPort} (reason: ${first.error})`)
       const second = await withTimeout(tryDisconnect(fallbackPort), 5000, `API ${host}:${fallbackPort}`)
       if (second.success) {
-        console.log(`[MikroTik API] ✅ Disconnected ${username} on ${router.name} (${host}:${fallbackPort})`)
+        console.log(`[MikroTik API] ? Disconnected ${username} on ${router.name} (${host}:${fallbackPort})`)
         return
       }
       throw new Error(`Disconnect failed (${primaryPort}: ${first.error}) (${fallbackPort}: ${second.error})`)
@@ -252,8 +253,8 @@ export async function autoIsolatePPPoEUsers(): Promise<{
     }
 
     // Find active users with expiredAt before today minus grace period
-    // gracePeriodDays=0 → isolate same day as expiry
-    // gracePeriodDays=3 → give 3 extra days before isolation
+    // gracePeriodDays=0 ? isolate same day as expiry
+    // gracePeriodDays=3 ? give 3 extra days before isolation
     const expiredUsers = await prisma.$queryRaw<Array<{
       id: string
       username: string
@@ -346,7 +347,7 @@ export async function autoIsolatePPPoEUsers(): Promise<{
             `[PPPoE Auto-Isolir] Disconnect ${user.username}: API=${disconnectResult.apiSuccess}, CoA=${disconnectResult.coaSuccess}`
           )
         } catch (disconnectError: any) {
-          console.error(`[PPPoE Auto-Isolir] ❌ Disconnect failed for ${user.username}:`, disconnectError.message)
+          console.error(`[PPPoE Auto-Isolir] ? Disconnect failed for ${user.username}:`, disconnectError.message)
         }
 
         // Close session in radacct
@@ -357,11 +358,11 @@ export async function autoIsolatePPPoEUsers(): Promise<{
           WHERE username = ${user.username} 
             AND acctstoptime IS NULL
         `
-        console.log(`[PPPoE Auto-Isolir] 📝 Session closed in radacct for ${user.username}`)
+        console.log(`[PPPoE Auto-Isolir] ?? Session closed in radacct for ${user.username}`)
 
         isolatedCount++
         console.log(
-          `✅ [PPPoE Auto-Isolir] User ${user.username} isolated (expired: ${
+          `? [PPPoE Auto-Isolir] User ${user.username} isolated (expired: ${
             user.expiredAt ? new Date(user.expiredAt).toISOString().split('T')[0] : 'N/A'
           })`
         )
@@ -391,7 +392,7 @@ export async function autoIsolatePPPoEUsers(): Promise<{
           console.error(`[PPPoE Auto-Isolir] Customer notification failed for ${user.username}:`, customerNotifError.message)
         }
       } catch (error: any) {
-        console.error(`❌ [PPPoE Auto-Isolir] Failed to isolate ${user.username}:`, error.message)
+        console.error(`? [PPPoE Auto-Isolir] Failed to isolate ${user.username}:`, error.message)
       }
     }
 
@@ -408,7 +409,7 @@ export async function autoIsolatePPPoEUsers(): Promise<{
       },
     })
 
-    console.log(`[PPPoE Auto-Isolir] ✅ Completed: ${message}`)
+    console.log(`[PPPoE Auto-Isolir] ? Completed: ${message}`)
 
     // Create bulk isolation notification
     if (isolatedCount > 0) {
@@ -425,7 +426,7 @@ export async function autoIsolatePPPoEUsers(): Promise<{
       isolated: isolatedCount 
     }
   } catch (error: any) {
-    console.error('[PPPoE Auto-Isolir] ❌ Error:', error)
+    console.error('[PPPoE Auto-Isolir] ? Error:', error)
     
     if (history) {
       const duration = new Date().getTime() - startedAt.getTime()

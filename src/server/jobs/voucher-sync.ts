@@ -1,4 +1,5 @@
-﻿import { prisma } from '@/server/db/client'
+import 'server-only'
+import { prisma } from '@/server/db/client'
 import { disconnectExpiredSessions, disconnectPPPoEUser, sendCoADisconnect } from '@/server/services/radius/coa-handler.service'
 import { nanoid } from 'nanoid'
 import { randomBytes } from 'crypto'
@@ -246,12 +247,12 @@ export async function syncVoucherFromRadius(): Promise<{ success: boolean; synce
 
           if (coaResult.success) {
             alreadyDisconnectedCount++
-            console.log(`[CRON] ✓ Disconnected already-expired ${session.username} from ${nas.name} (${coaTargetIp})`)
+            console.log(`[CRON] ? Disconnected already-expired ${session.username} from ${nas.name} (${coaTargetIp})`)
           } else {
-            console.error(`[CRON] ✗ Failed to disconnect ${session.username}:`, coaResult.error)
+            console.error(`[CRON] ? Failed to disconnect ${session.username}:`, coaResult.error)
           }
         } else {
-          console.error(`[CRON] ✗ No router found for voucher ${session.username}`)
+          console.error(`[CRON] ? No router found for voucher ${session.username}`)
         }
       }
     }
@@ -412,12 +413,12 @@ export async function syncVoucherFromRadius(): Promise<{ success: boolean; synce
 
             if (coaResult.success) {
               disconnectedCount++
-              console.log(`[CRON] ✓ Disconnected ${voucher.code} from ${nas.name} (${coaTargetIp})`)
+              console.log(`[CRON] ? Disconnected ${voucher.code} from ${nas.name} (${coaTargetIp})`)
             } else {
-              console.error(`[CRON] ✗ Failed to disconnect ${voucher.code}:`, coaResult.error)
+              console.error(`[CRON] ? Failed to disconnect ${voucher.code}:`, coaResult.error)
             }
           } else {
-            console.error(`[CRON] ✗ No router found for voucher ${voucher.code}`)
+            console.error(`[CRON] ? No router found for voucher ${voucher.code}`)
           }
         }
 
@@ -1052,7 +1053,7 @@ export async function autoIsolateExpiredUsers(): Promise<{ success: boolean; iso
   try {
     // IMPORTANT: Use timezone-aware comparison for isolir
     // User sees expiry in WIB, so we isolate at END of that WIB day
-    // Example: expired 5 Nov (WIB) → isolate at 6 Nov 00:00 (WIB) = 5 Nov 17:00 (UTC)
+    // Example: expired 5 Nov (WIB) ? isolate at 6 Nov 00:00 (WIB) = 5 Nov 17:00 (UTC)
     const nowInWIB = nowWIB()
     const startOfTodayWIB = startOfDayWIBtoUTC(nowInWIB)
 
@@ -1209,10 +1210,10 @@ export async function autoIsolateExpiredUsers(): Promise<{ success: boolean; iso
         }
 
         isolatedCount++
-        console.log(`✅ [Auto Isolir] User ${user.username} isolated (expired: ${user.expiredAt?.toISOString().split('T')[0]})`)
+        console.log(`? [Auto Isolir] User ${user.username} isolated (expired: ${user.expiredAt?.toISOString().split('T')[0]})`)
       } catch (error: any) {
         errors.push(`${user.username}: ${error.message}`)
-        console.error(`❌ [Auto Isolir] Failed to isolate ${user.username}:`, error.message)
+        console.error(`? [Auto Isolir] Failed to isolate ${user.username}:`, error.message)
       }
     }
 
@@ -1445,7 +1446,7 @@ export async function generateInvoices(force = false): Promise<{ success: boolea
 
         if (existingInvoice) {
           skipped++;
-          console.log(`⏭️  Skipped ${user.username} - Already has unpaid invoice (${existingInvoice.invoiceNumber})`);
+          console.log(`??  Skipped ${user.username} - Already has unpaid invoice (${existingInvoice.invoiceNumber})`);
           continue;
         }
 
@@ -1464,7 +1465,7 @@ export async function generateInvoices(force = false): Promise<{ success: boolea
           });
           if (paidInvoiceForPeriod) {
             skipped++;
-            console.log(`⏭️  Skipped ${user.username} - Already has PAID invoice for this period (${paidInvoiceForPeriod.invoiceNumber}, dueDate=${paidInvoiceForPeriod.dueDate.toISOString().slice(0, 10)})`);
+            console.log(`??  Skipped ${user.username} - Already has PAID invoice for this period (${paidInvoiceForPeriod.invoiceNumber}, dueDate=${paidInvoiceForPeriod.dueDate.toISOString().slice(0, 10)})`);
             continue;
           }
         }
@@ -1484,7 +1485,7 @@ export async function generateInvoices(force = false): Promise<{ success: boolea
           });
           if (paidForBillingDay) {
             skipped++;
-            console.log(`⏭️  Skipped ${user.username} - Already has PAID invoice for billingDay ${nextBD.toISOString().slice(0, 10)} (${paidForBillingDay.invoiceNumber})`);
+            console.log(`??  Skipped ${user.username} - Already has PAID invoice for billingDay ${nextBD.toISOString().slice(0, 10)} (${paidForBillingDay.invoiceNumber})`);
             continue;
           }
         }
@@ -1492,7 +1493,7 @@ export async function generateInvoices(force = false): Promise<{ success: boolea
         // Get amount from profile
         if (!user.profile) {
           skipped++;
-          console.log(`⏭️  Skipped ${user.username} - No profile assigned`);
+          console.log(`??  Skipped ${user.username} - No profile assigned`);
           continue;
         }
 
@@ -1507,7 +1508,7 @@ export async function generateInvoices(force = false): Promise<{ success: boolea
             const firstPeriodEnd = new Date(userCreatedAt.getTime() + 31 * 24 * 60 * 60 * 1000);
             if (user.expiredAt <= firstPeriodEnd) {
               skipped++;
-              console.log(`⏭️  Skipped ${user.username} - PREPAID first billing period (created: ${userCreatedAt.toISOString().slice(0, 10)}, expires: ${user.expiredAt.toISOString().slice(0, 10)})`);
+              console.log(`??  Skipped ${user.username} - PREPAID first billing period (created: ${userCreatedAt.toISOString().slice(0, 10)}, expires: ${user.expiredAt.toISOString().slice(0, 10)})`);
               continue;
             }
           }
@@ -1520,7 +1521,7 @@ export async function generateInvoices(force = false): Promise<{ success: boolea
             const userCreatedAt2 = new Date(user.createdAt);
             if (userCreatedAt2 >= billingPeriodStart) {
               skipped++;
-              console.log(`⏭️  Skipped ${user.username} - POSTPAID first billing period (created: ${userCreatedAt2.toISOString().slice(0, 10)}, period started: ${billingPeriodStart.toISOString().slice(0, 10)})`);
+              console.log(`??  Skipped ${user.username} - POSTPAID first billing period (created: ${userCreatedAt2.toISOString().slice(0, 10)}, period started: ${billingPeriodStart.toISOString().slice(0, 10)})`);
               continue;
             }
           }
@@ -1544,7 +1545,7 @@ export async function generateInvoices(force = false): Promise<{ success: boolea
           // PREPAID: Due date = expiredAt (user must pay before expiry)
           if (!user.expiredAt) {
             skipped++;
-            console.log(`⏭️  Skipped ${user.username} - PREPAID user has no expiredAt`);
+            console.log(`??  Skipped ${user.username} - PREPAID user has no expiredAt`);
             continue;
           }
           dueDate = user.expiredAt;
@@ -1593,10 +1594,10 @@ export async function generateInvoices(force = false): Promise<{ success: boolea
         const expiredAtStr = user.expiredAt ? formatWIB(user.expiredAt, 'd MMMM yyyy') : 'N/A';
         const statusLabel = isOverdue ? '(OVERDUE)' : '(PENDING)';
         const ppnLabel = taxRate ? ` (incl. PPN ${taxRate}%)` : '';
-        console.log(`✅ Generated invoice ${invoiceNumber} for ${user.username} - Rp ${invoiceAmount.toLocaleString()}${ppnLabel} (expires: ${expiredAtStr}) ${statusLabel}`);
+        console.log(`? Generated invoice ${invoiceNumber} for ${user.username} - Rp ${invoiceAmount.toLocaleString()}${ppnLabel} (expires: ${expiredAtStr}) ${statusLabel}`);
       } catch (error: any) {
         errors.push(`${user.username}: ${error.message}`);
-        console.error(`❌ Error generating invoice for ${user.username}:`, error);
+        console.error(`? Error generating invoice for ${user.username}:`, error);
       }
     }
 

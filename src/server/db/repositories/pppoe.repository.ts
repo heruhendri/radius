@@ -1,3 +1,4 @@
+import 'server-only'
 /**
  * PPPoE User Repository — Data Access Layer
  *

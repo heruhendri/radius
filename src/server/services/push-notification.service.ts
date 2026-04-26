@@ -1,3 +1,4 @@
+import 'server-only'
 import * as webpush from 'web-push';
 import { prisma } from '@/server/db/client';
 
@@ -485,7 +486,7 @@ export async function sendWebPushToUsers(userIds: string[], payload: PushNotific
 }
 
 export async function getPushDashboardStats() {
-  const [totalUsers, areas, totalBroadcasts, totalSubscriptions, subscribedUsers, agentSubscribers, technicianSubscribers, adminSubscribers, fcmUsers] = await Promise.all([
+  const [totalUsers, areas, totalBroadcasts, totalSubscriptions, subscribedUsers, agentSubscribers, technicianSubscribers, adminSubscribers] = await Promise.all([
     prisma.pppoeUser.count({
       where: { status: 'active' },
     }),
@@ -517,12 +518,6 @@ export async function getPushDashboardStats() {
       distinct: ['adminId'],
       select: { adminId: true },
     }),
-    prisma.pppoeUser.count({
-      where: {
-        fcmTokens: { not: null },
-        NOT: { fcmTokens: '' },
-      },
-    }),
   ]);
 
   return {
@@ -534,7 +529,6 @@ export async function getPushDashboardStats() {
     agentSubscribers: agentSubscribers.length,
     technicianSubscribers: technicianSubscribers.length,
     adminSubscribers: adminSubscribers.length,
-    fcmUserCount: fcmUsers,
   };
 }
 

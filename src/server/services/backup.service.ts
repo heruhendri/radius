@@ -1,3 +1,4 @@
+import 'server-only'
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { prisma } from '@/server/db/client';

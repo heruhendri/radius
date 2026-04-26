@@ -1,6 +1,6 @@
+import 'server-only'
 import { prisma } from '@/server/db/client';
 import { formatWIB } from '@/lib/timezone';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const nodemailer = require('nodemailer');
 
 export interface EmailOptions {

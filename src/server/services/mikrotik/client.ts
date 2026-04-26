@@ -1,4 +1,5 @@
-﻿import { RouterOSAPI } from 'node-routeros'
+import 'server-only'
+import { RouterOSAPI } from 'node-routeros'
 
 export interface MikroTikConfig {
   host: string
@@ -27,7 +28,7 @@ export class MikroTikConnection {
       user: this.config.username,
       password: this.config.password,
       port: this.config.port,
-      // node-routeros expects timeout in SECONDS (not ms); our config is in ms → divide by 1000
+      // node-routeros expects timeout in SECONDS (not ms); our config is in ms ? divide by 1000
       timeout: Math.round(timeoutMs / 1000),
     }
     
@@ -395,9 +396,9 @@ export class MikroTikConnection {
    * Setup firewall forwarding rules for VPN inter-client routing.
    * This allows all VPN clients (NAS routers + VPS/FreeRADIUS) to communicate
    * through the CHR hub. Essential for:
-   * - NAS → VPS: RADIUS auth/acct (UDP 1812/1813) via VPN
-   * - VPS → NAS: CoA/Disconnect (UDP 3799) via VPN
-   * - VPS → NAS: MikroTik API access (TCP 8728) via VPN
+   * - NAS ? VPS: RADIUS auth/acct (UDP 1812/1813) via VPN
+   * - VPS ? NAS: CoA/Disconnect (UDP 3799) via VPN
+   * - VPS ? NAS: MikroTik API access (TCP 8728) via VPN
    * 
    * Compatible with RouterOS 6 and 7 (uses /ip/firewall/filter path with = syntax)
    */
@@ -426,7 +427,7 @@ export class MikroTikConnection {
       const vpnSubnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`
 
       // Rule 1: Allow forwarding between VPN clients (ppp interfaces)
-      // This enables NAS ↔ VPS communication through the CHR hub
+      // This enables NAS ? VPS communication through the CHR hub
       try {
         await this.conn!.write('/ip/firewall/filter/add', [
           '=chain=forward',
@@ -435,7 +436,7 @@ export class MikroTikConnection {
           '=action=accept',
           `=comment=${comment}`,
         ])
-        console.log('✓ VPN forward rule added (subnet ↔ subnet)')
+        console.log('? VPN forward rule added (subnet ? subnet)')
       } catch (e) {
         console.error('Failed to add VPN forward rule:', e)
       }
@@ -450,7 +451,7 @@ export class MikroTikConnection {
           '=action=accept',
           `=comment=${comment}-RADIUS`,
         ])
-        console.log('✓ RADIUS input rule added')
+        console.log('? RADIUS input rule added')
       } catch (e) {
         console.error('Failed to add RADIUS input rule:', e)
       }
@@ -465,7 +466,7 @@ export class MikroTikConnection {
           '=action=accept',
           `=comment=${comment}-API`,
         ])
-        console.log('✓ API input rule added')
+        console.log('? API input rule added')
       } catch (e) {
         console.error('Failed to add API input rule:', e)
       }

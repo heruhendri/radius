@@ -1,8 +1,9 @@
-﻿import { prisma } from '@/server/db/client'
+import 'server-only'
+import { prisma } from '@/server/db/client'
 import { nanoid } from 'nanoid'
 
 /**
- * Update invoice status: PENDING → OVERDUE if past due date
+ * Update invoice status: PENDING ? OVERDUE if past due date
  * Runs hourly to keep invoice status accurate
  */
 export async function updateInvoiceStatus(): Promise<{

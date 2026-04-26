@@ -1,4 +1,5 @@
-﻿/**
+import 'server-only'
+/**
  * PPPoE Session Sync — Pure RADIUS approach (no MikroTik API).
  *
  * Runs periodically (every 5 min) and maintains radacct health:
@@ -15,7 +16,7 @@ import { prisma } from '@/server/db/client';
 import { nanoid } from 'nanoid';
 import { randomUUID } from 'crypto';
 
-// ── Types ───────────────────────────────────────────────────────────────────
+// -- Types -------------------------------------------------------------------
 
 interface SyncResult {
   success: boolean;
@@ -26,12 +27,12 @@ interface SyncResult {
   error?: string;
 }
 
-// ── Lock ────────────────────────────────────────────────────────────────────
+// -- Lock --------------------------------------------------------------------
 
 let isSyncRunning = 0;  // timestamp lock: 0 = free, >0 = lock start time
 const SYNC_LOCK_TTL_MS = 2 * 60 * 1000;  // auto-expire after 2 minutes
 
-// ── Main sync ───────────────────────────────────────────────────────────────
+// -- Main sync ---------------------------------------------------------------
 
 export async function syncPPPoESessions(): Promise<SyncResult> {
   const now = Date.now();
@@ -51,7 +52,7 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
     // 1. Close stale sessions — no Accounting-Update in over 90 minutes
     //    Acct-Interim-Interval = 300s (5 min), so 90 min = 18 missed intervals.
     //    90 minutes provides a safe window that survives:
-    //    - Web app rebuild (PM2 stop→build→start, typically 5-20 min)
+    //    - Web app rebuild (PM2 stop?build?start, typically 5-20 min)
     //    - Brief FreeRADIUS restart (NAS sync, health check, OOM recovery)
     //    - MikroTik RADIUS reconnect delay after RADIUS restarts
     //    The previous 30-minute threshold was too aggressive: if FreeRADIUS
@@ -68,7 +69,7 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
     `;
     closed += Number(staleResult);
     if (staleResult > 0) {
-      console.log(`[PPPoE-Sync] 🔴 Closed ${staleResult} stale session(s) (no update >30m)`);
+      console.log(`[PPPoE-Sync] ?? Closed ${staleResult} stale session(s) (no update >30m)`);
     }
 
     // 2. Close sessions for users that are blocked/stop/deleted in pppoe_users
@@ -84,7 +85,7 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
     `;
     closed += Number(blockedResult);
     if (blockedResult > 0) {
-      console.log(`[PPPoE-Sync] 🔴 Closed ${blockedResult} session(s) for blocked/stop users`);
+      console.log(`[PPPoE-Sync] ?? Closed ${blockedResult} session(s) for blocked/stop users`);
     }
 
     // 3. Auto-import orphan RADIUS sessions into pppoe_users
@@ -112,7 +113,7 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
 
       for (const { username } of orphanRows) {
         try {
-          // Look up group from radusergroup → find matching pppoeProfile
+          // Look up group from radusergroup ? find matching pppoeProfile
           const userGroup = await prisma.radusergroup.findFirst({
             where: { username },
             select: { groupname: true },
@@ -128,7 +129,7 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
           }
 
           if (!profileId) {
-            console.log(`[PPPoE-Sync] ⚠️ Skip import "${username}" — no profile found`);
+            console.log(`[PPPoE-Sync] ?? Skip import "${username}" — no profile found`);
             continue;
           }
 
@@ -154,17 +155,17 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
           });
 
           imported++;
-          console.log(`[PPPoE-Sync] ✅ Imported user "${username}" dari sesi RADIUS aktif`);
+          console.log(`[PPPoE-Sync] ? Imported user "${username}" dari sesi RADIUS aktif`);
         } catch (importErr: any) {
           // Skip if already exists (race condition) or other DB error
           if (!importErr.message?.includes('Unique constraint')) {
-            console.error(`[PPPoE-Sync] ⚠️ Gagal import "${username}":`, importErr.message);
+            console.error(`[PPPoE-Sync] ?? Gagal import "${username}":`, importErr.message);
           }
         }
       }
 
       if (imported > 0) {
-        console.log(`[PPPoE-Sync] 📥 Total imported: ${imported} user(s) dari RADIUS`);
+        console.log(`[PPPoE-Sync] ?? Total imported: ${imported} user(s) dari RADIUS`);
       }
     }
 
@@ -184,7 +185,7 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
     `;
     closed += Number(orphanResult);
     if (orphanResult > 0) {
-      console.log(`[PPPoE-Sync] 🔴 Closed ${orphanResult} orphan session(s) (user tidak terdaftar di RADIUS)`);
+      console.log(`[PPPoE-Sync] ?? Closed ${orphanResult} orphan session(s) (user tidak terdaftar di RADIUS)`);
     }
 
     // 4. Update acctsessiontime for all active sessions (keep it accurate)
@@ -220,12 +221,12 @@ export async function syncPPPoESessions(): Promise<SyncResult> {
     });
 
     if (closed > 0 || imported > 0) {
-      console.log(`[PPPoE-Sync] ✅ ${message}`);
+      console.log(`[PPPoE-Sync] ? ${message}`);
     }
 
     return { success: true, inserted: imported, closed, routers: activeNasCount, routerErrors: 0 };
   } catch (error: any) {
-    console.error('[PPPoE-Sync] ❌ Error:', error.message);
+    console.error('[PPPoE-Sync] ? Error:', error.message);
 
     await prisma.cronHistory.create({
       data: {

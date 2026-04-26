@@ -1,3 +1,4 @@
+import 'server-only'
 import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
 import { prisma } from '@/server/db/client';
 

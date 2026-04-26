@@ -1,4 +1,5 @@
-﻿/**
+import 'server-only'
+/**
  * API Rate Limiting Utility
  *
  * Menggunakan in-memory store.

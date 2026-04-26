@@ -1,3 +1,4 @@
+import 'server-only'
 /**
  * PPPoE Rate Limit Change Without Disconnect
  *

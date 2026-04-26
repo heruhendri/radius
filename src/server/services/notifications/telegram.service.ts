@@ -1,3 +1,4 @@
+import 'server-only'
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { createReadStream, createWriteStream } from 'fs';

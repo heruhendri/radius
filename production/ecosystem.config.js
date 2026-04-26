@@ -32,26 +32,25 @@ module.exports = {
       // Restart every 8 hours — offset to :03 to avoid clashing with hourly cron jobs at :00
       cron_restart: '3 */8 * * *'
     },
-    // Standalone Cron Service
+    // Standalone Cron Service (Direct DB — no HTTP dependency on Next.js)
     {
       name: 'salfanet-cron',
-      script: './cron-service.js',
+      script: 'npx',
+      args: 'tsx src/cron/runner.ts',
       cwd: process.env.APP_DIR || '/var/www/salfanet-radius',
       instances: 1,
       exec_mode: 'fork',
       watch: false,
-      // Cron tidak perlu banyak memori — cukup 120MB heap
+      // Cron tidak perlu banyak memori — cukup 150MB heap
       max_memory_restart: '150M',
       node_args: [
-        '--max-old-space-size=120',  // Limit heap to 120MB
+        '--max-old-space-size=120',
         '--max-semi-space-size=8',
         '--expose-gc',
       ],
       env: {
         NODE_ENV: 'production',
-        // NODE_OPTIONS tidak diisi — sudah diatur via node_args di atas
-        API_URL: 'http://localhost:3000',
-        TZ: 'Asia/Jakarta'
+        TZ: 'Asia/Jakarta',
       },
       error_file: './logs/cron-error.log',
       out_file: './logs/cron-out.log',

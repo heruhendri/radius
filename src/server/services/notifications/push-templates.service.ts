@@ -1,9 +1,9 @@
+import 'server-only'
 /**
  * Push Notification Templates
- * Structured templates matching email/WhatsApp templates for FCM push notifications
+ * Structured templates matching email/WhatsApp templates for Web Push (PWA)
  */
 
-import { sendFCMNotifications } from '@/server/services/notifications/push.service';
 import { prisma } from '@/server/db/client';
 import {
   sendWebPushBroadcast,
@@ -238,7 +238,6 @@ export async function sendPushToUser(
     const user = await prisma.pppoeUser.findUnique({
       where: { id: userId },
       select: {
-        fcmTokens: true,
         name: true,
         username: true,
         pushSubscriptions: {
@@ -253,29 +252,8 @@ export async function sendPushToUser(
       return { success: false, sent: 0, failed: 0 };
     }
 
-    let tokenObjects: any[] = [];
-    let tokens: string[] = [];
-    if (user.fcmTokens) {
-      try {
-        const parsed = JSON.parse(user.fcmTokens);
-        if (Array.isArray(parsed)) {
-          tokenObjects = parsed;
-          tokens = parsed.map((t: any) => typeof t === 'string' ? t : t.token).filter(Boolean);
-        } else if (typeof parsed === 'string') {
-          tokenObjects = [parsed];
-          tokens = [parsed];
-        }
-      } catch {
-        tokenObjects = [user.fcmTokens];
-        tokens = [user.fcmTokens];
-      }
-    }
-
-    const uniqueTokens = [...new Set(tokens)];
-    const hasWebSubscriptions = user.pushSubscriptions.length > 0;
-
-    if (uniqueTokens.length === 0 && !hasWebSubscriptions) {
-      console.log(`[Push] No push channel found for user ${userId}`);
+    if (user.pushSubscriptions.length === 0) {
+      console.log(`[Push] No web push subscriptions found for user ${userId}`);
       return { success: false, sent: 0, failed: 0 };
     }
 
@@ -285,46 +263,19 @@ export async function sendPushToUser(
 
     const { title, body, dataPayload } = generatePushContent(type, data);
 
-    const [fcmResult, webPushResult] = await Promise.all([
-      uniqueTokens.length > 0
-        ? sendFCMNotifications(uniqueTokens, title, body, dataPayload)
-        : Promise.resolve({ success: 0, failed: 0, invalidTokens: [] as string[] }),
-      hasWebSubscriptions
-        ? sendWebPushToUser(userId, {
-            title,
-            body,
-            url: dataPayload.link,
-            tag: type,
-            data: dataPayload,
-          })
-        : Promise.resolve({ sent: 0, failed: 0, total: 0 }),
-    ]);
+    const webPushResult = await sendWebPushToUser(userId, {
+      title,
+      body,
+      url: dataPayload.link,
+      tag: type,
+      data: dataPayload,
+    });
 
     console.log(
-      `[Push] Sent ${type} to user ${userId}: ${fcmResult.success + webPushResult.sent} success, ${fcmResult.failed + webPushResult.failed} failed`
+      `[Push] Sent ${type} to user ${userId}: ${webPushResult.sent} success, ${webPushResult.failed} failed`
     );
 
-    if (fcmResult.invalidTokens && fcmResult.invalidTokens.length > 0) {
-      try {
-        const invalidSet = new Set(fcmResult.invalidTokens);
-        const cleanedTokenObjects = tokenObjects.filter((t: any) => {
-          const tok = typeof t === 'string' ? t : t.token;
-          return tok && !invalidSet.has(tok);
-        });
-        await prisma.pppoeUser.update({
-          where: { id: userId },
-          data: { fcmTokens: JSON.stringify(cleanedTokenObjects) },
-        });
-        console.log(`[Push] Cleaned ${fcmResult.invalidTokens.length} invalid token(s) for user ${userId}`);
-      } catch (cleanupError: any) {
-        console.error(`[Push] Failed to clean up tokens for user ${userId}:`, cleanupError.message);
-      }
-    }
-
-    const sent = fcmResult.success + webPushResult.sent;
-    const failed = fcmResult.failed + webPushResult.failed;
-
-    return { success: sent > 0, sent, failed };
+    return { success: webPushResult.sent > 0, sent: webPushResult.sent, failed: webPushResult.failed };
   } catch (error: any) {
     console.error(`[Push] Error sending to user ${userId}:`, error.message);
     return { success: false, sent: 0, failed: 1 };
@@ -342,57 +293,23 @@ export async function sendPushToUsers(
   if (userIds.length === 0) return { success: 0, failed: 0 };
 
   try {
-    // Get all FCM tokens for these users
-    const users = await prisma.pppoeUser.findMany({
-      where: { id: { in: userIds } },
-      select: { fcmTokens: true },
+    const { title, body, dataPayload } = generatePushContent(type, data);
+
+    const webPushResult = await sendWebPushToUsers(userIds, {
+      title,
+      body,
+      url: dataPayload.link,
+      tag: type,
+      data: dataPayload,
     });
 
-    // Parse FCM tokens from JSON strings
-    const allTokens: string[] = [];
-    for (const u of users) {
-      if (!u.fcmTokens) continue;
-      try {
-        const parsed = JSON.parse(u.fcmTokens);
-        if (Array.isArray(parsed)) {
-          for (const t of parsed) {
-            const tok = typeof t === 'string' ? t : t.token;
-            if (tok) allTokens.push(tok);
-          }
-        } else if (typeof parsed === 'string') {
-          allTokens.push(parsed);
-        }
-      } catch {
-        allTokens.push(u.fcmTokens);
-      }
-    }
-
-    if (allTokens.length === 0) {
-      console.log(`[Push] No FCM tokens found for ${userIds.length} users`);
-      return { success: 0, failed: 0 };
-    }
-
-    const { title, body, dataPayload } = generatePushContent(type, data);
-    const [fcmResult, webPushResult] = await Promise.all([
-      allTokens.length > 0
-        ? sendFCMNotifications(allTokens, title, body, dataPayload)
-        : Promise.resolve({ success: 0, failed: 0, invalidTokens: [] as string[] }),
-      sendWebPushToUsers(userIds, {
-        title,
-        body,
-        url: dataPayload.link,
-        tag: type,
-        data: dataPayload,
-      }),
-    ]);
-
     console.log(
-      `[Push] Sent ${type} to ${allTokens.length} FCM devices and ${webPushResult.total} web subscriptions: ${fcmResult.success + webPushResult.sent} success, ${fcmResult.failed + webPushResult.failed} failed`
+      `[Push] Sent ${type} to ${userIds.length} users via web push: ${webPushResult.sent} success, ${webPushResult.failed} failed`
     );
 
     return {
-      success: fcmResult.success + webPushResult.sent,
-      failed: fcmResult.failed + webPushResult.failed,
+      success: webPushResult.sent,
+      failed: webPushResult.failed,
     };
   } catch (error: any) {
     console.error(`[Push] Batch send error:`, error.message);
@@ -408,61 +325,29 @@ export async function sendPushToAll(
   data: PushTemplateData
 ): Promise<{ success: number; failed: number }> {
   try {
-    const users = await prisma.pppoeUser.findMany({
-      where: {
-        fcmTokens: { not: null },
-        status: { not: 'stop' },
-      },
-      select: { id: true, fcmTokens: true },
+    const { title, body, dataPayload } = generatePushContent(type, data);
+
+    const userIds = await prisma.pppoeUser.findMany({
+      where: { status: { not: 'stop' } },
+      select: { id: true },
+    }).then(users => users.map(u => u.id));
+
+    const webPushResult = await sendWebPushBroadcast({
+      title,
+      body,
+      type,
+      targetType: 'all',
+      targetIds: userIds,
+      data: dataPayload,
     });
 
-    const allTokens: string[] = [];
-    const userIds: string[] = [];
-    for (const u of users) {
-      userIds.push(u.id);
-      if (!u.fcmTokens) continue;
-      try {
-        const parsed = JSON.parse(u.fcmTokens);
-        if (Array.isArray(parsed)) {
-          for (const t of parsed) {
-            const tok = typeof t === 'string' ? t : t.token;
-            if (tok) allTokens.push(tok);
-          }
-        } else if (typeof parsed === 'string') {
-          allTokens.push(parsed);
-        }
-      } catch {
-        allTokens.push(u.fcmTokens);
-      }
-    }
-
-    if (allTokens.length === 0) {
-      console.log(`[Push] No FCM tokens found for broadcast`);
-      return { success: 0, failed: 0 };
-    }
-
-    const { title, body, dataPayload } = generatePushContent(type, data);
-    const [fcmResult, webPushResult] = await Promise.all([
-      allTokens.length > 0
-        ? sendFCMNotifications(allTokens, title, body, dataPayload)
-        : Promise.resolve({ success: 0, failed: 0, invalidTokens: [] as string[] }),
-      sendWebPushBroadcast({
-        title,
-        body,
-        type,
-        targetType: 'all',
-        targetIds: userIds,
-        data: dataPayload,
-      }),
-    ]);
-
     console.log(
-      `[Push Broadcast] ${type}: ${fcmResult.success + webPushResult.sent} success, ${fcmResult.failed + webPushResult.failed} failed`
+      `[Push Broadcast] ${type}: ${webPushResult.sent} success, ${webPushResult.failed} failed`
     );
 
     return {
-      success: fcmResult.success + webPushResult.sent,
-      failed: fcmResult.failed + webPushResult.failed,
+      success: webPushResult.sent,
+      failed: webPushResult.failed,
     };
   } catch (error: any) {
     console.error(`[Push Broadcast] Error:`, error.message);

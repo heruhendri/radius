@@ -9,7 +9,15 @@ const reactHooksPlugin = require("eslint-plugin-react-hooks");
 
 const eslintConfig = [
   {
-    ignores: [".next/**", "out/**", "build/**", "node_modules/**", "next-env.d.ts"],
+    ignores: [
+      ".next/**",
+      "out/**",
+      "build/**",
+      "node_modules/**",
+      "next-env.d.ts",
+      "billing-radius/**",
+      "mobile-app/**",
+    ],
   },
   // Next.js core-web-vitals flat config (includes recommended + CWV rules)
   nextPlugin.flatConfig.coreWebVitals,

@@ -1,3 +1,4 @@
+import 'server-only'
 /**
  * RADIUS Change of Authorization (CoA) & Disconnect Utilities
  * 
@@ -22,7 +23,10 @@ const execAsync = promisify(exec);
 
 // Default CoA settings - these should match MikroTik RADIUS client secret
 const DEFAULT_COA_PORT = process.env.RADIUS_COA_PORT || '3799';
-const DEFAULT_COA_SECRET = process.env.RADIUS_COA_SECRET || 'testing123';
+const DEFAULT_COA_SECRET = process.env.RADIUS_COA_SECRET || '';
+if (!DEFAULT_COA_SECRET) {
+  console.warn('[CoA] RADIUS_COA_SECRET env var not set — CoA will use empty secret (ensure this matches NAS config)');
+}
 
 interface CoAResult {
   success: boolean;

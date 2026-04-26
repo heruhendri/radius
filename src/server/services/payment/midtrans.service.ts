@@ -1,3 +1,4 @@
+import 'server-only'
 import midtransClient from 'midtrans-client'
 import { prisma } from '@/server/db/client'
 

@@ -1,3 +1,4 @@
+import 'server-only'
 /**
  * Hotspot Voucher service — business logic extracted from route handlers.
  */
