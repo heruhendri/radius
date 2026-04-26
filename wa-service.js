@@ -127,6 +127,14 @@ app.get('/qr', (_req, res) => {
     });
   }
 
+  // Auto-restart if session was logged out or errored — so user just needs to click QR
+  if (connectionStatus === 'logged_out' || connectionStatus === 'error') {
+    console.log(`[WA Service] Auto-restarting from state '${connectionStatus}' on QR request...`);
+    connectionStatus = 'initializing';
+    qrCodeImage = null;
+    connectToWhatsApp().catch(err => console.error('[WA Service] Auto-restart error:', err));
+  }
+
   if (!qrCodeImage) {
     return res.status(400).json({
       status: 'WAITING',

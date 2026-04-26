@@ -380,6 +380,7 @@ export default function WhatsAppProvidersPage() {
     setQrConnected(false);
     stopQrPolling();
 
+    let retrying = false;
     try {
       const url = `/api/whatsapp/providers/${provider.id}/qr`;
       const response = await fetch(url);
@@ -401,10 +402,10 @@ export default function WhatsAppProvidersPage() {
         }
       } else if (response.status === 202) {
         // Baileys WAITING — QR belum siap, retry otomatis
+        retrying = true;
         setTimeout(() => {
           if (showQrModalRef.current) showQrCode(provider);
         }, 2500);
-        return; // keep qrLoading true (spinner tetap tampil)
       } else if (response.status === 422) {
         const errorData = await response.json();
         addToast({ type: 'info', title: 'Info', description: errorData.error || t('whatsapp.deviceAlreadyConnected') });
@@ -419,7 +420,7 @@ export default function WhatsAppProvidersPage() {
       addToast({ type: 'error', title: 'Error!', description: t('whatsapp.errorFetchingQr') });
       setShowQrModal(false);
     } finally {
-      setQrLoading(false);
+      if (!retrying) setQrLoading(false);
     }
   };
 
