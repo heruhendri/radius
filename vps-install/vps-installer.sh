@@ -296,6 +296,13 @@ run_installation() {
         exit 1
     }
 
+    # Step 8: Security (fail2ban + UFW + cleanup cron)
+    print_info "Running Step 8: Security Setup (fail2ban, UFW, cleanup cron)..."
+    source "$SCRIPT_DIR/install-security.sh"
+    install_security || {
+        print_warning "Security setup partial — lanjutkan manual: bash vps-install/install-security.sh"
+    }
+
     export APK_BUILT="false"
     export VPN_CLIENT_INSTALLED="false"
 

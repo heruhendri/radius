@@ -217,6 +217,18 @@ if [ -n "$USE_BRANCH" ]; then
     fi
     pm2 save
 
+    # ─── Security: pastikan fail2ban + UFW + cleanup cron terpasang ──────
+    if [ -f "$APP_DIR/vps-install/install-security.sh" ]; then
+        source "$APP_DIR/vps-install/install-security.sh"
+        # Hanya setup cleanup cron dan fail2ban (UFW sudah dikonfigurasi saat install)
+        setup_cleanup_cron 2>/dev/null || true
+        # Pastikan fail2ban running jika sudah terinstall
+        if command -v fail2ban-client &>/dev/null; then
+            systemctl is-active --quiet fail2ban || systemctl restart fail2ban 2>/dev/null || true
+            print_success "fail2ban status: $(systemctl is-active fail2ban 2>/dev/null)"
+        fi
+    fi
+
     # ─── VPN post-update (sama seperti mode release) ──────────────────────
     # VPN Client (CHR forwarding)
     if [ -f "/usr/local/bin/vpn-connect" ]; then
