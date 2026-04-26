@@ -469,6 +469,24 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 <!-- AUTO-CHANGELOG:START -->
 
+### v2.25.3 — 2026-04-27
+
+### Fixed
+- **Nama perusahaan tidak terlihat di tema terang pada semua portal login role** — Beberapa halaman login menampilkan heading brand dengan gaya yang bisa kehilangan kontras di light mode (teks putih/gradient terhadap latar terang), sehingga nama perusahaan nyaris tidak terbaca. Diperbaiki dengan pola heading kontras yang konsisten (`text-slate-900` untuk light mode, `text-white` untuk dark mode) dan fallback nama perusahaan yang aman.
+
+### Changed
+- **Redesign UI login lintas role (Admin, Customer, Agent, Technician)** — Semua halaman login portal diseragamkan tata letaknya agar konsisten antar-role dan tetap responsif desktop/mobile.
+  - Panel form login diseragamkan (`lg:w-[430px]`, background `bg-card`, batas `border-border`) untuk ritme visual yang sama.
+  - Ditambahkan blok branding **"Nama Perusahaan"** di sisi form agar identitas tetap terbaca jelas pada tema terang maupun gelap.
+  - Area hero kanan diperbarui dengan heading tunggal yang tegas + accent bar gradient per role untuk visual yang lebih clean dan kontras.
+  - Gradien latar hero desktop dirapikan ke palet yang lebih lembut di light mode agar elemen teks tidak tenggelam.
+
+### Affected
+- `src/app/admin/login/page.tsx`
+- `src/app/customer/login/page.tsx`
+- `src/app/agent/page.tsx`
+- `src/app/technician/login/page.tsx`
+
 ### v2.25.2 — 2026-04-26
 
 ### Added
@@ -554,43 +572,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 ### Fixed
 - **`vps-install/updater.sh`: default ke `--branch master`** ([`5aa05b7`]) — Menjalankan `bash updater.sh` tanpa flag sebelumnya masuk ke Mode B (GitHub Releases) yang langsung error 404 karena repo tidak menggunakan GitHub Releases. Sekarang jika tidak ada `--branch` maupun `--version`, script otomatis pakai `--branch master`.
-
-### v2.23.0 — 2026-04-26
-
-### Removed
-- **Coordinator role dihapus sepenuhnya** ([`e0cd701`]) — Role coordinator adalah fitur yang tidak pernah selesai diimplementasi. Semua endpoint API tidak pernah dibuat, sehingga halaman-halamannya selalu error. File yang dihapus:
-  - `src/app/coordinator/` — seluruh direktori portal coordinator (dashboard, tasks)
-  - `src/app/admin/coordinators/` — halaman manajemen coordinator di admin panel
-  - `src/locales/id.json` — key `coordinator`, `coordinatorLogin`, `manageCoordinators`, namespace `"coordinator"` (~40 key), dan `"senderType_COORDINATOR"` dihapus
-  - `src/app/admin/tickets/[id]/page.tsx` — `COORDINATOR` dihapus dari `SenderType` union type dan dari objek styling `getSenderBadgeColor()`
-- **Firebase Admin SDK & FCM dihapus** ([`fdc730b`]) — Seluruh integrasi Firebase Cloud Messaging dihapus. Push notification kini menggunakan VAPID Web Push murni (tidak ada dependency firebase-admin). File yang dihapus: `src/server/push.service.ts`, `firebase-service-account.json`. Stub `firebase-admin` di `src/lib/` digantikan dengan implementasi VAPID native.
-
-### Added
-- **`src/cron/runner.ts` — Cron runner baru berbasis tsx** ([`fdc730b`]) — Menggantikan `cron-service.js` (Node.js CJS) dengan TypeScript runner yang dijalankan via `npx tsx`. 16 cron jobs diload dari satu entry point, distributed locking tetap aktif. FreeRADIUS Health Check berjalan 5 detik setelah startup.
-- **`production/ecosystem.config.js` — Template konfigurasi PM2** ([`fdc730b`]) — File baru sebagai source of truth untuk konfigurasi PM2. `salfanet-cron` kini berjalan sebagai proses fork (`npx tsx src/cron/runner.ts`) dengan `NODE_OPTIONS: '--conditions=react-server'` (wajib agar `server-only` package tidak throw di luar Next.js).
-- **`vps-install/cleanup-refactor.sh` — Script cleanup instalasi lama** ([`f71256c`], [`c41f44f`]) — Script idempotent untuk membersihkan file-file stale dari instalasi sebelum refactor. Fitur:
-  - Support `--dry-run` (preview tanpa hapus)
-  - Phase 1: cleanup Firebase/FCM push service, firebase-service-account.json
-  - Phase 3: sync `ecosystem.config.js` dari `production/` (migrasi cron-service.js → tsx runner)
-  - Phase 8: hapus `src/app/coordinator/`, `src/app/admin/coordinators/`
-  - Auto-deteksi jika `salfanet-cron` masih pakai `cron-service.js` → migrate ke tsx runner otomatis
-  - Usage: `bash vps-install/cleanup-refactor.sh [--dry-run] [--app-dir=/path]`
-
-### Changed
-- **`scripts/update.sh`: refactor-aware** ([`f71256c`]) — Update script (dipanggil via admin panel → `/api/admin/system/update`) ditingkatkan:
-  - Setelah `git reset --hard`, otomatis copy `production/ecosystem.config.js` → root (file ini untracked, tidak tereset oleh git)
-  - Cleanup stale files dari Phase 1-8 refactor (push.service.ts, coordinator, firebase, dll.) di setiap update
-  - PM2 cron restart: jika `ecosystem.config.js` berubah → `pm2 delete` + `pm2 start` ulang (bukan sekedar `pm2 restart`)
-  - `pm2 save` otomatis setelah restart
-- **`vps-install/updater.sh`: refactor-aware** ([`f71256c`]) — CLI update script ditingkatkan:
-  - `npm ci` dengan fallback ke `npm install --production=false` jika lock file tidak sinkron (umum terjadi setelah refactor)
-  - Copy `production/ecosystem.config.js` setelah `git clean -fd`
-  - Cleanup stale files refactor (list sama dengan update.sh)
-  - Copy static assets ke `.next/standalone` setelah build
-  - PM2 cron: deteksi perubahan script → `pm2 delete` + `pm2 start` jika perlu
-
-### Fixed
-- **`cleanup-refactor.sh`: `set -e` safe** ([`c41f44f`]) — Fungsi `remove_path()` sebelumnya `return 1` saat file tidak ditemukan → script keluar prematur karena `set -e`. Diperbaiki ke `return 0`. Kondisi `diff` juga diperbaiki (inversi `!` yang salah menyebabkan ecosystem.config.js tidak pernah disync).
 
 <!-- AUTO-CHANGELOG:END -->
 
