@@ -2,7 +2,7 @@
 
 Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with FreeRADIUS integration supporting PPPoE and Hotspot authentication.
 
-> **Latest:** v2.25.0 — Build APK Android langsung di server VPS, download APK tanpa GitHub Actions (Apr 26, 2026)
+> **Latest:** v2.25.2 — Native Baileys WhatsApp gateway built-in di VPS, QR modal auto-retry, auto-reconnect setelah device disconnect (Apr 26, 2026)
 
 ---
 
@@ -22,7 +22,7 @@ Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with Free
 | **Hotspot Voucher** | 8 code types, batch up to 25,000, agent distribution, auto-sync with RADIUS, print templates |
 | **Billing** | Postpaid/prepaid invoices, auto-generation, payment reminders, balance/deposit, auto-renewal |
 | **Payment** | Manual upload (bukti transfer), Midtrans/Xendit/Duitku gateway, approval workflow, 0–5 bank accounts |
-| **Notifications** | WhatsApp (Fonnte/WAHA/GOWA/MPWA/Wablas/WABlast/**Kirimi.id**), Email SMTP, broadcast (outage/invoice/payment), webhook pesan masuk |
+| **Notifications** | WhatsApp (Fonnte/WAHA/GOWA/MPWA/Wablas/WABlast/**Kirimi.id**/**Baileys native**), Email SMTP, broadcast (outage/invoice/payment), webhook pesan masuk |
 | **Agent/Reseller** | Balance-based voucher generation, commission tracking, sales stats |
 | **Financial** | Income/expense tracking with categories, keuangan reconciliation |
 | **Network (FTTH)** | OLT/ODC/ODP management, customer port assignment, network map, distance calculation |
@@ -37,7 +37,43 @@ Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with Free
 | **Web Push** | VAPID-based browser push notifications, subscribe/unsubscribe toggle, admin broadcast |
 | **System Update** | Update via SSH menggunakan `updater.sh`, tidak ada web-based update |
 | **Mobile App** | Flutter customer portal (WiFi control, invoice, payment) |
-| **Android APK Builder** | Build APK Android (WebView wrapper) langsung di server VPS untuk 4 portal (Admin/Customer/Technician/Agent), download APK tanpa GitHub Actions |
+| **WhatsApp Baileys** | Native WhatsApp gateway built-in VPS via `@whiskeysockets/baileys`, PM2 proses terpisah, scan QR langsung di admin panel, auto-reconnect |
+
+---
+
+## 📱 WhatsApp Baileys (Native Gateway)
+
+Provider WhatsApp bawaan tanpa layanan pihak ketiga. Berjalan sebagai proses PM2 terpisah (`salfanet-wa`) di VPS.
+
+### Setup
+
+Provider Baileys otomatis di-setup saat menjalankan `updater.sh`. Tidak ada konfigurasi tambahan.
+
+```bash
+# Cek status wa-service
+pm2 status
+pm2 logs salfanet-wa --lines 20
+```
+
+### Cara Pakai
+
+1. Buka **Admin → Pengaturan → WhatsApp → Penyedia**
+2. Klik **+ Tambah Provider**, pilih tipe **Baileys**
+3. Klik **QR Code** → scan dengan HP (WhatsApp → Linked Devices)
+4. Setelah scan berhasil, modal menampilkan centang hijau konfirmasi
+5. Provider siap digunakan untuk kirim notifikasi
+
+### PM2 Processes
+
+| Process | Mode | Port | Purpose |
+|---------|------|------|---------|
+| `salfanet-radius` | cluster | 3000 | Next.js app |
+| `salfanet-wa` | fork | 4000 (internal) | Baileys WA service |
+| `salfanet-cron` | fork | — | Background jobs |
+
+### Auth Session
+
+Session WhatsApp tersimpan di `/var/data/salfanet/baileys_auth/` dan persist meski PM2 restart. Untuk logout/scan ulang, klik **Restart Session** di admin panel.
 
 ---
 
