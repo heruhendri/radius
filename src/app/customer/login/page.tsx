@@ -22,7 +22,6 @@ export default function CustomerLoginPage() {
   const [brandLoaded, setBrandLoaded] = useState(false);
   const [otpSendFailed, setOtpSendFailed] = useState(false);
   const [userDataForBypass, setUserDataForBypass] = useState<any>(null);
-  const displayCompanyName = companyName || 'Salfanet Radius';
 
   useEffect(() => {
     // If already logged in as customer, redirect to customer portal
@@ -153,7 +152,7 @@ export default function CustomerLoginPage() {
         <div className="relative z-10">
           <span className="text-xs font-semibold uppercase tracking-widest text-cyan-100">Portal Pelanggan</span>
           <h1 className="text-3xl font-extrabold text-white mt-1 leading-tight">
-            {companyName || 'Salfanet Radius'}
+            {companyName}
           </h1>
           <p className="text-sm text-blue-100/80 mt-2 leading-relaxed">
             Cek tagihan, bayar online, dan pantau status langganan internet Anda kapan saja.
@@ -196,11 +195,6 @@ export default function CustomerLoginPage() {
           <p className="text-center text-sm text-primary font-semibold mb-6">
             {step === 'otp' ? 'Verifikasi Kode OTP' : 'Portal Pelanggan'}
           </p>
-
-          <div className="text-center mb-6 rounded-xl border border-border bg-muted/40 px-4 py-3">
-            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Nama Perusahaan</p>
-            <p className="mt-1 text-base font-bold text-foreground">{displayCompanyName}</p>
-          </div>
 
           {/* Error */}
           {error && (
@@ -378,8 +372,8 @@ export default function CustomerLoginPage() {
           <div className="mb-2">
             <span className="text-xs font-semibold uppercase tracking-widest text-primary">Portal Pelanggan</span>
           </div>
-          <h1 className="text-5xl font-extrabold leading-tight mb-1 text-slate-900 dark:text-white">
-            {displayCompanyName}
+          <h1 className="text-5xl font-extrabold leading-tight mb-1 text-foreground">
+            {companyName}
           </h1>
           <div className="mb-4 h-1.5 w-28 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600" />
               <p className="text-base text-muted-foreground mb-8 leading-relaxed">

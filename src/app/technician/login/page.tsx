@@ -17,7 +17,6 @@ export default function TechnicianLoginPage() {
   const [footerText, setFooterText] = useState('');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [brandLoaded, setBrandLoaded] = useState(false);
-  const displayCompanyName = companyName || 'Salfanet Radius';
 
   useEffect(() => {
     fetch('/api/public/company')
@@ -78,7 +77,7 @@ export default function TechnicianLoginPage() {
         <div className="relative z-10">
           <span className="text-xs font-semibold uppercase tracking-widest text-blue-200">Portal Teknisi</span>
           <h1 className="text-3xl font-extrabold text-white mt-1 leading-tight">
-            {companyName || 'Salfanet Radius'}
+            {companyName}
           </h1>
           <p className="text-sm text-blue-100/80 mt-2 leading-relaxed">
             Portal khusus teknisi lapangan. Terima tiket, dokumentasi, dan registrasi dari lokasi.
@@ -111,11 +110,6 @@ export default function TechnicianLoginPage() {
           <p className="text-center text-sm text-blue-600 dark:text-blue-400 font-semibold mb-6">
             Portal Teknisi
           </p>
-
-          <div className="text-center mb-6 rounded-xl border border-border bg-muted/40 px-4 py-3">
-            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Nama Perusahaan</p>
-            <p className="mt-1 text-base font-bold text-foreground">{displayCompanyName}</p>
-          </div>
 
           {/* Error */}
           {error && (
@@ -182,8 +176,8 @@ export default function TechnicianLoginPage() {
           <div className="mb-2">
             <span className="text-xs font-semibold uppercase tracking-widest text-blue-500 dark:text-blue-400">Portal Teknisi</span>
           </div>
-          <h1 className="text-5xl font-extrabold leading-tight mb-1 text-slate-900 dark:text-white">
-            {displayCompanyName}
+          <h1 className="text-5xl font-extrabold leading-tight mb-1 text-foreground">
+            {companyName}
           </h1>
           <div className="mb-4 h-1.5 w-28 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500" />
           <p className="text-base text-gray-500 dark:text-slate-400 mb-8 leading-relaxed">

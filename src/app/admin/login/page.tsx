@@ -37,7 +37,6 @@ function LoginForm() {
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [footerText, setFooterText] = useState('');
   const [brandLoaded, setBrandLoaded] = useState(false);
-  const displayCompanyName = companyName || 'Salfanet Radius';
 
   // ── Form data ─────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({ username: '', password: '' });
@@ -201,7 +200,7 @@ function LoginForm() {
         <div className="relative z-10">
           <span className="text-xs font-semibold uppercase tracking-widest text-blue-200">Panel Admin</span>
           <h1 className="text-3xl font-extrabold text-white mt-1 leading-tight">
-            {companyName || 'Salfanet Radius'}
+            {companyName}
           </h1>
           <p className="text-sm text-blue-100/80 mt-2 leading-relaxed">
             Solusi manajemen Billing ISP terlengkap. Kelola pelanggan MikroTik secara otomatis.
@@ -234,11 +233,6 @@ function LoginForm() {
           <p className="text-center text-sm text-blue-600 dark:text-blue-400 font-semibold mb-6">
             {step === 'twoFactor' ? 'Autentikasi 2 Faktor' : t('auth.adminControlPanel')}
           </p>
-
-          <div className="text-center mb-6 rounded-xl border border-border bg-muted/40 px-4 py-3">
-            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Nama Perusahaan</p>
-            <p className="mt-1 text-base font-bold text-foreground">{displayCompanyName}</p>
-          </div>
 
           {/* Idle Logout Notice */}
           {idleLogout && step === 'credentials' && (
@@ -387,8 +381,8 @@ function LoginForm() {
             <span className="text-xs font-semibold uppercase tracking-widest text-blue-500 dark:text-blue-400">Panel Admin</span>
           </div>
           {/* Company name */}
-          <h1 className="text-5xl font-extrabold leading-tight mb-2 text-slate-900 dark:text-white">
-            {displayCompanyName}
+          <h1 className="text-5xl font-extrabold leading-tight mb-2 text-foreground">
+            {companyName}
           </h1>
           <div className="mb-4 h-1.5 w-28 rounded-full bg-gradient-to-r from-blue-600 to-indigo-500" />
           <p className="text-base text-gray-500 dark:text-slate-400 mb-6 leading-relaxed">
