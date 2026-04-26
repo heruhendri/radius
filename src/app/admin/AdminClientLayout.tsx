@@ -41,6 +41,7 @@ import {
   Mail,
   MessageCircle,
   Send,
+  Smartphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -304,6 +305,7 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.cronJobs', href: '/admin/settings/cron', requiredPermission: 'settings.cron' },
           { titleKey: 'nav.genieacs', href: '/admin/settings/genieacs', requiredPermission: 'settings.genieacs' },
           { titleKey: 'nav.systemUpdate', href: '/admin/system', requiredPermission: 'settings.view' },
+          { titleKey: 'nav.downloadApk', href: '/admin/download-apk', requiredPermission: 'settings.view' },
         ],
       },
     ],
