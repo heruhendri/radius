@@ -425,7 +425,7 @@ export async function POST(req: NextRequest) {
   // Spawn Gradle build in background
   const logFile = join(roleDir, 'build.log');
   const logFd   = openSync(logFile, 'w');
-  const javaHome = detectJavaHome();
+  const javaHome = await detectJavaHome();
   const env: Record<string, string> = {
     ...(process.env as Record<string, string>),
     ANDROID_HOME,
