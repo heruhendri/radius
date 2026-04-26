@@ -198,7 +198,7 @@ export default function TechnicianRegisterPage() {
 
   return (
     <div className="p-4 lg:p-6">
-      <div className="max-w-3xl mx-auto">
+      <div className="w-full">
         {/* Header */}
         <div className="mb-4">
           <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">

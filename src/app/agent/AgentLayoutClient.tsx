@@ -260,7 +260,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
 
   // Desktop layout with sidebar
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0e1a]">
+    <div data-role="agent" className="min-h-screen bg-background">
       {/* Background Effects - dark only */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none hidden dark:block">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>

@@ -235,6 +235,81 @@
   color-scheme: light;
 }
 
+/* =====================================================
+   AGENT + TECHNICIAN THEME HARMONIZATION (ADMIN-LIKE)
+   Scoped by data-role to avoid affecting admin/customer.
+   ===================================================== */
+
+/* Light mode: replace legacy neon/dark surfaces with theme surfaces */
+:root:not(.dark) [data-role="agent"] [class*="bg-[#0a0520"],
+:root:not(.dark) [data-role="agent"] [class*="bg-[#1a0f35"],
+:root:not(.dark) [data-role="agent"] [class*="bg-[#0b1120"],
+:root:not(.dark) [data-role="agent"] [class*="bg-[#0d0a1e"],
+:root:not(.dark) [data-role="agent"] [class*="bg-[#0a0e1a"],
+:root:not(.dark) [data-role="technician"] [class*="bg-[#0a0520"],
+:root:not(.dark) [data-role="technician"] [class*="bg-[#1a0f35"],
+:root:not(.dark) [data-role="technician"] [class*="bg-[#0b1120"],
+:root:not(.dark) [data-role="technician"] [class*="bg-[#0d0a1e"],
+:root:not(.dark) [data-role="technician"] [class*="bg-[#0a0e1a"] {
+  background-color: var(--card) !important;
+}
+
+:root:not(.dark) [data-role="agent"] [class*="text-[#00f7ff"],
+:root:not(.dark) [data-role="agent"] [class*="text-cyan-"],
+:root:not(.dark) [data-role="technician"] [class*="text-[#00f7ff"],
+:root:not(.dark) [data-role="technician"] [class*="text-cyan-"] {
+  color: var(--primary) !important;
+}
+
+:root:not(.dark) [data-role="agent"] [class*="text-[#bc13fe"],
+:root:not(.dark) [data-role="agent"] [class*="text-purple-"],
+:root:not(.dark) [data-role="technician"] [class*="text-[#bc13fe"],
+:root:not(.dark) [data-role="technician"] [class*="text-purple-"] {
+  color: var(--accent) !important;
+}
+
+:root:not(.dark) [data-role="agent"] [class*="text-[#e0d0ff"],
+:root:not(.dark) [data-role="technician"] [class*="text-[#e0d0ff"] {
+  color: var(--muted-foreground) !important;
+}
+
+:root:not(.dark) [data-role="agent"] [class*="border-[#bc13fe"],
+:root:not(.dark) [data-role="agent"] [class*="border-[#00f7ff"],
+:root:not(.dark) [data-role="agent"] [class*="border-cyan-"],
+:root:not(.dark) [data-role="agent"] [class*="border-purple-"],
+:root:not(.dark) [data-role="technician"] [class*="border-[#bc13fe"],
+:root:not(.dark) [data-role="technician"] [class*="border-[#00f7ff"],
+:root:not(.dark) [data-role="technician"] [class*="border-cyan-"],
+:root:not(.dark) [data-role="technician"] [class*="border-purple-"] {
+  border-color: var(--border) !important;
+}
+
+:root:not(.dark) [data-role="agent"] [class*="from-[#bc13fe"],
+:root:not(.dark) [data-role="technician"] [class*="from-[#bc13fe"] {
+  --tw-gradient-from: var(--primary) var(--tw-gradient-from-position) !important;
+}
+
+:root:not(.dark) [data-role="agent"] [class*="to-[#00f7ff"],
+:root:not(.dark) [data-role="technician"] [class*="to-[#00f7ff"] {
+  --tw-gradient-to: var(--accent) var(--tw-gradient-to-position) !important;
+}
+
+:root:not(.dark) [data-role="agent"] input,
+:root:not(.dark) [data-role="agent"] textarea,
+:root:not(.dark) [data-role="agent"] select,
+:root:not(.dark) [data-role="technician"] input,
+:root:not(.dark) [data-role="technician"] textarea,
+:root:not(.dark) [data-role="technician"] select {
+  color: var(--foreground) !important;
+}
+
+:root:not(.dark) [data-role="agent"] input::placeholder,
+:root:not(.dark) [data-role="agent"] textarea::placeholder,
+:root:not(.dark) [data-role="technician"] input::placeholder,
+:root:not(.dark) [data-role="technician"] textarea::placeholder {
+  color: var(--muted-foreground) !important;
+}
+
 /* No theme transition (instant switch) */
 html.theme-transitioning,
 html.theme-transitioning *,
