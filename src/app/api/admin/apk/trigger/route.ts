@@ -289,7 +289,7 @@ function writeProjectToDisk(
     mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192,
   };
   // parse hex color to rgb
-  const hex = role.color.replace('#', '');
+  const hex = cfg.color.replace('#', '');
   const ir = parseInt(hex.slice(0, 2), 16);
   const ig = parseInt(hex.slice(2, 4), 16);
   const ib = parseInt(hex.slice(4, 6), 16);
