@@ -303,6 +303,14 @@ run_installation() {
         print_warning "Security setup partial — lanjutkan manual: bash vps-install/install-security.sh"
     }
 
+    # Step 9: Auth Self-Heal (legacy-safe; ensures active SUPER_ADMIN exists)
+    print_info "Running Step 9: Auth Self-Heal..."
+    if [ -f "$SCRIPT_DIR/fix-auth-after-update.sh" ]; then
+        APP_DIR="$APP_DIR" bash "$SCRIPT_DIR/fix-auth-after-update.sh" || {
+            print_warning "Auth self-heal warning (continuing...)"
+        }
+    fi
+
     export APK_BUILT="false"
     export VPN_CLIENT_INSTALLED="false"
 

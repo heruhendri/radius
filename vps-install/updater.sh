@@ -190,6 +190,14 @@ if [ -n "$USE_BRANCH" ]; then
     print_step "Running database migrations"
     node_modules/.bin/prisma db push --accept-data-loss 2>/dev/null || node_modules/.bin/prisma db push
 
+    # ── Auth self-heal for legacy installs ────────────────────────────────
+    # Migrate legacy admin_user -> admin_users if needed and ensure
+    # at least one active SUPER_ADMIN exists.
+    if [ -f "$APP_DIR/vps-install/fix-auth-after-update.sh" ]; then
+        print_step "Running auth self-heal checks"
+        APP_DIR="$APP_DIR" bash "$APP_DIR/vps-install/fix-auth-after-update.sh" 2>&1 | tail -10 || true
+    fi
+
     print_step "Building application"
     NODE_OPTIONS="--max-old-space-size=1536" NEXT_TELEMETRY_DISABLED=1 npm run build
 
@@ -203,7 +211,22 @@ if [ -n "$USE_BRANCH" ]; then
     fi
 
     print_step "Restarting services"
-    pm2 reload "$PM2_APP_NAME" --update-env 2>/dev/null || pm2 restart "$PM2_APP_NAME" 2>/dev/null || true
+    # Self-heal old PM2 app definitions that still use "npm start / next start"
+    # while project now uses standalone server script.
+    APP_NEEDS_MIGRATION=false
+    CURRENT_APP_SCRIPT=$(pm2 describe "$PM2_APP_NAME" 2>/dev/null | grep -i "script path" | head -1 | sed 's/.*: //')
+    if [ -n "$CURRENT_APP_SCRIPT" ] && [[ "$CURRENT_APP_SCRIPT" != *".next/standalone/server.js"* ]]; then
+        APP_NEEDS_MIGRATION=true
+        print_info "PM2 app script is legacy ($CURRENT_APP_SCRIPT) — migrating to standalone"
+    fi
+
+    if [ "$APP_NEEDS_MIGRATION" = true ] && [ -f "$APP_DIR/ecosystem.config.js" ]; then
+        pm2 delete "$PM2_APP_NAME" 2>/dev/null || true
+        pm2 start "$APP_DIR/ecosystem.config.js" --only "$PM2_APP_NAME" 2>&1 | tail -3
+        print_success "salfanet-radius migrated to standalone PM2 config"
+    else
+        pm2 reload "$PM2_APP_NAME" --update-env 2>/dev/null || pm2 restart "$PM2_APP_NAME" 2>/dev/null || true
+    fi
 
     # Jika ecosystem.config.js berubah (migrasi cron-service.js → tsx runner),
     # harus delete + start ulang agar PM2 pakai script/args baru.

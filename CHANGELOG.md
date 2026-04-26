@@ -24,6 +24,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`vps-install/vps-installer.sh`: tambah Step 8 (Security)** — Installer utama kini memanggil `install-security.sh` secara otomatis setelah Step 7 (PM2 & Build). Instalasi baru langsung terlindungi fail2ban + UFW + cleanup cron tanpa langkah manual.
 - **`vps-install/updater.sh`: security check saat setiap update** — Setiap kali `bash updater.sh` dijalankan, script memastikan: (1) cleanup cronjob terpasang, (2) fail2ban dalam keadaan running. Idempotent — aman dijalankan berulang kali.
 
+### Fixed
+- **Self-heal login pasca update GitHub (legacy install)** — `updater.sh` kini menjalankan `vps-install/fix-auth-after-update.sh` setelah `prisma db push` untuk mencegah kasus gagal login setelah update pada instalasi lama. Perbaikan otomatis meliputi:
+  - Migrasi akun dari tabel legacy `admin_user` ke `admin_users` jika `admin_users` kosong
+  - Menjamin minimal ada 1 akun `SUPER_ADMIN` aktif
+  - Membuat fallback `superadmin` hanya jika database benar-benar kosong
+- **Self-heal PM2 app mode** — `updater.sh` kini mendeteksi proses PM2 legacy yang masih jalan via `next start`/`npm start`, lalu migrasi otomatis ke `.next/standalone/server.js` dari `ecosystem.config.js`.
+
 ---
 
 ## [2.25.0] — 2026-04-26
