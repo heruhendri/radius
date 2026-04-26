@@ -121,9 +121,25 @@ if [ ! -f "$APP_DIR/.env" ]; then
   fi
 fi
 
-# ── Clean up VPS orphan directories left from old deployments ─
+# ── Update ecosystem.config.js (untracked — not reset by git) ──────────
+# ecosystem.config.js is NOT tracked by git. Must be copied from production/
+# to pick up refactor changes (e.g. cron: cron-service.js → tsx runner).
+ECOSYSTEM_CHANGED=false
+if [ -f "$APP_DIR/production/ecosystem.config.js" ]; then
+  if ! diff -q "$APP_DIR/production/ecosystem.config.js" "$APP_DIR/ecosystem.config.js" &>/dev/null 2>&1; then
+    cp "$APP_DIR/production/ecosystem.config.js" "$APP_DIR/ecosystem.config.js"
+    ECOSYSTEM_CHANGED=true
+    ok "ecosystem.config.js updated (tsx cron runner)"
+  else
+    ok "ecosystem.config.js already up to date"
+  fi
+fi
+
+# ── Clean up stale files/dirs from refactor & old deployments ──────────
 echo ""
-log "Cleaning up orphan directories from old deployments..."
+log "Cleaning up stale files from old deployments and refactor..."
+
+# Mangled paths from very old deployments
 for orphan in srcappadmin srcappadmininvoicesimport srcappadminisolated-users \
               srcappadminlaporan srcappadminlaporananalitik srcappadminsuspend-requests \
               srclocales; do
@@ -132,7 +148,35 @@ for orphan in srcappadmin srcappadmininvoicesimport srcappadminisolated-users \
     log "  Removed orphan dir: $orphan"
   fi
 done
-ok "Orphan cleanup done"
+
+# Refactored-away files (Phase 1–8 cleanup)
+# These were tracked in git and deleted in commits, but git reset --hard
+# only removes them if they were previously tracked. On old fresh installs
+# via zip/tar (not git clone), they may still exist as untracked files.
+for stale in \
+  "src/server/push.service.ts" \
+  "src/server/push.service.js" \
+  "firebase-service-account.json" \
+  "src/lib/firebase.ts" \
+  "src/lib/firebase-admin.ts" \
+  "src/lib/cron" \
+  "src/app/coordinator" \
+  "src/app/admin/coordinators" \
+  "src/app/api/billing" \
+  "src/app/api/cron/history" \
+  "src/app/api/settings/telegram-backup" \
+  "src/components/dashboard" \
+  "chk-pg.js" \
+  "deploy.sh" \
+  "bad-files.txt" \
+  "start-dev.ps1" \
+  "kill-ports.ps1"; do
+  if [ -e "$APP_DIR/$stale" ]; then
+    rm -rf "${APP_DIR:?}/$stale"
+    log "  Removed stale: $stale"
+  fi
+done
+ok "Stale file cleanup done"
 
 # Make all scripts in scripts/ executable
 chmod +x "$APP_DIR"/scripts/*.sh 2>/dev/null || true
@@ -379,10 +423,25 @@ fi
 # ── Restart PM2 ───────────────────────────────────────────
 echo ""
 log "Restarting services (zero-downtime rolling reload)..."
+
 # `reload` = zero-downtime: PM2 starts new worker first, waits for it to be
 # ready, then kills the old one — no gap in HTTP service
 pm2 reload salfanet-radius --update-env 2>&1 | tail -3
-pm2 restart salfanet-cron --update-env 2>&1 | tail -3
+
+# Cron: jika ecosystem.config.js berubah (misalnya migrasi dari cron-service.js
+# ke tsx runner), harus delete + start ulang agar PM2 pakai script baru.
+# pm2 restart hanya restart proses lama dengan script yang SAMA.
+if [ "${ECOSYSTEM_CHANGED:-false}" = true ]; then
+  log "Ecosystem config changed — restarting salfanet-cron with new config..."
+  pm2 delete salfanet-cron 2>/dev/null || true
+  pm2 start ecosystem.config.js --only salfanet-cron 2>&1 | tail -3
+  ok "salfanet-cron restarted with new ecosystem config (tsx runner)"
+else
+  pm2 restart salfanet-cron --update-env 2>&1 | tail -3
+  ok "salfanet-cron restarted"
+fi
+
+pm2 save 2>/dev/null || true
 ok "Services reloaded (zero-downtime)"
 
 # ── Done ──────────────────────────────────────────────────

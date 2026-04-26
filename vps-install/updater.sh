@@ -137,8 +137,47 @@ if [ -n "$USE_BRANCH" ]; then
     git reset --hard "origin/$USE_BRANCH"
     git clean -fd
 
+    # ── Update ecosystem.config.js (untracked by git) ─────────────────────
+    # ecosystem.config.js is untracked — git clean removes it, must be restored.
+    ECOSYSTEM_CHANGED=false
+    if [ -f "$APP_DIR/production/ecosystem.config.js" ]; then
+        OLD_SCRIPT=$(grep -o "script:.*'[^']*'" "$APP_DIR/ecosystem.config.js" 2>/dev/null | grep -i cron | head -1 || echo "")
+        cp "$APP_DIR/production/ecosystem.config.js" "$APP_DIR/ecosystem.config.js"
+        NEW_SCRIPT=$(grep -o "script:.*'[^']*'" "$APP_DIR/ecosystem.config.js" 2>/dev/null | grep -i cron | head -1 || echo "")
+        if [ "$OLD_SCRIPT" != "$NEW_SCRIPT" ]; then
+            ECOSYSTEM_CHANGED=true
+        fi
+        print_success "ecosystem.config.js updated from production/"
+    fi
+
+    # ── Cleanup stale files from refactor phases ────────────────────────
+    print_step "Cleaning up stale files from refactor"
+    for stale in \
+        "src/server/push.service.ts" \
+        "src/server/push.service.js" \
+        "firebase-service-account.json" \
+        "src/lib/cron" \
+        "src/app/coordinator" \
+        "src/app/admin/coordinators" \
+        "src/app/api/billing" \
+        "src/app/api/cron/history" \
+        "src/app/api/settings/telegram-backup" \
+        "src/components/dashboard" \
+        "chk-pg.js" "deploy.sh" "bad-files.txt" "start-dev.ps1" "kill-ports.ps1"; do
+        if [ -e "$APP_DIR/$stale" ]; then
+            rm -rf "${APP_DIR:?}/$stale"
+            print_info "Removed stale: $stale"
+        fi
+    done
+    print_success "Stale file cleanup done"
+
     print_step "Installing dependencies"
-    npm ci --omit=dev
+    # Try npm ci first (faster, strict lock file) — fall back to npm install
+    # if lock file is out of sync with package.json (common after refactor).
+    if ! npm ci --omit=dev 2>/tmp/updater-npm-ci.log; then
+        print_info "npm ci failed (lock file mismatch) — falling back to npm install..."
+        npm install --production=false 2>&1 | tail -10
+    fi
 
     print_step "Generating Prisma client"
     node_modules/.bin/prisma generate
@@ -149,9 +188,28 @@ if [ -n "$USE_BRANCH" ]; then
     print_step "Building application"
     NODE_OPTIONS="--max-old-space-size=1536" NEXT_TELEMETRY_DISABLED=1 npm run build
 
+    # ── Copy static assets to standalone ──────────────────────────────────
+    if [ -d "$APP_DIR/.next/standalone" ]; then
+        mkdir -p "$APP_DIR/.next/standalone/public"
+        cp -r "$APP_DIR/public/." "$APP_DIR/.next/standalone/public/" 2>/dev/null || true
+        mkdir -p "$APP_DIR/.next/standalone/.next"
+        cp -r "$APP_DIR/.next/static" "$APP_DIR/.next/standalone/.next/static/" 2>/dev/null || true
+        print_success "Static assets copied to standalone"
+    fi
+
     print_step "Restarting services"
-    pm2 restart "$PM2_APP_NAME" 2>/dev/null || true
-    pm2 restart "$PM2_CRON_NAME" 2>/dev/null || true
+    pm2 reload "$PM2_APP_NAME" --update-env 2>/dev/null || pm2 restart "$PM2_APP_NAME" 2>/dev/null || true
+
+    # Jika ecosystem.config.js berubah (migrasi cron-service.js → tsx runner),
+    # harus delete + start ulang agar PM2 pakai script/args baru.
+    if [ "${ECOSYSTEM_CHANGED:-false}" = true ]; then
+        print_info "Ecosystem config changed — migrating salfanet-cron ke tsx runner..."
+        pm2 delete "$PM2_CRON_NAME" 2>/dev/null || true
+        pm2 start "$APP_DIR/ecosystem.config.js" --only "$PM2_CRON_NAME" 2>&1 | tail -3
+        print_success "salfanet-cron migrated to tsx runner"
+    else
+        pm2 restart "$PM2_CRON_NAME" --update-env 2>/dev/null || true
+    fi
     pm2 save
 
     # ─── VPN post-update (sama seperti mode release) ──────────────────────
