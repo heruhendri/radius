@@ -12,6 +12,9 @@ out/
 build/
 dist/
 
+# Exception: APK build API route (not a build artifact)
+!src/app/api/admin/apk/build/
+
 # Testing outputs
 coverage/
 test-results/
