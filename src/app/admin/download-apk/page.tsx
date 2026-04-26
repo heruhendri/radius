@@ -5,7 +5,7 @@ import {
   Smartphone, Download, Shield, Wifi, Users, UserCheck,
   CheckCircle2, XCircle, Clock, AlertTriangle, RefreshCw,
   Terminal, Copy, Check, HardDrive, ChevronDown,
-  Package,
+  Package, Globe,
 } from 'lucide-react';
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -275,12 +275,17 @@ export default function DownloadApkPage() {
   const [env, setEnv]           = useState<EnvStatus | null>(null);
   const [statuses, setStatuses] = useState<Partial<Record<RoleKey, BuildStatus>>>({});
   const [building, setBuilding] = useState<Set<RoleKey>>(new Set());
+  const [customUrl, setCustomUrl] = useState('');
 
   const fetchEnv = useCallback(() => {
     fetch('/api/admin/apk/trigger')
       .then(r => r.json())
-      .then(setEnv)
+      .then((data: EnvStatus & { defaultUrl?: string }) => {
+        setEnv(data);
+        if (data.defaultUrl && !customUrl) setCustomUrl(data.defaultUrl);
+      })
       .catch(() => setEnv({ ready: false, java: false, androidSdk: false }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchStatus = useCallback(async (role: RoleKey) => {
@@ -315,7 +320,8 @@ export default function DownloadApkPage() {
     setBuilding(prev => new Set([...prev, role]));
     setStatuses(prev => ({ ...prev, [role]: { status: 'building', startedAt: new Date().toISOString() } }));
     try {
-      const res = await fetch(`/api/admin/apk/trigger?role=${role}`, { method: 'POST' });
+      const urlParam = customUrl.trim() ? `&url=${encodeURIComponent(customUrl.trim())}` : '';
+      const res = await fetch(`/api/admin/apk/trigger?role=${role}${urlParam}`, { method: 'POST' });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Gagal memulai build' }));
         setStatuses(prev => ({ ...prev, [role]: { status: 'failed', error: err.error } }));
@@ -342,6 +348,26 @@ export default function DownloadApkPage() {
             <p className="text-xs text-slate-400 mt-0.5">Build APK langsung di server — download setelah selesai, tanpa GitHub.</p>
           </div>
         </div>
+      </div>
+
+      {/* URL Config */}
+      <div className="rounded-xl border border-slate-700/50 bg-slate-900/60 p-4">
+        <div className="flex items-center gap-2 text-slate-300 text-xs font-semibold mb-3">
+          <Globe className="w-3.5 h-3.5 text-cyan-400" /> URL Server (digunakan sebagai base URL di dalam APK)
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="url"
+            value={customUrl}
+            onChange={e => setCustomUrl(e.target.value)}
+            placeholder="https://radius.hotspotapp.net"
+            className="flex-1 bg-slate-800 border border-slate-600 text-white text-xs rounded-lg px-3 py-2 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500"
+          />
+        </div>
+        <p className="text-[11px] text-slate-500 mt-2">
+          URL ini akan di-hardcode ke dalam APK sebagai tujuan WebView. Gunakan subdomain Cloudflare Tunnel atau IP publik.
+          Contoh: <code className="text-slate-400">https://radius.hotspotapp.net</code>
+        </p>
       </div>
 
       {/* Env Banner */}

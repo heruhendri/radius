@@ -395,12 +395,22 @@ export async function GET(req: NextRequest) {
     existsSync(join(ANDROID_HOME, 'build-tools')) &&
     existsSync(join(ANDROID_HOME, 'platforms'));
 
+  // Default URL shown in UI input — from env or company DB
+  let defaultUrl = (process.env.NEXTAUTH_URL || process.env.APP_URL || '').replace(/\/$/, '');
+  if (!defaultUrl) {
+    try {
+      const company = await prisma.company.findFirst({ select: { baseUrl: true } });
+      if (company?.baseUrl) defaultUrl = company.baseUrl.replace(/\/$/, '');
+    } catch { /* ignore */ }
+  }
+
   return NextResponse.json({
     ready: java && androidSdk,
     java,
     javaVersion,
     androidSdk,
     androidHome: ANDROID_HOME,
+    defaultUrl,
   });
 }
 
@@ -415,6 +425,19 @@ export async function POST(req: NextRequest) {
   const role = req.nextUrl.searchParams.get('role') as RoleKey;
   if (!role || !ROLES[role]) {
     return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+  }
+
+  // Optional custom URL passed from UI
+  const customUrlParam = req.nextUrl.searchParams.get('url');
+  let customBaseUrl: string | null = null;
+  if (customUrlParam) {
+    try {
+      const parsed = new URL(customUrlParam);
+      if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Invalid protocol');
+      customBaseUrl = parsed.origin; // strip trailing path/slash
+    } catch {
+      return NextResponse.json({ error: 'URL tidak valid. Gunakan format https://domain.com' }, { status: 400 });
+    }
   }
 
   // Verify Java
@@ -483,6 +506,11 @@ export async function POST(req: NextRequest) {
       }
     }
   } catch { /* use defaults */ }
+
+  // Custom URL from UI overrides everything
+  if (customBaseUrl) {
+    baseUrl = customBaseUrl;
+  }
 
   const startUrl   = `${baseUrl}${ROLES[role].pathSuffix}`;
   const startedAt  = new Date().toISOString();
