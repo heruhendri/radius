@@ -135,7 +135,31 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               { status: 400 }
             );
           }
-          
+
+        case 'baileys': {
+          // Baileys native service — returns { status: 'qrcode', qrcode: 'data:image/png;base64,...' }
+          const port = process.env.WA_SERVICE_PORT || 4000;
+          const baileysRes = await fetch(`http://127.0.0.1:${port}/qr`, {
+            signal: AbortSignal.timeout(10000),
+          });
+
+          if (baileysRes.status === 422) {
+            // Already connected
+            const errData = await baileysRes.json();
+            return NextResponse.json(
+              { error: '✅ Device sudah tersambung!', alreadyConnected: true, status: errData.status },
+              { status: 422 },
+            );
+          }
+
+          if (!baileysRes.ok) {
+            const errText = await baileysRes.text();
+            return NextResponse.json({ error: errText || 'Baileys service error' }, { status: 400 });
+          }
+
+          const baileysData = await baileysRes.json();
+          return NextResponse.json(baileysData);
+        }
 
         default:
           return NextResponse.json(

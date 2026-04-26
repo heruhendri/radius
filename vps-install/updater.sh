@@ -238,6 +238,19 @@ if [ -n "$USE_BRANCH" ]; then
     else
         pm2 restart "$PM2_CRON_NAME" --update-env 2>/dev/null || true
     fi
+
+    # ── Baileys WhatsApp Service ───────────────────────────────────────────
+    PM2_WA_NAME="salfanet-wa"
+    mkdir -p /var/data/salfanet/baileys_auth
+    CURRENT_WA_PROC=$(pm2 describe "$PM2_WA_NAME" 2>/dev/null | grep -i "status" | head -1 || true)
+    if [ -z "$CURRENT_WA_PROC" ]; then
+        print_info "Starting $PM2_WA_NAME (Baileys WhatsApp service)..."
+        pm2 start "$APP_DIR/production/ecosystem.config.js" --only "$PM2_WA_NAME" 2>&1 | tail -3 || true
+    else
+        pm2 restart "$PM2_WA_NAME" --update-env 2>/dev/null || true
+    fi
+    print_success "salfanet-wa (Baileys) started/restarted"
+
     pm2 save
 
     # ─── Security: pastikan fail2ban + UFW + cleanup cron terpasang ──────

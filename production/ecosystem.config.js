@@ -32,6 +32,30 @@ module.exports = {
       // Restart every 8 hours — offset to :03 to avoid clashing with hourly cron jobs at :00
       cron_restart: '3 */8 * * *'
     },
+    // Baileys Native WhatsApp Service (local Express on port 4000)
+    {
+      name: 'salfanet-wa',
+      script: 'wa-service.js',
+      cwd: process.env.APP_DIR || '/var/www/salfanet-radius',
+      instances: 1,
+      exec_mode: 'fork',
+      watch: false,
+      max_memory_restart: '200M',
+      node_args: ['--max-old-space-size=160'],
+      env: {
+        NODE_ENV: 'production',
+        TZ: 'Asia/Jakarta',
+        WA_SERVICE_PORT: process.env.WA_SERVICE_PORT || '4000',
+        WA_AUTH_DIR: process.env.WA_AUTH_DIR || '/var/data/salfanet/baileys_auth',
+      },
+      error_file: './logs/wa-error.log',
+      out_file: './logs/wa-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      autorestart: true,
+      max_restarts: 20,
+      min_uptime: '5s',
+    },
     // Standalone Cron Service (Direct DB — no HTTP dependency on Next.js)
     {
       name: 'salfanet-cron',

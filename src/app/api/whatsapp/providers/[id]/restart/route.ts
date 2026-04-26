@@ -22,9 +22,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    if (provider.type !== 'waha' && provider.type !== 'gowa') {
+    if (provider.type !== 'waha' && provider.type !== 'gowa' && provider.type !== 'baileys') {
       return NextResponse.json(
-        { error: 'Restart only supported for WAHA and GOWA providers' },
+        { error: 'Restart only supported for WAHA, GOWA, and Baileys providers' },
         { status: 400 }
       );
     }
@@ -76,6 +76,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         await axios.get(`${provider.apiUrl}/app/reconnect`, { headers: gowaHeaders });
         
         await new Promise(resolve => setTimeout(resolve, 2000));
+      } else if (provider.type === 'baileys') {
+        // Baileys native service — call its /restart endpoint
+        const port = process.env.WA_SERVICE_PORT || 4000;
+        const baileysRes = await fetch(`http://127.0.0.1:${port}/restart`, {
+          method: 'POST',
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!baileysRes.ok) {
+          const errText = await baileysRes.text();
+          throw new Error(`Baileys restart error: ${errText}`);
+        }
+        await new Promise(resolve => setTimeout(resolve, 2500));
       }
 
       return NextResponse.json({

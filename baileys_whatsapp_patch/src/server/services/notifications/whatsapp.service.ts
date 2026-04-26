@@ -1,4 +1,3 @@
-import 'server-only'
 import { prisma } from '@/server/db/client';
 
 interface WhatsAppProvider {
@@ -310,7 +309,7 @@ export class WhatsAppService {
   }
 
   /**
-   * Baileys Native Service — calls internal wa-service.js Express server
+   * Baileys Native Service
    */
   private static async sendViaBaileys(
     provider: WhatsAppProvider,
@@ -322,20 +321,23 @@ export class WhatsAppService {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, message }),
-      signal: AbortSignal.timeout(30000),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      let detail = errorText;
-      try { detail = JSON.parse(errorText)?.message || errorText; } catch { }
-      throw new Error(`Baileys API error: ${response.status} - ${detail}`);
+        const errorText = await response.text();
+        let detail = errorText;
+        try {
+            const errJson = JSON.parse(errorText);
+            detail = errJson.message || errorText;
+        } catch { }
+        throw new Error(`Baileys API error: ${response.status} - ${detail}`);
     }
 
     const result = await response.json();
     if (result.status === false) {
-      throw new Error(`Baileys error: ${result.message || 'Failed to send message'}`);
+        throw new Error(`Baileys error: ${result.message || 'Failed to send message'}`);
     }
+
     return result;
   }
 

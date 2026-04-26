@@ -108,6 +108,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             });
           }
 
+        case 'baileys': {
+          // Baileys native service running on localhost
+          const port = process.env.WA_SERVICE_PORT || 4000;
+          try {
+            const baileysRes = await fetch(`http://127.0.0.1:${port}/status`, {
+              signal: AbortSignal.timeout(5000),
+            });
+            if (!baileysRes.ok) throw new Error(`HTTP ${baileysRes.status}`);
+            const baileysData = await baileysRes.json();
+            return NextResponse.json({
+              status: baileysData.status || 'unknown',
+              connected: baileysData.connected === true,
+              phone: baileysData.phone || null,
+              name: null,
+            });
+          } catch {
+            return NextResponse.json({ status: 'offline', connected: false });
+          }
+        }
+
         default:
           return NextResponse.json({
             status: 'unsupported',

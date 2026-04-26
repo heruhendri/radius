@@ -675,7 +675,14 @@ export default function WhatsAppProvidersPage() {
                 </div>
                 <div>
                   <ModalLabel required={(formData.type === 'mpwa' || formData.type === 'gowa' || formData.type === 'kirimi')}>{t('whatsapp.apiKey')}</ModalLabel>
-                  <ModalInput type="text" value={formData.type === 'baileys' ? 'internal' : formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} placeholder={formData.type === 'gowa' ? 'username:password' : formData.type === 'kirimi' ? 'user_code:secret' : 'API Key or Token'} required={(formData.type === 'mpwa' || formData.type === 'gowa' || formData.type === 'kirimi')} disabled={formData.type === 'baileys'} />
+                  <ModalInput 
+                    type="text" 
+                    value={formData.type === 'baileys' ? 'internal' : formData.apiKey} 
+                    onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} 
+                    placeholder={formData.type === 'gowa' ? 'username:password' : formData.type === 'kirimi' ? 'user_code:secret' : 'API Key or Token'} 
+                    required={(formData.type === 'mpwa' || formData.type === 'gowa' || formData.type === 'kirimi')} 
+                    disabled={formData.type === 'baileys'} 
+                  />
                   {formData.type === 'gowa' && <p className="text-[9px] text-muted-foreground mt-0.5">Format: username:password</p>}
                   {formData.type === 'kirimi' && <p className="text-[9px] text-muted-foreground mt-0.5">Format: user_code:secret (dari dashboard kirimi.id)</p>}
                   {formData.type === 'wablas' && <p className="text-[9px] text-muted-foreground mt-0.5">Format: <b>token.secret_key</b> (dari Device → Settings di dashboard Wablas)</p>}
