@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -120,7 +120,7 @@ export default function TopUpRequestPage() {
 
       {/* Two-column layout on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Form — takes 2/3 on desktop */}
+        {/* Form â€” takes 2/3 on desktop */}
         <div className="lg:col-span-2">
         <CyberCard className="p-6 bg-card/80 backdrop-blur-xl border-2 border-[#bc13fe]/30">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -278,15 +278,15 @@ export default function TopUpRequestPage() {
         </CyberCard>
         </div>
 
-        {/* Info panel — 1/3 on desktop, full-width below form on mobile */}
+        {/* Info panel â€” 1/3 on desktop, full-width below form on mobile */}
         <div className="lg:col-span-1">
           <div className="bg-[#00f7ff]/10 border-2 border-[#00f7ff]/30 rounded-xl p-5">
-            <h3 className="text-sm font-bold text-[#00f7ff] mb-3">ℹ️ {t('customer.importantInfo')}:</h3>
+            <h3 className="text-sm font-bold text-[#00f7ff] mb-3">â„¹ï¸ {t('customer.importantInfo')}:</h3>
             <ul className="text-xs text-[#e0d0ff]/70 space-y-2">
-              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">•</span>{t('customer.infoProcessTime')}</li>
-              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">•</span>{t('customer.infoProofClear')}</li>
-              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">•</span>{t('customer.infoBalanceAuto')}</li>
-              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">•</span>{t('customer.infoContactAdmin')}</li>
+              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">â€¢</span>{t('customer.infoProcessTime')}</li>
+              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">â€¢</span>{t('customer.infoProofClear')}</li>
+              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">â€¢</span>{t('customer.infoBalanceAuto')}</li>
+              <li className="flex gap-2"><span className="text-[#00f7ff] shrink-0">â€¢</span>{t('customer.infoContactAdmin')}</li>
             </ul>
           </div>
         </div>
@@ -294,4 +294,5 @@ export default function TopUpRequestPage() {
     </div>
   );
 }
+
 

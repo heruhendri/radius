@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -207,7 +207,7 @@ export default function CustomerSuspendPage() {
         </CyberCard>
       )}
 
-      {/* Request Form � only show if no active PENDING/APPROVED request */}
+      {/* Request Form — only show if no active PENDING/APPROVED request */}
       {(!current || ['REJECTED', 'CANCELLED', 'COMPLETED'].includes(current.status)) && (
         <CyberCard className="p-4 space-y-4">
           <p className="text-sm font-semibold text-[#00f7ff]">Ajukan Suspend Baru</p>
@@ -270,4 +270,5 @@ export default function CustomerSuspendPage() {
     </div>
   );
 }
+
 

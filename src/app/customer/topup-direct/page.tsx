@@ -1,4 +1,4 @@
-'use client';
+ï»¿'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -118,7 +118,7 @@ export default function TopUpDirectPage() {
         setSelectedChannel(data.methods[0].code);
       }
     } catch {
-      // silent fail — user must manually pick
+      // silent fail â€” user must manually pick
     } finally {
       setLoadingChannels(false);
     }
@@ -194,7 +194,7 @@ export default function TopUpDirectPage() {
         console.log('[Top-Up Direct Frontend] Redirecting to:', data.paymentUrl);
 
         showSuccess(
-          `${t('customer.invoiceNo')}: ${data.invoiceNumber} — ${t('customer.total')}: ${formatCurrency(data.amount)}. ${t('customer.redirectingToPayment')}`,
+          `${t('customer.invoiceNo')}: ${data.invoiceNumber} â€” ${t('customer.total')}: ${formatCurrency(data.amount)}. ${t('customer.redirectingToPayment')}`,
           t('common.success')
         );
 
@@ -498,4 +498,5 @@ export default function TopUpDirectPage() {
     </div>
   );
 }
+
 

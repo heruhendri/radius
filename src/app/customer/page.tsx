@@ -1,4 +1,4 @@
-'use client';
+ï»¿'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -294,7 +294,7 @@ export default function CustomerDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        toast('success', 'Bukti Transfer Terkirim', 'Admin akan mengkonfirmasi dalam 1×24 jam');
+        toast('success', 'Bukti Transfer Terkirim', 'Admin akan mengkonfirmasi dalam 1Ã—24 jam');
         setManualPayModal(null);
         setManualForm({ bankName: '', accountName: '', notes: '', file: null });
         setSelectedAdminBank(null);
@@ -315,16 +315,16 @@ export default function CustomerDashboard() {
     try {
       // Load WiFi data for device info and connected devices
       const wifiRes = await fetch('/api/customer/wifi', { headers: { 'Authorization': `Bearer ${token}` } });
-      if (!wifiRes.ok) return; // server error (e.g. 502 during restart) — skip silently
+      if (!wifiRes.ok) return; // server error (e.g. 502 during restart) â€” skip silently
       const wifiData = await wifiRes.json();
       if (wifiData.success && wifiData.device) {
         setOntDevice(wifiData.device);
         setConnectedDevices(wifiData.device.connectedHosts || []);
       } else if (wifiData.reason === 'not_configured') {
-        // GenieACS not set up — silently skip, no device info available
+        // GenieACS not set up â€” silently skip, no device info available
       }
     } catch (error) { 
-      // Silently ignore — WiFi info is non-critical for dashboard
+      // Silently ignore â€” WiFi info is non-critical for dashboard
     }
     finally { setLoadingOnt(false); }
   };
@@ -494,7 +494,7 @@ export default function CustomerDashboard() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-foreground font-mono">{invoice.invoiceNumber}</p>
-                <p className="text-[10px] text-muted-foreground">{formatCurrency(invoice.amount)} · JT {formatWIB(invoice.dueDate, 'd MMM')}</p>
+                <p className="text-[10px] text-muted-foreground">{formatCurrency(invoice.amount)} Â· JT {formatWIB(invoice.dueDate, 'd MMM')}</p>
               </div>
               <div className="flex flex-col gap-1 flex-shrink-0">
                 {invoice.manualPaymentStatus === 'pending' ? (
@@ -696,7 +696,7 @@ export default function CustomerDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-foreground">Kirim Bukti Transfer</h3>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{manualPayModal.invoiceNumber} — {formatCurrency(manualPayModal.amount)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{manualPayModal.invoiceNumber} â€” {formatCurrency(manualPayModal.amount)}</p>
                 </div>
                 <button onClick={() => setManualPayModal(null)} className="p-1.5 rounded-lg bg-muted/20 hover:bg-muted/40 border border-border/50">
                   <X className="w-4 h-4 text-muted-foreground" />
@@ -764,4 +764,5 @@ export default function CustomerDashboard() {
     </div>
   );
 }
+
 
