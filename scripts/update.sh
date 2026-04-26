@@ -314,9 +314,6 @@ else
   ok "Seed files unchanged — skipping db:seed"
 fi
 
-# ── Clean stale build artifacts ──────────────────────────
-rm -rf .next 2>/dev/null || true
-
 # ── Migrate uploads to persistent directory ──────────────
 UPLOAD_DIR="${UPLOAD_DIR:-/var/data/salfanet/uploads}"
 echo ""
@@ -365,18 +362,30 @@ if [ -d "$APP_DIR/public/uploads" ] && [ "$(ls -A "$APP_DIR/public/uploads" 2>/d
   fi
 fi
 
+# ── Detect docs-only changes (no build needed) ──────────
+# If only markdown/docs files changed, skip the build entirely.
+# This avoids stopping PM2 + deleting .next for non-code changes.
+DOCS_ONLY=false
+if [ -n "$CHANGED" ]; then
+  NON_DOCS=$(echo "$CHANGED" | grep -vE '\.(md|txt|sh)$|^docs/|^README|^CHANGELOG|^vps-install/README' || true)
+  if [ -z "$NON_DOCS" ]; then
+    DOCS_ONLY=true
+    log "Only docs/scripts changed — skipping build and PM2 stop"
+  fi
+fi
+
 # ── Stop PM2 before build to free RAM (low-memory VPS) ───
+if [ "$DOCS_ONLY" = false ]; then
 echo ""
 log "Stopping PM2 to free RAM before build..."
 log "(Active PPPoE/Hotspot sessions are handled by FreeRADIUS/MikroTik — not affected by this)"
 pm2 stop salfanet-radius 2>/dev/null || true
 pm2 stop salfanet-cron 2>/dev/null || true
 sleep 2
+fi
 
 # ── Protect FreeRADIUS from OOM killer during build ──────
-# The Next.js build can consume 1-2 GB RAM on a low-memory VPS, triggering
-# the Linux OOM killer. FreeRADIUS manages all active PPPoE/Hotspot sessions
-# so it must NOT be killed — set oom_score_adj to -1000 (never kill).
+if [ "$DOCS_ONLY" = false ]; then
 FREERADIUS_PID=$(cat /var/run/freeradius/freeradius.pid 2>/dev/null || pgrep -x freeradius 2>/dev/null | head -1 || echo "")
 if [ -n "$FREERADIUS_PID" ] && [ -f "/proc/$FREERADIUS_PID/oom_score_adj" ]; then
   echo -1000 > /proc/$FREERADIUS_PID/oom_score_adj 2>/dev/null && \
@@ -394,7 +403,10 @@ unset npm_lifecycle_event npm_lifecycle_script npm_package_name npm_package_vers
 unset npm_config_cache npm_config_prefix NODE_APP_INSTANCE
 # Do NOT inherit NODE_OPTIONS from parent process (server may have different flags)
 unset NODE_OPTIONS
-
+# Delete old .next AFTER PM2 is stopped — never delete before stop
+# so that if build fails, the old .next is gone but server can't restart.
+# We delete it here (just before build) to ensure a clean build output.
+rm -rf .next 2>/dev/null || true
 # Use low-mem build profile (1024MB heap) — avoids OOM on 4GB VPS with PM2 running
 npm run build:low-mem > /tmp/salfanet-next-build.log 2>&1
 BUILD_EXIT=$?
@@ -443,6 +455,8 @@ fi
 
 pm2 save 2>/dev/null || true
 ok "Services reloaded (zero-downtime)"
+
+fi # end if [ "$DOCS_ONLY" = false ]
 
 # ── Done ──────────────────────────────────────────────────
 NEW_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
