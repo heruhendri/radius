@@ -7,7 +7,10 @@ import {
   openSync, copyFileSync, statSync, readdirSync, readFileSync,
 } from 'fs';
 import { join } from 'path';
-import { spawn, execSync } from 'child_process';
+import { spawn, exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 export const dynamic = 'force-dynamic';
 
@@ -293,9 +296,10 @@ function writeProjectToDisk(
 
 // ─── detect JAVA_HOME ────────────────────────────────────────────────────────
 
-function detectJavaHome(): string {
+async function detectJavaHome(): Promise<string> {
   try {
-    const out = execSync('java -XshowSettings:property -version 2>&1', { timeout: 8000 }).toString();
+    const { stdout, stderr } = await execAsync('java -XshowSettings:property -version 2>&1', { timeout: 8000 });
+    const out = stdout + stderr;
     const m = out.match(/java\.home\s*=\s*(.+)/);
     if (m) return m[1].trim();
   } catch { /* ignore */ }
@@ -321,7 +325,8 @@ export async function GET(req: NextRequest) {
   let java = false;
   let javaVersion = '';
   try {
-    const out = execSync('java -version 2>&1', { timeout: 10000 }).toString();
+    const { stdout, stderr } = await execAsync('java -version 2>&1', { timeout: 8000 });
+    const out = stdout + stderr;
     java = true;
     javaVersion = out.match(/version "([^"]+)"/)?.[1] ?? 'detected';
   } catch { /* java not found */ }
@@ -354,7 +359,7 @@ export async function POST(req: NextRequest) {
 
   // Verify Java
   try {
-    execSync('java -version 2>&1', { timeout: 10000 });
+    await execAsync('java -version 2>&1', { timeout: 8000 });
   } catch {
     return NextResponse.json(
       { error: 'Java tidak terinstall. Jalankan: apt-get install -y openjdk-17-jdk' },
@@ -467,7 +472,7 @@ export async function POST(req: NextRequest) {
     } catch { /* ignore */ }
 
     // Cleanup project dir
-    try { execSync(`rm -rf "${projectDir}"`, { timeout: 30000 }); } catch { /* ignore */ }
+    try { spawn('rm', ['-rf', projectDir], { detached: true, stdio: 'ignore' }).unref(); } catch { /* ignore */ }
   });
 
   proc.unref();
