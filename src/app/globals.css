@@ -1285,12 +1285,16 @@ div[style*="z-index: 9999"].fixed.inset-0 {
     @apply bg-background text-foreground antialiased;
     font-size: 13px;
     line-height: 1.5;
+    /* Prevent pull-to-refresh in Android WebView & Chrome mobile */
+    overscroll-behavior-y: none;
   }
   
   /* Smaller base font */
   html {
     font-size: 14px;
     scroll-behavior: smooth;
+    /* Prevent pull-to-refresh at root level */
+    overscroll-behavior: none;
   }
   
   @media (max-width: 640px) {
@@ -1401,6 +1405,25 @@ div[style*="z-index: 9999"].fixed.inset-0 {
 .touch-pan-y {
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Smooth momentum scroll for all overflow containers on mobile */
+@media (hover: none) and (pointer: coarse) {
+  [class*="overflow-y-auto"],
+  [class*="overflow-y-scroll"],
+  [class*="overflow-auto"],
+  [class*="overflow-scroll"],
+  aside,
+  nav,
+  main,
+  .sidebar,
+  [data-sidebar],
+  [role="navigation"] {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    /* Allow scrolling inside elements but not bubble to body (no pull-to-refresh) */
+    overscroll-behavior: contain;
+  }
 }
 
 /* Custom scrollbar for mobile - thinner */

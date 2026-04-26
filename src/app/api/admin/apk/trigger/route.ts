@@ -66,6 +66,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         webView      = findViewById(R.id.webView)
         swipeRefresh = findViewById(R.id.swipeRefresh)
+        // Disable pull-to-refresh — web page handles its own scroll/refresh
+        swipeRefresh.isEnabled = false
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
         }
@@ -84,6 +86,8 @@ class MainActivity : AppCompatActivity() {
             mixedContentMode     = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             userAgentString      = userAgentString + " SalfanetApp/2.0"
         }
+        // Disable overscroll glow/bounce effect
+        webView.overScrollMode = android.view.View.OVER_SCROLL_NEVER
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) { swipeRefresh.isRefreshing = false }
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -100,7 +104,8 @@ class MainActivity : AppCompatActivity() {
                 fileChooser.launch(intent); return true
             }
         }
-        swipeRefresh.setOnRefreshListener { webView.reload() }
+        // Pull-to-refresh disabled — no-op listener kept for layout compatibility
+        swipeRefresh.setOnRefreshListener { swipeRefresh.isRefreshing = false }
         if (savedInstanceState != null) webView.restoreState(savedInstanceState)
         else webView.loadUrl("${startUrl}")
     }
