@@ -67,11 +67,10 @@ remove_path() {
       rm -rf "$full"
       print_removed "$desc"
     fi
-    return 0
   else
     print_skip "$desc"
-    return 1
   fi
+  return 0  # always succeed — set -e safe
 }
 
 # =============================================================
@@ -105,15 +104,15 @@ remove_path "src/lib/cron"                        "Legacy cron lib proxy (src/li
 
 # Update ecosystem.config.js dari production/ jika berbeda
 if [ -f "$APP_DIR/production/ecosystem.config.js" ]; then
-  if ! diff -q "$APP_DIR/production/ecosystem.config.js" "$APP_DIR/ecosystem.config.js" &>/dev/null 2>&1; then
+  if diff -q "$APP_DIR/production/ecosystem.config.js" "$APP_DIR/ecosystem.config.js" &>/dev/null 2>&1; then
+    print_success "ecosystem.config.js already up to date"
+  else
     if [ "$DRY_RUN" = true ]; then
       print_info "Would update: ecosystem.config.js (production/ → root)"
     else
       cp "$APP_DIR/production/ecosystem.config.js" "$APP_DIR/ecosystem.config.js"
       print_success "ecosystem.config.js updated (tsx runner, NODE_OPTIONS=--conditions=react-server)"
     fi
-  else
-    print_success "ecosystem.config.js already up to date"
   fi
 fi
 
