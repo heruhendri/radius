@@ -47,6 +47,8 @@ export default function WhatsAppProvidersPage() {
   const [qrProvider, setQrProvider] = useState<Provider | null>(null);
   const [qrImage, setQrImage] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
+  const [qrConnected, setQrConnected] = useState(false);
+  const [qrPollingRef, setQrPollingRef] = useState<ReturnType<typeof setInterval> | null>(null);
   const [providerStatuses, setProviderStatuses] = useState<Record<string, ProviderStatus>>({});
   const [restartingProvider, setRestartingProvider] = useState<string | null>(null);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
@@ -329,11 +331,51 @@ export default function WhatsAppProvidersPage() {
     }
   };
 
+  const stopQrPolling = () => {
+    setQrPollingRef(prev => {
+      if (prev) clearInterval(prev);
+      return null;
+    });
+  };
+
+  const closeQrModal = () => {
+    stopQrPolling();
+    setShowQrModal(false);
+    setQrImage(null);
+    setQrConnected(false);
+    // Auto-refresh statuses so provider card updates without page reload
+    setTimeout(() => fetchAllStatuses(), 500);
+  };
+
+  const startQrPolling = (provider: Provider) => {
+    stopQrPolling();
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/whatsapp/providers/${provider.id}/status`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.connected) {
+            stopQrPolling();
+            setQrConnected(true);
+            setQrImage(null);
+            // Update the status in the list immediately
+            setProviderStatuses(prev => ({ ...prev, [provider.id]: data }));
+          }
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 3000);
+    setQrPollingRef(interval);
+  };
+
   const showQrCode = async (provider: Provider) => {
     setQrProvider(provider);
     setShowQrModal(true);
     setQrLoading(true);
     setQrImage(null);
+    setQrConnected(false);
+    stopQrPolling();
 
     try {
       const url = `/api/whatsapp/providers/${provider.id}/qr`;
@@ -344,6 +386,7 @@ export default function WhatsAppProvidersPage() {
           const data = await response.json();
           if (data.status === 'qrcode' && data.qrcode) {
             setQrImage(data.qrcode);
+            startQrPolling(provider);
           } else {
             addToast({ type: 'info', title: 'Info', description: `${t('whatsapp.deviceStatusPrefix')}: ${data.message || data.status}` });
           }
@@ -351,12 +394,12 @@ export default function WhatsAppProvidersPage() {
           const blob = await response.blob();
           const imageUrl = URL.createObjectURL(blob);
           setQrImage(imageUrl);
+          startQrPolling(provider);
         }
       } else if (response.status === 422) {
         const errorData = await response.json();
         addToast({ type: 'info', title: 'Info', description: errorData.error || t('whatsapp.deviceAlreadyConnected') });
-        setShowQrModal(false);
-        fetchAllStatuses();
+        closeQrModal();
       } else {
         const errorData = await response.json();
         addToast({ type: 'error', title: 'Error!', description: errorData.error || t('whatsapp.failedFetchQr') });
@@ -710,7 +753,7 @@ export default function WhatsAppProvidersPage() {
         </SimpleModal>
 
         {/* QR Modal */}
-        <SimpleModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} size="sm">
+        <SimpleModal isOpen={showQrModal} onClose={closeQrModal} size="sm">
           <ModalHeader>
             <ModalTitle>{t('whatsapp.qrCode')} - {qrProvider?.name}</ModalTitle>
           </ModalHeader>
@@ -720,12 +763,26 @@ export default function WhatsAppProvidersPage() {
                 <div className="w-10 h-10 border-4 border-[#00f7ff] border-t-transparent rounded-full animate-spin drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]" />
                 <p className="text-xs text-muted-foreground">{t('common.loading')}</p>
               </div>
+            ) : qrConnected ? (
+              <div className="flex flex-col items-center space-y-3 py-6">
+                <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center shadow-[0_0_30px_rgba(34,197,94,0.4)]">
+                  <svg className="w-10 h-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-base font-semibold text-green-400">WhatsApp Berhasil Terhubung!</p>
+                <p className="text-xs text-muted-foreground text-center">Nomor sudah terdaftar dan siap mengirim pesan.</p>
+              </div>
             ) : qrImage ? (
               <>
                 <div className="p-3 bg-white rounded-lg shadow-[0_0_20px_rgba(0,247,255,0.3)]">
                   <Image unoptimized src={qrImage} alt="QR Code" width={192} height={192} className="w-48 h-48" />
                 </div>
                 <p className="text-[10px] text-muted-foreground text-center">{t('whatsapp.scanWhatsapp')}</p>
+                <div className="flex items-center gap-2 text-[10px] text-amber-400">
+                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  Menunggu scan...
+                </div>
                 <ModalButton variant="primary" onClick={() => showQrCode(qrProvider!)}>{t('whatsapp.refreshQr')}</ModalButton>
               </>
             ) : (
@@ -733,7 +790,7 @@ export default function WhatsAppProvidersPage() {
             )}
           </ModalBody>
           <ModalFooter className="justify-center">
-            <ModalButton variant="secondary" onClick={() => setShowQrModal(false)}>{t('common.close')}</ModalButton>
+            <ModalButton variant="secondary" onClick={closeQrModal}>{t('common.close')}</ModalButton>
           </ModalFooter>
         </SimpleModal>
       </div>
