@@ -193,15 +193,15 @@ export default function CustomerProfilePage() {
   }
 
   return (
-    <div className="p-3 lg:p-5 space-y-3 max-w-2xl mx-auto">
+    <div className="p-3 lg:p-6 space-y-3 max-w-3xl mx-auto">
       {/* Profile Header */}
-      <CyberCard className="p-6 bg-gradient-to-r from-primary/20 to-accent/20 backdrop-blur-xl border-2 border-primary/40 shadow-[0_0_30px_rgba(188,19,254,0.3)]">
+      <CyberCard className="p-6 bg-gradient-to-r from-primary/20 to-accent/20 backdrop-blur-xl border-2 border-primary/40 dark:shadow-[0_0_30px_rgba(188,19,254,0.3)] shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-primary/30 border-2 border-primary flex items-center justify-center shadow-[0_0_20px_rgba(188,19,254,0.5)]">
             <User size={32} className="text-primary drop-shadow-[0_0_10px_rgba(188,19,254,0.8)]" />
           </div>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-white">{customer.name}</h1>
+            <h1 className="text-xl font-bold text-foreground">{customer.name}</h1>
             <p className="text-accent text-sm font-mono">@{customer.username}</p>
           </div>
           <span className={`px-3 py-1 rounded-lg text-xs font-bold ${getStatusBadge(customer.status)}`}>
@@ -211,7 +211,7 @@ export default function CustomerProfilePage() {
       </CyberCard>
 
       {/* Contact Information */}
-      <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-accent/30 shadow-[0_0_30px_rgba(0,247,255,0.15)]">
+      <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-accent/30 dark:shadow-[0_0_30px_rgba(0,247,255,0.15)] shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-bold text-accent flex items-center gap-2 uppercase tracking-wider drop-shadow-[0_0_5px_rgba(0,247,255,0.5)]">
             <Mail size={16} className="drop-shadow-[0_0_5px_rgba(0,247,255,0.8)]" />
@@ -247,7 +247,7 @@ export default function CustomerProfilePage() {
                   placeholder="Nama lengkap"
                 />
               ) : (
-                <p className="text-sm text-white">{customer.name || '-'}</p>
+                <p className="text-sm text-foreground">{customer.name || '-'}</p>
               )}
             </div>
           </div>
@@ -265,7 +265,7 @@ export default function CustomerProfilePage() {
                   placeholder="email@contoh.com"
                 />
               ) : (
-                <p className="text-sm text-white">{customer.email || <span className="text-slate-500 italic text-xs">Belum diisi</span>}</p>
+                <p className="text-sm text-foreground">{customer.email || <span className="text-slate-500 italic text-xs">Belum diisi</span>}</p>
               )}
             </div>
           </div>
@@ -283,16 +283,18 @@ export default function CustomerProfilePage() {
                   placeholder="0812-3456-7890"
                 />
               ) : (
-                <p className="text-sm text-white">{customer.phone || <span className="text-slate-500 italic text-xs">Belum diisi</span>}</p>
+                <p className="text-sm text-foreground">{customer.phone || <span className="text-slate-500 italic text-xs">Belum diisi</span>}</p>
               )}
             </div>
           </div>
         </div>
       </CyberCard>
 
+      {/* Package Information + Account Information — 2-col on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       {/* Package Information */}
       {customer.profile && (
-        <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-primary/30 shadow-[0_0_30px_rgba(188,19,254,0.15)]">
+        <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-primary/30 dark:shadow-[0_0_30px_rgba(188,19,254,0.15)] shadow-sm">
           <h2 className="text-sm font-bold text-primary mb-3 flex items-center gap-2 uppercase tracking-wider drop-shadow-[0_0_5px_rgba(188,19,254,0.5)]">
             <Package size={16} className="drop-shadow-[0_0_5px_rgba(188,19,254,0.8)]" />
             {t('profile.packageInfo')}
@@ -302,14 +304,14 @@ export default function CustomerProfilePage() {
               <Package size={16} className="text-primary mt-0.5" />
               <div className="flex-1">
                 <p className="text-xs text-accent font-bold uppercase tracking-wide">{t('profile.package')}</p>
-                <p className="text-sm font-medium text-white">{customer.profile.name}</p>
+                <p className="text-sm font-medium text-foreground">{customer.profile.name}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <CreditCard size={16} className="text-primary mt-0.5" />
               <div className="flex-1">
                 <p className="text-xs text-accent font-bold uppercase tracking-wide">Kecepatan</p>
-                <p className="text-sm font-medium text-white">
+                <p className="text-sm font-medium text-foreground">
                   ↓ {customer.profile.downloadSpeed} Mbps / ↑ {customer.profile.uploadSpeed} Mbps
                 </p>
               </div>
@@ -319,7 +321,7 @@ export default function CustomerProfilePage() {
                 <Calendar size={16} className="text-primary mt-0.5" />
                 <div className="flex-1">
                   <p className="text-xs text-accent font-bold uppercase tracking-wide">{t('profile.expiryDate')}</p>
-                  <p className="text-sm text-white">
+                  <p className="text-sm text-foreground">
                     {formatWIB(customer.expiryDate, 'd MMMM yyyy')}
                   </p>
                 </div>
@@ -330,7 +332,7 @@ export default function CustomerProfilePage() {
       )}
 
       {/* Account Information */}
-      <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-primary/30 shadow-[0_0_30px_rgba(188,19,254,0.15)]">
+      <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-primary/30 dark:shadow-[0_0_30px_rgba(188,19,254,0.15)] shadow-sm">
         <h2 className="text-sm font-bold text-primary mb-3 flex items-center gap-2 uppercase tracking-wider drop-shadow-[0_0_5px_rgba(188,19,254,0.5)]">
           <Shield size={16} className="drop-shadow-[0_0_5px_rgba(188,19,254,0.8)]" />
           {t('profile.accountInfo')}
@@ -340,7 +342,7 @@ export default function CustomerProfilePage() {
             <User size={16} className="text-primary mt-0.5" />
             <div className="flex-1">
               <p className="text-xs text-accent font-bold uppercase tracking-wide">{t('profile.username')}</p>
-              <p className="text-sm font-mono text-white">{customer.username}</p>
+              <p className="text-sm font-mono text-foreground">{customer.username}</p>
             </div>
           </div>
           {customer.customerId && (
@@ -348,12 +350,13 @@ export default function CustomerProfilePage() {
               <Shield size={16} className="text-primary mt-0.5" />
               <div className="flex-1">
                 <p className="text-xs text-accent font-bold uppercase tracking-wide">ID Pelanggan</p>
-                <p className="text-sm font-mono font-bold text-white">{customer.customerId}</p>
+                <p className="text-sm font-mono font-bold text-foreground">{customer.customerId}</p>
               </div>
             </div>
           )}
         </div>
       </CyberCard>
+      </div>{/* end desktop 2-col grid */}
 
       {/* Actions */}
       <div className="space-y-2">

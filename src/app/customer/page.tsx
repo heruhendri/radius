@@ -391,24 +391,24 @@ export default function CustomerDashboard() {
   const daysLeft = Math.ceil((expiredDate.getTime() - nowWIB().getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <div className="p-3 lg:p-6 max-w-2xl mx-auto space-y-4">
+    <div className="p-3 lg:p-6 max-w-4xl mx-auto space-y-4">
       {/* ── Hero Status Card ─────────────────────────────────────────── */}
       <div className={`rounded-2xl p-5 relative overflow-hidden ${
         isExpired
-          ? 'bg-gradient-to-br from-red-900/60 to-slate-900 border-2 border-red-500/40'
+          ? 'bg-gradient-to-br from-red-500/15 to-red-500/5 dark:from-red-900/60 dark:to-slate-900 border-2 border-red-500/40'
           : user.status === 'active'
-          ? 'bg-gradient-to-br from-cyan-900/50 to-slate-900 border-2 border-cyan-500/30'
-          : 'bg-gradient-to-br from-yellow-900/50 to-slate-900 border-2 border-yellow-500/30'
+          ? 'bg-gradient-to-br from-primary/15 to-primary/5 dark:from-cyan-900/50 dark:to-slate-900 border-2 border-primary/30 dark:border-cyan-500/30'
+          : 'bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 dark:from-yellow-900/50 dark:to-slate-900 border-2 border-yellow-500/30'
       }`}>
         {/* Decorative circles */}
-        <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-white/5 pointer-events-none" />
-        <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-white/5 pointer-events-none" />
+        <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-foreground/5 pointer-events-none" />
+        <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-foreground/5 pointer-events-none" />
         <div className="relative z-10">
           {/* Top row: name + status badge */}
           <div className="flex items-start justify-between mb-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-cyan-400/70">Selamat Datang</p>
-              <h1 className="text-lg font-extrabold text-white mt-0.5 leading-tight">{user.name}</h1>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Selamat Datang</p>
+              <h1 className="text-lg font-extrabold text-foreground mt-0.5 leading-tight">{user.name}</h1>
               <p className="text-xs text-muted-foreground font-mono">@{user.username}</p>
             </div>
             {isExpired
@@ -422,14 +422,14 @@ export default function CustomerDashboard() {
           </div>
           {/* Package + expiry info */}
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="bg-white/5 rounded-xl p-2.5">
-              <p className="text-[9px] font-bold uppercase tracking-wide text-cyan-400/70 mb-0.5">Paket</p>
-              <p className="text-sm font-bold text-white leading-tight">{user.profile.name}</p>
+            <div className="bg-foreground/5 rounded-xl p-2.5">
+              <p className="text-[9px] font-bold uppercase tracking-wide text-primary/70 mb-0.5">Paket</p>
+              <p className="text-sm font-bold text-foreground leading-tight">{user.profile.name}</p>
               <p className="text-[10px] text-muted-foreground">{user.profile.downloadSpeed}/{user.profile.uploadSpeed} Mbps</p>
             </div>
-            <div className={`rounded-xl p-2.5 ${isExpired ? 'bg-red-500/10' : 'bg-white/5'}`}>
-              <p className="text-[9px] font-bold uppercase tracking-wide text-cyan-400/70 mb-0.5">Berlaku S/D</p>
-              <p className={`text-sm font-bold leading-tight ${isExpired ? 'text-red-400' : 'text-white'}`}>
+            <div className={`rounded-xl p-2.5 ${isExpired ? 'bg-red-500/10' : 'bg-foreground/5'}`}>
+              <p className="text-[9px] font-bold uppercase tracking-wide text-primary/70 mb-0.5">Berlaku S/D</p>
+              <p className={`text-sm font-bold leading-tight ${isExpired ? 'text-red-400' : 'text-foreground'}`}>
                 {formatWIB(user.expiredAt, 'd MMM yyyy')}
               </p>
               <p className={`text-[10px] font-medium ${isExpired ? 'text-red-400' : daysLeft <= 7 ? 'text-yellow-400' : 'text-green-400'}`}>
@@ -448,7 +448,7 @@ export default function CustomerDashboard() {
             </button>
             <button
               onClick={() => router.push('/customer/invoices')}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl transition-all border border-white/20 active:scale-95"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-foreground/10 hover:bg-foreground/15 text-foreground text-xs font-bold rounded-xl transition-all border border-foreground/20 active:scale-95"
             >
               <FileText className="w-3.5 h-3.5" />
               Tagihan
@@ -460,7 +460,7 @@ export default function CustomerDashboard() {
       {/* ── Quick Actions Grid ────────────────────────────────────────── */}
       <div>
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 px-1">Menu Cepat</p>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 lg:grid-cols-8 gap-2">
           {([
             { name: 'Riwayat',      href: '/customer/history',       icon: Receipt,       color: 'text-purple-400',  bg: 'bg-purple-500/10 border-purple-500/30' },
             { name: 'Perpanjang',   href: '/customer/renewal',       icon: RefreshCw,     color: 'text-cyan-400',    bg: 'bg-cyan-500/10 border-cyan-500/30' },
@@ -493,7 +493,7 @@ export default function CustomerDashboard() {
                 <Receipt className={`w-4 h-4 ${invoice.status === 'OVERDUE' ? 'text-red-400' : 'text-yellow-400'}`} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-white font-mono">{invoice.invoiceNumber}</p>
+                <p className="text-xs font-bold text-foreground font-mono">{invoice.invoiceNumber}</p>
                 <p className="text-[10px] text-muted-foreground">{formatCurrency(invoice.amount)} · JT {formatWIB(invoice.dueDate, 'd MMM')}</p>
               </div>
               <div className="flex flex-col gap-1 flex-shrink-0">
@@ -524,7 +524,7 @@ export default function CustomerDashboard() {
             </div>
           ))}
           {invoices.filter(inv => inv.status === 'PENDING' || inv.status === 'OVERDUE').length > 3 && (
-            <button onClick={() => router.push('/customer/invoices')} className="w-full text-center text-xs text-cyan-400 py-1 hover:underline">
+            <button onClick={() => router.push('/customer/invoices')} className="w-full text-center text-xs text-primary py-1 hover:underline">
               Lihat semua tagihan →
             </button>
           )}
@@ -543,7 +543,7 @@ export default function CustomerDashboard() {
               <h2 className="text-sm font-bold text-accent uppercase tracking-wider">{t('customer.ontWifi')}</h2>
             </div>
             {ontDevice && (
-              <button onClick={() => router.push('/customer/wifi')} className="text-[10px] text-cyan-400 hover:underline">Detail →</button>
+              <button onClick={() => router.push('/customer/wifi')} className="text-[10px] text-primary hover:underline">Detail →</button>
             )}
           </div>
           
@@ -552,12 +552,12 @@ export default function CustomerDashboard() {
           : (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-muted/20 rounded-lg p-2"><span className="text-muted-foreground block text-[9px] uppercase font-bold">{t('customer.model')}</span><span className="font-medium text-white text-[11px]">{ontDevice.manufacturer} {ontDevice.model}</span></div>
+                <div className="bg-muted/20 rounded-lg p-2"><span className="text-muted-foreground block text-[9px] uppercase font-bold">{t('customer.model')}</span><span className="font-medium text-foreground text-[11px]">{ontDevice.manufacturer} {ontDevice.model}</span></div>
                 <div className="bg-muted/20 rounded-lg p-2"><span className="text-muted-foreground block text-[9px] uppercase font-bold">{t('customer.ontStatus')}</span>
                   <span className={`text-[11px] font-bold ${ontDevice.status === 'Online' ? 'text-green-400' : 'text-red-400'}`}>{ontDevice.status}</span>
                 </div>
                 <div className="bg-muted/20 rounded-lg p-2"><span className="text-muted-foreground block text-[9px] uppercase font-bold">{t('customer.rxPower')}</span><span className="text-[11px] text-red-300">{ontDevice.signalStrength?.rxPower || '-'}</span></div>
-                <div className="bg-muted/20 rounded-lg p-2"><span className="text-muted-foreground block text-[9px] uppercase font-bold">{t('customer.connectedDevices')}</span><span className="text-[11px] font-bold text-cyan-300">{Array.isArray(ontDevice.connectedHosts) ? ontDevice.connectedHosts.length : 0}</span></div>
+                <div className="bg-muted/20 rounded-lg p-2"><span className="text-muted-foreground block text-[9px] uppercase font-bold">{t('customer.connectedDevices')}</span><span className="text-[11px] font-bold text-primary">{Array.isArray(ontDevice.connectedHosts) ? ontDevice.connectedHosts.length : 0}</span></div>
               </div>
               
               {/* WiFi SSIDs */}
@@ -572,7 +572,7 @@ export default function CustomerDashboard() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <Wifi className="w-3 h-3 text-accent" />
-                            <span className="text-[10px] font-bold text-white truncate max-w-[130px]">{wlan.ssid || '(belum ada SSID)'}</span>
+                            <span className="text-[10px] font-bold text-foreground truncate max-w-[130px]">{wlan.ssid || '(belum ada SSID)'}</span>
                             <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${wlan.enabled ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'}`}>{wlan.band || (wlan.index >= 5 ? '5GHz' : '2.4GHz')}</span>
                           </div>
                           {!isEditing && (
@@ -633,7 +633,7 @@ export default function CustomerDashboard() {
               </div>
               <h2 className="text-sm font-bold text-success uppercase tracking-wider">{t('customer.invoices')}</h2>
             </div>
-            <button onClick={() => router.push('/customer/invoices')} className="text-[10px] text-cyan-400 hover:underline">Semua →</button>
+            <button onClick={() => router.push('/customer/invoices')} className="text-[10px] text-primary hover:underline">Semua →</button>
           </div>
           
           {invoices.length === 0 ? <div className="text-center py-4 text-muted-foreground text-xs"><Receipt className="w-8 h-8 mx-auto mb-1 opacity-30" /><p>{t('customer.noInvoices')}</p></div>
@@ -649,7 +649,7 @@ export default function CustomerDashboard() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-0.5">
-                          <p className="font-mono text-xs font-semibold text-white truncate">{invoice.invoiceNumber}</p>
+                          <p className="font-mono text-xs font-semibold text-foreground truncate">{invoice.invoiceNumber}</p>
                           {isPaid ? <span className="px-1.5 py-0.5 bg-success/20 text-success text-[9px] rounded-full font-bold flex-shrink-0">Lunas</span>
                           : isCancelled ? <span className="px-1.5 py-0.5 bg-muted text-muted-foreground text-[9px] rounded-full font-bold flex-shrink-0">Batal</span>
                           : isOverdue ? <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[9px] rounded-full font-bold flex-shrink-0">Terlambat</span>
@@ -657,7 +657,7 @@ export default function CustomerDashboard() {
                         </div>
                         <div className="flex items-center justify-between">
                           <p className="text-[9px] text-muted-foreground">JT {formatWIB(invoice.dueDate, 'd MMM yyyy')}</p>
-                          <p className="text-xs font-bold text-white">{formatCurrency(invoice.amount)}</p>
+                          <p className="text-xs font-bold text-foreground">{formatCurrency(invoice.amount)}</p>
                         </div>
                       </div>
                       {!isPaid && !isCancelled && invoice.manualPaymentStatus !== 'pending' && (isPending || isOverdue) && (
@@ -695,7 +695,7 @@ export default function CustomerDashboard() {
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-sm font-bold text-white">Kirim Bukti Transfer</h3>
+                  <h3 className="text-sm font-bold text-foreground">Kirim Bukti Transfer</h3>
                   <p className="text-[10px] text-muted-foreground mt-0.5">{manualPayModal.invoiceNumber} — {formatCurrency(manualPayModal.amount)}</p>
                 </div>
                 <button onClick={() => setManualPayModal(null)} className="p-1.5 rounded-lg bg-muted/20 hover:bg-muted/40 border border-border/50">
@@ -705,7 +705,7 @@ export default function CustomerDashboard() {
               <div className="space-y-3">
                 {/* Admin bank account selector */}
                 <div>
-                  <label className="text-xs font-bold text-white mb-1.5 block">Transfer ke Rekening *</label>
+                  <label className="text-xs font-bold text-foreground mb-1.5 block">Transfer ke Rekening *</label>
                   {adminBankAccounts.length > 0 ? (
                     <div className="space-y-2">
                       {adminBankAccounts.map((acc, i) => (
@@ -723,7 +723,7 @@ export default function CustomerDashboard() {
                           }`}
                         >
                           <div>
-                            <p className="text-xs font-bold text-white">{acc.bankName}</p>
+                            <p className="text-xs font-bold text-foreground">{acc.bankName}</p>
                             <p className="font-mono text-sm text-cyan-300 tracking-wider mt-0.5">{acc.accountNumber}</p>
                             <p className="text-[10px] text-muted-foreground mt-0.5">a/n {acc.accountName}</p>
                           </div>
@@ -732,19 +732,19 @@ export default function CustomerDashboard() {
                       ))}
                     </div>
                   ) : (
-                    <input type="text" placeholder="Contoh: BCA, BNI, Mandiri..." value={manualForm.bankName} onChange={e => setManualForm(f => ({ ...f, bankName: e.target.value }))} className="w-full px-3 py-2 bg-muted/20 border border-border/50 rounded-lg text-xs text-white placeholder-muted-foreground focus:outline-none focus:border-primary/60" />
+                    <input type="text" placeholder="Contoh: BCA, BNI, Mandiri..." value={manualForm.bankName} onChange={e => setManualForm(f => ({ ...f, bankName: e.target.value }))} className="w-full px-3 py-2 bg-muted/20 border border-border/50 rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/60" />
                   )}
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-white mb-1.5 block">Nama Pengirim *</label>
-                  <input type="text" placeholder="Nama sesuai rekening" value={manualForm.accountName} onChange={e => setManualForm(f => ({ ...f, accountName: e.target.value }))} className="w-full px-3 py-2 bg-muted/20 border border-border/50 rounded-lg text-xs text-white placeholder-muted-foreground focus:outline-none focus:border-primary/60" />
+                  <label className="text-xs font-bold text-foreground mb-1.5 block">Nama Pengirim *</label>
+                  <input type="text" placeholder="Nama sesuai rekening" value={manualForm.accountName} onChange={e => setManualForm(f => ({ ...f, accountName: e.target.value }))} className="w-full px-3 py-2 bg-muted/20 border border-border/50 rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/60" />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-white mb-1.5 block">Catatan <span className="text-muted-foreground font-normal">(opsional)</span></label>
-                  <textarea placeholder="Catatan tambahan..." value={manualForm.notes} onChange={e => setManualForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-muted/20 border border-border/50 rounded-lg text-xs text-white placeholder-muted-foreground focus:outline-none focus:border-primary/60 resize-none" />
+                  <label className="text-xs font-bold text-foreground mb-1.5 block">Catatan <span className="text-muted-foreground font-normal">(opsional)</span></label>
+                  <textarea placeholder="Catatan tambahan..." value={manualForm.notes} onChange={e => setManualForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-muted/20 border border-border/50 rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/60 resize-none" />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-white mb-1.5 block">Bukti Transfer *</label>
+                  <label className="text-xs font-bold text-foreground mb-1.5 block">Bukti Transfer *</label>
                   <input type="file" accept="image/*" onChange={e => setManualForm(f => ({ ...f, file: e.target.files?.[0] ?? null }))} className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary/20 file:text-primary hover:file:bg-primary/30 cursor-pointer" />
                   {manualForm.file && <p className="text-[10px] text-success mt-1">✓ {manualForm.file.name}</p>}
                 </div>
