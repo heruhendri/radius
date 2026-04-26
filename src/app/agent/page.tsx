@@ -18,6 +18,7 @@ export default function AgentLoginPage() {
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState('');
   const [brandLoaded, setBrandLoaded] = useState(false);
+  const displayCompanyName = companyName || 'Salfanet Radius';
 
   useEffect(() => {
     fetch('/api/public/company')
@@ -75,7 +76,7 @@ export default function AgentLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-gray-50 dark:bg-slate-950">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
       {/* ── Mobile Brand Header (mobile only) ── */}
       <div className="lg:hidden bg-gradient-to-br from-indigo-600 to-violet-600 px-6 pt-10 pb-8 relative overflow-hidden flex-shrink-0">
         <div className="absolute top-[-50px] right-[-50px] w-40 h-40 bg-white/10 rounded-full pointer-events-none" />
@@ -96,7 +97,7 @@ export default function AgentLoginPage() {
         </div>
       </div>
       {/* ── Left Panel: Login Form ── */}
-      <div className="flex items-start justify-center w-full lg:w-[420px] lg:min-h-screen bg-white dark:bg-slate-800 shadow-xl dark:shadow-slate-900/50 px-8 pt-10 lg:pt-14 pb-10 flex-shrink-0">
+      <div className="flex items-start justify-center w-full lg:w-[430px] lg:min-h-screen bg-card border-r border-border shadow-xl px-8 pt-10 lg:pt-14 pb-10 flex-shrink-0">
         <div className="w-full max-w-[320px]">
 
           {/* Logo */}
@@ -116,6 +117,11 @@ export default function AgentLoginPage() {
           <p className="text-center text-sm text-indigo-600 dark:text-indigo-400 font-semibold mb-6">
             {t('agent.portal.loginSubtitle')}
           </p>
+
+          <div className="text-center mb-6 rounded-xl border border-border bg-muted/40 px-4 py-3">
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Nama Perusahaan</p>
+            <p className="mt-1 text-base font-bold text-foreground">{displayCompanyName}</p>
+          </div>
 
           {/* Error */}
           {error && (
@@ -176,7 +182,7 @@ export default function AgentLoginPage() {
       </div>
 
       {/* ── Right Panel: Brand Info ── */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 items-center justify-center px-12 py-8 relative overflow-hidden">
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-slate-100 via-white to-violet-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 items-center justify-center px-12 py-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-100/60 dark:bg-indigo-900/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-56 h-56 bg-violet-100/50 dark:bg-violet-900/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -184,10 +190,10 @@ export default function AgentLoginPage() {
           <div className="mb-2">
             <span className="text-xs font-semibold uppercase tracking-widest text-indigo-500 dark:text-indigo-400">Portal Agen</span>
           </div>
-          <h1 className="text-5xl font-extrabold leading-tight mb-1">
-            <span className="text-slate-800 dark:text-white">{(companyName || 'Salfanet Radius').split(' ').slice(0, -1).join(' ')} </span>
-            <span className="bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent">{(companyName || 'Salfanet Radius').split(' ').slice(-1)[0]}</span>
+          <h1 className="text-5xl font-extrabold leading-tight mb-1 text-slate-900 dark:text-white">
+            {displayCompanyName}
           </h1>
+          <div className="mb-4 h-1.5 w-28 rounded-full bg-gradient-to-r from-indigo-600 to-violet-500" />
           <p className="text-base text-gray-500 dark:text-slate-400 mb-8 leading-relaxed">
             Portal agen resmi untuk mengelola penjualan voucher, memantau komisi, dan mendaftarkan pelanggan baru di wilayah Anda.
           </p>
