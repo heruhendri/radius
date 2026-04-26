@@ -50,8 +50,12 @@ async function connectToWhatsApp() {
     auth: state,
     printQRInTerminal: false,
     logger,
-    browser: Browsers.macOS('Desktop'),
+    browser: Browsers.ubuntu('Chrome'),
     syncFullHistory: false,
+    markOnlineOnConnect: false,
+    generateHighQualityLinkPreview: false,
+    connectTimeoutMs: 60000,
+    defaultQueryTimeoutMs: 30000,
   });
 
   sock.ev.on('connection.update', async (update) => {
