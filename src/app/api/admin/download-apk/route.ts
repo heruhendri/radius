@@ -54,12 +54,10 @@ import android.os.Bundle
 import android.webkit.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
-    private lateinit var swipeRefresh: SwipeRefreshLayout
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
     private val fileChooser = registerForActivityResult(
@@ -78,10 +76,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        webView      = findViewById(R.id.webView)
-        swipeRefresh = findViewById(R.id.swipeRefresh)
-        // Disable pull-to-refresh — web page handles its own scroll/refresh
-        swipeRefresh.isEnabled = false
+        webView = findViewById(R.id.webView)
 
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
@@ -106,9 +101,6 @@ class MainActivity : AppCompatActivity() {
         webView.overScrollMode = android.view.View.OVER_SCROLL_NEVER
 
         webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                swipeRefresh.isRefreshing = false
-            }
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
                 val isInternal = url.startsWith("${baseUrl}") ||
@@ -134,9 +126,6 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
         }
-
-        // Pull-to-refresh disabled — no-op listener kept for layout compatibility
-        swipeRefresh.setOnRefreshListener { swipeRefresh.isRefreshing = false }
 
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState)
@@ -197,7 +186,6 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation 'com.google.android.material:material:1.11.0'
 }
 `;
@@ -270,9 +258,8 @@ function androidManifest(pkg: string): string {
 
 function activityMainXml(): string {
   return `<?xml version="1.0" encoding="utf-8"?>
-<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/swipeRefresh"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -281,7 +268,7 @@ function activityMainXml(): string {
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+</FrameLayout>
 `;
 }
 
