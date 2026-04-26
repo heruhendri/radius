@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useToast } from '@/components/cyberpunk/CyberToast';
@@ -49,6 +49,7 @@ export default function WhatsAppProvidersPage() {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrConnected, setQrConnected] = useState(false);
   const [qrPollingRef, setQrPollingRef] = useState<ReturnType<typeof setInterval> | null>(null);
+  const showQrModalRef = useRef(false);
   const [providerStatuses, setProviderStatuses] = useState<Record<string, ProviderStatus>>({});
   const [restartingProvider, setRestartingProvider] = useState<string | null>(null);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
@@ -340,6 +341,7 @@ export default function WhatsAppProvidersPage() {
 
   const closeQrModal = () => {
     stopQrPolling();
+    showQrModalRef.current = false;
     setShowQrModal(false);
     setQrImage(null);
     setQrConnected(false);
@@ -370,6 +372,7 @@ export default function WhatsAppProvidersPage() {
   };
 
   const showQrCode = async (provider: Provider) => {
+    showQrModalRef.current = true;
     setQrProvider(provider);
     setShowQrModal(true);
     setQrLoading(true);
@@ -396,6 +399,12 @@ export default function WhatsAppProvidersPage() {
           setQrImage(imageUrl);
           startQrPolling(provider);
         }
+      } else if (response.status === 202) {
+        // Baileys WAITING — QR belum siap, retry otomatis
+        setTimeout(() => {
+          if (showQrModalRef.current) showQrCode(provider);
+        }, 2500);
+        return; // keep qrLoading true (spinner tetap tampil)
       } else if (response.status === 422) {
         const errorData = await response.json();
         addToast({ type: 'info', title: 'Info', description: errorData.error || t('whatsapp.deviceAlreadyConnected') });

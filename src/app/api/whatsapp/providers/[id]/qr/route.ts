@@ -153,8 +153,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           }
 
           if (!baileysRes.ok) {
-            const errText = await baileysRes.text();
-            return NextResponse.json({ error: errText || 'Baileys service error' }, { status: 400 });
+            const errData = await baileysRes.json().catch(() => ({}));
+            if (errData.status === 'WAITING') {
+              // QR not generated yet — caller should retry
+              return NextResponse.json(
+                { waiting: true, message: errData.message || 'QR Code belum siap, coba lagi...' },
+                { status: 202 },
+              );
+            }
+            return NextResponse.json(
+              { error: errData.message || 'Baileys service error' },
+              { status: 400 },
+            );
           }
 
           const baileysData = await baileysRes.json();
