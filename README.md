@@ -2,7 +2,7 @@
 
 Modern, full-stack billing & RADIUS management system for ISP/RTRW.NET with FreeRADIUS integration supporting PPPoE and Hotspot authentication.
 
-> **Latest:** v2.23.0 — Refactor besar (Phase 1-8): hapus coordinator role, migrasi cron ke tsx runner, cleanup Firebase/FCM, update scripts refactor-safe (Apr 26, 2026)
+> **Latest:** v2.24.0 — Hapus update via web (ganti ke SSH manual), fix updater.sh default branch (Apr 26, 2026)
 
 ---
 
@@ -361,6 +361,15 @@ Dashboard · PPPoE · Hotspot · Agent · Invoice · Payment · Keuangan · Sess
 ---
 
 ## 📝 Changelog
+
+### v2.24.0 — April 26, 2026
+- **Removed: Update otomatis via web panel** — Fitur SSE update browser dihapus karena bash script selalu mati saat `pm2 stop` dipanggil dari dalam Next.js, menyebabkan 502. Halaman `/admin/system` diganti menjadi info sistem + panduan SSH siap-copy.
+- **Fix: `updater.sh` default `--branch master`** — `bash updater.sh` tanpa flag sebelumnya 404 karena masuk mode GitHub Releases yang tidak dipakai. Sekarang otomatis pakai git branch master.
+
+### v2.23.0 — April 26, 2026
+- **Removed:** Coordinator role, Firebase/FCM — hapus portal coordinator, API Firebase, dependency firebase-admin
+- **Added:** `src/cron/runner.ts` tsx-based cron runner, `production/ecosystem.config.js` PM2 template, `vps-install/cleanup-refactor.sh` idempotent cleanup script
+- **Changed:** `update.sh` & `updater.sh` refactor-aware (copy ecosystem, cleanup stale, PM2 cron migration)
 
 ### v2.20.0 — April 20, 2026
 - **Fix: Script RADIUS `address=127.0.0.1`** — Fallback chain diperbarui: `RADIUS_SERVER_IP` → `VPS_IP` → hostname dari `NEXTAUTH_URL` → `127.0.0.1`. Instalasi tanpa env var eksplisit (VPS lokal/LXC) kini otomatis pakai IP yang benar.
