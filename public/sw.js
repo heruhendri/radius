@@ -1,4 +1,4 @@
-const CACHE_NAME = 'salfanet-pwa-v5';
+const CACHE_NAME = 'salfanet-pwa-v6';
 const OFFLINE_URL = '/offline';
 const STATIC_ASSETS = [
   OFFLINE_URL,
@@ -37,16 +37,10 @@ function offlineFallbackResponse(returnUrl) {
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    // Cache each asset individually — one failure won't abort entire install
-    await Promise.all(
-      STATIC_ASSETS.map((url) =>
-        cache.add(url).catch((err) => console.warn('[SW] precache skip:', url, err))
-      )
-    );
-    await self.skipWaiting();
-  })());
+  // Skip network fetches during install — avoids blocking on slow server responses.
+  // Static assets are cached lazily on first access (fetch handler below).
+  // The offline fallback HTML is already inlined in this SW via offlineFallbackResponse().
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
