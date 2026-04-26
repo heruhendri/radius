@@ -233,7 +233,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Background Effects */}
       <div className="fixed inset-0 pointer-events-none z-0" style={{ willChange: 'transform' }}>
-        <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-cyan-500/10 rounded-full blur-[80px]" style={{ transform: 'translateZ(0)' }} />
+        <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-primary/10 rounded-full blur-[80px]" style={{ transform: 'translateZ(0)' }} />
         <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] bg-blue-500/10 rounded-full blur-[80px]" style={{ transform: 'translateZ(0)' }} />
         <div className="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] w-[50%] h-[50%] bg-sky-400/10 rounded-full blur-[100px]" />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(6,182,212,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.03)_1px,transparent_1px)] bg-[size:50px_50px]" />
@@ -251,37 +251,37 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       <aside
         className={cn(
           'fixed top-0 left-0 h-full z-50 transition-all duration-300 ease-in-out',
-          'w-64 bg-background/95 backdrop-blur-xl border-r border-cyan-500/20',
-          'shadow-[5px_0_30px_rgba(6,182,212,0.15)] flex flex-col',
+          'w-64 bg-sidebar backdrop-blur-xl border-r border-sidebar-border',
+          'shadow-lg flex flex-col',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
           'lg:translate-x-0'
         )}
       >
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-cyan-500/20">
+        <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {companyLogo ? (
-                <div className="w-9 h-9 rounded-lg bg-white p-1 border border-cyan-400/30 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+                <div className="w-9 h-9 rounded-lg bg-sidebar-accent p-1 border border-sidebar-border flex items-center justify-center overflow-hidden shadow-sm">
                   <Image unoptimized src={companyLogo} alt={companyName} width={36} height={36} className="w-full h-full object-contain" decoding="async" />
                 </div>
               ) : (
-                <div className="w-9 h-9 rounded-lg bg-white p-1 border border-cyan-400/30 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-                  <Shield className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
+                <div className="w-9 h-9 rounded-lg bg-sidebar-accent p-1 border border-sidebar-border flex items-center justify-center shadow-sm">
+                  <Shield className="w-5 h-5 text-sidebar-primary" />
                 </div>
               )}
               <div>
-                <h1 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400">
+                <h1 className="text-sm font-bold text-sidebar-primary">
                   {companyName}
                 </h1>
-                <p className="text-[10px] text-cyan-400/70 tracking-widest font-bold uppercase">Customer Portal</p>
+                <p className="text-[10px] text-sidebar-primary/70 tracking-widest font-bold uppercase">Customer Portal</p>
               </div>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="p-1.5 hover:bg-cyan-500/20 rounded-lg lg:hidden"
+              className="p-1.5 hover:bg-sidebar-accent rounded-lg lg:hidden"
             >
-              <X className="w-4 h-4 text-cyan-300" />
+              <X className="w-4 h-4 text-sidebar-foreground" />
             </button>
           </div>
         </div>
@@ -301,16 +301,16 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 group',
                   active
-                    ? 'text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)]'
-                    : 'text-muted-foreground hover:text-cyan-300 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/20'
+                      ? 'text-sidebar-primary bg-sidebar-accent border border-sidebar-border'
+                      : 'text-sidebar-foreground/70 hover:text-sidebar-primary hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border'
                 )}
               >
                 <span
                   className={cn(
                     'p-1.5 rounded-lg transition-all duration-300',
                     active
-                      ? 'text-cyan-400 bg-cyan-500/20 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]'
-                      : 'text-muted-foreground/60 group-hover:text-cyan-400'
+                      ? 'text-sidebar-primary bg-sidebar-accent'
+                      : 'text-sidebar-foreground/50 group-hover:text-sidebar-primary'
                   )}
                 >
                   <Icon className="w-4 h-4" />
@@ -322,7 +322,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Logout */}
-        <div className="p-4 border-t border-cyan-500/20">
+        <div className="p-4 border-t border-sidebar-border">
           <PushNotificationToggle compact />
           <button
             onClick={handleLogout}
@@ -337,13 +337,13 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       {/* â”€â”€ MAIN CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="lg:ml-64 flex flex-col min-h-screen">
         {/* Desktop Header */}
-        <header className="hidden lg:flex sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-cyan-500/20 items-center justify-between px-6 py-3">
+        <header className="hidden lg:flex sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border items-center justify-between px-6 py-3">
           <div>
-            <h2 className="text-sm font-bold text-white">Customer Portal</h2>
-            <p className="text-xs text-cyan-400/70">{companyName}</p>
+            <h2 className="text-sm font-bold text-foreground">Customer Portal</h2>
+            <p className="text-xs text-primary/70">{companyName}</p>
           </div>
           <div className="flex items-center gap-3">
-            <Clock className="w-4 h-4 text-cyan-400/50" />
+            <Clock className="w-4 h-4 text-primary/50" />
             <span className="text-xs text-muted-foreground">
               {now
                 ? formatInTimeZone(now, 'Asia/Jakarta', 'EEEE, d MMMM yyyy  HH:mm:ss', { locale: localeId })
@@ -353,9 +353,9 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
             <div className="relative">
               <button
                 onClick={() => { setBellOpen(v => !v); setUnreadCount(0); }}
-                className="relative p-2 flex items-center justify-center rounded-xl hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/20 transition-all"
+                className="relative p-2 flex items-center justify-center rounded-xl hover:bg-primary/10 border border-transparent hover:border-border transition-all"
               >
-                <Bell className="w-4 h-4 text-cyan-400" />
+                <Bell className="w-4 h-4 text-primary" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-[0_0_8px_rgba(239,68,68,0.6)]">
                     {unreadCount > 99 ? '99+' : unreadCount}
@@ -365,39 +365,39 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
               {bellOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setBellOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-card/95 backdrop-blur-xl border border-cyan-500/20 rounded-2xl shadow-[0_8px_30px_rgba(6,182,212,0.2)] z-50 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-cyan-500/20 flex items-center justify-between">
-                      <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Notifikasi</span>
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                      <span className="text-xs font-bold text-primary uppercase tracking-wider">Notifikasi</span>
                       <div className="flex items-center gap-1">
                         {notifHistory.length > 0 && (
                           <button onClick={handleClearAllNotifications} title="Hapus semua" className="p-1 hover:bg-red-500/20 rounded-lg transition-colors">
                             <Trash2 className="w-3.5 h-3.5 text-red-400" />
                           </button>
                         )}
-                        <button onClick={() => setBellOpen(false)} className="p-1 hover:bg-cyan-500/20 rounded-lg"><X className="w-3.5 h-3.5 text-cyan-300" /></button>
+                        <button onClick={() => setBellOpen(false)} className="p-1 hover:bg-primary/10 rounded-lg"><X className="w-3.5 h-3.5 text-primary" /></button>
                       </div>
                     </div>
-                    <div className="max-h-72 overflow-y-auto divide-y divide-cyan-500/10">
+                    <div className="max-h-72 overflow-y-auto divide-y divide-border">
                       {notifHistory.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-6">Belum ada notifikasi</p>
                       ) : notifHistory.map(n => (
-                        <div key={n.id} className="px-4 py-3 hover:bg-cyan-500/5 transition-colors group">
+                        <div key={n.id} className="px-4 py-3 hover:bg-primary/5 transition-colors group">
                             <div className="flex items-start gap-2">
                               <div className={`mt-0.5 p-1 rounded-lg flex-shrink-0 ${
                                 n.type === 'payment_success' ? 'bg-green-500/20' :
                                 n.type === 'payment_rejected' ? 'bg-red-500/20' :
-                                n.type === 'package_changed' ? 'bg-blue-500/20' : 'bg-cyan-500/20'
+                                n.type === 'package_changed' ? 'bg-blue-500/20' : 'bg-primary/10'
                               }`}>
                                 {n.type === 'payment_success' && <CheckCircle2 className="w-3 h-3 text-green-400" />}
                                 {n.type === 'payment_rejected' && <XCircle className="w-3 h-3 text-red-400" />}
                                 {n.type === 'package_changed' && <Package className="w-3 h-3 text-blue-400" />}
-                                {n.type !== 'payment_success' && n.type !== 'payment_rejected' && n.type !== 'package_changed' && <Bell className="w-3 h-3 text-cyan-400" />}
+                                {n.type !== 'payment_success' && n.type !== 'payment_rejected' && n.type !== 'package_changed' && <Bell className="w-3 h-3 text-primary" />}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className={`text-xs font-bold mb-0.5 ${
                                   n.type === 'payment_success' ? 'text-green-400' :
                                   n.type === 'payment_rejected' ? 'text-red-400' :
-                                  n.type === 'package_changed' ? 'text-blue-400' : 'text-cyan-400'
+                                  n.type === 'package_changed' ? 'text-blue-400' : 'text-primary'
                                 }`}>{n.title}</p>
                                 <p className="text-[11px] text-muted-foreground leading-tight">{n.message}</p>
                                 <p className="text-[10px] text-muted-foreground/50 mt-1">{formatWIB(n.timestamp, 'dd MMM yyyy HH:mm')}</p>
@@ -419,7 +419,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
             {/* Theme Toggle â€” Desktop */}
             <button
               onClick={toggleTheme}
-              className="p-2 flex items-center justify-center rounded-xl hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/20 transition-all"
+              className="p-2 flex items-center justify-center rounded-xl hover:bg-primary/10 border border-transparent hover:border-border transition-all"
               title={isDark ? 'Mode Terang' : 'Mode Gelap'}
             >
               {isDark
@@ -432,30 +432,30 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+        <header className="lg:hidden sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border shadow-sm">
           <div className="px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {/* Menu button (left side) */}
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-2 flex items-center justify-center hover:bg-cyan-500/20 rounded-xl transition-all border border-cyan-500/30"
+                className="p-2 flex items-center justify-center hover:bg-primary/10 rounded-xl transition-all border border-border"
               >
-                <Menu className="w-5 h-5 text-cyan-400" />
+                <Menu className="w-5 h-5 text-primary" />
               </button>
               {companyLogo ? (
-                <div className="w-8 h-8 rounded-lg bg-white p-1 border border-cyan-400/30 flex items-center justify-center overflow-hidden">
+                <div className="w-8 h-8 rounded-lg bg-card p-1 border border-border flex items-center justify-center overflow-hidden">
                   <Image unoptimized src={companyLogo} alt={companyName} width={32} height={32} className="w-full h-full object-contain" decoding="async" />
                 </div>
               ) : (
-                <div className="w-8 h-8 rounded-lg bg-white p-1 border border-cyan-400/30 flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
+                <div className="w-8 h-8 rounded-lg bg-card p-1 border border-border flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-primary" />
                 </div>
               )}
               <div>
-                <h1 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400">
+                <h1 className="text-sm font-bold text-primary">
                   {companyName}
                 </h1>
-                <p className="text-[10px] text-cyan-400/70 tracking-widest font-bold uppercase">Customer Portal</p>
+                <p className="text-[10px] text-primary/60 tracking-widest font-bold uppercase">Customer Portal</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -463,9 +463,9 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
               <div className="relative">
                 <button
                   onClick={() => { setBellOpen(v => !v); setUnreadCount(0); }}
-                  className="relative p-2 flex items-center justify-center hover:bg-cyan-500/20 rounded-xl transition-all border border-cyan-500/30"
+                  className="relative p-2 flex items-center justify-center hover:bg-primary/10 rounded-xl transition-all border border-border"
                 >
-                  <Bell className="w-4 h-4 text-cyan-400" />
+                  <Bell className="w-4 h-4 text-primary" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-[0_0_8px_rgba(239,68,68,0.6)]">
                       {unreadCount > 99 ? '99+' : unreadCount}
@@ -475,39 +475,39 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
                 {bellOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setBellOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-72 bg-card/95 backdrop-blur-xl border border-cyan-500/20 rounded-2xl shadow-[0_8px_30px_rgba(6,182,212,0.2)] z-50 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-cyan-500/20 flex items-center justify-between">
-                        <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Notifikasi</span>
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg z-50 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                        <span className="text-xs font-bold text-primary uppercase tracking-wider">Notifikasi</span>
                         <div className="flex items-center gap-1">
                           {notifHistory.length > 0 && (
                             <button onClick={handleClearAllNotifications} title="Hapus semua" className="p-1 hover:bg-red-500/20 rounded-lg transition-colors">
                               <Trash2 className="w-3.5 h-3.5 text-red-400" />
                             </button>
                           )}
-                          <button onClick={() => setBellOpen(false)} className="p-1 hover:bg-cyan-500/20 rounded-lg"><X className="w-3.5 h-3.5 text-cyan-300" /></button>
+                          <button onClick={() => setBellOpen(false)} className="p-1 hover:bg-primary/10 rounded-lg"><X className="w-3.5 h-3.5 text-primary" /></button>
                         </div>
                       </div>
-                      <div className="max-h-60 overflow-y-auto divide-y divide-cyan-500/10">
+                      <div className="max-h-60 overflow-y-auto divide-y divide-border">
                         {notifHistory.length === 0 ? (
                           <p className="text-xs text-muted-foreground text-center py-6">Belum ada notifikasi</p>
                         ) : notifHistory.map(n => (
-                          <div key={n.id} className="px-4 py-3 hover:bg-cyan-500/5 transition-colors group">
+                          <div key={n.id} className="px-4 py-3 hover:bg-primary/5 transition-colors group">
                             <div className="flex items-start gap-2">
                               <div className={`mt-0.5 p-1 rounded-lg flex-shrink-0 ${
                                 n.type === 'payment_success' ? 'bg-green-500/20' :
                                 n.type === 'payment_rejected' ? 'bg-red-500/20' :
-                                n.type === 'package_changed' ? 'bg-blue-500/20' : 'bg-cyan-500/20'
+                                n.type === 'package_changed' ? 'bg-blue-500/20' : 'bg-primary/10'
                               }`}>
                                 {n.type === 'payment_success' && <CheckCircle2 className="w-3 h-3 text-green-400" />}
                                 {n.type === 'payment_rejected' && <XCircle className="w-3 h-3 text-red-400" />}
                                 {n.type === 'package_changed' && <Package className="w-3 h-3 text-blue-400" />}
-                                {n.type !== 'payment_success' && n.type !== 'payment_rejected' && n.type !== 'package_changed' && <Bell className="w-3 h-3 text-cyan-400" />}
+                                {n.type !== 'payment_success' && n.type !== 'payment_rejected' && n.type !== 'package_changed' && <Bell className="w-3 h-3 text-primary" />}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className={`text-xs font-bold mb-0.5 ${
                                   n.type === 'payment_success' ? 'text-green-400' :
                                   n.type === 'payment_rejected' ? 'text-red-400' :
-                                  n.type === 'package_changed' ? 'text-blue-400' : 'text-cyan-400'
+                                  n.type === 'package_changed' ? 'text-blue-400' : 'text-primary'
                                 }`}>{n.title}</p>
                                 <p className="text-[11px] text-muted-foreground leading-tight">{n.message}</p>
                                 <p className="text-[10px] text-muted-foreground/50 mt-1">{formatWIB(n.timestamp, 'dd MMM yyyy HH:mm')}</p>
@@ -529,7 +529,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
               {/* Theme Toggle â€” Mobile */}
               <button
                 onClick={toggleTheme}
-                className="p-2 flex items-center justify-center hover:bg-cyan-500/20 rounded-xl transition-all border border-cyan-500/30"
+                className="p-2 flex items-center justify-center hover:bg-primary/10 rounded-xl transition-all border border-border"
                 title={isDark ? 'Mode Terang' : 'Mode Gelap'}
               >
                 {isDark
@@ -548,7 +548,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* ── MOBILE BOTTOM NAV ─────────────────────────────────── */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-xl border-t border-cyan-500/20 shadow-[0_-4px_20px_rgba(6,182,212,0.15)]">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-xl border-t border-border shadow-sm">
           <div className="flex items-center justify-around px-1 py-1.5 safe-area-pb">
             {[
               { href: '/customer',          icon: Home,        label: 'Beranda' },
@@ -564,12 +564,12 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
                   onClick={() => router.push(href)}
                   className={cn(
                     'flex flex-col items-center justify-center gap-1 py-1.5 px-2 min-w-[56px] min-h-[52px] rounded-xl transition-all',
-                    active ? 'text-cyan-400' : 'text-muted-foreground/60'
+                    active ? 'text-primary' : 'text-muted-foreground/60'
                   )}
                 >
                   <span className={cn(
                     'flex items-center justify-center p-1.5 rounded-xl transition-all',
-                    active ? 'bg-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.4)]' : ''
+                    active ? 'bg-primary/10' : ''
                   )}>
                     <Icon className="w-5 h-5" />
                   </span>

@@ -43,12 +43,15 @@ function CmdBlock({ children }: { children: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="relative group">
-      <pre className="bg-black/80 border border-border/50 rounded-lg px-4 py-3 text-[11px] font-mono text-green-400 whitespace-pre-wrap overflow-x-auto leading-relaxed">
+      <pre
+        className="border border-border/50 rounded-lg px-4 py-3 text-[11px] font-mono whitespace-pre-wrap overflow-x-auto leading-relaxed"
+        style={{ backgroundColor: '#0d1b2a', color: '#4ade80' }}
+      >
         {children}
       </pre>
       <button
         onClick={() => { navigator.clipboard.writeText(children); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-        className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+        className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all opacity-0 group-hover:opacity-100"
       >
         {copied ? '✔ copied' : 'copy'}
       </button>
