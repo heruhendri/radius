@@ -125,6 +125,8 @@ self.addEventListener('push', (event) => {
     image: payload.image,
     tag: payload.tag || 'salfanet-notification',
     requireInteraction: Boolean(payload.requireInteraction),
+    silent: false,
+    vibrate: [200, 100, 200],
     data: payload.data || { url: payload.url || '/customer' },
   };
 

@@ -295,9 +295,27 @@ function NotificationBell() {
 
   // Listen for push notifications from service worker
   useEffect(() => {
+    const playNotifSound = () => {
+      try {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.5);
+      } catch { /* audio not available */ }
+    };
+
     const handler = (event: MessageEvent) => {
       if (event.data?.type !== 'PUSH_RECEIVED') return;
       const { title, body, tag } = event.data;
+      playNotifSound();
       // Add to bell list
       setNotifications(prev => [{
         id: `push-${tag || Date.now()}`,

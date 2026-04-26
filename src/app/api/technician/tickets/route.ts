@@ -81,11 +81,12 @@ export async function PATCH(req: NextRequest) {
   if (!tech) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { ticketId, action, status, message } = body as {
+  const { ticketId, action, status, message, attachments } = body as {
     ticketId: string;
     action: 'claim' | 'update_status' | 'reply';
     status?: string;
     message?: string;
+    attachments?: string[];
   };
 
   if (!ticketId || !action) {
@@ -168,8 +169,8 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (action === 'reply') {
-    if (!message?.trim()) {
-      return NextResponse.json({ error: 'Pesan tidak boleh kosong' }, { status: 400 });
+    if (!message?.trim() && (!attachments || attachments.length === 0)) {
+      return NextResponse.json({ error: 'Pesan atau lampiran tidak boleh kosong' }, { status: 400 });
     }
     const msg = await prisma.ticketMessage.create({
       data: {
@@ -178,8 +179,9 @@ export async function PATCH(req: NextRequest) {
         senderType: 'TECHNICIAN',
         senderId: tech.id,
         senderName: tech.name,
-        message: message.trim(),
+        message: message?.trim() || '📷 Foto dikirim',
         isInternal: false,
+        attachments: attachments && attachments.length > 0 ? JSON.stringify(attachments) : null,
       },
     });
     await prisma.ticket.update({
@@ -192,7 +194,7 @@ export async function PATCH(req: NextRequest) {
         const { sendWebPushToUser } = await import('@/server/services/push-notification.service');
         await sendWebPushToUser(ticket.customerId, {
           title: '💬 Balasan Baru di Tiket Anda',
-          body: `${tech.name}: ${message.trim().substring(0, 100)}`,
+          body: `${tech.name}: ${(message?.trim() || '📷 Foto dikirim').substring(0, 100)}`,
           url: '/customer/tickets',
           tag: 'ticket-reply',
         });
