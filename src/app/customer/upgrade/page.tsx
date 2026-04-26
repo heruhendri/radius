@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -136,7 +136,7 @@ export default function UpgradePackagePage() {
       if (data.success) {
         // Show success toast and redirect
         showSuccess(
-          `${t('customer.invoiceNo')}: ${data.invoiceNumber} — ${t('customer.total')}: ${formatCurrency(data.amount)}`,
+          `${t('customer.invoiceNo')}: ${data.invoiceNumber} � ${t('customer.total')}: ${formatCurrency(data.amount)}`,
           t('customer.invoiceCreated')
         );
 
@@ -180,7 +180,7 @@ export default function UpgradePackagePage() {
 
       if (data.success) {
         showSuccess(
-          `${t('customer.invoiceNo')}: ${data.invoice?.invoiceNumber} — ${t('customer.total')}: ${formatCurrency(data.invoice?.amount || 0)}. ${t('customer.contactAdminPayment')}`,
+          `${t('customer.invoiceNo')}: ${data.invoice?.invoiceNumber} � ${t('customer.total')}: ${formatCurrency(data.invoice?.amount || 0)}. ${t('customer.contactAdminPayment')}`,
           t('customer.invoiceCreated')
         );
         router.push('/customer/history');
@@ -224,7 +224,7 @@ export default function UpgradePackagePage() {
   }
 
   return (
-    <div className="p-3 lg:p-6 space-y-5 max-w-5xl mx-auto">
+    <div className="p-3 lg:p-6 space-y-5 w-full">
       {/* Page Header */}
       <div>
         <h1 className="text-lg font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">{t('customer.upgradePackage')}</h1>
@@ -240,7 +240,7 @@ export default function UpgradePackagePage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
-        {/* ── LEFT COLUMN: Current package info (2/5) ── */}
+        {/* -- LEFT COLUMN: Current package info (2/5) -- */}
         <div className="lg:col-span-2 space-y-4">
           {/* Current Package Card */}
           {currentPackage && (
@@ -329,7 +329,7 @@ export default function UpgradePackagePage() {
           </CyberCard>
         </div>
 
-        {/* ── RIGHT COLUMN: Package selection + payment (3/5) ── */}
+        {/* -- RIGHT COLUMN: Package selection + payment (3/5) -- */}
         <div className="lg:col-span-3 space-y-4">
           {/* Available Packages */}
           <CyberCard className="bg-card/80 backdrop-blur-xl border-2 border-[#00f7ff]/30">
@@ -370,7 +370,7 @@ export default function UpgradePackagePage() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground dark:text-[#e0d0ff]/60 mb-3">
-                      ↓ {formatSpeed(pkg.downloadSpeed)} / ↑ {formatSpeed(pkg.uploadSpeed)}
+                      ? {formatSpeed(pkg.downloadSpeed)} / ? {formatSpeed(pkg.uploadSpeed)}
                     </p>
                     <p className="text-lg font-bold text-[#00f7ff] drop-shadow-[0_0_8px_rgba(0,247,255,0.4)]">
                       {formatCurrency(pkg.price)}<span className="text-[10px] font-normal text-muted-foreground dark:text-[#e0d0ff]/40">/{t('common.month')}</span>
@@ -488,3 +488,4 @@ export default function UpgradePackagePage() {
     </div>
   );
 }
+

@@ -260,7 +260,7 @@ export default function RenewalPage() {
   }
 
   return (
-    <div className="p-3 lg:p-6 space-y-4 max-w-5xl mx-auto">
+    <div className="p-3 lg:p-6 space-y-4 w-full">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => step === 'select' ? router.push('/customer') : setStep('select')} className="p-2 rounded-xl hover:bg-muted/20 border border-border/40 transition">
@@ -639,3 +639,4 @@ export default function RenewalPage() {
     </div>
   );
 }
+

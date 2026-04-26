@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -124,7 +124,7 @@ export default function CustomerSuspendPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-4">
+    <div className="p-4 lg:p-6 w-full space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <PauseCircle className="w-8 h-8 text-[#00f7ff]" />
@@ -138,9 +138,9 @@ export default function CustomerSuspendPage() {
       <div className="bg-[#1a1135]/80 border border-[#bc13fe]/30 rounded-xl p-4 text-sm text-[#e0d0ff]/70 space-y-1">
         <p className="flex items-start gap-2"><AlertCircle className="w-4 h-4 text-[#bc13fe] shrink-0 mt-0.5" />
           <span>Suspend sementara menghentikan layanan internet untuk periode tertentu (maks. 90 hari).</span></p>
-        <p className="pl-6">✦ Tagihan tetap berjalan selama suspend.</p>
-        <p className="pl-6">✦ Permintaan perlu disetujui oleh admin terlebih dahulu.</p>
-        <p className="pl-6">✦ Layanan otomatis aktif kembali setelah periode berakhir.</p>
+        <p className="pl-6">? Tagihan tetap berjalan selama suspend.</p>
+        <p className="pl-6">? Permintaan perlu disetujui oleh admin terlebih dahulu.</p>
+        <p className="pl-6">? Layanan otomatis aktif kembali setelah periode berakhir.</p>
       </div>
 
       {/* Alert Message */}
@@ -207,7 +207,7 @@ export default function CustomerSuspendPage() {
         </CyberCard>
       )}
 
-      {/* Request Form — only show if no active PENDING/APPROVED request */}
+      {/* Request Form � only show if no active PENDING/APPROVED request */}
       {(!current || ['REJECTED', 'CANCELLED', 'COMPLETED'].includes(current.status)) && (
         <CyberCard className="p-4 space-y-4">
           <p className="text-sm font-semibold text-[#00f7ff]">Ajukan Suspend Baru</p>
@@ -270,3 +270,4 @@ export default function CustomerSuspendPage() {
     </div>
   );
 }
+

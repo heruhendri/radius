@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -108,7 +108,7 @@ export default function CustomerTicketsPage() {
   };
 
   return (
-    <div className="p-3 lg:p-5 space-y-3 max-w-5xl mx-auto">
+    <div className="p-3 lg:p-5 space-y-3 w-full">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -223,3 +223,4 @@ export default function CustomerTicketsPage() {
     </div>
   );
 }
+

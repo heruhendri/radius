@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -294,7 +294,7 @@ export default function CustomerDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        toast('success', 'Bukti Transfer Terkirim', 'Admin akan mengkonfirmasi dalam 1×24 jam');
+        toast('success', 'Bukti Transfer Terkirim', 'Admin akan mengkonfirmasi dalam 1�24 jam');
         setManualPayModal(null);
         setManualForm({ bankName: '', accountName: '', notes: '', file: null });
         setSelectedAdminBank(null);
@@ -315,16 +315,16 @@ export default function CustomerDashboard() {
     try {
       // Load WiFi data for device info and connected devices
       const wifiRes = await fetch('/api/customer/wifi', { headers: { 'Authorization': `Bearer ${token}` } });
-      if (!wifiRes.ok) return; // server error (e.g. 502 during restart) — skip silently
+      if (!wifiRes.ok) return; // server error (e.g. 502 during restart) � skip silently
       const wifiData = await wifiRes.json();
       if (wifiData.success && wifiData.device) {
         setOntDevice(wifiData.device);
         setConnectedDevices(wifiData.device.connectedHosts || []);
       } else if (wifiData.reason === 'not_configured') {
-        // GenieACS not set up — silently skip, no device info available
+        // GenieACS not set up � silently skip, no device info available
       }
     } catch (error) { 
-      // Silently ignore — WiFi info is non-critical for dashboard
+      // Silently ignore � WiFi info is non-critical for dashboard
     }
     finally { setLoadingOnt(false); }
   };
@@ -391,8 +391,8 @@ export default function CustomerDashboard() {
   const daysLeft = Math.ceil((expiredDate.getTime() - nowWIB().getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <div className="p-3 lg:p-6 max-w-5xl mx-auto space-y-4">
-      {/* ── Hero Status Card ─────────────────────────────────────────── */}
+    <div className="p-3 lg:p-6 w-full space-y-4">
+      {/* -- Hero Status Card ------------------------------------------- */}
       <div className={`rounded-2xl p-5 relative overflow-hidden ${
         isExpired
           ? 'bg-card dark:bg-gradient-to-br dark:from-red-900/60 dark:to-slate-900 border-2 border-red-500/40'
@@ -457,7 +457,7 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
-      {/* ── Quick Actions Grid ────────────────────────────────────────── */}
+      {/* -- Quick Actions Grid ------------------------------------------ */}
       <div>
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 px-1">Menu Cepat</p>
         <div className="grid grid-cols-4 lg:grid-cols-8 gap-2">
@@ -483,7 +483,7 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
-      {/* ── Pending Invoice Alert ─────────────────────────────────────── */}
+      {/* -- Pending Invoice Alert --------------------------------------- */}
       {invoices.filter(inv => inv.status === 'PENDING' || inv.status === 'OVERDUE').length > 0 && (
         <div className="space-y-2">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Tagihan Belum Dibayar</p>
@@ -494,7 +494,7 @@ export default function CustomerDashboard() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-foreground font-mono">{invoice.invoiceNumber}</p>
-                <p className="text-[10px] text-muted-foreground">{formatCurrency(invoice.amount)} · JT {formatWIB(invoice.dueDate, 'd MMM')}</p>
+                <p className="text-[10px] text-muted-foreground">{formatCurrency(invoice.amount)} � JT {formatWIB(invoice.dueDate, 'd MMM')}</p>
               </div>
               <div className="flex flex-col gap-1 flex-shrink-0">
                 {invoice.manualPaymentStatus === 'pending' ? (
@@ -525,13 +525,13 @@ export default function CustomerDashboard() {
           ))}
           {invoices.filter(inv => inv.status === 'PENDING' || inv.status === 'OVERDUE').length > 3 && (
             <button onClick={() => router.push('/customer/invoices')} className="w-full text-center text-xs text-primary py-1 hover:underline">
-              Lihat semua tagihan →
+              Lihat semua tagihan ?
             </button>
           )}
         </div>
       )}
 
-      {/* ── ONT/WiFi + All Invoices (desktop 2-col) ───────────────────── */}
+      {/* -- ONT/WiFi + All Invoices (desktop 2-col) --------------------- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* ONT/WiFi Card */}
         <CyberCard className="p-4 bg-card/80 backdrop-blur-xl border-2 border-accent/30 shadow-[0_0_30px_rgba(0,247,255,0.15)]">
@@ -543,7 +543,7 @@ export default function CustomerDashboard() {
               <h2 className="text-sm font-bold text-accent uppercase tracking-wider">{t('customer.ontWifi')}</h2>
             </div>
             {ontDevice && (
-              <button onClick={() => router.push('/customer/wifi')} className="text-[10px] text-primary hover:underline">Detail →</button>
+              <button onClick={() => router.push('/customer/wifi')} className="text-[10px] text-primary hover:underline">Detail ?</button>
             )}
           </div>
           
@@ -633,7 +633,7 @@ export default function CustomerDashboard() {
               </div>
               <h2 className="text-sm font-bold text-success uppercase tracking-wider">{t('customer.invoices')}</h2>
             </div>
-            <button onClick={() => router.push('/customer/invoices')} className="text-[10px] text-primary hover:underline">Semua →</button>
+            <button onClick={() => router.push('/customer/invoices')} className="text-[10px] text-primary hover:underline">Semua ?</button>
           </div>
           
           {invoices.length === 0 ? <div className="text-center py-4 text-muted-foreground text-xs"><Receipt className="w-8 h-8 mx-auto mb-1 opacity-30" /><p>{t('customer.noInvoices')}</p></div>
@@ -696,7 +696,7 @@ export default function CustomerDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-foreground">Kirim Bukti Transfer</h3>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{manualPayModal.invoiceNumber} — {formatCurrency(manualPayModal.amount)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{manualPayModal.invoiceNumber} � {formatCurrency(manualPayModal.amount)}</p>
                 </div>
                 <button onClick={() => setManualPayModal(null)} className="p-1.5 rounded-lg bg-muted/20 hover:bg-muted/40 border border-border/50">
                   <X className="w-4 h-4 text-muted-foreground" />
@@ -746,7 +746,7 @@ export default function CustomerDashboard() {
                 <div>
                   <label className="text-xs font-bold text-foreground mb-1.5 block">Bukti Transfer *</label>
                   <input type="file" accept="image/*" onChange={e => setManualForm(f => ({ ...f, file: e.target.files?.[0] ?? null }))} className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary/20 file:text-primary hover:file:bg-primary/30 cursor-pointer" />
-                  {manualForm.file && <p className="text-[10px] text-success mt-1">✓ {manualForm.file.name}</p>}
+                  {manualForm.file && <p className="text-[10px] text-success mt-1">? {manualForm.file.name}</p>}
                 </div>
               </div>
               <div className="flex gap-2 mt-4">
@@ -764,3 +764,4 @@ export default function CustomerDashboard() {
     </div>
   );
 }
+

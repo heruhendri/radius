@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -118,7 +118,7 @@ export default function TopUpDirectPage() {
         setSelectedChannel(data.methods[0].code);
       }
     } catch {
-      // silent fail — user must manually pick
+      // silent fail � user must manually pick
     } finally {
       setLoadingChannels(false);
     }
@@ -194,7 +194,7 @@ export default function TopUpDirectPage() {
         console.log('[Top-Up Direct Frontend] Redirecting to:', data.paymentUrl);
 
         showSuccess(
-          `${t('customer.invoiceNo')}: ${data.invoiceNumber} — ${t('customer.total')}: ${formatCurrency(data.amount)}. ${t('customer.redirectingToPayment')}`,
+          `${t('customer.invoiceNo')}: ${data.invoiceNumber} � ${t('customer.total')}: ${formatCurrency(data.amount)}. ${t('customer.redirectingToPayment')}`,
           t('common.success')
         );
 
@@ -240,7 +240,7 @@ export default function TopUpDirectPage() {
   }
 
   return (
-    <div className="p-3 lg:p-6 space-y-5 max-w-5xl mx-auto">
+    <div className="p-3 lg:p-6 space-y-5 w-full">
       {/* Back + Page Header */}
       <div className="flex items-center gap-3 mb-2">
         <button
@@ -337,7 +337,7 @@ export default function TopUpDirectPage() {
               <div className="space-y-4">
                 <div className="p-4 bg-amber-500/10 border-2 border-amber-500/30 rounded-xl">
                   <p className="text-sm text-amber-400 mb-2">
-                    ⚠️ {t('customer.noActiveGateway')}
+                    ?? {t('customer.noActiveGateway')}
                   </p>
                   <p className="text-xs text-amber-300/70">
                     {t('customer.contactAdminOrManualRequest')}
@@ -417,7 +417,7 @@ export default function TopUpDirectPage() {
                   <div className="space-y-2">
                     {parseInt(amount) < 10000 && (
                       <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-center">
-                        <p className="text-xs text-amber-400">⬆️ {t('customer.enterAmountAbove')}</p>
+                        <p className="text-xs text-amber-400">?? {t('customer.enterAmountAbove')}</p>
                       </div>
                     )}
                     <p className="text-xs text-[#e0d0ff]/60 uppercase tracking-wider font-bold">Pilih Metode Pembayaran</p>
@@ -485,7 +485,7 @@ export default function TopUpDirectPage() {
                   </CyberButton>
                 ) : selectedGateway ? (
                   <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-center">
-                    <p className="text-xs text-amber-400">⬆️ {t('customer.enterAmountAbove')}</p>
+                    <p className="text-xs text-amber-400">?? {t('customer.enterAmountAbove')}</p>
                   </div>
                 ) : null}
 
@@ -498,3 +498,4 @@ export default function TopUpDirectPage() {
     </div>
   );
 }
+

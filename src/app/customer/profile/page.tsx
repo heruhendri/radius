@@ -193,7 +193,7 @@ export default function CustomerProfilePage() {
   }
 
   return (
-    <div className="p-3 lg:p-6 space-y-3 max-w-5xl mx-auto">
+    <div className="p-3 lg:p-6 space-y-3 w-full">
       {/* Profile Header */}
       <CyberCard className="p-6 bg-gradient-to-r from-primary/20 to-accent/20 backdrop-blur-xl border-2 border-primary/40 dark:shadow-[0_0_30px_rgba(188,19,254,0.3)] shadow-sm">
         <div className="flex items-center gap-4">
@@ -379,3 +379,4 @@ export default function CustomerProfilePage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -516,7 +516,7 @@ export default function PaymentHistoryPage() {
   const totalPendingAmount = pendingPayments.reduce((s, p) => s + p.amount, 0);
 
   return (
-    <div className="p-4 lg:p-6 space-y-5 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-6 space-y-5 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -915,7 +915,7 @@ export default function PaymentHistoryPage() {
                 <div className="p-5 border-b border-purple-500/20 flex items-center justify-between flex-shrink-0">
                   <div>
                     <h3 className="text-sm font-bold text-white">Pembayaran Offline</h3>
-                    <p className="text-[10px] text-muted-foreground">{selectedPaymentInvoice.invoiceNumber} � {formatCurrency(selectedPaymentInvoice.amount)}</p>
+                    <p className="text-[10px] text-muted-foreground">{selectedPaymentInvoice.invoiceNumber} ? {formatCurrency(selectedPaymentInvoice.amount)}</p>
                   </div>
                   {!submittingOffline && <button onClick={() => setOfflineDialogVisible(false)} className="p-1.5 rounded-lg bg-muted/20 hover:bg-muted/40 border border-border/50"><X className="w-4 h-4 text-muted-foreground" /></button>}
                 </div>
@@ -1012,7 +1012,7 @@ export default function PaymentHistoryPage() {
 
                   <div className="flex items-center gap-2 p-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                     <Info className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
-                    <p className="text-[10px] text-yellow-300/80">Pembayaran akan diverifikasi admin dalam 1�24 jam</p>
+                    <p className="text-[10px] text-yellow-300/80">Pembayaran akan diverifikasi admin dalam 1?24 jam</p>
                   </div>
                 </div>
 
@@ -1187,3 +1187,4 @@ export default function PaymentHistoryPage() {
     </div>
   );
 }
+

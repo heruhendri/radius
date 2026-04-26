@@ -202,7 +202,7 @@ export default function TicketDetailPage() {
   const isClosed = ticket.status === 'CLOSED';
 
   return (
-    <div className="p-3 lg:p-5 space-y-3 max-w-5xl mx-auto">
+    <div className="p-3 lg:p-5 space-y-3 w-full">
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-3">
         <div className="flex items-center gap-3 mb-3">
