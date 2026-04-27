@@ -13,6 +13,8 @@ import {
   AlertCircle,
   Shield,
   Loader2,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { showSuccess, showError, showConfirm } from '@/lib/sweetalert';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -50,6 +52,8 @@ export default function DatabaseSettingsPage() {
   const [backupHistory, setBackupHistory] = useState<BackupHistory[]>([]);
   const [dbHealth, setDbHealth] = useState<DatabaseHealth | null>(null);
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   useEffect(() => {
     if (hasPermission('settings.view')) {
@@ -152,6 +156,51 @@ export default function DatabaseSettingsPage() {
     } finally {
       setRestoring(false);
     }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === backupHistory.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(backupHistory.map(b => b.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const confirmed = await showConfirm(
+      `Hapus ${selectedIds.size} backup yang dipilih? Tindakan ini tidak dapat dibatalkan.`
+    );
+    if (!confirmed) return;
+
+    setBulkDeleting(true);
+    let successCount = 0;
+    let failCount = 0;
+    for (const id of selectedIds) {
+      try {
+        const res = await fetch(`/api/backup/delete/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) successCount++; else failCount++;
+      } catch {
+        failCount++;
+      }
+    }
+    setBulkDeleting(false);
+    setSelectedIds(new Set());
+    if (failCount === 0) {
+      await showSuccess(`${successCount} backup berhasil dihapus.`);
+    } else {
+      await showError(`${successCount} berhasil, ${failCount} gagal dihapus.`);
+    }
+    loadData();
   };
 
   const handleDeleteBackup = async (id: string, filename: string) => {
@@ -367,31 +416,79 @@ export default function DatabaseSettingsPage() {
 
           {/* Backup History */}
           <div className="bg-card rounded-lg border border-border shadow-sm">
-            <div className="p-6 border-b border-border">
+            <div className="p-4 sm:p-6 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Clock className="w-5 h-5" />
                 Backup History
               </h3>
+              {canEdit && selectedIds.size > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">{selectedIds.size} dipilih</span>
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={bulkDeleting}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-destructive hover:bg-destructive/90 text-white rounded-lg transition disabled:opacity-50"
+                  >
+                    {bulkDeleting ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                    Hapus {selectedIds.size} Terpilih
+                  </button>
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="text-sm text-muted-foreground hover:text-foreground transition"
+                  >
+                    Batal
+                  </button>
+                </div>
+              )}
             </div>
             {/* Mobile Card View */}
             <div className="block md:hidden space-y-3 p-4">
+              {canEdit && backupHistory.length > 0 && (
+                <div className="flex items-center gap-2 pb-1">
+                  <button onClick={toggleSelectAll} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition">
+                    {selectedIds.size === backupHistory.length ? (
+                      <CheckSquare className="w-4 h-4 text-primary" />
+                    ) : (
+                      <Square className="w-4 h-4" />
+                    )}
+                    {selectedIds.size === backupHistory.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
+                  </button>
+                </div>
+              )}
               {backupHistory.length === 0 ? (
                 <div className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3 text-center text-sm text-muted-foreground">
                   No backup history yet
                 </div>
               ) : (
                 backupHistory.map((backup) => (
-                  <div key={backup.id} className="bg-card/80 backdrop-blur-xl rounded-xl border border-[#bc13fe]/20 p-3">
+                  <div key={backup.id} className={`bg-card/80 backdrop-blur-xl rounded-xl border p-3 transition ${
+                    selectedIds.has(backup.id) ? 'border-primary/50 bg-primary/5' : 'border-[#bc13fe]/20'
+                  }`}>
                     <div className="flex items-center justify-between mb-2">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          backup.type === 'auto'
-                            ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-violet-200'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        {backup.type}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {canEdit && (
+                          <button onClick={() => toggleSelect(backup.id)} className="text-muted-foreground hover:text-primary transition">
+                            {selectedIds.has(backup.id) ? (
+                              <CheckSquare className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Square className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            backup.type === 'auto'
+                              ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-violet-200'
+                              : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          {backup.type}
+                        </span>
+                      </div>
                       {backup.status === 'success' ? (
                         <span className="flex items-center gap-1 text-success dark:text-success text-xs">
                           <CheckCircle className="w-3 h-3" />
@@ -451,6 +548,17 @@ export default function DatabaseSettingsPage() {
               <table className="w-full">
                 <thead className="bg-muted">
                   <tr>
+                    {canEdit && (
+                      <th className="px-4 py-3 w-10">
+                        <button onClick={toggleSelectAll} className="text-muted-foreground hover:text-primary transition">
+                          {selectedIds.size === backupHistory.length && backupHistory.length > 0 ? (
+                            <CheckSquare className="w-4 h-4 text-primary" />
+                          ) : (
+                            <Square className="w-4 h-4" />
+                          )}
+                        </button>
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                       Date & Time
                     </th>
@@ -474,13 +582,26 @@ export default function DatabaseSettingsPage() {
                 <tbody className="divide-y divide-border">
                   {backupHistory.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-sm text-muted-foreground">
+                      <td colSpan={canEdit ? 7 : 6} className="px-6 py-8 text-center text-sm text-muted-foreground">
                         No backup history yet
                       </td>
                     </tr>
                   ) : (
                     backupHistory.map((backup) => (
-                      <tr key={backup.id} className="hover:bg-muted/50">
+                      <tr key={backup.id} className={`transition ${
+                        selectedIds.has(backup.id) ? 'bg-primary/5' : 'hover:bg-muted/50'
+                      }`}>
+                        {canEdit && (
+                          <td className="px-4 py-4">
+                            <button onClick={() => toggleSelect(backup.id)} className="text-muted-foreground hover:text-primary transition">
+                              {selectedIds.has(backup.id) ? (
+                                <CheckSquare className="w-4 h-4 text-primary" />
+                              ) : (
+                                <Square className="w-4 h-4" />
+                              )}
+                            </button>
+                          </td>
+                        )}
                         <td className="px-6 py-4 text-sm text-foreground">
                           {formatWIB(backup.createdAt)}
                         </td>
