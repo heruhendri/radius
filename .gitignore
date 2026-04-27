@@ -105,3 +105,10 @@ google-services-desktop.json
 *-adminsdk-*.json
 GoogleService-Info.plist
 
+# Go backend — build artifacts (source code tetap di-track)
+backend/bin/
+backend/*.exe
+backend/server
+backend/radius-buildup
+backend/vendor/
+

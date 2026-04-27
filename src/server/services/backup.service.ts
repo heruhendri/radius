@@ -31,13 +31,24 @@ function parseDbUrl(url: string) {
 
 // Create backups directory if not exists
 async function ensureBackupDir() {
-  const backupDir = path.join(process.cwd(), 'backups');
-  try {
-    await fs.access(backupDir);
-  } catch {
-    await fs.mkdir(backupDir, { recursive: true });
+  // Use a stable path outside the Next.js standalone dir (which changes on deploy)
+  const candidates = [
+    '/var/backups/salfanet',
+    '/tmp/salfanet-backups',
+  ];
+  for (const dir of candidates) {
+    try {
+      await fs.mkdir(dir, { recursive: true });
+      await fs.access(dir);
+      return dir;
+    } catch {
+      // try next candidate
+    }
   }
-  return backupDir;
+  // Last resort: next to the app
+  const fallback = path.join(process.cwd(), 'backups');
+  await fs.mkdir(fallback, { recursive: true });
+  return fallback;
 }
 
 /**

@@ -2,8 +2,12 @@
 import { restoreBackup } from '@/server/services/backup.service';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
-import { writeFile, unlink } from 'fs/promises';
+import { unlink, mkdir } from 'fs/promises';
+import { createWriteStream } from 'fs';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import path from 'path';
+import os from 'os';
 
 // Allow up to 5 minutes for large restore operations
 export const maxDuration = 300;
@@ -37,13 +41,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File must be .sql or .sql.gz format' }, { status: 400 });
     }
 
-    // Save uploaded file temporarily
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
+    // Stream file to disk to avoid memory spike with large SQL files
+    // (loading into memory crashes PM2's max_memory_restart threshold)
     const ext = isGzip ? (file.name.endsWith('.sql.gz') ? '.sql.gz' : '.gz') : '.sql';
-    const tempFilepath = path.join(process.cwd(), 'backups', `restore_temp_${Date.now()}${ext}`);
-    await writeFile(tempFilepath, buffer);
+    const tmpDir = path.join(os.tmpdir(), 'salfanet-restore');
+    await mkdir(tmpDir, { recursive: true });
+    const tempFilepath = path.join(tmpDir, `restore_temp_${Date.now()}${ext}`);
+
+    const webStream = file.stream();
+    const nodeReadable = Readable.fromWeb(webStream as Parameters<typeof Readable.fromWeb>[0]);
+    const writeStream = createWriteStream(tempFilepath);
+    await pipeline(nodeReadable, writeStream);
 
     console.log('[Restore API] File uploaded, starting restore...');
 

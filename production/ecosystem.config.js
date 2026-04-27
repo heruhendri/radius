@@ -86,6 +86,28 @@ module.exports = {
       min_uptime: '10s',
       // Restart every 4 hours — offset to :33 to avoid clashing with hourly cron jobs at :00
       cron_restart: '33 */4 * * *'
+    },
+    // Go Backend REST API (port 8080)
+    {
+      name: 'salfanet-go',
+      script: './backend/bin/server',  // Built via: cd backend && make build
+      cwd: process.env.APP_DIR || '/var/www/salfanet-radius',
+      instances: 1,
+      exec_mode: 'fork',
+      watch: false,
+      max_memory_restart: '256M',
+      env: {
+        GO_ENV: 'production',
+        GO_PORT: process.env.GO_PORT || '8080',
+        TZ: 'Asia/Jakarta',
+      },
+      error_file: './logs/go-error.log',
+      out_file: './logs/go-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      autorestart: true,
+      max_restarts: 10,
+      min_uptime: '5s',
     }
   ]
 };

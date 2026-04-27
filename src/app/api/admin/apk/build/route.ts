@@ -384,7 +384,7 @@ export async function POST(req: NextRequest) {
 
   // Fetch company name and base URL
   let baseUrl = (process.env.NEXTAUTH_URL || process.env.APP_URL || 'https://your-vps.com').replace(/\/$/, '');
-  let appName = ROLES[role].label;
+  let appName: string = ROLES[role].label;
   try {
     const company = await prisma.company.findFirst({ select: { name: true } });
     if (company?.name) {
@@ -414,8 +414,8 @@ export async function POST(req: NextRequest) {
   const logFile = join(roleDir, 'build.log');
   const logFd   = openSync(logFile, 'w');
   const javaHome = detectJavaHome();
-  const env: Record<string, string> = {
-    ...(process.env as Record<string, string>),
+  const env: NodeJS.ProcessEnv = {
+    ...(process.env),
     ANDROID_HOME,
     GRADLE_USER_HOME: GRADLE_CACHE,
     TERM: 'dumb',
@@ -427,9 +427,10 @@ export async function POST(req: NextRequest) {
     env,
     detached: true,
     stdio: ['ignore', logFd, logFd],
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }) as any;
 
-  proc.on('exit', (code) => {
+  proc.on('exit', (code: number | null) => {
     try {
       if (code === 0) {
         const releaseDir = join(projectDir, 'app/build/outputs/apk/release');

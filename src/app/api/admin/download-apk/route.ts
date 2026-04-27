@@ -422,7 +422,7 @@ export async function GET(req: NextRequest) {
   let baseUrl = process.env.NEXTAUTH_URL || process.env.APP_URL || 'https://your-vps-domain.com';
   baseUrl = baseUrl.replace(/\/$/, '');
 
-  let appName = role.label;
+  let appName: string = role.label;
   try {
     const company = await prisma.company.findFirst({ select: { name: true } });
     if (company?.name) {
@@ -539,7 +539,7 @@ local.properties
   const zipBuffer = zipSync(files, { level: 6 });
 
   const filename = `${dirName}-android.zip`;
-  return new NextResponse(zipBuffer, {
+  return new NextResponse(Buffer.from(zipBuffer), {
     headers: {
       'Content-Type': 'application/zip',
       'Content-Disposition': `attachment; filename="${filename}"`,
