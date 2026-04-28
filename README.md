@@ -469,6 +469,42 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 <!-- AUTO-CHANGELOG:START -->
 
+### v2.25.4 — 2026-04-28
+
+### Added
+- **Input lokasi GPS di form tiket pelanggan** — Halaman pembuatan tiket pelanggan kini mendukung tag lokasi, pengambilan koordinat GPS dari browser, dan penyisipan link Google Maps otomatis ke deskripsi tiket agar teknisi lebih mudah menemukan rumah pelanggan.
+- **Tanggal Register editable untuk user PPPoE** — Form tambah dan edit user PPPoE kini menyediakan field `Tanggal Register` yang tersimpan ke `createdAt`, sehingga data historis pelanggan bisa dikoreksi tanpa manipulasi database manual.
+- **Logo perusahaan di sidebar admin** — Sidebar admin kini menampilkan logo perusahaan secara langsung dengan fallback ke inisial jika logo belum tersedia.
+
+### Fixed
+- **CSV import/export PPPoE belum mendukung `registeredAt`** — Template CSV/XLSX, normalization map import, dan parsing data bulk kini mendukung `Tanggal Register` / `registeredAt` sehingga tanggal registrasi historis tidak lagi hilang saat impor massal.
+- **Penyimpanan rate limit isolir ke tabel RADIUS tidak pernah update** — Endpoint pengaturan isolasi sebelumnya memakai `ON DUPLICATE KEY UPDATE` pada tabel `radgroupreply` yang tidak memiliki UNIQUE constraint. Diperbaiki ke pola `DELETE + INSERT` untuk atribut `Mikrotik-Rate-Limit`, `Mikrotik-Group`, dan `Framed-Pool`.
+- **Label tanggal isolasi PPPoE masih memakai istilah kedaluwarsa** — Teks UI terkait `expiredAt` di form PPPoE dan detail user kini diseragamkan menjadi `Tanggal Isolir`.
+- **Preview/logo branding belum konsisten di semua halaman** — Login Admin, Customer, Technician, Agent, halaman Isolated, Settings Company, dan Download APK kini memakai pola logo dinamis dengan `object-contain` dan batas layout ideal agar logo horizontal maupun vertikal tetap proporsional.
+
+### Changed
+- **Upload logo kini mendukung lebih banyak format** — Upload logo perusahaan sekarang menerima PNG, JPG, SVG, WebP, AVIF, dan GIF, dengan mapping ekstensi berbasis MIME type agar nama file hasil upload lebih konsisten.
+- **Download APK memakai preview logo full-area** — Kartu logo pada halaman download APK kini memakai container preview lebih besar agar admin bisa melihat hasil branding secara proporsional sebelum build APK.
+- **Versi aplikasi disinkronkan dengan changelog** — Metadata versi project dinaikkan ke `2.25.4` agar badge versi, package metadata, dan changelog tetap selaras.
+
+### Affected
+- `src/app/admin/AdminClientLayout.tsx`
+- `src/app/admin/download-apk/page.tsx`
+- `src/app/admin/login/page.tsx`
+- `src/app/admin/pppoe/users/page.tsx`
+- `src/app/admin/settings/company/page.tsx`
+- `src/app/agent/page.tsx`
+- `src/app/api/pppoe/users/bulk/route.ts`
+- `src/app/api/settings/isolation/route.ts`
+- `src/app/api/upload/logo/route.ts`
+- `src/app/customer/login/page.tsx`
+- `src/app/customer/tickets/create/page.tsx`
+- `src/app/isolated/page.tsx`
+- `src/app/technician/login/page.tsx`
+- `src/components/UserDetailModal.tsx`
+- `src/locales/id.json`
+- `src/server/services/pppoe.service.ts`
+
 ### v2.25.3 — 2026-04-27
 
 ### Fixed
@@ -561,17 +597,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
   echo 'Selesai!'
   ```
   Build pertama ±3–5 menit (download Gradle dependencies). Build berikutnya ±1 menit (Gradle cache di `/var/data/salfanet/gradle-cache`).
-
-### v2.24.0 — 2026-04-26
-
-### Removed
-- **Update otomatis via web panel dihapus** ([`4692059`]) — Fitur update via browser (SSE live log, tombol Apply Update / Force Rebuild) dihapus karena tidak reliable: bash script `update.sh` selalu mati saat `pm2 stop` dipanggil dari dalam Next.js process group, menyebabkan `.next` terhapus dan server 502 yang harus dipulihkan manual. File yang dihapus:
-  - `scripts/update.sh` — script update yang dipanggil via API
-  - `src/app/api/admin/system/update/route.ts` — SSE API endpoint (GET stream + POST trigger)
-  - Halaman `/admin/system` diganti menjadi halaman **Informasi Sistem** statis: versi, commit, Node.js, uptime, banner update tersedia, dan panduan SSH siap-copy untuk update manual
-
-### Fixed
-- **`vps-install/updater.sh`: default ke `--branch master`** ([`5aa05b7`]) — Menjalankan `bash updater.sh` tanpa flag sebelumnya masuk ke Mode B (GitHub Releases) yang langsung error 404 karena repo tidak menggunakan GitHub Releases. Sekarang jika tidak ada `--branch` maupun `--version`, script otomatis pakai `--branch master`.
 
 <!-- AUTO-CHANGELOG:END -->
 
