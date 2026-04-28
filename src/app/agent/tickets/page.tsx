@@ -130,7 +130,10 @@ export default function AgentTicketsPage() {
 
   const loadCategories = async () => {
     try {
-      const res = await fetch('/api/tickets/categories');
+      const token = localStorage.getItem('agentToken');
+      const res = await fetch('/api/tickets/categories', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (res.ok) {
         const data = await res.json();
         setCategories(Array.isArray(data) ? data : []);

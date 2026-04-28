@@ -2,22 +2,30 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { prisma } from '@/server/db/client';
+import { verifyAgentToken } from '@/server/auth/agent-jwt';
 
 // GET - List all categories
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Allow customer Bearer token as fallback
+    // Allow customer Bearer token or Agent JWT as fallback
     if (!session) {
       const bearerToken = req.headers.get('authorization')?.replace('Bearer ', '');
       if (bearerToken) {
-        const customerSession = await prisma.customerSession.findFirst({
-          where: { token: bearerToken, verified: true, expiresAt: { gte: new Date() } },
-          select: { userId: true },
-        });
-        if (!customerSession) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        // Try agent JWT first
+        const agentPayload = await verifyAgentToken(bearerToken);
+        if (agentPayload) {
+          // Valid agent token — allow access
+        } else {
+          // Try customer session token
+          const customerSession = await prisma.customerSession.findFirst({
+            where: { token: bearerToken, verified: true, expiresAt: { gte: new Date() } },
+            select: { userId: true },
+          });
+          if (!customerSession) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+          }
         }
       } else {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

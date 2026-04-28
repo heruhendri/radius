@@ -236,31 +236,22 @@ create_pm2_config() {
         cp "${APP_DIR}/production/ecosystem.config.js" "${APP_DIR}/ecosystem.config.js"
         print_success "PM2 ecosystem file copied from production/ecosystem.config.js"
     else
-        # Fallback: generate a complete config with all required settings
+        # Fallback: generate a complete config with all required services
         print_info "production/ecosystem.config.js not found, generating fallback..."
         cat > ${APP_DIR}/ecosystem.config.js <<'EOF'
+const APP_DIR = process.env.APP_DIR || '/var/www/salfanet-radius';
 module.exports = {
   apps: [
     {
       name: 'salfanet-radius',
-      script: 'node_modules/next/dist/bin/next',
-      args: 'start',
-      cwd: process.env.APP_DIR || '/var/www/salfanet-radius',
+      script: '.next/standalone/server.js',
+      cwd: APP_DIR,
       instances: 1,
       exec_mode: 'cluster',
       watch: false,
-      max_memory_restart: '400M',
-      node_args: [
-        '--max-old-space-size=350',
-        '--max-semi-space-size=8',
-        '--optimize-for-size'
-      ],
-      env: {
-        NODE_ENV: 'production',
-        NODE_OPTIONS: '--max-old-space-size=350',
-        PORT: 3000,
-        TZ: 'Asia/Jakarta'
-      },
+      max_memory_restart: '450M',
+      node_args: ['--max-old-space-size=400','--max-semi-space-size=8','--optimize-for-size'],
+      env: { NODE_ENV: 'production', NODE_OPTIONS: '--max-old-space-size=400', PORT: 3000, HOSTNAME: '127.0.0.1', TZ: 'Asia/Jakarta' },
       error_file: './logs/error.log',
       out_file: './logs/out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
@@ -273,22 +264,13 @@ module.exports = {
     {
       name: 'salfanet-cron',
       script: './cron-service.js',
-      cwd: process.env.APP_DIR || '/var/www/salfanet-radius',
+      cwd: APP_DIR,
       instances: 1,
       exec_mode: 'fork',
       watch: false,
       max_memory_restart: '150M',
-      node_args: [
-        '--max-old-space-size=120',
-        '--max-semi-space-size=4',
-        '--optimize-for-size'
-      ],
-      env: {
-        NODE_ENV: 'production',
-        NODE_OPTIONS: '--max-old-space-size=120',
-        API_URL: 'http://localhost:3000',
-        TZ: 'Asia/Jakarta'
-      },
+      node_args: ['--max-old-space-size=120','--max-semi-space-size=4','--optimize-for-size'],
+      env: { NODE_ENV: 'production', NODE_OPTIONS: '--max-old-space-size=120', API_URL: 'http://localhost:3000', TZ: 'Asia/Jakarta' },
       error_file: './logs/cron-error.log',
       out_file: './logs/cron-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
@@ -297,6 +279,25 @@ module.exports = {
       max_restarts: 5,
       min_uptime: '10s',
       restart_delay: 5000
+    },
+    {
+      name: 'salfanet-wa',
+      script: './wa-service.js',
+      cwd: APP_DIR,
+      instances: 1,
+      exec_mode: 'fork',
+      watch: false,
+      max_memory_restart: '200M',
+      node_args: ['--max-old-space-size=180','--max-semi-space-size=4'],
+      env: { NODE_ENV: 'production', NODE_OPTIONS: '--max-old-space-size=180', WA_SERVICE_PORT: 4000, WA_AUTH_DIR: '/var/data/salfanet/baileys_auth', TZ: 'Asia/Jakarta' },
+      error_file: './logs/wa-error.log',
+      out_file: './logs/wa-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      autorestart: true,
+      max_restarts: 10,
+      min_uptime: '5s',
+      restart_delay: 3000
     }
   ]
 };
@@ -305,7 +306,7 @@ EOF
     fi
 
     mkdir -p ${APP_DIR}/logs
-    print_success "PM2 ecosystem configured (salfanet-radius + salfanet-cron)"
+    print_success "PM2 ecosystem configured (salfanet-radius + salfanet-cron + salfanet-wa)"
 }
 
 check_port_conflict() {
@@ -465,7 +466,24 @@ start_pm2_app() {
     # Wait for app to stabilize
     print_info "Waiting for applications to stabilize..."
     sleep 5
-    
+
+    # ── Start Baileys WhatsApp service ────────────────────────────────────
+    print_info "Starting salfanet-wa (Baileys WhatsApp service)..."
+    mkdir -p /var/data/salfanet/baileys_auth
+    if [ -f "${APP_DIR}/wa-service.js" ]; then
+        if sudo su - ${APP_USER} -c "cd ${APP_DIR} && pm2 describe salfanet-wa" &>/dev/null; then
+            sudo su - ${APP_USER} -c "pm2 restart salfanet-wa --update-env" 2>/dev/null || true
+        else
+            sudo su - ${APP_USER} -c "cd ${APP_DIR} && pm2 start ecosystem.config.js --only salfanet-wa" 2>&1 | tail -3 || true
+        fi
+        print_success "salfanet-wa started"
+    else
+        print_warning "wa-service.js not found — skipping salfanet-wa startup"
+    fi
+
+    # Save updated PM2 config (includes salfanet-wa)
+    sudo su - ${APP_USER} -c 'pm2 save'
+
     # Check if apps are running using su -
     if sudo su - ${APP_USER} -c 'pm2 list' | grep -q "salfanet-radius.*online"; then
         print_success "Applications started successfully!"
