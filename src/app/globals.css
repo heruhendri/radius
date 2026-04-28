@@ -376,14 +376,14 @@
   --chart-4: #039855;
   --chart-5: #ee46bc;
 
-  /* Navy sidebar — brand consistency with dark mode */
-  --sidebar: #091020;
-  --sidebar-foreground: #e8eef9;
-  --sidebar-primary: #465fff;
+  /* Light sidebar — TailAdmin style: white sidebar, dark text */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #344054;       /* gray-700 */
+  --sidebar-primary: #465fff;          /* brand-500 */
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #162033;
-  --sidebar-accent-foreground: #e8eef9;
-  --sidebar-border: #27374f;
+  --sidebar-accent: #f2f4f7;           /* gray-100 hover */
+  --sidebar-accent-foreground: #101828; /* gray-900 */
+  --sidebar-border: #e4e7ec;           /* gray-200 */
   --sidebar-ring: #465fff;
 
   color-scheme: light;
