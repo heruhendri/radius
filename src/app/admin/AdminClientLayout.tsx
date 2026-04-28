@@ -387,13 +387,13 @@ function CategoryItem({ titleKey, items, pendingCount, manualPaymentsCount, unre
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center gap-1.5 px-2 py-1 group"
       >
-        <span className="text-[9px] text-gray-400 tracking-[0.25em] uppercase font-bold group-hover:text-gray-500 dark:text-gray-400 dark:group-hover:text-gray-300 transition-colors flex-shrink-0">
+        <span className="text-[9px] text-gray-500 tracking-[0.25em] uppercase font-bold group-hover:text-gray-600 dark:text-gray-400 dark:group-hover:text-gray-300 transition-colors flex-shrink-0">
           {t(titleKey)}
         </span>
         <div className="flex-1 h-px bg-gradient-to-r from-gray-300 via-gray-200 to-transparent dark:from-brand-400/35 dark:via-brand-400/20" />
         <ChevronDown
           className={cn(
-            'w-3 h-3 text-gray-400 group-hover:text-gray-500 dark:text-brand-400/60 dark:group-hover:text-brand-400 transition-all duration-200 flex-shrink-0',
+            'w-3 h-3 text-gray-500 group-hover:text-gray-600 dark:text-brand-400/60 dark:group-hover:text-brand-400 transition-all duration-200 flex-shrink-0',
             isOpen ? 'rotate-180' : ''
           )}
         />
@@ -944,7 +944,7 @@ function AdminLayoutContent({
                 <h1 className="text-[11px] sm:text-xs font-black tracking-wider text-gray-800 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-brand-400 dark:via-brand-300 dark:to-blue-400 truncate max-w-[130px] sm:max-w-[110px]">
                   {company.name}
                 </h1>
-                <p className="text-[9px] sm:text-[10px] text-brand-400/60 tracking-[0.15em] sm:tracking-[0.2em] uppercase font-medium">{t('common.billingSystem')}</p>
+                <p className="text-[9px] sm:text-[10px] text-brand-600 dark:text-brand-400/60 tracking-[0.15em] sm:tracking-[0.2em] uppercase font-medium">{t('common.billingSystem')}</p>
               </div>
             </div>
             <button
@@ -1001,7 +1001,7 @@ function AdminLayoutContent({
                   <p className="text-xs font-bold text-foreground truncate tracking-wide">
                     {session?.user?.name || 'Admin'}
                   </p>
-                  <p className="text-[10px] text-brand-400 truncate font-medium tracking-wider capitalize">
+                  <p className="text-[10px] text-brand-600 dark:text-brand-400 truncate font-medium tracking-wider capitalize">
                     {(session?.user as any)?.role || 'admin'}
                   </p>
                 </div>
@@ -1013,7 +1013,7 @@ function AdminLayoutContent({
                   <div className="absolute top-0 left-2 right-2 h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
                   <div className="p-3 border-b border-sidebar-border bg-sidebar-accent/50">
                     <p className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] font-medium">{t('auth.signedInAs')}</p>
-                    <p className="text-xs font-bold text-brand-400 truncate mt-1">
+                    <p className="text-xs font-bold text-brand-600 dark:text-brand-400 truncate mt-1">
                       {(session?.user as any)?.username}
                     </p>
                   </div>
@@ -1186,7 +1186,7 @@ function AppVersionBadge() {
         </span>
       </div>
       {info.hasUpdate && (
-        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-400/50 dark:border-amber-500/30 animate-pulse">
           UPDATE
         </span>
       )}
