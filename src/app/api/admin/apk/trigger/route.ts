@@ -42,6 +42,9 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -109,6 +112,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun showNativeNotification(title: String, body: String, notifId: Int) {
+        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val vibratePattern = longArrayOf(0, 300, 200, 300)
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -121,12 +126,16 @@ class MainActivity : AppCompatActivity() {
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setTicker(title)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setSound(soundUri)
+            .setVibrate(vibratePattern)
+            .setLights(Color.CYAN, 1000, 500)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setFullScreenIntent(pendingIntent, true)
         try {
             NotificationManagerCompat.from(this).notify(notifId, builder.build())
         } catch (e: SecurityException) { /* POST_NOTIFICATIONS not granted */ }
@@ -134,14 +143,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val audioAttributes = AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .build()
             val channel = NotificationChannel(
                 CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Notifikasi push dari Salfanet"
                 enableLights(true)
+                lightColor = Color.CYAN
                 enableVibration(true)
-                vibrationPattern = longArrayOf(0, 250, 250, 250)
+                vibrationPattern = longArrayOf(0, 300, 200, 300)
+                setSound(soundUri, audioAttributes)
                 setShowBadge(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
             }
             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .createNotificationChannel(channel)
@@ -277,11 +294,11 @@ class MainActivity : AppCompatActivity() {
 function notificationWorker(pkg: string): string {
   return `package ${pkg}
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -334,18 +351,10 @@ class NotificationWorker(
     }
 
     private fun showNotification(title: String, body: String, notifId: Int) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                MainActivity.CHANNEL_ID, MainActivity.CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                enableLights(true)
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 250, 250, 250)
-                setShowBadge(true)
-            }
-            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                .createNotificationChannel(channel)
-        }
+        // Channel is created once at app startup (MainActivity.createNotificationChannel).
+        // Do NOT recreate it here — Android ignores updates to existing channels.
+        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val vibratePattern = longArrayOf(0, 300, 200, 300)
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -357,12 +366,16 @@ class NotificationWorker(
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setTicker(title)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setSound(soundUri)
+            .setVibrate(vibratePattern)
+            .setLights(android.graphics.Color.CYAN, 1000, 500)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setFullScreenIntent(pendingIntent, true)
         try {
             NotificationManagerCompat.from(context).notify(notifId, builder.build())
         } catch (e: SecurityException) { /* Permission not granted */ }
@@ -437,6 +450,7 @@ const androidManifest = (pkg: string) => `<?xml version="1.0" encoding="utf-8"?>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

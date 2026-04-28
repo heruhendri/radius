@@ -259,38 +259,6 @@ export default function UpgradePackagePage() {
                   </div>
                 </div>
 
-                {/* Speed bars */}
-                <div className="space-y-3 mb-4 p-3 bg-[#bc13fe]/5 rounded-xl border border-[#bc13fe]/15">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground dark:text-[#e0d0ff]/60 font-bold uppercase">
-                        <Download className="w-3 h-3" /> Download
-                      </span>
-                      <span className="text-xs font-bold text-[#00f7ff]">{formatSpeed(currentPackage.downloadSpeed)}</span>
-                    </div>
-                      <div className="h-1.5 bg-muted dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#00f7ff] to-[#bc13fe] rounded-full"
-                        style={{ width: `${Math.min(100, (currentPackage.downloadSpeed / 1000) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground dark:text-[#e0d0ff]/60 font-bold uppercase">
-                        <Upload className="w-3 h-3" /> Upload
-                      </span>
-                      <span className="text-xs font-bold text-[#ff44cc]">{formatSpeed(currentPackage.uploadSpeed)}</span>
-                    </div>
-                      <div className="h-1.5 bg-muted dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#ff44cc] to-[#bc13fe] rounded-full"
-                        style={{ width: `${Math.min(100, (currentPackage.uploadSpeed / 1000) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 {/* Expiry */}
                 <div className="flex items-center gap-2 p-2.5 bg-muted/20 rounded-lg border border-border/50">
                   <Calendar className="w-4 h-4 text-accent flex-shrink-0" />
@@ -373,10 +341,8 @@ export default function UpgradePackagePage() {
                         <span className="text-[9px] px-1.5 py-0.5 bg-slate-700/50 text-slate-400 rounded-full border border-slate-600/50 absolute top-2 right-2">Aktif</span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground dark:text-[#e0d0ff]/60 mb-3 flex items-center gap-1 flex-wrap">
-                      <Download className="w-3 h-3 inline" /> {formatSpeed(pkg.downloadSpeed)}
-                      <span className="mx-0.5">/</span>
-                      <Upload className="w-3 h-3 inline" /> {formatSpeed(pkg.uploadSpeed)}
+                    <p className="text-xs text-muted-foreground dark:text-[#e0d0ff]/60 mb-3">
+                      {pkg.description || pkg.name}
                     </p>
                     <p className="text-lg font-bold text-[#00f7ff] drop-shadow-[0_0_8px_rgba(0,247,255,0.4)]">
                       {formatCurrency(pkg.price)}<span className="text-[10px] font-normal text-muted-foreground dark:text-[#e0d0ff]/40">/{t('common.month')}</span>

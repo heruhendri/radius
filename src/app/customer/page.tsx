@@ -425,7 +425,6 @@ export default function CustomerDashboard() {
             <div className="bg-foreground/5 rounded-xl p-2.5">
               <p className="text-[9px] font-bold uppercase tracking-wide text-primary/70 mb-0.5">Paket</p>
               <p className="text-sm font-bold text-foreground leading-tight">{user.profile.name}</p>
-              <p className="text-[10px] text-muted-foreground">{user.profile.downloadSpeed}/{user.profile.uploadSpeed} Mbps</p>
             </div>
             <div className={`rounded-xl p-2.5 ${isExpired ? 'bg-red-500/10' : 'bg-foreground/5'}`}>
               <p className="text-[9px] font-bold uppercase tracking-wide text-primary/70 mb-0.5">Berlaku S/D</p>
