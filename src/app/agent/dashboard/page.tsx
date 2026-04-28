@@ -630,7 +630,7 @@ export default function AgentDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] lg:text-xs text-slate-500 dark:text-[#e0d0ff]/70">{t('agent.portal.commissionThisMonth')}</p>
-              <p className="text-base lg:text-lg font-bold mt-0.5 text-[#00ff88]">
+              <p className="text-base lg:text-lg font-bold mt-0.5 text-emerald-600 dark:text-[#00ff88]">
                 {formatCurrency(stats.currentMonth?.total || 0)}
               </p>
             </div>
@@ -642,7 +642,7 @@ export default function AgentDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] lg:text-xs text-slate-500 dark:text-[#e0d0ff]/70">{t('agent.portal.totalCommission')}</p>
-              <p className="text-base lg:text-lg font-bold mt-0.5 text-[#bc13fe]">
+              <p className="text-base lg:text-lg font-bold mt-0.5 text-violet-600 dark:text-[#bc13fe]">
                 {formatCurrency(stats.allTime?.total || 0)}
               </p>
             </div>
@@ -654,7 +654,7 @@ export default function AgentDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] lg:text-xs text-slate-500 dark:text-[#e0d0ff]/70">{t('agent.portal.availableVouchers')}</p>
-              <p className="text-base lg:text-lg font-bold mt-0.5 text-[#00f7ff]">{stats.waiting || 0}</p>
+              <p className="text-base lg:text-lg font-bold mt-0.5 text-cyan-600 dark:text-[#00f7ff]">{stats.waiting || 0}</p>
             </div>
             <Ticket className="h-5 lg:h-6 w-5 lg:w-6 text-[#00f7ff] drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]" />
           </div>
@@ -664,7 +664,7 @@ export default function AgentDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] lg:text-xs text-slate-500 dark:text-[#e0d0ff]/70">{t('agent.portal.usedVouchers')}</p>
-              <p className="text-base lg:text-lg font-bold mt-0.5 text-[#ff44cc]">{stats.used || 0}</p>
+              <p className="text-base lg:text-lg font-bold mt-0.5 text-pink-500 dark:text-[#ff44cc]">{stats.used || 0}</p>
             </div>
             <Check className="h-5 lg:h-6 w-5 lg:w-6 text-[#ff44cc] drop-shadow-[0_0_10px_rgba(255,68,204,0.5)]" />
           </div>
@@ -674,7 +674,7 @@ export default function AgentDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] lg:text-xs text-slate-500 dark:text-[#e0d0ff]/70">{t('agent.portal.todaySales')}</p>
-              <p className="text-base lg:text-lg font-bold mt-0.5 text-[#00f7ff]">
+              <p className="text-base lg:text-lg font-bold mt-0.5 text-cyan-600 dark:text-[#00f7ff]">
                 {formatCurrency(stats.today?.total || 0)}
               </p>
               <p className="text-[9px] lg:text-[10px] text-slate-400 dark:text-[#e0d0ff]/50 mt-0.5">{stats.today?.count || 0} {t('agent.portal.voucher').toLowerCase()}</p>
@@ -770,7 +770,7 @@ export default function AgentDashboardPage() {
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{t('agent.portal.profitPerPiece')}</p>
-                  <p className="font-semibold text-[#00ff88]">{formatCurrency(selectedProfileData.resellerFee)}</p>
+                  <p className="font-semibold text-emerald-600 dark:text-[#00ff88]">{formatCurrency(selectedProfileData.resellerFee)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{t('agent.portal.validity')}</p>
@@ -778,7 +778,7 @@ export default function AgentDashboardPage() {
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{t('agent.portal.totalPayment')}</p>
-                  <p className="font-semibold text-[#00f7ff]">{formatCurrency(selectedProfileData.costPrice * quantity)}</p>
+                  <p className="font-semibold text-cyan-600 dark:text-[#00f7ff]">{formatCurrency(selectedProfileData.costPrice * quantity)}</p>
                 </div>
               </div>
             </div>
@@ -816,7 +816,7 @@ export default function AgentDashboardPage() {
                 onClick={() => setShowVouchersModal(false)}
                 className="p-1.5 hover:bg-[#bc13fe]/20 rounded-lg transition"
               >
-                <CloseIcon className="h-4 w-4 text-[#e0d0ff]" />
+                <CloseIcon className="h-4 w-4 text-slate-400 dark:text-[#e0d0ff]" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-5">
@@ -915,7 +915,7 @@ export default function AgentDashboardPage() {
                       loadPaymentMethods(depositGateway, parsed);
                     }
                   }}
-                  className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
+                  className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-slate-900 dark:text-white focus:border-[#00f7ff] outline-none"
                   min="10000"
                   step="10000"
                 />
@@ -938,7 +938,7 @@ export default function AgentDashboardPage() {
                             setDepositPaymentMethod('');
                           }
                         }}
-                        className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
+                        className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-slate-900 dark:text-white focus:border-[#00f7ff] outline-none"
                       >
                         {paymentGateways.map((gw) => (
                           <option key={gw.provider} value={gw.provider} className="bg-white dark:bg-[#0a0520]">{gw.name}</option>
@@ -958,7 +958,7 @@ export default function AgentDashboardPage() {
                         Pilih Kanal Pembayaran
                       </label>
                       {loadingMethods ? (
-                        <div className="flex items-center gap-2 p-3 text-sm text-[#e0d0ff]/70">
+                        <div className="flex items-center gap-2 p-3 text-sm text-slate-500 dark:text-[#e0d0ff]/70">
                           <div className="w-4 h-4 border-2 border-[#00f7ff]/30 border-t-[#00f7ff] rounded-full animate-spin"></div>
                           Memuat metode pembayaran...
                         </div>
@@ -985,7 +985,7 @@ export default function AgentDashboardPage() {
                               className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
                                 depositPaymentMethod === method.code
                                   ? 'border-[#00f7ff] bg-[#00f7ff]/10 shadow-[0_0_10px_rgba(0,247,255,0.2)]'
-                                  : 'border-[#bc13fe]/20 bg-[#0a0520] hover:border-[#bc13fe]/50'
+                                  : 'border-purple-200 bg-slate-50 dark:border-[#bc13fe]/20 dark:bg-[#0a0520] hover:border-purple-400 dark:hover:border-[#bc13fe]/50'
                               }`}
                             >
                               <input
@@ -1001,9 +1001,9 @@ export default function AgentDashboardPage() {
                                 <img src={method.iconUrl} alt={method.name} className="w-8 h-8 object-contain rounded" />
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-white truncate">{method.name}</p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{method.name}</p>
                                 {method.totalFee !== undefined && method.totalFee > 0 && (
-                                  <p className="text-xs text-[#e0d0ff]/60">
+                                  <p className="text-xs text-slate-400 dark:text-[#e0d0ff]/60">
                                     Biaya: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(method.totalFee)}
                                   </p>
                                 )}
@@ -1026,7 +1026,7 @@ export default function AgentDashboardPage() {
                       <select
                         value={selectedAdminBankKey}
                         onChange={(e) => setSelectedAdminBankKey(e.target.value)}
-                        className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
+                        className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-slate-900 dark:text-white focus:border-[#00f7ff] outline-none"
                       >
                         {adminBankAccounts.map((account) => {
                           const key = `${account.bankName}|${account.accountNumber}|${account.accountName}`;
@@ -1051,7 +1051,7 @@ export default function AgentDashboardPage() {
                       value={senderAccountName}
                       onChange={(e) => setSenderAccountName(e.target.value)}
                       placeholder="Nama pemilik rekening pengirim"
-                      className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
+                      className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-slate-900 dark:text-white focus:border-[#00f7ff] outline-none"
                     />
                   </div>
 
@@ -1062,7 +1062,7 @@ export default function AgentDashboardPage() {
                       value={senderAccountNumber}
                       onChange={(e) => setSenderAccountNumber(e.target.value)}
                       placeholder="Contoh: 1234567890"
-                      className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
+                      className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-slate-900 dark:text-white focus:border-[#00f7ff] outline-none"
                     />
                   </div>
 
@@ -1077,7 +1077,7 @@ export default function AgentDashboardPage() {
                         setProofFile(file);
                         setProofPreviewUrl(file ? URL.createObjectURL(file) : null);
                       }}
-                      className="w-full px-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-dashed border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white"
+                      className="w-full px-3 py-2 text-xs bg-slate-100 dark:bg-[#0a0520] border-2 border-dashed border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-slate-900 dark:text-white"
                     />
                     {proofPreviewUrl && (
                       <div className="mt-2 rounded-lg overflow-hidden border border-purple-300 dark:border-[#bc13fe]/30">
@@ -1094,7 +1094,7 @@ export default function AgentDashboardPage() {
                       onChange={(e) => setManualDepositNote(e.target.value)}
                       placeholder="Contoh: Transfer BCA via m-banking"
                       rows={3}
-                      className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-white focus:border-[#00f7ff] outline-none"
+                      className="w-full px-3 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-xl text-slate-900 dark:text-white focus:border-[#00f7ff] outline-none"
                     />
                     <p className="text-[11px] text-slate-500 dark:text-[#e0d0ff]/60 mt-1">
                       Permintaan akan masuk ke admin untuk diverifikasi manual.
@@ -1105,12 +1105,12 @@ export default function AgentDashboardPage() {
 
               {depositAmount && parseInt(depositAmount) >= 10000 && (
                 <div className="bg-gradient-to-br from-[#bc13fe]/20 to-[#00f7ff]/20 p-4 rounded-xl border border-purple-300 dark:border-[#bc13fe]/30">
-                  <p className="text-sm text-white">
-                    {t('agent.portal.totalAmount')}: <span className="font-bold text-[#00f7ff]">{formatCurrency(parseInt(depositAmount))}</span>
+                  <p className="text-sm text-slate-900 dark:text-white">
+                    {t('agent.portal.totalAmount')}: <span className="font-bold text-cyan-600 dark:text-[#00f7ff]">{formatCurrency(parseInt(depositAmount))}</span>
                   </p>
                   {depositPaymentMethod && paymentMethods.find(m => m.code === depositPaymentMethod)?.totalFee ? (
-                    <p className="text-xs text-[#e0d0ff]/70 mt-1">
-                      Total bayar: <span className="font-bold text-[#00ff88]">
+                    <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/70 mt-1">
+                      Total bayar: <span className="font-bold text-emerald-600 dark:text-[#00ff88]">
                         {formatCurrency(parseInt(depositAmount) + (paymentMethods.find(m => m.code === depositPaymentMethod)?.totalFee ?? 0))}
                       </span>
                     </p>

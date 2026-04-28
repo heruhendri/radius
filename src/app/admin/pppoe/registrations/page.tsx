@@ -374,7 +374,6 @@ export default function RegistrationsPage() {
                   <div>
                     <span className="text-muted-foreground">{t('pppoe.profile')}:</span>
                     <p className="font-medium">{reg.profile.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{reg.profile.downloadSpeed}/{reg.profile.uploadSpeed}M</p>
                     <p className="text-[10px] text-success font-medium">Rp {reg.profile.price.toLocaleString()}</p>
                   </div>
                 </div>
@@ -461,7 +460,6 @@ export default function RegistrationsPage() {
                         </td>
                         <td className="px-3 py-2">
                           <div className="font-medium text-xs">{reg.profile.name}</div>
-                          <div className="text-[10px] text-muted-foreground">{reg.profile.downloadSpeed}/{reg.profile.uploadSpeed}M</div>
                           <div className="text-[10px] text-success font-medium">Rp {reg.profile.price.toLocaleString()}</div>
                         </td>
                         <td className="px-3 py-2">{getStatusBadge(reg.status)}</td>

@@ -418,7 +418,7 @@ export default function TechnicianRegisterPage() {
                           <option value="">-- Pilih Paket Internet --</option>
                           {profiles.map((p) => (
                             <option key={p.id} value={p.id}>
-                              {p.name} — {formatSpeed(p.downloadSpeed)}/{formatSpeed(p.uploadSpeed)} — {formatIDR(p.price)}/bln
+                              {p.name} — {formatIDR(p.price)}/bln
                             </option>
                           ))}
                         </select>
@@ -431,10 +431,6 @@ export default function TechnicianRegisterPage() {
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-sm font-bold text-[#00f7ff]">{selected.name}</span>
                               <span className="text-sm font-bold text-slate-700 dark:text-white">{formatIDR(selected.price)}/bln</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                              <span>↓ {formatSpeed(selected.downloadSpeed)}</span>
-                              <span>↑ {formatSpeed(selected.uploadSpeed)}</span>
                             </div>
                           </div>
                         );

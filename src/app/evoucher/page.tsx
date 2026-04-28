@@ -153,8 +153,8 @@ export default function EVoucherPage() {
                         </span>
                         <h3 className="text-base font-bold text-white line-clamp-1 mb-1 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">{profile.name}</h3>
                         <div className="flex items-center text-xs text-[#e0d0ff]/80 mt-1">
-                          <Zap className="w-3.5 h-3.5 mr-1 text-[#00f7ff] drop-shadow-[0_0_6px_rgba(0,247,255,0.6)]" />
-                          {profile.downloadSpeed}/{profile.uploadSpeed} Mbps
+                          <Clock className="w-3.5 h-3.5 mr-1 text-[#00f7ff] drop-shadow-[0_0_6px_rgba(0,247,255,0.6)]" />
+                          {formatValidity(profile.validityValue, profile.validityUnit)}
                         </div>
                       </div>
                       {selectedProfile?.id === profile.id && (
@@ -195,7 +195,7 @@ export default function EVoucherPage() {
                     <p className="text-xs font-bold text-[#00f7ff] uppercase mb-2 tracking-wider drop-shadow-[0_0_6px_rgba(0,247,255,0.6)]">Paket Dipilih</p>
                     <p className="text-base font-bold text-white mb-1 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">{selectedProfile.name}</p>
                     <p className="text-xs text-[#e0d0ff]/80">
-                      {formatValidity(selectedProfile.validityValue, selectedProfile.validityUnit)} • {selectedProfile.downloadSpeed}/{selectedProfile.uploadSpeed} Mbps
+                      {formatValidity(selectedProfile.validityValue, selectedProfile.validityUnit)}
                     </p>
                     <div className="pt-3 mt-3 border-t-2 border-[#bc13fe]/30 flex justify-between items-baseline">
                       <span className="text-xs text-[#00f7ff] font-semibold uppercase tracking-wide drop-shadow-[0_0_6px_rgba(0,247,255,0.5)]">Total Bayar</span>
