@@ -564,17 +564,22 @@ html.theme-transitioning *::after {
   border-color: var(--border) !important;
 }
 
-/* --- 11. NEON SHADOWS → subtle light shadows --- */
+/* --- 11. NEON SHADOWS → visible card elevation shadows --- */
 :root:not(.dark) [class*="shadow-[0_0_"],
 :root:not(.dark) [class*="shadow-[5px_0_"],
 :root:not(.dark) [class*="shadow-[inset_"] {
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06) !important;
 }
 :root:not(.dark) [class*="shadow-[0_4px_30px"] {
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
 }
 :root:not(.dark) [class*="drop-shadow-[0_0_"] {
   filter: none !important;
+}
+/* Agent/Technician portal: heavier card elevation for better visual hierarchy */
+:root:not(.dark) [data-role="agent"] main [class*="shadow-[0_0_"],
+:root:not(.dark) [data-role="technician"] main [class*="shadow-[0_0_"] {
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.10), 0 2px 6px -2px rgba(0, 0, 0, 0.07) !important;
 }
 
 /* --- 12. NEON GLOW BLOBS → fade out on white bg (use opacity, NOT display:none) --- */

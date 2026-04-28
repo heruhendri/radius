@@ -244,7 +244,7 @@ export default function AgentSessionsPage() {
             placeholder={t('agent.portal.searchSession') + '...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-white focus:border-[#00f7ff] outline-none"
+            className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-100 dark:bg-[#0a0520] border-2 border-purple-300 dark:border-[#bc13fe]/30 rounded-lg text-slate-900 dark:text-white focus:border-[#00f7ff] outline-none"
           />
         </div>
       </div>
@@ -278,7 +278,7 @@ export default function AgentSessionsPage() {
                       <p className="text-[10px] text-slate-500 dark:text-[#e0d0ff]/60">{session.profileName || '-'} · {session.routerName || '-'}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-semibold text-white whitespace-nowrap">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-white whitespace-nowrap">
                     {session.expiresAt
                       ? formatDuration(liveCountdown(session.expiresAt)) + ' left'
                       : formatDuration(liveDuration(session.acctStartTime))}
@@ -287,7 +287,7 @@ export default function AgentSessionsPage() {
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
                   <div className="flex justify-between">
                     <span className="text-slate-400 dark:text-[#e0d0ff]/40">IP:</span>
-                    <span className="font-mono text-white">{session.framedIpAddress || '-'}</span>
+                    <span className="font-mono text-slate-700 dark:text-white">{session.framedIpAddress || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400 dark:text-[#e0d0ff]/40">MAC:</span>
