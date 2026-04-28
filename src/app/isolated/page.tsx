@@ -198,8 +198,8 @@ function IsolatedContent() {
       <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #0f2818 0%, #064e3b 100%)' }}>
         <div className="text-center max-w-sm w-full">
           {company?.logo && (
-            <div style={{ background: '#fff', borderRadius: 16, padding: '12px 24px', display: 'inline-block', marginBottom: 24 }}>
-              <Image unoptimized src={company.logo} alt={company.name} width={180} height={44} style={{ height: 44, maxWidth: 180, objectFit: 'contain' }} />
+            <div style={{ background: '#fff', borderRadius: 16, padding: '10px 14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 220, maxWidth: '100%', height: 74, marginBottom: 24, overflow: 'hidden' }}>
+              <Image unoptimized src={company.logo} alt={company.name} width={220} height={110} style={{ maxHeight: '100%', maxWidth: '100%', width: 'auto', height: 'auto', objectFit: 'contain' }} />
             </div>
           )}
           <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(16,185,129,0.15)', border: '2px solid rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
@@ -242,8 +242,8 @@ function IsolatedContent() {
         {/* ── Header ────────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10 }}>
           {company?.logo ? (
-            <div style={{ background: '#fff', borderRadius: 10, padding: '5px 14px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
-              <Image unoptimized src={company.logo} alt={company?.name || 'Logo'} width={120} height={30} style={{ height: 30, maxWidth: 120, objectFit: 'contain' }} />
+            <div style={{ background: '#fff', borderRadius: 10, padding: '6px 10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 170, maxWidth: '100%', height: 48, boxShadow: '0 2px 10px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+              <Image unoptimized src={company.logo} alt={company?.name || 'Logo'} width={220} height={110} style={{ maxHeight: '100%', maxWidth: '100%', width: 'auto', height: 'auto', objectFit: 'contain' }} />
             </div>
           ) : (
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(239,68,68,0.15)', border: '2px solid rgba(239,68,68,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -219,8 +219,8 @@ function LoginForm() {
           {/* Logo */}
           <div className="flex justify-center mb-5">
             {companyLogo ? (
-              <div className="p-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-700 shadow-sm">
-                <Image unoptimized src={companyLogo} alt={companyName} width={120} height={48} className="max-h-12 max-w-[120px] w-auto h-auto object-contain" />
+              <div className="h-16 w-full max-w-[210px] p-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-700 shadow-sm flex items-center justify-center overflow-hidden">
+                <Image unoptimized src={companyLogo} alt={companyName} width={220} height={110} className="max-h-full max-w-full w-auto h-auto object-contain" />
               </div>
             ) : (
               <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl shadow-lg transition-all duration-300 ${step === 'twoFactor' ? 'bg-indigo-600 shadow-indigo-500/25' : 'bg-blue-600 shadow-blue-500/25'}`}>

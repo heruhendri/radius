@@ -23,10 +23,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
+    const mimeToExtension: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/svg+xml': 'svg',
+      'image/webp': 'webp',
+      'image/avif': 'avif',
+      'image/gif': 'gif',
+    };
+    const allowedTypes = Object.keys(mimeToExtension);
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid file type. Only PNG, JPG, SVG, and WebP are allowed.' },
+        { success: false, error: 'Invalid file type. Only PNG, JPG, SVG, WebP, AVIF, and GIF are allowed.' },
         { status: 400 }
       );
     }
@@ -42,8 +51,8 @@ export async function POST(request: NextRequest) {
 
     const uploadsDir = getUploadDir('logos');
 
-    // Generate unique filename
-    const extension = file.name.split('.').pop();
+    // Generate unique filename based on MIME type
+    const extension = mimeToExtension[file.type] || 'png';
     const filename = `logo-${nanoid(10)}.${extension}`;
     const filepath = path.join(uploadsDir, filename);
 

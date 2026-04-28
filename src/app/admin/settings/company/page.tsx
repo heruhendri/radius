@@ -288,9 +288,9 @@ export default function CompanySettingsPage() {
                       <Image unoptimized
                         src={settings.logo}
                         alt="Logo"
-                        width={56}
-                        height={56}
-                        className="w-14 h-14 object-contain rounded-lg border border-border bg-card p-1"
+                        width={220}
+                        height={120}
+                        className="w-28 h-16 object-contain rounded-lg border border-border bg-card p-1"
                       />
                       <button
                         type="button"
@@ -301,7 +301,7 @@ export default function CompanySettingsPage() {
                       </button>
                     </div>
                   ) : (
-                    <div className="w-14 h-14 rounded-lg border-2 border-dashed border-border bg-card flex items-center justify-center text-muted-foreground">
+                    <div className="w-28 h-16 rounded-lg border-2 border-dashed border-border bg-card flex items-center justify-center text-muted-foreground">
                       <ImageIcon className="w-5 h-5" />
                     </div>
                   )}
@@ -309,7 +309,7 @@ export default function CompanySettingsPage() {
                     <label className="cursor-pointer">
                       <input
                         type="file"
-                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/avif,image/gif"
                         className="hidden"
                         onChange={handleLogoUpload}
                         disabled={uploadingLogo}
@@ -322,7 +322,7 @@ export default function CompanySettingsPage() {
                         )}
                       </div>
                     </label>
-                    <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG, SVG, WebP · Maks 2MB</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG, SVG, WebP, AVIF, GIF · Maks 2MB</p>
                   </div>
                 </div>
               </div>

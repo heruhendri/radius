@@ -127,6 +127,7 @@ export default function UserDetailModal({
     idCardPhoto: '',
     installationPhotos: [] as string[],
     autoIsolationEnabled: true,
+    registeredAt: '',
   });
 
   useEffect(() => {
@@ -153,6 +154,7 @@ export default function UserDetailModal({
         idCardPhoto: user.idCardPhoto || '',
         installationPhotos: user.installationPhotos || [],
         autoIsolationEnabled: user.autoIsolationEnabled !== false,
+        registeredAt: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : '',
       });
     }
   }, [user]);
@@ -583,7 +585,7 @@ export default function UserDetailModal({
                 {/* Expired At - Shows for both PREPAID and POSTPAID */}
                 <div className={formData.subscriptionType === 'POSTPAID' ? '' : 'col-span-2'}>
                   <label className={labelCls}>
-                    {formData.subscriptionType === 'POSTPAID' ? '⏰ Expired Saat Ini' : t('userModal.expiredAt')}
+                    Tanggal Isolir
                   </label>
                   <input
                     type="date"
@@ -633,6 +635,20 @@ export default function UserDetailModal({
                   </select>
                   <p className="text-xs text-muted-foreground dark:text-[#e0d0ff]/50 mt-1">
                     Pilih tindakan otomatis saat tanggal tagihan / expired terlewati.
+                  </p>
+                </div>
+
+                {/* Tanggal Register */}
+                <div>
+                  <label className={labelCls}>📅 Tanggal Register</label>
+                  <input
+                    type="date"
+                    value={formData.registeredAt}
+                    onChange={(e) => setFormData({ ...formData, registeredAt: e.target.value })}
+                    className={inputCls}
+                  />
+                  <p className="text-xs text-muted-foreground dark:text-[#e0d0ff]/50 mt-1">
+                    Tanggal pelanggan terdaftar. Ubah jika perlu koreksi data historis.
                   </p>
                 </div>
               </div>

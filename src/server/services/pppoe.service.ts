@@ -1,5 +1,5 @@
-﻿/**
- * PPPoE User service â€” business logic extracted from route handlers.
+/**
+ * PPPoE User service — business logic extracted from route handlers.
  * All DB mutations, RADIUS sync, notifications and activity logging live here.
  */
 
@@ -11,7 +11,7 @@ import { generateUniqueReferralCode } from '@/server/services/referral.service';
 import type { NextRequest } from 'next/server';
 import type { Session } from 'next-auth';
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface CreatePppoeUserInput {
   username: string;
@@ -36,6 +36,7 @@ export interface CreatePppoeUserInput {
   idCardPhoto?: string;
   installationPhotos?: unknown;
   followRoad?: boolean;
+  registeredAt?: string;
 }
 
 export interface UpdatePppoeUserInput {
@@ -65,9 +66,10 @@ export interface UpdatePppoeUserInput {
   idCardPhoto?: string | null;
   installationPhotos?: unknown;
   followRoad?: boolean;
+  registeredAt?: string;
 }
 
-// â”€â”€â”€ List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── List ─────────────────────────────────────────────────────────────────────
 
 export async function listPppoeUsers(params: { status?: string | null }) {
   const whereClause: Record<string, unknown> = {};
@@ -102,7 +104,7 @@ export async function listPppoeUsers(params: { status?: string | null }) {
   return users.map(user => ({ ...user, isOnline: onlineSet.has(user.username) }));
 }
 
-// â”€â”€â”€ Get one â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Get one ──────────────────────────────────────────────────────────────────
 
 export async function getPppoeUserById(id: string) {
   const user = await prisma.pppoeUser.findUnique({
@@ -134,7 +136,7 @@ export async function getPppoeUserById(id: string) {
   return { user, activeSession };
 }
 
-// â”€â”€â”€ Create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Create ───────────────────────────────────────────────────────────────────
 
 export async function createPppoeUser(
   data: CreatePppoeUserInput,
@@ -145,7 +147,7 @@ export async function createPppoeUser(
     username, password, profileId, pppoeCustomerId, routerId, areaId,
     email, address, latitude, longitude, ipAddress, macAddress, comment,
     expiredAt, subscriptionType, billingDay, idCardNumber, idCardPhoto,
-    installationPhotos, followRoad,
+    installationPhotos, followRoad, registeredAt,
   } = data;
 
   // Resolve name/phone: prefer explicit values, fall back to linked customer
@@ -242,6 +244,7 @@ export async function createPppoeUser(
       installationPhotos: installationPhotos ?? null,
       followRoad: !!followRoad,
       referralCode: await generateUniqueReferralCode(),
+      ...(registeredAt ? { createdAt: new Date(registeredAt) } : {}),
       ...(pppoeCustomerId ? { pppoeCustomerId } : {}),
     } as never,
   });
@@ -262,7 +265,7 @@ export async function createPppoeUser(
     });
 
     // NOTE: NAS-IP-Address is NOT stored in radcheck.
-    // FreeRADIUS treats radcheck as check items — if NAS-IP-Address doesn't match
+    // FreeRADIUS treats radcheck as check items � if NAS-IP-Address doesn't match
     // the incoming request (VPN, NAT, different source IP), auth fails entirely.
     // NAS restriction is handled at the app level via REST authorize hook.
 
@@ -348,7 +351,7 @@ export async function createPppoeUser(
   return { user: { ...user, syncedToRadius: radiusSynced }, radiusSynced };
 }
 
-// â”€â”€â”€ Update â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Update ───────────────────────────────────────────────────────────────────
 
 export async function updatePppoeUser(
   data: UpdatePppoeUserInput,
@@ -405,8 +408,8 @@ export async function updatePppoeUser(
       ...(data.subscriptionType && { subscriptionType: data.subscriptionType }),
       ...(data.billingDay !== undefined && { billingDay: Math.min(Math.max(parseInt(String(data.billingDay)), 1), 28) }),
       // expiredAt: if explicitly provided, save it directly with correct timezone handling.
-      // Date-only string (YYYY-MM-DD) → end of day WIB (23:59:59 WIB = 16:59:59 UTC).
-      // No longer auto-recalculate expiredAt from billingDay on every edit —
+      // Date-only string (YYYY-MM-DD) ? end of day WIB (23:59:59 WIB = 16:59:59 UTC).
+      // No longer auto-recalculate expiredAt from billingDay on every edit �
       // that was the bug causing expiredAt to silently reset to "next month" on any save.
       ...(data.expiredAt && (() => {
         const expStr = String(data.expiredAt);
@@ -422,6 +425,7 @@ export async function updatePppoeUser(
       ...(data.idCardPhoto !== undefined && { idCardPhoto: data.idCardPhoto }),
       ...(data.installationPhotos !== undefined && { installationPhotos: data.installationPhotos }),
       ...(data.followRoad !== undefined && { followRoad: !!data.followRoad }),
+      ...(data.registeredAt && { createdAt: new Date(data.registeredAt) }),
     } as never,
   });
 
@@ -447,9 +451,9 @@ export async function updatePppoeUser(
       // RADIUS re-sync must respect the user's effective status:
       // - active: full sync (password, profile group, static IP)
       // - isolated: allow auth but use isolir group, no static IP
-      // - blocked/stop: keep RADIUS tables empty — user must remain unreachable
+      // - blocked/stop: keep RADIUS tables empty � user must remain unreachable
       if (effectiveStatus === 'blocked' || effectiveStatus === 'stop') {
-        // Tables already cleared by deleteMany above — do NOT re-add any entries
+        // Tables already cleared by deleteMany above � do NOT re-add any entries
       } else if (effectiveStatus === 'isolated') {
         // Keep login allowed but restrict to isolir group
         await prisma.radcheck.create({
@@ -459,7 +463,7 @@ export async function updatePppoeUser(
         await prisma.radusergroup.create({
           data: { username: newUsername, groupname: 'isolir', priority: 1 },
         });
-        // No Framed-IP-Address — isolated users get IP from pool-isolir
+        // No Framed-IP-Address � isolated users get IP from pool-isolir
       } else {
         // active (default): full sync
         await prisma.radcheck.create({
@@ -569,7 +573,7 @@ export async function updatePppoeUser(
   return user;
 }
 
-// â”€â”€â”€ Delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Delete ───────────────────────────────────────────────────────────────────
 
 export async function deletePppoeUser(
   id: string,

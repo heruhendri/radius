@@ -78,6 +78,7 @@ function AddPppoeUserModal({ isOpen, onClose, onSuccess, profiles, routers, area
     idCardNumber: '', idCardPhoto: '',
     installationPhotos: [] as string[],
     followRoad: false,
+    registeredAt: new Date().toISOString().slice(0, 10),
   });
   const [showPassword, setShowPassword] = useState(false);
   const [uploadingIdCard, setUploadingIdCard] = useState(false);
@@ -89,7 +90,7 @@ function AddPppoeUserModal({ isOpen, onClose, onSuccess, profiles, routers, area
   const prevIsOpen = useRef(isOpen);
   useEffect(() => {
     if (prevIsOpen.current && !isOpen) {
-      setFormData({ username: '', password: '', profileId: '', routerId: '', areaId: '', name: '', phone: '', email: '', address: '', latitude: '', longitude: '', ipAddress: '', expiredAt: '', subscriptionType: 'POSTPAID', billingDay: '1', macAddress: '', comment: '', referralCode: '', idCardNumber: '', idCardPhoto: '', installationPhotos: [], followRoad: false });
+      setFormData({ username: '', password: '', profileId: '', routerId: '', areaId: '', name: '', phone: '', email: '', address: '', latitude: '', longitude: '', ipAddress: '', expiredAt: '', subscriptionType: 'POSTPAID', billingDay: '1', macAddress: '', comment: '', referralCode: '', idCardNumber: '', idCardPhoto: '', installationPhotos: [], followRoad: false, registeredAt: new Date().toISOString().slice(0, 10) });
       setShowPassword(false);
     }
     prevIsOpen.current = isOpen;
@@ -217,6 +218,7 @@ function AddPppoeUserModal({ isOpen, onClose, onSuccess, profiles, routers, area
               <div><ModalLabel>{t('pppoe.expiryDate')}</ModalLabel><ModalInput type="date" value={formData.expiredAt} onChange={(e) => setFormData(prev => ({ ...prev, expiredAt: e.target.value }))} /></div>
             )}
             <div><ModalLabel>Komentar / Catatan</ModalLabel><ModalTextarea value={formData.comment} onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))} placeholder="Catatan tambahan tentang pelanggan ini..." rows={2} /></div>
+            <div><ModalLabel>Tanggal Register</ModalLabel><ModalInput type="date" value={formData.registeredAt} onChange={(e) => setFormData(prev => ({ ...prev, registeredAt: e.target.value }))} /><p className="text-[10px] text-muted-foreground mt-1">Tanggal pelanggan terdaftar. Default hari ini, bisa diubah untuk data historis.</p></div>
             <div><ModalLabel>Kode Referral <span className="text-muted-foreground text-[10px]">(opsional)</span></ModalLabel><ModalInput type="text" value={formData.referralCode} onChange={(e) => setFormData(prev => ({ ...prev, referralCode: e.target.value }))} placeholder="Masukkan kode referral" /></div>
 
             {/* Dokumen Pelanggan */}

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense, useRef, TouchEvent } from '
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut, SessionProvider } from 'next-auth/react';
+import Image from 'next/image';
 import {
   LayoutDashboard,
   Users,
@@ -726,6 +727,7 @@ function AdminLayoutContent({
             address: data.address,
             baseUrl: data.baseUrl || window.location.origin,
             adminPhone: data.phone,
+            logo: data.logo || '',
           });
         }
       })
@@ -922,9 +924,22 @@ function AdminLayoutContent({
           {/* Logo - compact on mobile with safe area */}
           <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-sidebar-border bg-sidebar-accent/50">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-400 flex items-center justify-center border border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.4),inset_0_1px_0_rgba(255,255,255,0.2)] animate-[neonPulse_3s_ease-in-out_infinite]">
-                <span className="text-black font-black text-xs sm:text-sm">{company.name.charAt(0)}</span>
-              </div>
+              {company.logo ? (
+                <div className="w-[44px] h-[34px] sm:w-[52px] sm:h-[38px] rounded-lg bg-sidebar p-1 border border-cyan-400/30 shadow-[0_0_12px_rgba(6,182,212,0.25)] flex items-center justify-center overflow-hidden">
+                  <Image
+                    unoptimized
+                    src={company.logo}
+                    alt={company.name || 'Company Logo'}
+                    width={120}
+                    height={80}
+                    className="max-w-full max-h-full w-auto h-auto object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-400 flex items-center justify-center border border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.4),inset_0_1px_0_rgba(255,255,255,0.2)] animate-[neonPulse_3s_ease-in-out_infinite]">
+                  <span className="text-black font-black text-xs sm:text-sm">{company.name.charAt(0)}</span>
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <h1 className="text-[11px] sm:text-xs font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-cyan-300 to-blue-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)] truncate max-w-[130px] sm:max-w-[110px]">
                   {company.name}

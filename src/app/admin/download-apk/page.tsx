@@ -417,38 +417,41 @@ export default function DownloadApkPage() {
         <div className="flex items-center gap-2 text-slate-300 text-xs font-semibold mb-3">
           <ImageIcon className="w-3.5 h-3.5 text-cyan-400" /> Logo Aplikasi (digunakan sebagai ikon APK)
         </div>
-        <div className="flex items-center gap-4">
-          {/* Preview */}
-          <div className="w-16 h-16 rounded-xl border border-slate-700 bg-slate-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
-            {currentLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={currentLogo} alt="Logo" className="w-full h-full object-contain" />
-            ) : (
-              <ImageIcon className="w-7 h-7 text-slate-600" />
-            )}
-          </div>
-          {/* Upload */}
-          <div className="flex-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <span className={`inline-flex items-center gap-1.5 py-2 px-4 rounded-lg text-xs font-bold transition-all text-white ${
-                uploadingLogo ? 'bg-slate-700 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'
-              }`}>
-                {uploadingLogo ? (
-                  <><RefreshCw className="w-3 h-3 animate-spin" /> Mengupload…</>
-                ) : (
-                  <><Upload className="w-3 h-3" /> {currentLogo ? 'Ganti Logo' : 'Upload Logo'}</>
-                )}
-              </span>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp"
-                onChange={handleLogoUpload}
-                disabled={uploadingLogo}
-                className="hidden"
-              />
-            </label>
-            <p className="text-[11px] text-slate-500 mt-1.5">
-              PNG/JPG/WebP, maks 2MB. Logo akan otomatis digunakan sebagai ikon saat build APK.
+        {/* Preview — full width */}
+        <div className="w-full h-44 rounded-xl border border-slate-700 bg-slate-800/60 flex items-center justify-center overflow-hidden mb-3">
+          {currentLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={currentLogo} alt="Logo" className="max-h-full max-w-full object-contain p-3" />
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <ImageIcon className="w-10 h-10 text-slate-600" />
+              <span className="text-xs text-slate-500">Belum ada logo</span>
+            </div>
+          )}
+        </div>
+        {/* Upload */}
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <span className={`inline-flex items-center gap-1.5 py-2 px-4 rounded-lg text-xs font-bold transition-all text-white ${
+              uploadingLogo ? 'bg-slate-700 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'
+            }`}>
+              {uploadingLogo ? (
+                <><RefreshCw className="w-3 h-3 animate-spin" /> Mengupload…</>
+              ) : (
+                <><Upload className="w-3 h-3" /> {currentLogo ? 'Ganti Logo' : 'Upload Logo'}</>
+              )}
+            </span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,image/avif,image/gif"
+              onChange={handleLogoUpload}
+              disabled={uploadingLogo}
+              className="hidden"
+            />
+          </label>
+          <div>
+            <p className="text-[11px] text-slate-500">
+              PNG/JPG/SVG/WebP/AVIF/GIF, maks 2MB. Logo otomatis menyesuaikan layout dan digunakan sebagai ikon saat build APK.
             </p>
             {logoError && <p className="text-[11px] text-red-400 mt-1">{logoError}</p>}
             {currentLogo && !logoError && (

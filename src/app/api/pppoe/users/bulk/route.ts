@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
           { key: 'latitude', header: 'Latitude', width: 14 },
           { key: 'longitude', header: 'Longitude', width: 14 },
           { key: 'autoIsolationEnabled', header: 'Auto Isolasi (true/false)', width: 22 },
+          { key: 'registeredAt', header: 'Tanggal Register (YYYY-MM-DD)', width: 26 },
         ];
         const buffer = await generateExcelBuffer(sampleData as any, columns, 'PPPoE Template');
         return new NextResponse(Buffer.from(buffer), {
@@ -89,9 +90,9 @@ export async function GET(request: NextRequest) {
       }
 
       // CSV fallback
-      const template = `ID Pelanggan (kosongkan = auto),Username *,Password *,Nama Lengkap *,No. Telepon *,Email,Alamat,Area/Wilayah,IP Address,Tipe Langganan (POSTPAID/PREPAID),Tanggal Expired (YYYY-MM-DD),Hari Tagihan (1-31),Latitude,Longitude
-,user001,pass123,Budi Santoso,08123456789,budi@example.com,Jl. Merdeka No. 10,Cluster A,10.10.10.2,POSTPAID,,1,-6.200000,106.816666
-,user002,pass456,Siti Rahayu,08987654321,siti@example.com,Jl. Sudirman No. 5,,, PREPAID,2026-12-31,,,`;
+      const template = `ID Pelanggan (kosongkan = auto),Username *,Password *,Nama Lengkap *,No. Telepon *,Email,Alamat,Area/Wilayah,IP Address,Tipe Langganan (POSTPAID/PREPAID),Tanggal Expired (YYYY-MM-DD),Hari Tagihan (1-31),Latitude,Longitude,Tanggal Register (YYYY-MM-DD)
+,user001,pass123,Budi Santoso,08123456789,budi@example.com,Jl. Merdeka No. 10,Cluster A,10.10.10.2,POSTPAID,,1,-6.200000,106.816666,
+,user002,pass456,Siti Rahayu,08987654321,siti@example.com,Jl. Sudirman No. 5,,, PREPAID,2026-12-31,,,,`;
 
       return new NextResponse(template, {
         headers: {
@@ -237,7 +238,14 @@ export async function POST(request: NextRequest) {
       'status': '_status',
       'router': 'routername',
       'created': '_created',
-      'createdat': '_createdat',
+      'createdat': 'createdat',
+      // Tanggal Register / registeredAt (maps to createdAt in DB)
+      'tanggal register (yyyy-mm-dd)': 'createdat',
+      'tanggal register': 'createdat',
+      'tanggal registrasi': 'createdat',
+      'tanggal terdaftar': 'createdat',
+      'registered at': 'createdat',
+      'registeredat': 'createdat',
     };
 
     // Parse file: support both CSV and XLSX/XLS
@@ -461,15 +469,10 @@ export async function POST(request: NextRequest) {
           userData.autoIsolationEnabled = rowData.autoisolation.toLowerCase() !== 'false' && rowData.autoisolation !== '0';
         }
 
-        // Optional fields from template/export
-        if (rowData.comment && rowData.comment.trim() !== '') {
-          userData.comment = rowData.comment.trim();
-        }
-        if (rowData.macaddress && rowData.macaddress.trim() !== '') {
-          userData.macAddress = rowData.macaddress.trim();
-        }
-        if (rowData.autoisolation !== undefined && rowData.autoisolation !== '') {
-          userData.autoIsolationEnabled = rowData.autoisolation.toLowerCase() !== 'false' && rowData.autoisolation !== '0';
+        // Tanggal Register / registeredAt — maps to createdAt in DB
+        if (rowData.createdat && rowData.createdat !== '') {
+          const d = new Date(rowData.createdat);
+          if (!isNaN(d.getTime())) userData.createdAt = d;
         }
 
         // Generate unique referral code for new user

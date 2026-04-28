@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useToast } from '@/components/cyberpunk/CyberToast';
-import { ArrowLeft, Send, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, MapPin, Navigation } from 'lucide-react';
 import { CyberCard } from '@/components/cyberpunk/CyberCard';
 import { CyberButton } from '@/components/cyberpunk/CyberButton';
 
@@ -31,6 +31,9 @@ export default function CreateTicketPage() {
     customerName: '',
     customerEmail: '',
     customerPhone: '',
+    locationTag: '',
+    latitude: '',
+    longitude: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -102,6 +105,31 @@ export default function CreateTicketPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  const handleGetGPS = () => {
+    if (!navigator.geolocation) {
+      toastError('Browser tidak mendukung GPS');
+      return;
+    }
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setFormData(prev => ({
+          ...prev,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        setGpsLoading(false);
+      },
+      () => {
+        toastError('Gagal mendapatkan lokasi GPS. Pastikan izin lokasi diaktifkan.');
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -121,11 +149,25 @@ export default function CreateTicketPage() {
         }
       }
 
+      // Build description with optional location info
+      let finalDescription = formData.description;
+      if (formData.locationTag || (formData.latitude && formData.longitude)) {
+        finalDescription += '\n\n---';
+        if (formData.locationTag) {
+          finalDescription += `\n📍 Lokasi: ${formData.locationTag}`;
+        }
+        if (formData.latitude && formData.longitude) {
+          finalDescription += `\n🌐 Koordinat: ${formData.latitude}, ${formData.longitude}`;
+          finalDescription += `\n🗺️ Maps: https://maps.google.com/?q=${formData.latitude},${formData.longitude}`;
+        }
+      }
+
       const res = await fetch('/api/tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          description: finalDescription,
           customerId, // Link ticket to customer
         }),
       });
@@ -307,6 +349,43 @@ export default function CreateTicketPage() {
             )}
             <p className="text-muted-foreground text-sm mt-1">
               {t('ticket.minCharacters')}: 10
+            </p>
+          </div>
+
+          {/* Location Tag */}
+          <div>
+            <label className="block text-sm font-medium text-cyan-400 mb-2 drop-shadow-[0_0_5px_rgba(6,182,212,0.3)]">
+              <MapPin size={14} className="inline mr-1" />
+              Lokasi / Alamat Rumah
+            </label>
+            <input
+              type="text"
+              value={formData.locationTag}
+              onChange={(e) => setFormData({ ...formData, locationTag: e.target.value })}
+              className="w-full bg-background dark:bg-slate-900/50 border border-cyan-500/30 rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all"
+              placeholder="Contoh: Jl. Merdeka No. 10, dekat warung Pak Budi"
+            />
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                type="button"
+                onClick={handleGetGPS}
+                disabled={gpsLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-cyan-500/40 text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {gpsLoading ? (
+                  <><div className="w-3 h-3 border border-cyan-400 border-t-transparent rounded-full animate-spin" /> Mendapatkan lokasi…</>
+                ) : (
+                  <><Navigation size={12} /> Ambil Koordinat GPS</>
+                )}
+              </button>
+              {formData.latitude && formData.longitude && (
+                <span className="text-xs text-emerald-400">
+                  📍 {formData.latitude}, {formData.longitude}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Opsional — membantu teknisi menemukan lokasi rumah Anda
             </p>
           </div>
 
