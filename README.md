@@ -469,6 +469,24 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 <!-- AUTO-CHANGELOG:START -->
 
+### v2.25.6 — 2026-04-28
+
+### Fixed
+- **Tema terang agent portal — seluruh teks/border neon tidak terbaca** — Halaman `vouchers`, `sessions`, dan `tickets` portal agen masih menggunakan warna hex neon (`#00f7ff`, `#bc13fe`, `#ff44cc`, `#00ff88`, dll.) yang di theme terang menjadi tidak terbaca karena di-override oleh `globals.css`. Seluruh warna tersebut diganti dengan pasangan class Tailwind standar yang aman untuk light dan dark mode.
+
+### Added
+- **Input lokasi GPS di form tiket agen** — Form "Buat Tiket" portal agen kini memiliki field tag lokasi (teks manual) dan tombol GPS yang mengambil koordinat dari browser (`navigator.geolocation`). Lokasi dan link Google Maps otomatis disisipkan ke deskripsi tiket agar teknisi lebih mudah menemukan lokasi pelanggan.
+
+### Changed
+- **Redesign UI agent/vouchers — pure Tailwind dark/light** — Loading spinner, container utama, filter controls, mobile cards, desktop table, pagination, dan dialog WhatsApp semuanya diperbarui ke class Tailwind standar (`bg-white dark:bg-slate-800/60`, `border-slate-200 dark:border-slate-700`, status badge `bg-emerald-100 text-emerald-700`, dll.).
+- **Redesign UI agent/sessions — pure Tailwind dark/light** — Header, tombol refresh, stats cards (cyan/emerald/pink), search bar, daftar sesi (mobile card + desktop table) diperbarui; upload `text-emerald-600 dark:text-emerald-400`, download `text-pink-600 dark:text-pink-400`.
+- **Redesign UI agent/tickets — pure Tailwind dark/light** — Header, tombol "Buat Tiket", form tiket, filter status, daftar tiket, chat bubble, dan reply box diperbarui dari neon gradient ke `from-violet-600 to-cyan-600`; active filter `bg-violet-100 dark:bg-violet-500/20`.
+
+### Affected
+- `src/app/agent/vouchers/page.tsx`
+- `src/app/agent/sessions/page.tsx`
+- `src/app/agent/tickets/page.tsx`
+
 ### v2.25.5 — 2026-04-28
 
 ### Added
@@ -552,31 +570,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 ### Changed
 - **`whatsapp.service.ts`** — Menambahkan `'baileys'` ke union type provider dan method `sendViaBaileys()` yang memanggil `http://127.0.0.1:${WA_SERVICE_PORT}/send`
 - **Dependencies tambahan di `package.json`** — `@whiskeysockets/baileys ^7.0.0-rc.9`, `pino ^10.3.1`, `express ^4.21.2`
-
-### v2.25.1 — 2026-04-26
-
-### Added
-- **`vps-install/install-security.sh` — Modul keamanan server otomatis** — Script baru yang dipanggil di Step 8 installer dan setiap `updater.sh`. Memasang tiga lapisan perlindungan secara otomatis:
-  - **fail2ban**: ban IP brute-force SSH setelah 5x gagal dalam 10 menit (ban 2 jam). Jail aktif: `sshd`, `nginx-http-auth`, `nginx-limit-req`. IP jaringan lokal (`192.168.x.x`, `10.x.x.x`) tidak pernah di-ban.
-  - **UFW Firewall**: default deny semua incoming, allow hanya port yang dibutuhkan: 22/TCP (SSH), 80/TCP (HTTP), 443/TCP (HTTPS), 1812-1813/UDP (RADIUS), 3799/UDP (RADIUS CoA). Di-skip otomatis untuk LXC container (pakai Proxmox host firewall).
-  - **Disk cleanup cronjob**: script `/usr/local/bin/salfanet-cleanup.sh` berjalan otomatis setiap hari jam 02:00. Membersihkan: journal systemd (max 200MB/7 hari), syslog lama, btmp (truncate jika >50MB), APT cache, tmp files, PM2 logs besar, Gradle cache >30 hari, APK build temp.
-  - Bisa dijalankan manual: `bash vps-install/install-security.sh`
-  - Log cleanup: `/var/log/salfanet-cleanup.log` (auto-trim jika >5MB)
-
-### Fixed
-- **Disk penuh 100% menyebabkan MySQL deadlock & API 500** — Disk VPS publik penuh akibat log systemd journal (~2.9GB) dan syslog (~2.2GB) menumpuk. MySQL tidak bisa commit karena disk penuh → semua query FreeRADIUS (`radpostauth`, `radacct`) stuck "waiting for handler commit" → Prisma connection pool exhausted (P2024) → semua API endpoint 500. Diatasi dengan cleanup log + install cronjob harian.
-- **Build APK customer/technician/agent: connection pool exhausted saat 3 build serentak** — Menjalankan Gradle build untuk 3 role sekaligus menyebabkan VPS overload. Prisma connection pool (limit 10) habis karena server tidak bisa melayani request DB selama build berjalan. Build sebenarnya tetap berjalan di background; yang "berhenti" hanya tampilan UI karena polling API gagal 500.
-
-### Changed
-- **`vps-install/vps-installer.sh`: tambah Step 8 (Security)** — Installer utama kini memanggil `install-security.sh` secara otomatis setelah Step 7 (PM2 & Build). Instalasi baru langsung terlindungi fail2ban + UFW + cleanup cron tanpa langkah manual.
-- **`vps-install/updater.sh`: security check saat setiap update** — Setiap kali `bash updater.sh` dijalankan, script memastikan: (1) cleanup cronjob terpasang, (2) fail2ban dalam keadaan running. Idempotent — aman dijalankan berulang kali.
-
-### Fixed
-- **Self-heal login pasca update GitHub (legacy install)** — `updater.sh` kini menjalankan `vps-install/fix-auth-after-update.sh` setelah `prisma db push` untuk mencegah kasus gagal login setelah update pada instalasi lama. Perbaikan otomatis meliputi:
-  - Migrasi akun dari tabel legacy `admin_user` ke `admin_users` jika `admin_users` kosong
-  - Menjamin minimal ada 1 akun `SUPER_ADMIN` aktif
-  - Membuat fallback `superadmin` hanya jika database benar-benar kosong
-- **Self-heal PM2 app mode** — `updater.sh` kini mendeteksi proses PM2 legacy yang masih jalan via `next start`/`npm start`, lalu migrasi otomatis ke `.next/standalone/server.js` dari `ecosystem.config.js`.
 
 <!-- AUTO-CHANGELOG:END -->
 
