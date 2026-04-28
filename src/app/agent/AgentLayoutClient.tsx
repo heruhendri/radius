@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -62,12 +63,14 @@ interface AgentData {
 }
 
 function AgentSidebar({ 
-  agent, 
+  agent,
+  company,
   sidebarOpen, 
   setSidebarOpen,
   onLogout 
 }: { 
   agent: AgentData | null;
+  company: { name: string; logo: string | null };
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   onLogout: () => void;
@@ -98,14 +101,20 @@ function AgentSidebar({
         <div className="flex-shrink-0 p-4 border-b border-sidebar-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center">
-                <Ticket className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-base font-bold text-sidebar-primary">
-                  {t('agent.portal.title')}
+              {company.logo ? (
+                <div className="w-9 h-9 rounded-lg bg-sidebar p-1 border border-brand-400/30 flex items-center justify-center overflow-hidden">
+                  <Image unoptimized src={company.logo} alt={company.name || 'Logo'} width={36} height={36} className="w-full h-full object-contain" />
+                </div>
+              ) : (
+                <div className="p-2 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center">
+                  <Ticket className="w-5 h-5 text-white" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <h1 className="text-xs font-black tracking-wider text-gray-800 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-brand-400 dark:via-brand-300 dark:to-blue-400 truncate max-w-[130px]">
+                  {company.name || t('agent.portal.title')}
                 </h1>
-                <p className="text-[10px] text-sidebar-foreground/60">{t('agent.portal.subtitle')}</p>
+                <p className="text-[10px] text-brand-600 dark:text-brand-400/60 tracking-[0.15em] uppercase font-medium">{t('agent.portal.subtitle')}</p>
               </div>
             </div>
             <button
@@ -121,7 +130,7 @@ function AgentSidebar({
         {agent && (
           <div className="flex-shrink-0 p-4">
             <div className="bg-sidebar-primary/15 rounded-xl p-3 border border-sidebar-primary/30">
-              <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">{t('agent.portal.yourBalance')}</p>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('agent.portal.yourBalance')}</p>
               <p className="text-lg font-bold text-sidebar-primary">
                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(agent.balance || 0)}
               </p>
@@ -139,15 +148,15 @@ function AgentSidebar({
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 group',
                 pathname === item.href
-                  ? 'text-sidebar-primary bg-sidebar-accent border border-sidebar-primary/30 shadow-sm'
-                  : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border',
+                  ? 'text-brand-500 bg-brand-50 dark:text-brand-400 dark:bg-brand-500/[0.12] border border-brand-200 dark:border-brand-500/30 shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-gray-300 border border-transparent hover:border-gray-200 dark:hover:border-white/10',
               )}
             >
               <span className={cn(
                 'p-1.5 rounded-lg transition-all duration-300 flex items-center justify-center',
                 pathname === item.href 
-                  ? 'text-sidebar-primary bg-sidebar-primary/20' 
-                  : 'text-sidebar-foreground/40 group-hover:text-sidebar-primary'
+                  ? 'text-brand-500 dark:text-brand-400 bg-brand-100 dark:bg-brand-500/20' 
+                  : 'text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300'
               )}>
                 {item.icon}
               </span>
@@ -166,7 +175,7 @@ function AgentSidebar({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-sidebar-foreground truncate">{agent.name}</p>
-                  <p className="text-[10px] text-sidebar-foreground/60 truncate">{agent.phone}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{agent.phone}</p>
                 </div>
               </div>
             </div>
@@ -189,6 +198,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [agent, setAgent] = useState<AgentData | null>(null);
+  const [company, setCompany] = useState<{ name: string; logo: string | null }>({ name: '', logo: null });
   const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
   const { t } = useTranslation();
@@ -247,6 +257,16 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
     }
   }, [isLoginPage, pathname]);
 
+  // Load company info for sidebar logo
+  useEffect(() => {
+    fetch('/api/public/company')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.company?.name) setCompany({ name: data.company.name, logo: data.company.logo || null });
+      })
+      .catch(() => {});
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('agentData');
     localStorage.removeItem('agentToken');
@@ -272,7 +292,8 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar - Hidden on mobile */}
       <div className="hidden lg:block">
         <AgentSidebar 
-          agent={agent} 
+          agent={agent}
+          company={company}
           sidebarOpen={true}
           setSidebarOpen={() => {}}
           onLogout={handleLogout}
@@ -282,7 +303,8 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
       {/* Mobile Sidebar */}
       <div className="lg:hidden">
         <AgentSidebar 
-          agent={agent} 
+          agent={agent}
+          company={company}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           onLogout={handleLogout}
@@ -292,17 +314,17 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
       {/* Main Content Area */}
       <div className="lg:ml-64 min-h-screen flex flex-col">
         {/* Desktop Header */}
-        <header className="hidden lg:block sticky top-0 z-20 bg-white/80 dark:bg-[#0a0e1a]/80 backdrop-blur-xl border-b border-slate-200 dark:border-brand-500/20 shadow-sm dark:shadow-none">
+        <header className="hidden lg:block sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border shadow-theme-sm">
           <div className="px-6 py-3 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('agent.portal.welcome')}</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{agent?.name || 'Agent'}</p>
+              <h2 className="text-sm font-bold text-foreground">{t('agent.portal.welcome')}</h2>
+              <p className="text-xs text-muted-foreground">{agent?.name || 'Agent'}</p>
             </div>
             <div className="flex items-center gap-3">
               {/* Live datetime */}
               {now && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-brand-500/10 border border-slate-200 dark:border-brand-500/20 text-slate-600 dark:text-muted-foreground">
-                  <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-brand-400/70 flex-shrink-0" />
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card/50 border border-border text-muted-foreground">
+                  <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                   <span className="text-xs tabular-nums">
                     {formatInTimeZone(now, 'Asia/Jakarta', 'EEEE, d MMMM yyyy  HH:mm:ss', { locale: localeId })}
                   </span>
@@ -311,10 +333,10 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
-                className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 dark:bg-brand-500/10 hover:bg-slate-200 dark:hover:bg-brand-500/20 border border-slate-200 dark:border-brand-500/30 transition-all"
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-card/50 hover:bg-card border border-border transition-all"
                 title={isDark ? 'Mode Terang' : 'Mode Gelap'}
               >
-                {isDark ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-slate-600" />}
+                {isDark ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-muted-foreground" />}
               </button>
               {agent && <AgentNotificationDropdown agentId={agent.id} />}
             </div>
@@ -322,35 +344,35 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-20 bg-white/95 dark:bg-gradient-to-r dark:from-[#0b1120] dark:via-[#0f172a] dark:to-brand-600 shadow-sm dark:shadow-[0_6px_30px_rgba(70,95,255,0.35)] backdrop-blur-xl border-b border-slate-200 dark:border-brand-500/20">
+        <header className="lg:hidden sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b border-border shadow-theme-sm">
           <div className="px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition"
+                className="p-2 hover:bg-card rounded-xl transition"
               >
-                <Menu className="w-5 h-5 text-slate-700 dark:text-white" />
+                <Menu className="w-5 h-5 text-foreground" />
               </button>
               <div>
-                <h1 className="text-base font-bold text-slate-900 dark:text-white">{t('agent.portal.title')}</h1>
-                <p className="text-[10px] text-slate-500 dark:text-white/70">{agent?.name}</p>
+                <h1 className="text-base font-bold text-foreground">{t('agent.portal.title')}</h1>
+                <p className="text-[10px] text-muted-foreground">{agent?.name}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
-                className="p-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 rounded-xl transition border border-slate-200 dark:border-white/20 flex items-center justify-center"
+                className="p-2 bg-card/50 hover:bg-card rounded-xl transition border border-border flex items-center justify-center"
                 title={isDark ? 'Mode Terang' : 'Mode Gelap'}
               >
-                {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+                {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-muted-foreground" />}
               </button>
               {agent && <AgentNotificationDropdown agentId={agent.id} enableToasts={false} />}
               <button
                 onClick={handleLogout}
-                className="p-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 rounded-xl transition border border-slate-200 dark:border-white/20 flex items-center justify-center"
+                className="p-2 bg-card/50 hover:bg-card rounded-xl transition border border-border flex items-center justify-center"
               >
-                <LogOut className="w-4 h-4 text-slate-700 dark:text-white" />
+                <LogOut className="w-4 h-4 text-foreground" />
               </button>
             </div>
           </div>

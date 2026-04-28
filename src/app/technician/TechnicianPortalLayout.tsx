@@ -219,16 +219,16 @@ function SidebarPushToggle({ techId }: { techId: string }) {
       className={cn(
         'w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 border',
         isOn
-          ? 'text-sidebar-primary bg-sidebar-accent border-sidebar-primary/30 shadow-sm'
+          ? 'text-brand-500 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/[0.12] border-brand-200 dark:border-brand-500/30 shadow-sm'
           : isDenied || !isSupported
-          ? 'text-sidebar-foreground/40 border-transparent opacity-60 cursor-not-allowed'
-          : 'text-sidebar-foreground/70 border-transparent hover:text-sidebar-foreground hover:bg-sidebar-accent hover:border-sidebar-border',
+          ? 'text-gray-400 dark:text-gray-500 border-transparent opacity-60 cursor-not-allowed'
+          : 'text-gray-700 dark:text-gray-300 border-transparent hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-white/5 hover:border-gray-200 dark:hover:border-white/10',
       )}
     >
       <span
         className={cn(
           'p-1.5 rounded-lg flex-shrink-0 flex items-center justify-center transition-all duration-300',
-          isOn ? 'text-sidebar-primary bg-sidebar-primary/20' : 'text-sidebar-foreground/40',
+          isOn ? 'text-brand-500 dark:text-brand-400 bg-brand-100 dark:bg-brand-500/20' : 'text-gray-400 dark:text-gray-500',
         )}
       >
         {loading ? (
@@ -472,7 +472,7 @@ function TechSidebar({
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-sidebar-foreground truncate">{tech.name}</p>
-                  <p className="text-[10px] text-sidebar-foreground/60 flex items-center gap-1 truncate">
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1 truncate">
                     <Phone className="w-2.5 h-2.5 flex-shrink-0" />
                     {tech.phoneNumber}
                   </p>
@@ -494,16 +494,16 @@ function TechSidebar({
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 group',
                   isActive
-                    ? 'text-sidebar-primary bg-sidebar-accent border border-sidebar-primary/30 shadow-sm'
-                    : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border',
+                    ? 'text-brand-500 bg-brand-50 dark:text-brand-400 dark:bg-brand-500/[0.12] border border-brand-200 dark:border-brand-500/30 shadow-sm'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-gray-300 border border-transparent hover:border-gray-200 dark:hover:border-white/10',
                 )}
               >
                 <span
                   className={cn(
                     'p-1.5 rounded-lg transition-all duration-300 flex-shrink-0 flex items-center justify-center',
                     isActive
-                      ? 'text-sidebar-primary bg-sidebar-primary/20'
-                      : 'text-sidebar-foreground/40 group-hover:text-sidebar-primary',
+                      ? 'text-brand-500 dark:text-brand-400 bg-brand-100 dark:bg-brand-500/20'
+                      : 'text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300',
                   )}
                 >
                   {item.icon}
@@ -519,9 +519,9 @@ function TechSidebar({
         <div className="p-3 border-t border-sidebar-border flex-shrink-0 space-y-2">
           <Link
             href="/technician/profile"
-            className="flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border"
+            className="flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-gray-300 border border-transparent hover:border-gray-200 dark:hover:border-white/10"
           >
-            <span className="p-1.5 rounded-lg text-sidebar-foreground/40">
+            <span className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400">
               <User className="w-4 h-4" />
             </span>
             <span className="tracking-wide">{t('techPortal.profile')}</span>
@@ -613,7 +613,7 @@ function TechnicianPortalInner({ children }: { children: React.ReactNode }) {
             <Wrench className="w-8 h-8 text-white" />
           </div>
           <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
-          <p className="text-xs text-slate-500 dark:text-slate-400">{t('techPortal.loading')}</p>
+          <p className="text-xs text-muted-foreground">{t('techPortal.loading')}</p>
         </div>
       </div>
     );
@@ -644,19 +644,19 @@ function TechnicianPortalInner({ children }: { children: React.ReactNode }) {
       {/* Main Content Area */}
       <div className="lg:ml-64 min-h-screen flex flex-col">
         {/* Desktop Header */}
-        <header className="hidden lg:block sticky top-0 z-20 bg-white/80 dark:bg-[#0a0e1a]/80 backdrop-blur-xl border-b border-slate-200 dark:border-brand-500/20 shadow-sm dark:shadow-none">
+        <header className="hidden lg:block sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border shadow-theme-sm">
           <div className="px-6 py-3 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+              <h2 className="text-sm font-bold text-foreground">
                 {currentMenu ? t(currentMenu.titleKey) : t('techPortal.welcome')}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{tech?.name || ''}</p>
+              <p className="text-xs text-muted-foreground">{tech?.name || ''}</p>
             </div>
             <div className="flex items-center gap-3">
               {/* Live datetime */}
               {now && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-brand-500/10 border border-slate-200 dark:border-brand-500/20 text-slate-600 dark:text-muted-foreground">
-                  <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-brand-400/70 flex-shrink-0" />
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card/50 border border-border text-muted-foreground">
+                  <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                   <span className="text-xs tabular-nums">
                     {formatInTimeZone(now, 'Asia/Jakarta', 'EEEE, d MMMM yyyy  HH:mm:ss', { locale: localeId })}
                   </span>
@@ -664,10 +664,10 @@ function TechnicianPortalInner({ children }: { children: React.ReactNode }) {
               )}
               <button
                 onClick={toggleTheme}
-                className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 dark:bg-brand-500/10 hover:bg-slate-200 dark:hover:bg-brand-500/20 border border-slate-200 dark:border-brand-500/30 transition-all"
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-card/50 hover:bg-card border border-border transition-all"
                 title={isDark ? 'Mode Terang' : 'Mode Gelap'}
               >
-                {isDark ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-slate-600" />}
+                {isDark ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-muted-foreground" />}
               </button>
               <NotificationBell />
             </div>
@@ -675,33 +675,33 @@ function TechnicianPortalInner({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-20 bg-white/95 dark:bg-gradient-to-r dark:from-[#0b1120] dark:via-[#0f172a] dark:to-brand-600 shadow-sm dark:shadow-[0_6px_30px_rgba(70,95,255,0.35)] backdrop-blur-xl border-b border-slate-200 dark:border-brand-500/20">
+        <header className="lg:hidden sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b border-border shadow-theme-sm">
           <div className="px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition"
+                className="p-2 hover:bg-card rounded-xl transition"
               >
-                <Menu className="w-5 h-5 text-slate-700 dark:text-white" />
+                <Menu className="w-5 h-5 text-foreground" />
               </button>
               <div>
-                <h1 className="text-base font-bold text-slate-900 dark:text-white">{t('techPortal.title')}</h1>
-                <p className="text-[10px] text-slate-500 dark:text-white/70">{tech?.name}</p>
+                <h1 className="text-base font-bold text-foreground">{t('techPortal.title')}</h1>
+                <p className="text-[10px] text-muted-foreground">{tech?.name}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleTheme}
-                className="p-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 rounded-xl transition border border-slate-200 dark:border-white/20 flex items-center justify-center"
+                className="p-2 bg-card/50 hover:bg-card rounded-xl transition border border-border flex items-center justify-center"
               >
-                {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+                {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-muted-foreground" />}
               </button>
               <NotificationBell />
               <button
                 onClick={handleLogout}
-                className="p-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 rounded-xl transition border border-slate-200 dark:border-white/20 flex items-center justify-center"
+                className="p-2 bg-card/50 hover:bg-card rounded-xl transition border border-border flex items-center justify-center"
               >
-                <LogOut className="w-4 h-4 text-slate-700 dark:text-white" />
+                <LogOut className="w-4 h-4 text-foreground" />
               </button>
             </div>
           </div>

@@ -274,7 +274,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
                 <h1 className="text-sm font-bold text-sidebar-primary">
                   {companyName}
                 </h1>
-                <p className="text-[10px] text-sidebar-primary/70 tracking-widest font-bold uppercase">Customer Portal</p>
+                <p className="text-[10px] text-brand-600 dark:text-brand-400/60 tracking-widest font-bold uppercase">Customer Portal</p>
               </div>
             </div>
             <button
@@ -301,16 +301,16 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 group',
                   active
-                      ? 'text-sidebar-primary bg-sidebar-accent border border-sidebar-border'
-                      : 'text-sidebar-foreground/70 hover:text-sidebar-primary hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border'
+                      ? 'text-brand-500 bg-brand-50 dark:text-brand-400 dark:bg-brand-500/[0.12] border border-brand-200 dark:border-brand-500/30'
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-brand-500 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-brand-400 border border-transparent hover:border-gray-200 dark:hover:border-white/10'
                 )}
               >
                 <span
                   className={cn(
                     'p-1.5 rounded-lg transition-all duration-300',
                     active
-                      ? 'text-sidebar-primary bg-sidebar-accent'
-                      : 'text-sidebar-foreground/50 group-hover:text-sidebar-primary'
+                    ? 'text-brand-500 dark:text-brand-400 bg-brand-100 dark:bg-brand-500/20'
+                    : 'text-gray-500 group-hover:text-brand-500 dark:text-gray-400 dark:group-hover:text-brand-400'
                   )}
                 >
                   <Icon className="w-4 h-4" />
@@ -340,10 +340,10 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
         <header className="hidden lg:flex sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border items-center justify-between px-6 py-3">
           <div>
             <h2 className="text-sm font-bold text-foreground">Customer Portal</h2>
-            <p className="text-xs text-primary/70">{companyName}</p>
+            <p className="text-xs text-muted-foreground">{companyName}</p>
           </div>
           <div className="flex items-center gap-3">
-            <Clock className="w-4 h-4 text-primary/50" />
+            <Clock className="w-4 h-4 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">
               {now
                 ? formatInTimeZone(now, 'Asia/Jakarta', 'EEEE, d MMMM yyyy  HH:mm:ss', { locale: localeId })
