@@ -107,8 +107,20 @@ if [ -n "$USE_BRANCH" ]; then
         print_step "Creating backup"
         BACKUP_DIR="$BACKUP_BASE/$(date +%Y%m%d-%H%M%S)-git"
         mkdir -p "$BACKUP_DIR"
-        cp -r "$APP_DIR" "$BACKUP_DIR/app" 2>/dev/null || true
-        print_success "Backup saved to $BACKUP_DIR"
+        # Exclude node_modules and .next — they can be rebuilt (each ~2GB)
+        rsync -a --exclude='node_modules' --exclude='.next' --exclude='.git' \
+            "$APP_DIR/" "$BACKUP_DIR/app/" 2>/dev/null || \
+            cp -r "$APP_DIR" "$BACKUP_DIR/app" 2>/dev/null || true
+        print_success "Backup saved to $BACKUP_DIR ($(du -sh "$BACKUP_DIR" 2>/dev/null | cut -f1))"
+
+        # Prune old backups — keep only 2 most recent
+        BACKUP_COUNT=$(ls -1t "$BACKUP_BASE" 2>/dev/null | wc -l)
+        if [ "$BACKUP_COUNT" -gt 2 ]; then
+            ls -1t "$BACKUP_BASE" | tail -n +3 | while read -r OLD; do
+                rm -rf "${BACKUP_BASE:?}/$OLD"
+                print_info "Removed old backup: $OLD"
+            done
+        fi
     fi
 
     # ─── Migrate uploads to persistent directory ───────────────────────

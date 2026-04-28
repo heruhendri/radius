@@ -190,7 +190,26 @@ find /tmp -maxdepth 1 -name "salfanet-apk-*" -type d -mtime +1 -exec rm -rf {} +
 # 9. FreeRADIUS old logs
 find /var/log/freeradius -name "*.log.*" -mtime +30 -delete 2>/dev/null
 
-# 10. Cleanup log file sendiri jika > 5MB
+# 10. Prune old update backups — keep only 2 most recent
+BACKUP_BASE=/root/salfanet-backups
+if [ -d "$BACKUP_BASE" ]; then
+    BACKUP_COUNT=$(ls -1t "$BACKUP_BASE" 2>/dev/null | wc -l)
+    if [ "$BACKUP_COUNT" -gt 2 ]; then
+        ls -1t "$BACKUP_BASE" | tail -n +3 | while read -r OLD; do
+            rm -rf "${BACKUP_BASE:?}/$OLD"
+            echo "[$TIMESTAMP] Removed old backup: $OLD" >> $LOG
+        done
+    fi
+fi
+
+# 11. NPM cache — hapus jika > 1GB
+NPM_CACHE_SIZE=$(du -sb /root/.npm 2>/dev/null | cut -f1 || echo 0)
+if [ "$NPM_CACHE_SIZE" -gt 1073741824 ]; then
+    npm cache clean --force >> $LOG 2>&1
+    echo "[$TIMESTAMP] NPM cache cleaned (was $(( NPM_CACHE_SIZE / 1048576 ))MB)" >> $LOG
+fi
+
+# 12. Cleanup log file sendiri jika > 5MB
 SELF_SIZE=$(stat -c%s $LOG 2>/dev/null || echo 0)
 if [ "$SELF_SIZE" -gt 5242880 ]; then
     tail -200 $LOG > /tmp/cleanup-log-trim && mv /tmp/cleanup-log-trim $LOG
