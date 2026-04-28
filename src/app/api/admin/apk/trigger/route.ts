@@ -33,6 +33,7 @@ const WRAPPER_JAR   = join(process.cwd(), 'public', 'android-template', 'gradle-
 function mainActivity(pkg: string, startUrl: string, baseUrl: string): string {
   return `package ${pkg}
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.NotificationChannel
@@ -40,14 +41,17 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.webkit.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.work.*
 import java.util.concurrent.TimeUnit
 
@@ -73,6 +77,19 @@ class MainActivity : AppCompatActivity() {
             else null
         )
         fileCallback = null
+    }
+
+    private var geolocationCallback: GeolocationPermissions.Callback? = null
+    private var geolocationOrigin: String? = null
+
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val granted = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                      grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        geolocationCallback?.invoke(geolocationOrigin, granted, false)
+        geolocationCallback = null
+        geolocationOrigin = null
     }
 
     inner class AndroidBridge {
@@ -153,7 +170,16 @@ class MainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webView)
         createNotificationChannel()
         if (Build.VERSION.SDK_INT >= 33) {
-            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
+        // Request location permission on startup
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                2
+            )
         }
         with(webView.settings) {
             javaScriptEnabled    = true
@@ -163,6 +189,7 @@ class MainActivity : AppCompatActivity() {
             useWideViewPort      = true
             allowFileAccess      = true
             allowContentAccess   = true
+            setGeolocationEnabled(true)
             setSupportZoom(false)
             builtInZoomControls  = false
             displayZoomControls  = false
@@ -210,6 +237,29 @@ class MainActivity : AppCompatActivity() {
             }
             override fun onPermissionRequest(request: PermissionRequest?) {
                 request?.grant(request.resources)
+            }
+            override fun onGeolocationPermissionsShowPrompt(
+                origin: String?,
+                callback: GeolocationPermissions.Callback?
+            ) {
+                val hasFine = ContextCompat.checkSelfPermission(
+                    this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+                val hasCoarse = ContextCompat.checkSelfPermission(
+                    this@MainActivity, Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+                if (hasFine || hasCoarse) {
+                    callback?.invoke(origin, true, false)
+                } else {
+                    geolocationCallback = callback
+                    geolocationOrigin = origin
+                    locationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                }
             }
         }
         if (savedInstanceState != null) webView.restoreState(savedInstanceState)
@@ -389,6 +439,8 @@ const androidManifest = (pkg: string) => `<?xml version="1.0" encoding="utf-8"?>
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
         android:allowBackup="true"
         android:label="@string/app_name"
