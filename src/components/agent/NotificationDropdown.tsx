@@ -235,9 +235,9 @@ export default function AgentNotificationDropdown({ agentId, enableToasts = true
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl hover:bg-[#bc13fe]/10 transition"
+        className="relative p-2 rounded-xl hover:bg-primary/10 dark:hover:bg-[#bc13fe]/10 transition"
       >
-        <Bell className="h-5 w-5 text-[#e0d0ff]" />
+        <Bell className="h-5 w-5 text-foreground dark:text-[#e0d0ff]" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 bg-gradient-to-r from-[#ff4466] to-[#ff44cc] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-[0_0_10px_rgba(255,68,102,0.5)]">
             {unreadCount > 9 ? '9+' : unreadCount}

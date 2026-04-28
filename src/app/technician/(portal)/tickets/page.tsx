@@ -346,7 +346,7 @@ export default function TechnicianTicketsPage() {
                 <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{s.label}</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white">{s.value}</p>
               </div>
-              <div className={`p-2.5 rounded-xl border ${s.color}`}>{s.icon}</div>
+              <div className={`p-2.5 rounded-xl border flex items-center justify-center ${s.color}`}>{s.icon}</div>
             </div>
           </div>
         ))}

@@ -1033,6 +1033,7 @@
       "profitPerPiece": "Keuntungan/pcs",
       "costPrice": "Harga Modal",
       "speed": "Kecepatan",
+      "validity": "Masa Berlaku",
       "totalPayment": "Total Bayar",
       "generating": "Generating...",
       "voucherList": "Daftar Voucher",

@@ -161,7 +161,7 @@ export default function TechnicianMonitorPage() {
                 <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{s.label}</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white">{s.value}</p>
               </div>
-              <div className={`p-2.5 rounded-xl border ${s.color} relative`}>
+              <div className={`p-2.5 rounded-xl border flex items-center justify-center ${s.color} relative`}>
                 {s.icon}
                 {s.pulse && s.value > 0 && (
                   <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-green-400 rounded-full animate-pulse" />

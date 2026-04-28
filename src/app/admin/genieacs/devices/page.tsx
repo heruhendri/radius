@@ -491,7 +491,7 @@ export default function GenieACSDevicesPage() {
           <div className="grid grid-cols-3 gap-2">
             <div className="bg-card rounded-lg border border-border p-2">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-primary/20 dark:bg-blue-900/30">
+                <div className="p-1.5 rounded-lg bg-primary/20 dark:bg-blue-900/30 flex items-center justify-center">
                   <Server className="w-3 h-3 text-primary" />
                 </div>
                 <div>
@@ -502,7 +502,7 @@ export default function GenieACSDevicesPage() {
             </div>
             <div className="bg-card rounded-lg border border-border p-2">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-success/20 dark:bg-green-900/30">
+                <div className="p-1.5 rounded-lg bg-success/20 dark:bg-green-900/30 flex items-center justify-center">
                   <Wifi className="w-3 h-3 text-success" />
                 </div>
                 <div>
@@ -513,7 +513,7 @@ export default function GenieACSDevicesPage() {
             </div>
             <div className="bg-card rounded-lg border border-border p-2">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-destructive/20 dark:bg-red-900/30">
+                <div className="p-1.5 rounded-lg bg-destructive/20 dark:bg-red-900/30 flex items-center justify-center">
                   <WifiOff className="w-3 h-3 text-destructive" />
                 </div>
                 <div>

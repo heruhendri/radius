@@ -511,7 +511,7 @@ export default function KeuanganPage() {
               <p className="text-lg sm:text-xl font-bold text-foreground drop-shadow-none mt-1 truncate">{formatCurrency(stats.totalIncome)}</p>
               <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{stats.incomeCount} trans</p>
             </div>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-success/10 shadow-lg flex-shrink-0">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-success/10 shadow-lg flex-shrink-0 flex items-center justify-center">
               <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
             </div>
           </div>
@@ -538,7 +538,7 @@ export default function KeuanganPage() {
               <p className="text-lg sm:text-xl font-bold text-foreground drop-shadow-none mt-1 truncate">{formatCurrency(stats.totalExpense)}</p>
               <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{stats.expenseCount} trans</p>
             </div>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-destructive/10 shadow-lg flex-shrink-0">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-destructive/10 shadow-lg flex-shrink-0 flex items-center justify-center">
               <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
             </div>
           </div>
@@ -551,7 +551,7 @@ export default function KeuanganPage() {
               <p className={`text-lg sm:text-xl font-bold text-foreground mt-1 truncate`}>{formatCurrency(stats.balance)}</p>
               <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{t('keuangan.income')} - {t('keuangan.expense')}</p>
             </div>
-            <div className={`p-1.5 sm:p-2 rounded-lg shadow-lg flex-shrink-0 ${stats.balance >= 0 ? "bg-info/10" : "bg-warning/10"}`}>
+            <div className={`p-1.5 sm:p-2 rounded-lg shadow-lg flex-shrink-0 flex items-center justify-center ${stats.balance >= 0 ? "bg-info/10" : "bg-warning/10"}`}>
               <Wallet className={`w-4 h-4 sm:w-5 sm:h-5 ${stats.balance >= 0 ? "text-info" : "text-warning"}`} />
             </div>
           </div>

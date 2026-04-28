@@ -215,7 +215,7 @@ export default function GenieACSTasksPage() {
           }`}
         >
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-warning/20 dark:bg-yellow-900/30">
+            <div className="p-1.5 rounded-lg bg-warning/20 dark:bg-yellow-900/30 flex items-center justify-center">
               <Clock className="w-3 h-3 text-warning" />
             </div>
             <div className="text-left">
@@ -231,7 +231,7 @@ export default function GenieACSTasksPage() {
           }`}
         >
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-destructive/20 dark:bg-red-900/30">
+            <div className="p-1.5 rounded-lg bg-destructive/20 dark:bg-red-900/30 flex items-center justify-center">
               <XCircle className="w-3 h-3 text-destructive" />
             </div>
             <div className="text-left">
@@ -247,7 +247,7 @@ export default function GenieACSTasksPage() {
           }`}
         >
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-success/20 dark:bg-green-900/30">
+            <div className="p-1.5 rounded-lg bg-success/20 dark:bg-green-900/30 flex items-center justify-center">
               <CheckCircle className="w-3 h-3 text-success" />
             </div>
             <div className="text-left">

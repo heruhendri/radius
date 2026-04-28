@@ -654,7 +654,7 @@ export default function AgentDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] lg:text-xs text-slate-500 dark:text-[#e0d0ff]/70">{t('agent.portal.availableVouchers')}</p>
-              <p className="text-base lg:text-lg font-bold mt-0.5 text-white">{stats.waiting || 0}</p>
+              <p className="text-base lg:text-lg font-bold mt-0.5 text-[#00f7ff]">{stats.waiting || 0}</p>
             </div>
             <Ticket className="h-5 lg:h-6 w-5 lg:w-6 text-[#00f7ff] drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]" />
           </div>
@@ -664,7 +664,7 @@ export default function AgentDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] lg:text-xs text-slate-500 dark:text-[#e0d0ff]/70">{t('agent.portal.usedVouchers')}</p>
-              <p className="text-base lg:text-lg font-bold mt-0.5 text-white">{stats.used || 0}</p>
+              <p className="text-base lg:text-lg font-bold mt-0.5 text-[#ff44cc]">{stats.used || 0}</p>
             </div>
             <Check className="h-5 lg:h-6 w-5 lg:w-6 text-[#ff44cc] drop-shadow-[0_0_10px_rgba(255,68,204,0.5)]" />
           </div>
@@ -703,7 +703,7 @@ export default function AgentDashboardPage() {
               >
                 {profiles.map((profile) => (
                   <option key={profile.id} value={profile.id} className="bg-white dark:bg-[#0a0520]">
-                    {profile.name} - {formatCurrency(profile.sellingPrice)} - {profile.downloadSpeed}/{profile.uploadSpeed} Mbps
+                    {profile.name} - {formatCurrency(profile.sellingPrice)} - {profile.validityValue} {profile.validityUnit}
                   </option>
                 ))}
               </select>
@@ -766,15 +766,15 @@ export default function AgentDashboardPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                 <div>
                   <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{t('agent.portal.costPrice')}</p>
-                  <p className="font-semibold text-white">{formatCurrency(selectedProfileData.costPrice)}</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">{formatCurrency(selectedProfileData.costPrice)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{t('agent.portal.profitPerPiece')}</p>
                   <p className="font-semibold text-[#00ff88]">{formatCurrency(selectedProfileData.resellerFee)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{t('agent.portal.speed')}</p>
-                  <p className="font-semibold text-white">{selectedProfileData.downloadSpeed}/{selectedProfileData.uploadSpeed} Mbps</p>
+                  <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{t('agent.portal.validity')}</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">{selectedProfileData.validityValue} {selectedProfileData.validityUnit}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 dark:text-[#e0d0ff]/60">{t('agent.portal.totalPayment')}</p>

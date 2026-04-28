@@ -567,7 +567,7 @@ export default function PaymentHistoryPage() {
                     {/* Header row */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <div className={`p-1.5 rounded-lg ${config.bgColor} border ${config.borderColor}`}>
+                        <div className={`p-1.5 rounded-lg flex items-center justify-center ${config.bgColor} border ${config.borderColor}`}>
                           <StatusIcon className={`w-3.5 h-3.5 ${config.textColor}`} />
                         </div>
                         <div>

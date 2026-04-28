@@ -777,7 +777,7 @@ export default function InvoicesPage() {
                 <p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide truncate">{t('common.total')}</p>
                 <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.total}</p>
               </div>
-              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-[#bc13fe]/20 flex-shrink-0">
+              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-[#bc13fe]/20 flex-shrink-0 flex items-center justify-center">
                 <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             </div>
@@ -789,7 +789,7 @@ export default function InvoicesPage() {
                 <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.unpaid}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{formatCurrency(Number(stats.totalUnpaidAmount))}</p>
               </div>
-              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-red-400/20 flex-shrink-0">
+              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-red-400/20 flex-shrink-0 flex items-center justify-center">
                 <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400" />
               </div>
             </div>
@@ -801,7 +801,7 @@ export default function InvoicesPage() {
                 <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.paid}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{formatCurrency(Number(stats.totalPaidAmount))}</p>
               </div>
-              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-green-400/20 flex-shrink-0">
+              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-green-400/20 flex-shrink-0 flex items-center justify-center">
                 <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400" />
               </div>
             </div>
@@ -812,7 +812,7 @@ export default function InvoicesPage() {
                 <p className="text-[10px] sm:text-xs text-[#00f7ff] uppercase tracking-wide truncate">{t('invoices.overdue')}</p>
                 <p className="text-lg sm:text-2xl font-bold text-foreground mt-1">{stats.overdue}</p>
               </div>
-              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-amber-400/20 flex-shrink-0">
+              <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-amber-400/20 flex-shrink-0 flex items-center justify-center">
                 <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
               </div>
             </div>
