@@ -2,6 +2,20 @@
 
 export const dynamic = 'force-dynamic';
 
+function renderWithLinks(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) =>
+    urlRegex.test(part) ? (
+      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline break-all hover:text-blue-300">
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Ticket,
@@ -581,7 +595,7 @@ export default function TechnicianTicketsPage() {
                 <div>
                   <h4 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Deskripsi</h4>
                   <p className="text-xs text-slate-700 dark:text-[#e0d0ff]/80 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-900/40 rounded-xl p-3 border border-slate-100 dark:border-slate-700/40">
-                    {detailTicket.description || <span className="italic text-slate-400">Tidak ada deskripsi</span>}
+                    {detailTicket.description ? renderWithLinks(detailTicket.description) : <span className="italic text-slate-400">Tidak ada deskripsi</span>}
                   </p>
                 </div>
 
@@ -698,7 +712,7 @@ export default function TechnicianTicketsPage() {
                                   ? 'bg-[#bc13fe]/15 dark:bg-[#bc13fe]/20 text-slate-800 dark:text-[#f0e0ff] rounded-tr-sm border border-[#bc13fe]/20'
                                   : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-[#e0d0ff]/90 rounded-tl-sm border border-slate-200 dark:border-slate-700'
                               }`}>
-                                {msg.message}
+                                {renderWithLinks(msg.message)}
                               </div>
                             )}
                             <div className={`text-[9px] text-slate-400 dark:text-slate-500 ${isTech ? 'text-right' : 'text-left'}`}>

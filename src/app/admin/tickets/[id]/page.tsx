@@ -2,6 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+
+function renderWithLinks(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) =>
+    urlRegex.test(part) ? (
+      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline break-all hover:text-blue-400">
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
 import Link from 'next/link';
 import { useTranslation } from '@/hooks/useTranslation';
 import { showSuccess, showError } from '@/lib/sweetalert';
@@ -339,7 +353,7 @@ export default function AdminTicketDetailPage() {
               {t('ticket.description')}
             </h3>
             <p className="text-foreground/80 whitespace-pre-wrap mb-4">
-              {ticket.description}
+              {renderWithLinks(ticket.description)}
             </p>
             <div className="border-t border-border pt-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -405,7 +419,7 @@ export default function AdminTicketDetailPage() {
                         {formatWIB(msg.createdAt, 'd MMM HH:mm')}
                       </div>
                     </div>
-                    <p className="text-foreground/80 whitespace-pre-wrap">{msg.message}</p>
+                    <p className="text-foreground/80 whitespace-pre-wrap">{renderWithLinks(msg.message)}</p>
                   </div>
                 </div>
               </div>
