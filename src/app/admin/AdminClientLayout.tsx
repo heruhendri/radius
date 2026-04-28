@@ -387,13 +387,13 @@ function CategoryItem({ titleKey, items, pendingCount, manualPaymentsCount, unre
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center gap-1.5 px-2 py-1 group"
       >
-        <span className="text-[9px] text-slate-600 tracking-[0.25em] uppercase font-bold group-hover:text-slate-800 dark:text-brand-300/80 dark:group-hover:text-brand-300 transition-colors flex-shrink-0">
+        <span className="text-[9px] text-gray-400 tracking-[0.25em] uppercase font-bold group-hover:text-gray-500 dark:text-gray-400 dark:group-hover:text-gray-300 transition-colors flex-shrink-0">
           {t(titleKey)}
         </span>
-        <div className="flex-1 h-px bg-gradient-to-r from-brand-400/35 via-brand-400/20 to-transparent" />
+        <div className="flex-1 h-px bg-gradient-to-r from-gray-300 via-gray-200 to-transparent dark:from-brand-400/35 dark:via-brand-400/20" />
         <ChevronDown
           className={cn(
-            'w-3 h-3 text-brand-400/60 group-hover:text-brand-400 transition-all duration-200 flex-shrink-0',
+            'w-3 h-3 text-gray-400 group-hover:text-gray-500 dark:text-brand-400/60 dark:group-hover:text-brand-400 transition-all duration-200 flex-shrink-0',
             isOpen ? 'rotate-180' : ''
           )}
         />
@@ -431,15 +431,15 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            'w-full flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all duration-300 group',
+            'w-full flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 group',
             isActive
-              ? 'text-primary bg-primary/10 border border-primary/30'
-              : 'text-muted-foreground hover:text-foreground hover:bg-primary/8 border border-transparent hover:border-primary/15',
+              ? 'text-brand-500 bg-brand-50 dark:text-brand-400 dark:bg-brand-500/[0.12]'
+              : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-gray-100 dark:hover:bg-white/5',
           )}
         >
           <span className={cn(
-            'flex-shrink-0 p-0.5 rounded-md transition-all duration-300 flex items-center justify-center',
-            isActive ? 'text-primary bg-primary/10' : 'text-muted-foreground group-hover:text-primary'
+            'flex-shrink-0 p-0.5 rounded-md transition-all duration-200 flex items-center justify-center',
+            isActive ? 'text-brand-500 dark:text-brand-400' : 'text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300'
           )}>
             {item.icon}
           </span>
@@ -455,17 +455,17 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
             'overflow-hidden transition-all duration-300 ease-in-out',
             isOpen ? 'max-h-96 opacity-100 mt-0.5' : 'max-h-0 opacity-0'
           )}>
-            <div className="ml-3.5 pl-2 border-l-2 border-primary/20 space-y-0.5">
+            <div className="ml-3.5 pl-2 border-l-2 border-gray-200 dark:border-primary/20 space-y-0.5">
               {item.children.map((child) => (
                 <Link
                   key={child.href}
                   href={child.href}
                   onClick={onNavigate}
                   className={cn(
-                    'flex items-center justify-between px-2.5 py-1 text-xs rounded-md transition-all duration-200 group/item',
+                    'flex items-center justify-between px-2.5 py-1.5 text-xs rounded-md transition-all duration-200 group/item',
                     pathname === child.href
-                      ? 'text-primary bg-primary/10 border border-primary/20'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-primary/8'
+                      ? 'text-brand-500 bg-brand-50 dark:text-brand-400 dark:bg-brand-500/[0.12]'
+                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5'
                   )}
                 >
                   <span className="tracking-wide">{t(child.titleKey)}</span>
@@ -501,15 +501,15 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
       href={item.href!}
       onClick={onNavigate}
       className={cn(
-        'flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all duration-300 group',
+        'flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 group',
         pathname === item.href
-          ? 'text-primary bg-primary/10 border border-primary/30'
-          : 'text-muted-foreground hover:text-foreground hover:bg-primary/8 border border-transparent hover:border-primary/15',
+          ? 'text-brand-500 bg-brand-50 dark:text-brand-400 dark:bg-brand-500/[0.12]'
+          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-gray-100 dark:hover:bg-white/5',
       )}
     >
       <span className={cn(
-        'flex-shrink-0 p-0.5 rounded-md transition-all duration-300 flex items-center justify-center',
-        pathname === item.href ? 'text-primary bg-primary/10' : 'text-muted-foreground group-hover:text-primary'
+        'flex-shrink-0 p-0.5 rounded-md transition-all duration-200 flex items-center justify-center',
+        pathname === item.href ? 'text-brand-500 dark:text-brand-400' : 'text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300'
       )}>
         {item.icon}
       </span>
@@ -879,11 +879,11 @@ function AdminLayoutContent({
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[70px] animate-pulse delay-1000" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-blue-500/3 rounded-full blur-[80px]" />
 
-        {/* Scan lines overlay */}
-        <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(6,182,212,0.01)_2px,rgba(6,182,212,0.01)_4px)]" />
+        {/* Scan lines overlay — dark mode only */}
+        <div className="hidden dark:block absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(70,95,255,0.01)_2px,rgba(70,95,255,0.01)_4px)]" />
 
-        {/* Grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(6,182,212,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.02)_1px,transparent_1px)] bg-[size:50px_50px]" />
+        {/* Grid pattern — dark mode only */}
+        <div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(70,95,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(70,95,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px]" />
       </div>
 
       {/* Mobile overlay - tap or swipe to close */}
@@ -917,8 +917,8 @@ function AdminLayoutContent({
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
-        {/* Top neon line */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
+        {/* Top neon line — dark mode only */}
+        <div className="hidden dark:block absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
 
         <div className="flex flex-col h-full">
           {/* Logo - compact on mobile with safe area */}
@@ -941,7 +941,7 @@ function AdminLayoutContent({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <h1 className="text-[11px] sm:text-xs font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-brand-300 to-blue-400 truncate max-w-[130px] sm:max-w-[110px]">
+                <h1 className="text-[11px] sm:text-xs font-black tracking-wider text-gray-800 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-brand-400 dark:via-brand-300 dark:to-blue-400 truncate max-w-[130px] sm:max-w-[110px]">
                   {company.name}
                 </h1>
                 <p className="text-[9px] sm:text-[10px] text-brand-400/60 tracking-[0.15em] sm:tracking-[0.2em] uppercase font-medium">{t('common.billingSystem')}</p>
@@ -1034,9 +1034,9 @@ function AdminLayoutContent({
       {/* Main */}
       <div className="lg:pl-64 min-h-screen flex flex-col relative z-10 transition-all duration-300">
         {/* Header - optimized for mobile */}
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-primary/15 shadow-theme-sm safe-area-inset-top">
-          {/* Top neon line */}
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
+        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-gray-200 dark:border-primary/15 shadow-theme-sm safe-area-inset-top">
+          {/* Top neon line — dark mode only */}
+          <div className="hidden dark:block absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
 
           <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-2 sm:py-3">
             <button
@@ -1049,7 +1049,7 @@ function AdminLayoutContent({
 
             {/* Mobile title - show on small screens */}
             <div className="flex-1 sm:hidden min-w-0">
-              <h1 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-blue-400 truncate">
+              <h1 className="text-sm font-bold text-gray-800 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-brand-400 dark:to-blue-400 truncate">
                 {company.name}
               </h1>
             </div>
@@ -1061,7 +1061,7 @@ function AdminLayoutContent({
                 <input
                   type="text"
                   placeholder={t('common.search')}
-                  className="w-full pl-10 pr-4 py-2.5 bg-card/50 border-2 border-primary/20 rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 focus:bg-card/80 focus:shadow-[0_0_20px_rgba(0,247,255,0.1)] transition-all duration-300"
+                  className="w-full pl-10 pr-4 py-2.5 bg-card/50 border-2 border-primary/20 rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/80 focus:shadow-focus-ring transition-all duration-300"
                 />
                 {/* Bottom focus line */}
                 <div className="absolute bottom-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-accent/0 to-transparent group-focus-within:via-accent transition-all duration-300" />
@@ -1101,7 +1101,7 @@ function AdminLayoutContent({
       {showIdleWarning && (
         <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           {/* Scan lines */}
-          <div className="absolute inset-0 pointer-events-none bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(6,182,212,0.02)_2px,rgba(6,182,212,0.02)_4px)]" />
+          <div className="hidden dark:block absolute inset-0 pointer-events-none bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(70,95,255,0.02)_2px,rgba(70,95,255,0.02)_4px)]" />
 
           <div className="relative bg-background/95 backdrop-blur-xl border-2 border-brand-500/30 rounded-2xl shadow-theme-xl max-w-sm w-full p-6 animate-in zoom-in-95 duration-300">
             {/* Top accent line */}

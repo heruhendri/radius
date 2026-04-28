@@ -395,39 +395,39 @@
    ============================================================ */
 
 @utility menu-item {
-  @apply relative flex items-center w-full gap-2 px-2.5 py-2 text-xs font-bold rounded-lg transition-all duration-200;
+  @apply relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-theme-sm transition-all duration-200;
 }
 
 @utility menu-item-active {
-  @apply text-primary bg-primary/10 border border-primary/25;
+  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
 }
 
 @utility menu-item-inactive {
-  @apply text-muted-foreground hover:text-foreground hover:bg-primary/5 border border-transparent hover:border-primary/15;
+  @apply text-gray-700 hover:bg-gray-100 group-hover:text-gray-700 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-gray-300;
 }
 
 @utility menu-item-icon {
-  @apply flex-shrink-0 p-0.5 rounded-md flex items-center justify-center transition-colors duration-200;
+  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400;
 }
 
 @utility menu-item-icon-active {
-  @apply text-primary;
+  @apply text-brand-500 dark:text-brand-400;
 }
 
 @utility menu-item-icon-inactive {
-  @apply text-muted-foreground group-hover:text-primary;
+  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300;
 }
 
 @utility menu-dropdown-item {
-  @apply flex items-center justify-between px-2.5 py-1 text-xs rounded-md transition-all duration-200;
+  @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium transition-all duration-200;
 }
 
 @utility menu-dropdown-item-active {
-  @apply text-primary bg-primary/10 border border-primary/20;
+  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
 }
 
 @utility menu-dropdown-item-inactive {
-  @apply text-muted-foreground hover:text-foreground hover:bg-primary/8;
+  @apply text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5;
 }
 
 @utility no-scrollbar {
