@@ -406,7 +406,7 @@ function DaftarPageInner() {
                   <option value="" className="bg-[#0a0520]">Pilih paket internet</option>
                   {profiles.map((profile) => (
                     <option key={profile.id} value={profile.id} className="bg-[#0a0520]">
-                      {profile.name} - {profile.downloadSpeed}/{profile.uploadSpeed} Mbps - {formatCurrency(profile.price)}/bln
+                      {profile.name} - {formatCurrency(profile.price)}/bln
                     </option>
                   ))}
                 </select>
@@ -419,10 +419,6 @@ function DaftarPageInner() {
                     <div className="flex justify-between">
                       <span className="text-[#e0d0ff]/70">Paket:</span>
                       <span className="font-bold text-white">{selectedProfile.name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#e0d0ff]/70">Speed:</span>
-                      <span className="font-bold text-white">{selectedProfile.downloadSpeed}/{selectedProfile.uploadSpeed} Mbps</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#e0d0ff]/70">Harga:</span>
