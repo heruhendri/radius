@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import "./globals.css";
 import { ClientProviders } from "@/components/client-providers";
 import { prisma } from "@/server/db/client";
@@ -15,6 +15,12 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   preload: false, // Less critical than sans-serif, don't block initial load
+});
+
+const outfit = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -34,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#06b6d4",
+  themeColor: "#465fff",
   width: "device-width",
   initialScale: 1,
   minimumScale: 1,
@@ -95,7 +101,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/pwa/apple-touch-icon.png" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} antialiased`}
       >
         {children}
         <ClientProviders />

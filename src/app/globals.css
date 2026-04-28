@@ -3,6 +3,160 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================
+   TAILADMIN DESIGN SYSTEM TOKENS
+   Brand blue palette + gray scale + semantic colors + type scale
+   Applied globally across all roles (admin, agent, customer, technician)
+   ============================================================ */
+@theme {
+  /* Font */
+  --font-outfit: Outfit, sans-serif;
+
+  /* Extended Breakpoints */
+  --breakpoint-2xsm: 375px;
+  --breakpoint-xsm: 425px;
+  --breakpoint-3xl: 2000px;
+
+  /* Typography Scale (TailAdmin) */
+  --text-title-2xl: 72px;
+  --text-title-2xl--line-height: 90px;
+  --text-title-xl: 60px;
+  --text-title-xl--line-height: 72px;
+  --text-title-lg: 48px;
+  --text-title-lg--line-height: 60px;
+  --text-title-md: 36px;
+  --text-title-md--line-height: 44px;
+  --text-title-sm: 30px;
+  --text-title-sm--line-height: 38px;
+  --text-theme-xl: 20px;
+  --text-theme-xl--line-height: 30px;
+  --text-theme-sm: 14px;
+  --text-theme-sm--line-height: 20px;
+  --text-theme-xs: 12px;
+  --text-theme-xs--line-height: 18px;
+
+  /* Brand palette (#465fff = brand-500, main primary) */
+  --color-brand-25: #f2f7ff;
+  --color-brand-50: #ecf3ff;
+  --color-brand-100: #dde9ff;
+  --color-brand-200: #c2d6ff;
+  --color-brand-300: #9cb9ff;
+  --color-brand-400: #7592ff;
+  --color-brand-500: #465fff;
+  --color-brand-600: #3641f5;
+  --color-brand-700: #2a31d8;
+  --color-brand-800: #252dae;
+  --color-brand-900: #262e89;
+  --color-brand-950: #161950;
+
+  /* Gray scale (TailAdmin) */
+  --color-gray-25: #fcfcfd;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f2f4f7;
+  --color-gray-200: #e4e7ec;
+  --color-gray-300: #d0d5dd;
+  --color-gray-400: #98a2b3;
+  --color-gray-500: #667085;
+  --color-gray-600: #475467;
+  --color-gray-700: #344054;
+  --color-gray-800: #1d2939;
+  --color-gray-900: #101828;
+  --color-gray-950: #0c111d;
+  --color-gray-dark: #1a2231;
+
+  /* Success palette */
+  --color-success-25: #f6fef9;
+  --color-success-50: #ecfdf3;
+  --color-success-100: #d1fadf;
+  --color-success-200: #a6f4c5;
+  --color-success-300: #6ce9a6;
+  --color-success-400: #32d583;
+  --color-success-500: #12b76a;
+  --color-success-600: #039855;
+  --color-success-700: #027a48;
+  --color-success-800: #05603a;
+  --color-success-900: #054f31;
+  --color-success-950: #053321;
+
+  /* Error palette */
+  --color-error-25: #fffbfa;
+  --color-error-50: #fef3f2;
+  --color-error-100: #fee4e2;
+  --color-error-200: #fecdca;
+  --color-error-300: #fda29b;
+  --color-error-400: #f97066;
+  --color-error-500: #f04438;
+  --color-error-600: #d92d20;
+  --color-error-700: #b42318;
+  --color-error-800: #912018;
+  --color-error-900: #7a271a;
+  --color-error-950: #55160c;
+
+  /* Warning palette */
+  --color-warning-25: #fffcf5;
+  --color-warning-50: #fffaeb;
+  --color-warning-100: #fef0c7;
+  --color-warning-200: #fedf89;
+  --color-warning-300: #fec84b;
+  --color-warning-400: #fdb022;
+  --color-warning-500: #f79009;
+  --color-warning-600: #dc6803;
+  --color-warning-700: #b54708;
+  --color-warning-800: #93370d;
+  --color-warning-900: #7a2e0e;
+  --color-warning-950: #4e1d09;
+
+  /* Orange palette */
+  --color-orange-25: #fffaf5;
+  --color-orange-50: #fff6ed;
+  --color-orange-100: #ffead5;
+  --color-orange-200: #fddcab;
+  --color-orange-300: #feb273;
+  --color-orange-400: #fd853a;
+  --color-orange-500: #fb6514;
+  --color-orange-600: #ec4a0a;
+  --color-orange-700: #c4320a;
+  --color-orange-800: #9c2a10;
+  --color-orange-900: #7e2410;
+  --color-orange-950: #511c10;
+
+  /* Blue Light palette */
+  --color-blue-light-25: #f5fbff;
+  --color-blue-light-50: #f0f9ff;
+  --color-blue-light-100: #e0f2fe;
+  --color-blue-light-200: #b9e6fe;
+  --color-blue-light-300: #7cd4fd;
+  --color-blue-light-400: #36bffa;
+  --color-blue-light-500: #0ba5ec;
+  --color-blue-light-600: #0086c9;
+  --color-blue-light-700: #026aa2;
+  --color-blue-light-800: #065986;
+  --color-blue-light-900: #0b4a6f;
+  --color-blue-light-950: #062c41;
+
+  /* Accent */
+  --color-theme-pink-500: #ee46bc;
+  --color-theme-purple-500: #7a5af8;
+
+  /* Shadows (TailAdmin) */
+  --shadow-theme-xs: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+  --shadow-theme-sm: 0px 1px 3px 0px rgba(16, 24, 40, 0.1), 0px 1px 2px 0px rgba(16, 24, 40, 0.06);
+  --shadow-theme-md: 0px 4px 8px -2px rgba(16, 24, 40, 0.1), 0px 2px 4px -2px rgba(16, 24, 40, 0.06);
+  --shadow-theme-lg: 0px 12px 16px -4px rgba(16, 24, 40, 0.08), 0px 4px 6px -2px rgba(16, 24, 40, 0.03);
+  --shadow-theme-xl: 0px 20px 24px -4px rgba(16, 24, 40, 0.08), 0px 8px 8px -4px rgba(16, 24, 40, 0.03);
+  --shadow-focus-ring: 0px 0px 0px 4px rgba(70, 95, 255, 0.12);
+  --shadow-card: 0px 1px 3px 0px rgba(16, 24, 40, 0.08), 0px 1px 2px 0px rgba(16, 24, 40, 0.04);
+
+  /* Z-index scale */
+  --z-index-1: 1;
+  --z-index-9: 9;
+  --z-index-99: 99;
+  --z-index-999: 999;
+  --z-index-9999: 9999;
+  --z-index-99999: 99999;
+  --z-index-999999: 999999;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -86,8 +240,8 @@
   --popover: #162033;
   --popover-foreground: #e8eef9;
 
-  /* Brand primary: cyan-500 (matches themeColor #06b6d4) */
-  --primary: #06b6d4;
+  /* Brand primary: TailAdmin brand-500 (#465fff) */
+  --primary: #465fff;
   --primary-foreground: #ffffff;
 
   --secondary: #1e2a44;
@@ -96,40 +250,40 @@
   --muted: #1e2a44;
   --muted-foreground: #9ba8c4;
 
-  /* Violet accent — dynamic complement to cyan */
-  --accent: #8b5cf6;
+  /* Violet accent — dynamic complement to brand */
+  --accent: #7a5af8;
   --accent-foreground: #ffffff;
 
-  --destructive: #ef4444;
+  --destructive: #f04438;
   --destructive-foreground: #ffffff;
-  --success: #10b981;
+  --success: #12b76a;
   --success-foreground: #ffffff;
-  --warning: #f59e0b;
+  --warning: #f79009;
   --warning-foreground: #ffffff;
-  --info: #06b6d4;
+  --info: #0ba5ec;
   --info-foreground: #ffffff;
 
   /* More visible borders for card/layout separation */
   --border: #27374f;
   --input: #1e2a44;
-  --ring: #06b6d4;
+  --ring: #465fff;
 
-  /* Cyan/violet/teal chart palette — dynamic and brand-aligned */
-  --chart-1: #06b6d4;
-  --chart-2: #8b5cf6;
-  --chart-3: #f59e0b;
-  --chart-4: #10b981;
-  --chart-5: #ec4899;
+  /* Brand-aligned chart palette */
+  --chart-1: #465fff;
+  --chart-2: #7a5af8;
+  --chart-3: #f79009;
+  --chart-4: #12b76a;
+  --chart-5: #ee46bc;
 
   /* Sidebar deeper than bg for visual hierarchy */
   --sidebar: #091020;
   --sidebar-foreground: #e8eef9;
-  --sidebar-primary: #06b6d4;
+  --sidebar-primary: #465fff;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #162033;
   --sidebar-accent-foreground: #e8eef9;
   --sidebar-border: #27374f;
-  --sidebar-ring: #06b6d4;
+  --sidebar-ring: #465fff;
 
   color-scheme: dark;
 }
@@ -141,38 +295,38 @@
   --card-foreground: #e8eef9;
   --popover: #162033;
   --popover-foreground: #e8eef9;
-  --primary: #06b6d4;
+  --primary: #465fff;
   --primary-foreground: #ffffff;
   --secondary: #1e2a44;
   --secondary-foreground: #e8eef9;
   --muted: #1e2a44;
   --muted-foreground: #9ba8c4;
-  --accent: #8b5cf6;
+  --accent: #7a5af8;
   --accent-foreground: #ffffff;
-  --destructive: #ef4444;
+  --destructive: #f04438;
   --destructive-foreground: #ffffff;
-  --success: #10b981;
+  --success: #12b76a;
   --success-foreground: #ffffff;
-  --warning: #f59e0b;
+  --warning: #f79009;
   --warning-foreground: #ffffff;
-  --info: #06b6d4;
+  --info: #0ba5ec;
   --info-foreground: #ffffff;
   --border: #27374f;
   --input: #1e2a44;
-  --ring: #06b6d4;
-  --chart-1: #06b6d4;
-  --chart-2: #8b5cf6;
-  --chart-3: #f59e0b;
-  --chart-4: #10b981;
-  --chart-5: #ec4899;
+  --ring: #465fff;
+  --chart-1: #465fff;
+  --chart-2: #7a5af8;
+  --chart-3: #f79009;
+  --chart-4: #12b76a;
+  --chart-5: #ee46bc;
   --sidebar: #091020;
   --sidebar-foreground: #e8eef9;
-  --sidebar-primary: #06b6d4;
+  --sidebar-primary: #465fff;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #162033;
   --sidebar-accent-foreground: #e8eef9;
   --sidebar-border: #27374f;
-  --sidebar-ring: #06b6d4;
+  --sidebar-ring: #465fff;
   color-scheme: dark;
 }
 
@@ -189,50 +343,111 @@
   --popover: #ffffff;
   --popover-foreground: #0f172a;
 
-  /* Brand cyan-600 — same family as PWA themeColor */
-  --primary: #0891b2;
+  /* Brand TailAdmin brand-500 (#465fff) — unified with dark mode */
+  --primary: #465fff;
   --primary-foreground: #ffffff;
 
-  --secondary: #ecfeff;           /* cyan-50 — brand-tinted secondary */
-  --secondary-foreground: #0e7490; /* cyan-700 */
+  --secondary: #ecf3ff;           /* brand-50 — brand-tinted secondary */
+  --secondary-foreground: #2a31d8; /* brand-700 */
 
-  --muted: #f1f5f9;
-  --muted-foreground: #475569;    /* slate-600 — readable */
+  --muted: #f2f4f7;               /* gray-100 */
+  --muted-foreground: #475467;    /* gray-600 — readable */
 
-  --accent: #7c3aed;              /* violet-600 — dynamic complement */
+  --accent: #7a5af8;              /* theme-purple-500 — dynamic complement */
   --accent-foreground: #ffffff;
 
-  --destructive: #dc2626;
+  --destructive: #f04438;         /* error-500 */
   --destructive-foreground: #ffffff;
-  --success: #059669;
+  --success: #039855;             /* success-600 */
   --success-foreground: #ffffff;
-  --warning: #d97706;
+  --warning: #dc6803;             /* warning-600 */
   --warning-foreground: #ffffff;
-  --info: #0891b2;
+  --info: #0086c9;                /* blue-light-600 */
   --info-foreground: #ffffff;
 
-  --border: #cbd5e1;              /* slate-300 — visible card lines */
-  --input: #ffffff;               /* white inputs on slate-50 bg */
-  --ring: #0891b2;                /* cyan focus ring */
+  --border: #e4e7ec;              /* gray-200 — TailAdmin border */
+  --input: #ffffff;               /* white inputs on gray-50 bg */
+  --ring: #465fff;                /* brand focus ring */
 
-  /* Chart palette aligned with brand cyan/violet */
-  --chart-1: #0891b2;
-  --chart-2: #7c3aed;
-  --chart-3: #d97706;
-  --chart-4: #059669;
-  --chart-5: #db2777;
+  /* Brand-aligned chart palette */
+  --chart-1: #465fff;
+  --chart-2: #7a5af8;
+  --chart-3: #dc6803;
+  --chart-4: #039855;
+  --chart-5: #ee46bc;
 
   /* Navy sidebar — brand consistency with dark mode */
   --sidebar: #091020;
   --sidebar-foreground: #e8eef9;
-  --sidebar-primary: #06b6d4;
+  --sidebar-primary: #465fff;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #162033;
   --sidebar-accent-foreground: #e8eef9;
   --sidebar-border: #27374f;
-  --sidebar-ring: #06b6d4;
+  --sidebar-ring: #465fff;
 
   color-scheme: light;
+}
+
+/* ============================================================
+   TAILADMIN UTILITY CLASSES
+   Portable nav-item helpers used across all role sidebars.
+   ============================================================ */
+
+@utility menu-item {
+  @apply relative flex items-center w-full gap-2 px-2.5 py-2 text-xs font-bold rounded-lg transition-all duration-200;
+}
+
+@utility menu-item-active {
+  @apply text-primary bg-primary/10 border border-primary/25;
+}
+
+@utility menu-item-inactive {
+  @apply text-muted-foreground hover:text-foreground hover:bg-primary/5 border border-transparent hover:border-primary/15;
+}
+
+@utility menu-item-icon {
+  @apply flex-shrink-0 p-0.5 rounded-md flex items-center justify-center transition-colors duration-200;
+}
+
+@utility menu-item-icon-active {
+  @apply text-primary;
+}
+
+@utility menu-item-icon-inactive {
+  @apply text-muted-foreground group-hover:text-primary;
+}
+
+@utility menu-dropdown-item {
+  @apply flex items-center justify-between px-2.5 py-1 text-xs rounded-md transition-all duration-200;
+}
+
+@utility menu-dropdown-item-active {
+  @apply text-primary bg-primary/10 border border-primary/20;
+}
+
+@utility menu-dropdown-item-inactive {
+  @apply text-muted-foreground hover:text-foreground hover:bg-primary/8;
+}
+
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    @apply size-1.5;
+  }
+  &::-webkit-scrollbar-track {
+    @apply rounded-full;
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full dark:bg-gray-700;
+  }
 }
 
 /* =====================================================

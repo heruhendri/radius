@@ -387,13 +387,13 @@ function CategoryItem({ titleKey, items, pendingCount, manualPaymentsCount, unre
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center gap-1.5 px-2 py-1 group"
       >
-        <span className="text-[9px] text-slate-600 tracking-[0.25em] uppercase font-bold group-hover:text-slate-800 dark:text-cyan-300/80 dark:group-hover:text-cyan-300 transition-colors flex-shrink-0">
+        <span className="text-[9px] text-slate-600 tracking-[0.25em] uppercase font-bold group-hover:text-slate-800 dark:text-brand-300/80 dark:group-hover:text-brand-300 transition-colors flex-shrink-0">
           {t(titleKey)}
         </span>
-        <div className="flex-1 h-px bg-gradient-to-r from-cyan-400/35 via-cyan-400/20 to-transparent" />
+        <div className="flex-1 h-px bg-gradient-to-r from-brand-400/35 via-brand-400/20 to-transparent" />
         <ChevronDown
           className={cn(
-            'w-3 h-3 text-cyan-400/60 group-hover:text-cyan-300 transition-all duration-200 flex-shrink-0',
+            'w-3 h-3 text-brand-400/60 group-hover:text-brand-400 transition-all duration-200 flex-shrink-0',
             isOpen ? 'rotate-180' : ''
           )}
         />
@@ -433,13 +433,13 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
           className={cn(
             'w-full flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all duration-300 group',
             isActive
-              ? 'text-cyan-400 bg-cyan-500/10 border border-cyan-400/30 shadow-[0_0_15px_rgba(0,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.05)]'
-              : 'text-muted-foreground hover:text-foreground hover:bg-primary/10 border border-transparent hover:border-primary/20',
+              ? 'text-primary bg-primary/10 border border-primary/30'
+              : 'text-muted-foreground hover:text-foreground hover:bg-primary/8 border border-transparent hover:border-primary/15',
           )}
         >
           <span className={cn(
             'flex-shrink-0 p-0.5 rounded-md transition-all duration-300 flex items-center justify-center',
-            isActive ? 'text-cyan-400 bg-cyan-500/10 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]' : 'text-muted-foreground group-hover:text-cyan-400'
+            isActive ? 'text-primary bg-primary/10' : 'text-muted-foreground group-hover:text-primary'
           )}>
             {item.icon}
           </span>
@@ -455,7 +455,7 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
             'overflow-hidden transition-all duration-300 ease-in-out',
             isOpen ? 'max-h-96 opacity-100 mt-0.5' : 'max-h-0 opacity-0'
           )}>
-            <div className="ml-3.5 pl-2 border-l-2 border-cyan-500/20 space-y-0.5">
+            <div className="ml-3.5 pl-2 border-l-2 border-primary/20 space-y-0.5">
               {item.children.map((child) => (
                 <Link
                   key={child.href}
@@ -464,8 +464,8 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
                   className={cn(
                     'flex items-center justify-between px-2.5 py-1 text-xs rounded-md transition-all duration-200 group/item',
                     pathname === child.href
-                      ? 'text-cyan-400 bg-cyan-500/10 border border-cyan-400/20 shadow-[0_0_10px_rgba(0,255,255,0.1)]'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-primary/10'
+                      ? 'text-primary bg-primary/10 border border-primary/20'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-primary/8'
                   )}
                 >
                   <span className="tracking-wide">{t(child.titleKey)}</span>
@@ -503,13 +503,13 @@ function NavItem({ item, pendingCount, manualPaymentsCount, unreadNotifications,
       className={cn(
         'flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all duration-300 group',
         pathname === item.href
-          ? 'text-cyan-400 bg-cyan-500/10 border border-cyan-400/30 shadow-[0_0_15px_rgba(0,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.05)]'
-          : 'text-muted-foreground hover:text-foreground hover:bg-primary/10 border border-transparent hover:border-primary/20',
+          ? 'text-primary bg-primary/10 border border-primary/30'
+          : 'text-muted-foreground hover:text-foreground hover:bg-primary/8 border border-transparent hover:border-primary/15',
       )}
     >
       <span className={cn(
         'flex-shrink-0 p-0.5 rounded-md transition-all duration-300 flex items-center justify-center',
-        pathname === item.href ? 'text-cyan-400 bg-cyan-500/10 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]' : 'text-muted-foreground group-hover:text-cyan-400'
+        pathname === item.href ? 'text-primary bg-primary/10' : 'text-muted-foreground group-hover:text-primary'
       )}>
         {item.icon}
       </span>
@@ -834,16 +834,16 @@ function AdminLayoutContent({
       <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
         {/* Background effects */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-500/10 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[70px] animate-pulse delay-1000" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
         </div>
 
         <div className="flex flex-col items-center gap-4 relative z-10">
           <div className="relative">
-            <div className="w-12 h-12 border-3 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin shadow-[0_0_20px_rgba(0,255,255,0.3)]" />
+            <div className="w-12 h-12 border-3 border-brand-500/30 border-t-brand-400 rounded-full animate-spin" />
             <div className="absolute inset-0 w-12 h-12 border-3 border-blue-500/20 border-b-blue-400 rounded-full animate-spin animate-reverse" style={{ animationDuration: '1.5s' }} />
           </div>
-          <p className="text-sm text-cyan-400/80 font-medium tracking-wider uppercase animate-pulse">{t('common.loading')}</p>
+          <p className="text-sm text-brand-400/80 font-medium tracking-wider uppercase animate-pulse">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -855,16 +855,16 @@ function AdminLayoutContent({
       <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
         {/* Background effects */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-500/10 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[70px] animate-pulse delay-1000" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
         </div>
 
         <div className="flex flex-col items-center gap-4 relative z-10">
           <div className="relative">
-            <div className="w-12 h-12 border-3 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin shadow-[0_0_20px_rgba(0,255,255,0.3)]" />
+            <div className="w-12 h-12 border-3 border-brand-500/30 border-t-brand-400 rounded-full animate-spin" />
             <div className="absolute inset-0 w-12 h-12 border-3 border-blue-500/20 border-b-blue-400 rounded-full animate-spin animate-reverse" style={{ animationDuration: '1.5s' }} />
           </div>
-          <p className="text-sm text-cyan-400/80 font-medium tracking-wider uppercase animate-pulse">{t('common.redirectingToLogin')}</p>
+          <p className="text-sm text-brand-400/80 font-medium tracking-wider uppercase animate-pulse">{t('common.redirectingToLogin')}</p>
         </div>
       </div>
     );
@@ -875,7 +875,7 @@ function AdminLayoutContent({
       {/* Cyberpunk Background Effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {/* Primary glow orbs */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/5 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-500/5 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[70px] animate-pulse delay-1000" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-blue-500/3 rounded-full blur-[80px]" />
 
@@ -918,14 +918,14 @@ function AdminLayoutContent({
         )}
       >
         {/* Top neon line */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
 
         <div className="flex flex-col h-full">
           {/* Logo - compact on mobile with safe area */}
           <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-sidebar-border bg-sidebar-accent/50">
             <div className="flex items-center gap-2 sm:gap-3">
               {company.logo ? (
-                <div className="w-[40px] h-[40px] sm:w-[46px] sm:h-[46px] rounded-lg bg-sidebar p-1 border border-cyan-400/30 shadow-[0_0_12px_rgba(6,182,212,0.25)] flex items-center justify-center overflow-hidden">
+                <div className="w-[40px] h-[40px] sm:w-[46px] sm:h-[46px] rounded-lg bg-sidebar p-1 border border-brand-400/30 flex items-center justify-center overflow-hidden">
                   <Image
                     unoptimized
                     src={company.logo}
@@ -936,15 +936,15 @@ function AdminLayoutContent({
                   />
                 </div>
               ) : (
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-400 flex items-center justify-center border border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.4),inset_0_1px_0_rgba(255,255,255,0.2)] animate-[neonPulse_3s_ease-in-out_infinite]">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center border border-brand-400/40">
                   <span className="text-black font-black text-xs sm:text-sm">{company.name.charAt(0)}</span>
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <h1 className="text-[11px] sm:text-xs font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-cyan-300 to-blue-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)] truncate max-w-[130px] sm:max-w-[110px]">
+                <h1 className="text-[11px] sm:text-xs font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-brand-300 to-blue-400 truncate max-w-[130px] sm:max-w-[110px]">
                   {company.name}
                 </h1>
-                <p className="text-[9px] sm:text-[10px] text-cyan-400/60 tracking-[0.15em] sm:tracking-[0.2em] uppercase font-medium">{t('common.billingSystem')}</p>
+                <p className="text-[9px] sm:text-[10px] text-brand-400/60 tracking-[0.15em] sm:tracking-[0.2em] uppercase font-medium">{t('common.billingSystem')}</p>
               </div>
             </div>
             <button
@@ -994,18 +994,18 @@ function AdminLayoutContent({
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-primary/20 transition-all duration-300 border border-transparent hover:border-primary/30 group"
               >
-                <div className="w-9 h-9 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-[0_0_15px_rgba(6,182,212,0.3)] group-hover:shadow-[0_0_20px_rgba(6,182,212,0.5)] transition-shadow">
+                <div className="w-9 h-9 bg-gradient-to-br from-brand-500 to-brand-700 rounded-lg flex items-center justify-center text-white text-sm font-black">
                   {session?.user?.name?.charAt(0).toUpperCase() || 'A'}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-xs font-bold text-foreground truncate tracking-wide">
                     {session?.user?.name || 'Admin'}
                   </p>
-                  <p className="text-[10px] text-cyan-400 truncate font-medium tracking-wider capitalize">
+                  <p className="text-[10px] text-brand-400 truncate font-medium tracking-wider capitalize">
                     {(session?.user as any)?.role || 'admin'}
                   </p>
                 </div>
-                <ChevronDown className={cn('w-3.5 h-3.5 text-muted-foreground group-hover:text-cyan-400 transition-all duration-300', showUserMenu && 'rotate-180')} />
+                <ChevronDown className={cn('w-3.5 h-3.5 text-muted-foreground group-hover:text-brand-400 transition-all duration-300', showUserMenu && 'rotate-180')} />
               </button>
 
               {showUserMenu && (
@@ -1013,7 +1013,7 @@ function AdminLayoutContent({
                   <div className="absolute top-0 left-2 right-2 h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
                   <div className="p-3 border-b border-sidebar-border bg-sidebar-accent/50">
                     <p className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] font-medium">{t('auth.signedInAs')}</p>
-                    <p className="text-xs font-bold text-cyan-400 truncate mt-1">
+                    <p className="text-xs font-bold text-brand-400 truncate mt-1">
                       {(session?.user as any)?.username}
                     </p>
                   </div>
@@ -1034,9 +1034,9 @@ function AdminLayoutContent({
       {/* Main */}
       <div className="lg:pl-64 min-h-screen flex flex-col relative z-10 transition-all duration-300">
         {/* Header - optimized for mobile */}
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3),0_0_15px_rgba(6,182,212,0.05)] safe-area-inset-top">
+        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-primary/15 shadow-theme-sm safe-area-inset-top">
           {/* Top neon line */}
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
 
           <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-2 sm:py-3">
             <button
@@ -1049,7 +1049,7 @@ function AdminLayoutContent({
 
             {/* Mobile title - show on small screens */}
             <div className="flex-1 sm:hidden min-w-0">
-              <h1 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 truncate">
+              <h1 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-blue-400 truncate">
                 {company.name}
               </h1>
             </div>
@@ -1103,13 +1103,13 @@ function AdminLayoutContent({
           {/* Scan lines */}
           <div className="absolute inset-0 pointer-events-none bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(6,182,212,0.02)_2px,rgba(6,182,212,0.02)_4px)]" />
 
-          <div className="relative bg-background/95 backdrop-blur-xl border-2 border-cyan-500/30 rounded-2xl shadow-[0_0_50px_rgba(0,255,255,0.2),0_0_100px_rgba(255,0,255,0.1)] max-w-sm w-full p-6 animate-in zoom-in-95 duration-300">
-            {/* Top neon line */}
-            <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+          <div className="relative bg-background/95 backdrop-blur-xl border-2 border-brand-500/30 rounded-2xl shadow-theme-xl max-w-sm w-full p-6 animate-in zoom-in-95 duration-300">
+            {/* Top accent line */}
+            <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
 
             {/* Corner accents */}
-            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-400 rounded-tl-lg" />
-            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-cyan-400 rounded-tr-lg" />
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-brand-400 rounded-tl-lg" />
+            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-brand-400 rounded-tr-lg" />
             <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-blue-400 rounded-bl-lg" />
             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-blue-400 rounded-br-lg" />
 
@@ -1121,7 +1121,7 @@ function AdminLayoutContent({
                 <h3 className="text-lg font-black text-foreground tracking-wider uppercase drop-shadow-[0_0_10px_rgba(0,255,255,0.3)]">
                   {t('common.sessionTimeout')}
                 </h3>
-                <p className="text-[10px] text-cyan-400/60 tracking-[0.2em] uppercase font-medium">
+                <p className="text-[10px] text-brand-400/60 tracking-[0.2em] uppercase font-medium">
                   {t('common.securityProtocolActive')}
                 </p>
               </div>
@@ -1149,7 +1149,7 @@ function AdminLayoutContent({
               </button>
               <button
                 onClick={handleStayLoggedIn}
-                className="flex-1 px-4 py-3 text-sm font-black text-black bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 border-2 border-cyan-400 shadow-[0_0_20px_rgba(0,255,255,0.4)] hover:shadow-[0_0_30px_rgba(0,255,255,0.6)] rounded-xl transition-all duration-300 uppercase tracking-wider"
+                className="flex-1 px-4 py-3 text-sm font-black text-white bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 border-2 border-brand-400 rounded-xl transition-all duration-300 uppercase tracking-wider"
               >
                 {t('common.stayActive')}
               </button>
@@ -1206,12 +1206,12 @@ export default function AdminLayout({
         <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
           {/* Background effects */}
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-500/10 rounded-full blur-[70px] animate-pulse" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
             <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[70px] animate-pulse delay-1000" style={{ willChange: 'opacity', transform: 'translateZ(0)' }} />
           </div>
 
           <div className="relative">
-            <div className="w-12 h-12 border-3 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin shadow-[0_0_20px_rgba(0,255,255,0.3)]" />
+            <div className="w-12 h-12 border-3 border-brand-500/30 border-t-brand-400 rounded-full animate-spin" />
           </div>
         </div>
       }>
