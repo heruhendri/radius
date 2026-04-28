@@ -86,7 +86,7 @@ const menuGroups: MenuGroup[] = [
         children: [
           { titleKey: 'nav.users', href: '/admin/pppoe/users', requiredPermission: 'customers.view' },
           { titleKey: 'nav.profiles', href: '/admin/pppoe/profiles', requiredPermission: 'customers.view' },
-          { titleKey: 'nav.areas', href: '/admin/pppoe/areas', requiredPermission: 'customers.view' },
+          { titleKey: 'nav.manageAreas', href: '/admin/pppoe/areas', requiredPermission: 'customers.view' },
           { titleKey: 'nav.stopSubscription', href: '/admin/pppoe/stopped', requiredPermission: 'customers.view' },
           { titleKey: 'nav.registrations', href: '/admin/pppoe/registrations', badge: 'pending', requiredPermission: 'registrations.view' },
         ],

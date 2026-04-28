@@ -21,6 +21,7 @@ interface CurrentPackage {
   name: string;
   downloadSpeed: number;
   uploadSpeed: number;
+  price: number;
   expiredAt: string;
 }
 
@@ -77,6 +78,7 @@ export default function UpgradePackagePage() {
           name: userData.user.profile?.name || 'Unknown',
           downloadSpeed: userData.user.profile?.downloadSpeed || 0,
           uploadSpeed: userData.user.profile?.uploadSpeed || 0,
+          price: userData.user.profile?.price || 0,
           expiredAt: userData.user.expiredAt
         });
       }
@@ -341,7 +343,9 @@ export default function UpgradePackagePage() {
             </div>
 
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {packages.map((pkg) => {
+              {packages
+                .filter((pkg) => pkg.price >= (currentPackage?.price ?? 0))
+                .map((pkg) => {
                 const isCurrentPackage = currentPackage?.name === pkg.name;
                 const isSelected = selectedPackage === pkg.id;
 
@@ -369,8 +373,10 @@ export default function UpgradePackagePage() {
                         <span className="text-[9px] px-1.5 py-0.5 bg-slate-700/50 text-slate-400 rounded-full border border-slate-600/50 absolute top-2 right-2">Aktif</span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground dark:text-[#e0d0ff]/60 mb-3">
-                      ? {formatSpeed(pkg.downloadSpeed)} / ? {formatSpeed(pkg.uploadSpeed)}
+                    <p className="text-xs text-muted-foreground dark:text-[#e0d0ff]/60 mb-3 flex items-center gap-1 flex-wrap">
+                      <Download className="w-3 h-3 inline" /> {formatSpeed(pkg.downloadSpeed)}
+                      <span className="mx-0.5">/</span>
+                      <Upload className="w-3 h-3 inline" /> {formatSpeed(pkg.uploadSpeed)}
                     </p>
                     <p className="text-lg font-bold text-[#00f7ff] drop-shadow-[0_0_8px_rgba(0,247,255,0.4)]">
                       {formatCurrency(pkg.price)}<span className="text-[10px] font-normal text-muted-foreground dark:text-[#e0d0ff]/40">/{t('common.month')}</span>

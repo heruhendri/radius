@@ -321,6 +321,7 @@
     "profiles": "Paket Layanan",
     "profile": "Paket Hotspot",
     "areas": "Area",
+    "manageAreas": "Kelola Area",
     "stopSubscription": "Berhenti Langganan",
     "registrations": "Pendaftaran Online",
     "hotspot": "Hotspot",

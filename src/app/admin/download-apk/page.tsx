@@ -5,7 +5,7 @@ import {
   Smartphone, Download, Shield, Wifi, Users, UserCheck,
   CheckCircle2, XCircle, Clock, AlertTriangle, RefreshCw,
   Terminal, Copy, Check, HardDrive, ChevronDown,
-  Package, Globe,
+  Package, Globe, Upload, ImageIcon,
 } from 'lucide-react';
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -276,6 +276,9 @@ export default function DownloadApkPage() {
   const [statuses, setStatuses] = useState<Partial<Record<RoleKey, BuildStatus>>>({});
   const [building, setBuilding] = useState<Set<RoleKey>>(new Set());
   const [customUrl, setCustomUrl] = useState('');
+  const [currentLogo, setCurrentLogo] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState('');
 
   const fetchEnv = useCallback(() => {
     fetch('/api/admin/apk/trigger')
@@ -288,6 +291,44 @@ export default function DownloadApkPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchCompanyLogo = useCallback(() => {
+    fetch('/api/company')
+      .then(r => r.json())
+      .then(data => { if (data.logo) setCurrentLogo(data.logo); })
+      .catch(() => {});
+  }, []);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    setLogoError('');
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/upload/logo', { method: 'POST', body: form });
+      const data = await res.json();
+      if (data.success && data.url) {
+        // Save logo URL to company settings
+        const companyRes = await fetch('/api/company');
+        const company = await companyRes.json();
+        await fetch('/api/company', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...company, logo: data.url }),
+        });
+        setCurrentLogo(data.url);
+      } else {
+        setLogoError(data.error || 'Upload gagal');
+      }
+    } catch {
+      setLogoError('Gagal menghubungi server');
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = '';
+    }
+  };
+
   const fetchStatus = useCallback(async (role: RoleKey) => {
     try {
       const res = await fetch(`/api/admin/apk/status?role=${role}`);
@@ -299,8 +340,9 @@ export default function DownloadApkPage() {
 
   useEffect(() => {
     fetchEnv();
+    fetchCompanyLogo();
     ROLES.forEach(r => fetchStatus(r.key));
-  }, [fetchEnv, fetchStatus]);
+  }, [fetchEnv, fetchStatus, fetchCompanyLogo]);
 
   // Poll roles that are building
   useEffect(() => {
@@ -368,6 +410,52 @@ export default function DownloadApkPage() {
           URL ini akan di-hardcode ke dalam APK sebagai tujuan WebView. Gunakan subdomain Cloudflare Tunnel atau IP publik.
           Contoh: <code className="text-slate-400">https://radius.hotspotapp.net</code>
         </p>
+      </div>
+
+      {/* Logo APK */}
+      <div className="rounded-xl border border-slate-700/50 bg-slate-900/60 p-4">
+        <div className="flex items-center gap-2 text-slate-300 text-xs font-semibold mb-3">
+          <ImageIcon className="w-3.5 h-3.5 text-cyan-400" /> Logo Aplikasi (digunakan sebagai ikon APK)
+        </div>
+        <div className="flex items-center gap-4">
+          {/* Preview */}
+          <div className="w-16 h-16 rounded-xl border border-slate-700 bg-slate-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {currentLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={currentLogo} alt="Logo" className="w-full h-full object-contain" />
+            ) : (
+              <ImageIcon className="w-7 h-7 text-slate-600" />
+            )}
+          </div>
+          {/* Upload */}
+          <div className="flex-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <span className={`inline-flex items-center gap-1.5 py-2 px-4 rounded-lg text-xs font-bold transition-all text-white ${
+                uploadingLogo ? 'bg-slate-700 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'
+              }`}>
+                {uploadingLogo ? (
+                  <><RefreshCw className="w-3 h-3 animate-spin" /> Mengupload…</>
+                ) : (
+                  <><Upload className="w-3 h-3" /> {currentLogo ? 'Ganti Logo' : 'Upload Logo'}</>
+                )}
+              </span>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={handleLogoUpload}
+                disabled={uploadingLogo}
+                className="hidden"
+              />
+            </label>
+            <p className="text-[11px] text-slate-500 mt-1.5">
+              PNG/JPG/WebP, maks 2MB. Logo akan otomatis digunakan sebagai ikon saat build APK.
+            </p>
+            {logoError && <p className="text-[11px] text-red-400 mt-1">{logoError}</p>}
+            {currentLogo && !logoError && (
+              <p className="text-[11px] text-emerald-400 mt-1">Logo aktif tersimpan di server.</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Env Banner */}
