@@ -35,6 +35,10 @@ function mainActivity(pkg: string, startUrl: string, baseUrl: string): string {
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -42,10 +46,23 @@ import android.os.Bundle
 import android.webkit.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.work.*
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private var fileCallback: ValueCallback<Array<Uri>>? = null
+
+    companion object {
+        const val CHANNEL_ID = "salfanet_push_channel"
+        const val CHANNEL_NAME = "Notifikasi Salfanet"
+        const val PREFS_NAME = "salfanet_prefs"
+        const val PREF_BASE_URL = "base_url"
+        const val PREF_LAST_NOTIF_ID = "last_notif_id"
+        const val PREF_SESSION_COOKIE = "session_cookie"
+    }
 
     private val fileChooser = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -58,11 +75,83 @@ class MainActivity : AppCompatActivity() {
         fileCallback = null
     }
 
+    inner class AndroidBridge {
+        @JavascriptInterface
+        fun showNotification(title: String, body: String) {
+            showNativeNotification(title, body, System.currentTimeMillis().toInt())
+        }
+        @JavascriptInterface
+        fun showNotificationWithTag(title: String, body: String, tag: String) {
+            showNativeNotification(title, body, tag.hashCode())
+        }
+        @JavascriptInterface
+        fun saveBaseUrl(url: String) {
+            getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putString(PREF_BASE_URL, url).apply()
+        }
+    }
+
+    fun showNativeNotification(title: String, body: String, notifId: Int) {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        try {
+            NotificationManagerCompat.from(this).notify(notifId, builder.build())
+        } catch (e: SecurityException) { /* POST_NOTIFICATIONS not granted */ }
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifikasi push dari Salfanet"
+                enableLights(true)
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 250, 250)
+                setShowBadge(true)
+            }
+            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .createNotificationChannel(channel)
+        }
+    }
+
+    private fun scheduleBackgroundPolling() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        val workRequest = PeriodicWorkRequestBuilder<NotificationWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
+            .build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "salfanet_notif_poll",
+            ExistingPeriodicWorkPolicy.KEEP,
+            workRequest
+        )
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         webView = findViewById(R.id.webView)
+        createNotificationChannel()
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
         }
@@ -83,12 +172,34 @@ class MainActivity : AppCompatActivity() {
         }
         // Disable overscroll glow/bounce effect
         webView.overScrollMode = android.view.View.OVER_SCROLL_NEVER
+        webView.addJavascriptInterface(AndroidBridge(), "Android")
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
                 val isInternal = url.startsWith("${baseUrl}") || url.startsWith("blob:")
                 if (!isInternal) { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))); return true }
                 return false
+            }
+            override fun onPageFinished(view: WebView?, url: String?) {
+                // Cache session cookie for background polling
+                val cookie = CookieManager.getInstance().getCookie("${baseUrl}")
+                if (!cookie.isNullOrEmpty()) {
+                    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                        .edit().putString(PREF_SESSION_COOKIE, cookie).apply()
+                }
+                // Bridge service worker push events to native notification
+                view?.evaluateJavascript(
+                    "(function(){" +
+                    "if(typeof Android!=='undefined'&&typeof Android.saveBaseUrl==='function')" +
+                    "{try{Android.saveBaseUrl(window.location.origin);}catch(e){}}" +
+                    "if('serviceWorker' in navigator){" +
+                    "navigator.serviceWorker.addEventListener('message',function(e){" +
+                    "var d=e.data;" +
+                    "if(d&&(d.type==='PUSH_RECEIVED'||d.type==='PUSH_NOTIFICATION')&&typeof Android!=='undefined'){" +
+                    "try{Android.showNotificationWithTag(d.title||'Salfanet',d.body||'',d.tag||'');}catch(err){}" +
+                    "}});}})();",
+                    null
+                )
             }
         }
         webView.webChromeClient = object : WebChromeClient() {
@@ -97,14 +208,115 @@ class MainActivity : AppCompatActivity() {
                 val intent = params?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply { type = "*/*" }
                 fileChooser.launch(intent); return true
             }
+            override fun onPermissionRequest(request: PermissionRequest?) {
+                request?.grant(request.resources)
+            }
         }
         if (savedInstanceState != null) webView.restoreState(savedInstanceState)
         else webView.loadUrl("${startUrl}")
+        scheduleBackgroundPolling()
     }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() { if (webView.canGoBack()) webView.goBack() else super.onBackPressed() }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); webView.saveState(outState) }
+}
+`;
+}
+
+function notificationWorker(pkg: string): string {
+  return `package ${pkg}
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+
+class NotificationWorker(
+    private val context: Context,
+    params: WorkerParameters
+) : CoroutineWorker(context, params) {
+
+    override suspend fun doWork(): Result {
+        val prefs = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
+        val baseUrl = prefs.getString(MainActivity.PREF_BASE_URL, null) ?: return Result.success()
+        val cookie = prefs.getString(MainActivity.PREF_SESSION_COOKIE, null)
+        if (cookie.isNullOrEmpty()) return Result.success()
+        val lastId = prefs.getString(MainActivity.PREF_LAST_NOTIF_ID, null)
+        try {
+            val conn = (URL(baseUrl + "/api/notifications?unreadOnly=true&limit=5").openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("Cookie", cookie)
+                setRequestProperty("Accept", "application/json")
+                connectTimeout = 10000
+                readTimeout = 10000
+            }
+            if (conn.responseCode == 200) {
+                val response = conn.inputStream.bufferedReader().readText()
+                conn.disconnect()
+                val json = JSONObject(response)
+                val notifications = json.optJSONArray("notifications")
+                val unreadCount = json.optInt("unreadCount", 0)
+                if (notifications != null && notifications.length() > 0 && unreadCount > 0) {
+                    val first = notifications.getJSONObject(0)
+                    val firstId = first.optString("id", "")
+                    if (firstId.isNotEmpty() && firstId != lastId) {
+                        prefs.edit().putString(MainActivity.PREF_LAST_NOTIF_ID, firstId).apply()
+                        val title = first.optString("title", "Notifikasi Baru")
+                        val message = first.optString("message", "Anda memiliki notifikasi baru")
+                        showNotification(title, message, firstId.hashCode())
+                    }
+                }
+            } else {
+                conn.disconnect()
+            }
+        } catch (e: Exception) { /* Network error, try next cycle */ }
+        return Result.success()
+    }
+
+    private fun showNotification(title: String, body: String, notifId: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                MainActivity.CHANNEL_ID, MainActivity.CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                enableLights(true)
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 250, 250)
+                setShowBadge(true)
+            }
+            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .createNotificationChannel(channel)
+        }
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val builder = NotificationCompat.Builder(context, MainActivity.CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        try {
+            NotificationManagerCompat.from(context).notify(notifId, builder.build())
+        } catch (e: SecurityException) { /* Permission not granted */ }
+    }
 }
 `;
 }
@@ -140,6 +352,8 @@ android {
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.work:work-runtime-ktx:2.9.0'
+    implementation 'androidx.core:core-ktx:1.12.0'
 }
 `;
 }
@@ -172,6 +386,7 @@ const androidManifest = (pkg: string) => `<?xml version="1.0" encoding="utf-8"?>
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <application
@@ -275,6 +490,7 @@ async function writeProjectToDisk(
   writeFileSync(join(projectDir, 'app/proguard-rules.pro'), '# ProGuard rules\n');
   writeFileSync(join(projectDir, 'app/src/main/AndroidManifest.xml'), androidManifest(cfg.pkg));
   writeFileSync(join(projectDir, `app/src/main/java/${pkgPath}/MainActivity.kt`), mainActivity(cfg.pkg, startUrl, baseUrl));
+  writeFileSync(join(projectDir, `app/src/main/java/${pkgPath}/NotificationWorker.kt`), notificationWorker(cfg.pkg));
   writeFileSync(join(projectDir, 'app/src/main/res/layout/activity_main.xml'), activityMainXml());
   writeFileSync(join(projectDir, 'app/src/main/res/values/strings.xml'), stringsXml(appName));
   writeFileSync(join(projectDir, 'app/src/main/res/values/colors.xml'), colorsXml(cfg.color));

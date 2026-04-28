@@ -290,7 +290,7 @@ export default function CompanySettingsPage() {
                         alt="Logo"
                         width={220}
                         height={120}
-                        className="w-28 h-16 object-contain rounded-lg border border-border bg-card p-1"
+                        className="w-20 h-20 object-contain rounded-lg border border-border bg-card p-1"
                       />
                       <button
                         type="button"
@@ -301,7 +301,7 @@ export default function CompanySettingsPage() {
                       </button>
                     </div>
                   ) : (
-                    <div className="w-28 h-16 rounded-lg border-2 border-dashed border-border bg-card flex items-center justify-center text-muted-foreground">
+                    <div className="w-20 h-20 rounded-lg border-2 border-dashed border-border bg-card flex items-center justify-center text-muted-foreground">
                       <ImageIcon className="w-5 h-5" />
                     </div>
                   )}

@@ -418,7 +418,7 @@ export default function DownloadApkPage() {
           <ImageIcon className="w-3.5 h-3.5 text-cyan-400" /> Logo Aplikasi (digunakan sebagai ikon APK)
         </div>
         {/* Preview — full width */}
-        <div className="w-full h-44 rounded-xl border border-slate-700 bg-slate-800/60 flex items-center justify-center overflow-hidden mb-3">
+        <div className="w-44 h-44 mx-auto rounded-xl border border-slate-700 bg-slate-800/60 flex items-center justify-center overflow-hidden mb-3">
           {currentLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={currentLogo} alt="Logo" className="max-h-full max-w-full object-contain p-3" />

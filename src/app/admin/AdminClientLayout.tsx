@@ -925,7 +925,7 @@ function AdminLayoutContent({
           <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-sidebar-border bg-sidebar-accent/50">
             <div className="flex items-center gap-2 sm:gap-3">
               {company.logo ? (
-                <div className="w-[44px] h-[34px] sm:w-[52px] sm:h-[38px] rounded-lg bg-sidebar p-1 border border-cyan-400/30 shadow-[0_0_12px_rgba(6,182,212,0.25)] flex items-center justify-center overflow-hidden">
+                <div className="w-[40px] h-[40px] sm:w-[46px] sm:h-[46px] rounded-lg bg-sidebar p-1 border border-cyan-400/30 shadow-[0_0_12px_rgba(6,182,212,0.25)] flex items-center justify-center overflow-hidden">
                   <Image
                     unoptimized
                     src={company.logo}
