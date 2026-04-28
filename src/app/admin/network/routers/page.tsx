@@ -480,7 +480,7 @@ export default function RouterPage() {
                     ))}
                   </div>
                   <div className="mt-4 p-3 rounded-xl border border-[#00f7ff]/20 bg-[#00f7ff]/5">
-                    <p className="text-xs text-[#00f7ff]/80"><span className="font-bold">ℹ️ Tentang NAS/Router:</span> NAS (Network Access Server) adalah MikroTik router di lokasi pelanggan yang menangani autentikasi PPPoE atau Hotspot. Setiap NAS harus terdaftar di sini agar RADIUS server SALFANET dapat mengenali request autentikasi dari NAS tersebut.</p>
+                    <p className="text-xs text-[#00f7ff]/80"><span className="font-bold">ℹ️ Tentang NAS/Router:</span> NAS (Network Access Server) adalah MikroTik router di lokasi pelanggan yang menangani autentikasi PPPoE atau Hotspot. Setiap NAS harus terdaftar di sini agar RADIUS server dapat mengenali request autentikasi dari NAS tersebut.</p>
                   </div>
 
                   {/* Troubleshooting: unknown client */}

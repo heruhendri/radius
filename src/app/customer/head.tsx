@@ -1,11 +1,11 @@
 export default function Head() {
   return (
     <>
-      <title>Salfanet Customer Portal</title>
-      <meta name="application-name" content="Salfanet Customer Portal" />
+      <title>Customer Portal</title>
+      <meta name="application-name" content="Customer Portal" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-      <meta name="apple-mobile-web-app-title" content="Salfanet" />
+      <meta name="apple-mobile-web-app-title" content="Customer Portal" />
       <meta name="theme-color" content="#06b6d4" />
       <meta name="mobile-web-app-capable" content="yes" />
       <link rel="manifest" href="/manifest.json" />

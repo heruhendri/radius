@@ -46,12 +46,17 @@ export default function TemplatesPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('desktop');
   const [saving, setSaving] = useState(false);
   const [companyBaseUrl, setCompanyBaseUrl] = useState('https://yourdomain.com');
+  const [companyName, setCompanyName] = useState('ISP Billing');
 
   useEffect(() => {
     fetchTemplates();
     fetch('/api/settings/isolation')
       .then(r => r.json())
       .then(d => { if (d.success && d.data?.baseUrl) setCompanyBaseUrl(d.data.baseUrl.replace(/\/$/, '')); })
+      .catch(() => {});
+    fetch('/api/public/company')
+      .then(r => r.json())
+      .then(d => { if (d.success && d.company?.name) setCompanyName(d.company.name); })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -154,7 +159,7 @@ export default function TemplatesPage() {
     if (!editingTemplate) return null;
 
     const sampleData = {
-      companyName: 'SALFANET',
+      companyName: companyName,
       customerName: 'John Doe',
       username: 'user001',
       phoneNumber: '081234567890',

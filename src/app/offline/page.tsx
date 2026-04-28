@@ -65,7 +65,7 @@ export default function OfflinePage() {
 
         {/* Footer */}
         <p className="mt-8 text-xs text-gray-600">
-          Salfanet Radius &mdash; Halaman tersimpan mungkin masih tersedia
+          Halaman tersimpan mungkin masih tersedia
         </p>
       </div>
     </div>

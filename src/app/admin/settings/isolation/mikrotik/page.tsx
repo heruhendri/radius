@@ -316,7 +316,7 @@ add chain=dstnat \\
   // Complete Script
   const completeScript = `# ============================================
 # MIKROTIK ISOLATION SYSTEM SETUP
-# Auto-generated script from SALFANET RADIUS
+# Auto-generated script
 # Generated: ${formatWIB(new Date())}
 # ============================================
 # 

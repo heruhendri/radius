@@ -31,7 +31,7 @@ interface Invoice {
 }
 
 interface PaymentGateway { id: string; name: string; provider: string; isActive: boolean; }
-interface CompanySetting { companyName: string; address: string | null; phone: string | null; email: string | null; }
+interface CompanySetting { name: string; address: string | null; phone: string | null; email: string | null; }
 
 export default function PaymentPage() {
   const params = useParams();
@@ -399,7 +399,7 @@ export default function PaymentPage() {
         {/* Company Info */}
         {company && (
           <div className="bg-[#1a0f35]/80 backdrop-blur-xl rounded-2xl border-2 border-[#bc13fe]/30 p-4 text-center shadow-[0_0_30px_rgba(188,19,254,0.1)]">
-            <h3 className="text-sm font-bold text-white">{company.companyName}</h3>
+            <h3 className="text-sm font-bold text-white">{company.name}</h3>
             {company.address && <p className="text-[10px] text-[#e0d0ff]/60 mt-1">📍 {company.address}</p>}
             <div className="flex flex-wrap justify-center gap-3 text-[10px] text-[#e0d0ff]/60 mt-2">
               {company.phone && <span>📞 {company.phone}</span>}
@@ -411,7 +411,7 @@ export default function PaymentPage() {
         {/* Footer */}
         <div className="text-center space-y-1">
           <p className="text-[10px] text-[#e0d0ff]/50">Pembayaran aman didukung oleh</p>
-          <p className="text-xs font-bold bg-gradient-to-r from-[#00f7ff] to-[#bc13fe] bg-clip-text text-transparent">{company?.companyName || 'SALFANETRADIUS'}</p>
+          <p className="text-xs font-bold bg-gradient-to-r from-[#00f7ff] to-[#bc13fe] bg-clip-text text-transparent">{company?.name || 'ISP Billing'}</p>
         </div>
       </div>
     </div>

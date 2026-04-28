@@ -34,6 +34,7 @@ interface User {
   idCardNumber?: string | null;
   idCardPhoto?: string | null;
   installationPhotos?: string[] | null;
+  createdAt?: string | null;
 }
 
 interface Session {

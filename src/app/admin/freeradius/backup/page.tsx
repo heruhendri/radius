@@ -321,7 +321,7 @@ export default function FreeRADIUSBackupPage() {
                 </div>
                 <div className="p-4 space-y-3">
                     <p className="text-xs text-muted-foreground">
-                        Upload file backup <span className="font-mono bg-muted px-1 rounded">.tar.gz</span> yang didownload dari instalasi Salfanet RADIUS lain, lalu langsung restore ke VPS ini.
+                        Upload file backup <span className="font-mono bg-muted px-1 rounded">.tar.gz</span> yang didownload dari instalasi lain, lalu langsung restore ke VPS ini.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
                         <label
