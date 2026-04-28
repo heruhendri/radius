@@ -469,6 +469,12 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 <!-- AUTO-CHANGELOG:START -->
 
+### v2.25.5 — 2026-04-28
+
+### Added
+- **APK Android: notifikasi native dengan suara, getaran & floating** — APK WebView kini menyertakan `NotificationChannel` (Android 8+), JavaScript bridge (`Android.showNotificationWithTag`) yang terhubung ke service worker push event (`PUSH_RECEIVED`), serta `NotificationWorker` berbasis WorkManager yang polling `/api/notifications` setiap 15 menit di background. Notifikasi tampil dengan prioritas HIGH, suara default, getaran, dan heads-up notification bahkan saat aplikasi ditutup.
+- **Logo square 1:1 di semua halaman** — Semua container logo (login Admin/Customer/Technician/Agent, sidebar admin, settings company, download APK, halaman isolated) kini menggunakan rasio persegi (1:1) dengan `object-contain` sehingga logo 512×200 ditampilkan dalam kanvas 512×512 dengan letterbox — tidak distretch.
+
 ### v2.25.4 — 2026-04-28
 
 ### Added
@@ -571,32 +577,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
   - Menjamin minimal ada 1 akun `SUPER_ADMIN` aktif
   - Membuat fallback `superadmin` hanya jika database benar-benar kosong
 - **Self-heal PM2 app mode** — `updater.sh` kini mendeteksi proses PM2 legacy yang masih jalan via `next start`/`npm start`, lalu migrasi otomatis ke `.next/standalone/server.js` dari `ecosystem.config.js`.
-
-### v2.25.0 — 2026-04-26
-
-### Added
-- **Build APK Android langsung di server VPS** ([`91a45d5`]) — Fitur baru di halaman `/admin/download-apk`: build APK Android Kotlin (WebView wrapper) langsung di server menggunakan Gradle, tanpa perlu upload ke GitHub atau install Android Studio. APK tersimpan di server dan bisa didownload kapan saja.
-  - `GET /api/admin/apk/trigger` — cek ketersediaan Java JDK dan Android SDK di server
-  - `POST /api/admin/apk/trigger?role=admin|customer|technician|agent` — mulai build di background (detached process, tidak timeout)
-  - `GET /api/admin/apk/status?role=...` — polling status build: `idle` / `building` / `done` / `failed` / `stale`
-  - `GET /api/admin/apk/file?role=...` — download APK hasil build
-  - UI polling otomatis setiap 3 detik selama build berjalan
-  - Deteksi stale build: jika status masih `building` setelah 15 menit, otomatis ditandai `stale`
-  - Panduan install Android SDK ditampilkan di UI jika environment belum siap (copy-able bash command)
-  - Fallback ZIP download tetap tersedia via collapsible section
-- **Setup Android SDK di VPS** (manual, satu kali) — Jalankan command berikut via SSH sebelum menggunakan fitur build:
-  ```bash
-  apt-get update && apt-get install -y openjdk-17-jdk wget unzip && \
-  mkdir -p /opt/android/cmdline-tools && \
-  wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip && \
-  unzip -q /tmp/cmdtools.zip -d /opt/android/cmdline-tools && \
-  mv /opt/android/cmdline-tools/cmdline-tools /opt/android/cmdline-tools/latest && \
-  yes | /opt/android/cmdline-tools/latest/bin/sdkmanager --licenses && \
-  /opt/android/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" && \
-  echo 'export ANDROID_HOME=/opt/android' >> /etc/environment && \
-  echo 'Selesai!'
-  ```
-  Build pertama ±3–5 menit (download Gradle dependencies). Build berikutnya ±1 menit (Gradle cache di `/var/data/salfanet/gradle-cache`).
 
 <!-- AUTO-CHANGELOG:END -->
 
