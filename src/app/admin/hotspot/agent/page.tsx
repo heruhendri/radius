@@ -344,7 +344,7 @@ export default function AgentPage() {
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
-        <RefreshCw className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
+        <RefreshCw className="w-12 h-12 animate-spin text-brand-500 dark:text-[#00f7ff] dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
       </div>
     );
   }
@@ -355,14 +355,14 @@ export default function AgentPage() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       </div>
       <div className="relative z-10 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
-              <Users className="w-5 h-5 text-[#00f7ff]" />
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc] dark:drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+              <Users className="w-5 h-5 text-brand-500 dark:text-[#00f7ff]" />
               {t('agent.title')}
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('agent.subtitle')}</p>
@@ -672,16 +672,16 @@ export default function AgentPage() {
               <div>
                 <ModalLabel>{t('agent.router')}/NAS</ModalLabel>
                 <ModalSelect value={formData.routerId} onChange={(e) => setFormData({ ...formData, routerId: e.target.value })}>
-                  <option value="" className="bg-[#0a0520]">{t('agent.noRouter')}</option>
-                  {routers.map((router) => (<option key={router.id} value={router.id} className="bg-[#0a0520]">{router.name} ({router.nasname})</option>))}
+                  <option value="" className="dark:bg-[#0a0520]">{t('agent.noRouter')}</option>
+                  {routers.map((router) => (<option key={router.id} value={router.id} className="dark:bg-[#0a0520]">{router.name} ({router.nasname})</option>))}
                 </ModalSelect>
               </div>
               {editingAgent && (
                 <div>
                   <ModalLabel>{t('common.status')}</ModalLabel>
                   <ModalSelect value={formData.isActive ? 'active' : 'inactive'} onChange={(e) => setFormData({ ...formData, isActive: e.target.value === 'active' })}>
-                    <option value="active" className="bg-[#0a0520]">{t('common.active')}</option>
-                    <option value="inactive" className="bg-[#0a0520]">{t('common.inactive')}</option>
+                    <option value="active" className="dark:bg-[#0a0520]">{t('common.active')}</option>
+                    <option value="inactive" className="dark:bg-[#0a0520]">{t('common.inactive')}</option>
                   </ModalSelect>
                 </div>
               )}

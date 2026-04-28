@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { showSuccess, showError } from '@/lib/sweetalert';
@@ -138,7 +138,7 @@ export default function NewPppoeUserPage() {
           <ArrowLeft className="h-3.5 w-3.5" /> Kembali
         </button>
         <div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc]">
             Tambah User PPPoE
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">Buat akun pelanggan PPPoE baru</p>

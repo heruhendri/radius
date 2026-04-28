@@ -212,12 +212,12 @@ export default function VirtualParametersPage() {
 
   return (
     <div className="bg-background relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 max-w-6xl mx-auto space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
-              <Cpu className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc] dark:drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+              <Cpu className="w-6 h-6 text-brand-500 dark:text-[#00f7ff] dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
               {t('genieacs.virtualParamsTitle')}
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -294,7 +294,7 @@ export default function VirtualParametersPage() {
 
           {loading ? (
             <div className="flex items-center justify-center py-10">
-              <Loader2 className="w-5 h-5 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
+              <Loader2 className="w-5 h-5 animate-spin text-brand-500 dark:text-[#00f7ff] dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
             </div>
           ) : items.length === 0 ? (
             <div className="py-10 text-center">
@@ -510,7 +510,7 @@ return user || "N/A";`}</pre>
                       type="checkbox"
                       checked={form.isActive}
                       onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                      className="rounded border-[#bc13fe]/40 bg-background dark:bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]/50"
+                      className="rounded border-[#bc13fe]/40 bg-background dark:bg-background dark:bg-[#0a0520] accent-brand-500 dark:accent-[#00f7ff]/50"
                     />
                     {t('genieacs.activateThisParam')}
                   </label>
@@ -536,10 +536,10 @@ return user || "N/A";`}</pre>
                         value={form.displayType}
                         onChange={(e) => setForm({ ...form, displayType: e.target.value })}
                       >
-                        <option value="card" className="bg-[#0a0520]">Card</option>
-                        <option value="badge" className="bg-[#0a0520]">Badge</option>
-                        <option value="meter" className="bg-[#0a0520]">Meter</option>
-                        <option value="list" className="bg-[#0a0520]">List</option>
+                        <option value="card" className="dark:bg-[#0a0520]">Card</option>
+                        <option value="badge" className="dark:bg-[#0a0520]">Badge</option>
+                        <option value="meter" className="dark:bg-[#0a0520]">Meter</option>
+                        <option value="list" className="dark:bg-[#0a0520]">List</option>
                       </ModalSelect>
                     </div>
 
@@ -562,14 +562,14 @@ return user || "N/A";`}</pre>
                         value={form.color}
                         onChange={(e) => setForm({ ...form, color: e.target.value })}
                       >
-                        <option value="blue" className="bg-[#0a0520]">Blue</option>
-                        <option value="green" className="bg-[#0a0520]">Green</option>
-                        <option value="purple" className="bg-[#0a0520]">Purple</option>
-                        <option value="red" className="bg-[#0a0520]">Red</option>
-                        <option value="orange" className="bg-[#0a0520]">Orange</option>
-                        <option value="teal" className="bg-[#0a0520]">Teal</option>
-                        <option value="pink" className="bg-[#0a0520]">Pink</option>
-                        <option value="indigo" className="bg-[#0a0520]">Indigo</option>
+                        <option value="blue" className="dark:bg-[#0a0520]">Blue</option>
+                        <option value="green" className="dark:bg-[#0a0520]">Green</option>
+                        <option value="purple" className="dark:bg-[#0a0520]">Purple</option>
+                        <option value="red" className="dark:bg-[#0a0520]">Red</option>
+                        <option value="orange" className="dark:bg-[#0a0520]">Orange</option>
+                        <option value="teal" className="dark:bg-[#0a0520]">Teal</option>
+                        <option value="pink" className="dark:bg-[#0a0520]">Pink</option>
+                        <option value="indigo" className="dark:bg-[#0a0520]">Indigo</option>
                       </ModalSelect>
                     </div>
 
@@ -612,7 +612,7 @@ return user || "N/A";`}</pre>
                       type="checkbox"
                       checked={form.showInSummary}
                       onChange={(e) => setForm({ ...form, showInSummary: e.target.checked })}
-                      className="rounded border-[#bc13fe]/40 bg-background dark:bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]/50"
+                      className="rounded border-[#bc13fe]/40 bg-background dark:bg-background dark:bg-[#0a0520] accent-brand-500 dark:accent-[#00f7ff]/50"
                     />
                     {t('genieacs.showInSummary')}
                   </label>

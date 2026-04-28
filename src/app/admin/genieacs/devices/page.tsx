@@ -407,7 +407,7 @@ export default function GenieACSDevicesPage() {
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
-        <Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
+        <Loader2 className="w-12 h-12 animate-spin text-brand-500 dark:text-[#00f7ff] dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
       </div>
     );
   }
@@ -419,13 +419,13 @@ export default function GenieACSDevicesPage() {
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
           <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div>
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+          <div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
         </div>
         <div className="relative z-10 space-y-6">
           <div className="space-y-4">
             {/* Header */}
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc] dark:drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
                 <Server className="w-6 h-6 text-[#00f7ff]" />
                 <div>
                   <span>{t('genieacs.devicesTitle')}</span>
@@ -463,13 +463,13 @@ export default function GenieACSDevicesPage() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       </div>
       <div className="relative z-10 space-y-6">
         <div className="space-y-3">
           {/* Header */}
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc] dark:drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
               <Server className="w-6 h-6 text-[#00f7ff]" />
               <div>
                 <span>{t('genieacs.devicesTitle')}</span>
@@ -1045,7 +1045,7 @@ export default function GenieACSDevicesPage() {
               <div>
                 <ModalLabel>{t('genieacs.wlanIndex')}</ModalLabel>
                 <ModalSelect value={editWifiData.wlanIndex} onChange={(e) => handleWlanIndexChange(parseInt(e.target.value))}>
-                  {selectedDevice?.wlanConfigs?.map((wlan) => (<option key={wlan.index} value={wlan.index} className="bg-[#0a0520]">WLAN {wlan.index} - {wlan.ssid || t('genieacs.noSsid')} ({wlan.band})</option>)) || (<><option value={1} className="bg-[#0a0520]">WLAN 1 (2.4GHz)</option><option value={2} className="bg-[#0a0520]">WLAN 2</option><option value={3} className="bg-[#0a0520]">WLAN 3</option><option value={4} className="bg-[#0a0520]">WLAN 4</option><option value={5} className="bg-[#0a0520]">WLAN 5 (5GHz)</option></>)}
+                  {selectedDevice?.wlanConfigs?.map((wlan) => (<option key={wlan.index} value={wlan.index} className="dark:bg-[#0a0520]">WLAN {wlan.index} - {wlan.ssid || t('genieacs.noSsid')} ({wlan.band})</option>)) || (<><option value={1} className="dark:bg-[#0a0520]">WLAN 1 (2.4GHz)</option><option value={2} className="dark:bg-[#0a0520]">WLAN 2</option><option value={3} className="dark:bg-[#0a0520]">WLAN 3</option><option value={4} className="dark:bg-[#0a0520]">WLAN 4</option><option value={5} className="dark:bg-[#0a0520]">WLAN 5 (5GHz)</option></>)}
                 </ModalSelect>
               </div>
               <div>

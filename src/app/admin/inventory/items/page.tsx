@@ -240,7 +240,7 @@ export default function InventoryItemsPage() {
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
-        <div className="w-12 h-12 border-4 border-[#00f7ff] border-t-transparent rounded-full animate-spin drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10"></div>
+        <div className="w-12 h-12 border-4 border-brand-500 dark:border-[#00f7ff] border-t-transparent rounded-full animate-spin dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10"></div>
       </div>
     );
   }
@@ -251,13 +251,13 @@ export default function InventoryItemsPage() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       </div>
       <div className="relative z-10 space-y-6">
         <div className="space-y-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
-              <Package className="h-6 w-6 text-[#00f7ff]" />
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc] dark:drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+              <Package className="h-6 w-6 text-brand-500 dark:text-[#00f7ff]" />
               {t('inventory.items')}
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -267,7 +267,7 @@ export default function InventoryItemsPage() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-border dark:border-[#bc13fe]/30 p-2.5 sm:p-4 dark:shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-primary/30 dark:hover:border-[#bc13fe]/50 transition-all">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('inventory.totalItems')}</p>
@@ -279,7 +279,7 @@ export default function InventoryItemsPage() {
               </div>
             </div>
 
-            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-border dark:border-[#bc13fe]/30 p-2.5 sm:p-4 dark:shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-orange-300 dark:hover:border-[#bc13fe]/50 transition-all">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('inventory.lowStock')}</p>
@@ -289,7 +289,7 @@ export default function InventoryItemsPage() {
               </div>
             </div>
 
-            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-border dark:border-[#bc13fe]/30 p-2.5 sm:p-4 dark:shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-destructive/30 dark:hover:border-[#bc13fe]/50 transition-all">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('inventory.outOfStock')}</p>
@@ -299,7 +299,7 @@ export default function InventoryItemsPage() {
               </div>
             </div>
 
-            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-[#bc13fe]/30 p-2.5 sm:p-4 shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-[#bc13fe]/50 transition-all">
+            <div className="bg-card/80 backdrop-blur-xl rounded-xl border-2 border-border dark:border-[#bc13fe]/30 p-2.5 sm:p-4 dark:shadow-[0_0_20px_rgba(188,19,254,0.2)] hover:border-success/30 dark:hover:border-[#bc13fe]/50 transition-all">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('inventory.totalValue')}</p>
@@ -581,15 +581,15 @@ export default function InventoryItemsPage() {
                   <div>
                     <ModalLabel>{t('inventory.category')}</ModalLabel>
                     <ModalSelect value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}>
-                      <option value="" className="bg-[#0a0520]">{t('inventory.selectCategory')}</option>
-                      {categories.map((cat) => (<option key={cat.id} value={cat.id} className="bg-[#0a0520]">{cat.name}</option>))}
+                      <option value="" className="dark:bg-[#0a0520]">{t('inventory.selectCategory')}</option>
+                      {categories.map((cat) => (<option key={cat.id} value={cat.id} className="dark:bg-[#0a0520]">{cat.name}</option>))}
                     </ModalSelect>
                   </div>
                   <div>
                     <ModalLabel>{t('inventory.supplier')}</ModalLabel>
                     <ModalSelect value={formData.supplierId} onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}>
-                      <option value="" className="bg-[#0a0520]">{t('inventory.selectSupplier')}</option>
-                      {suppliers.map((sup) => (<option key={sup.id} value={sup.id} className="bg-[#0a0520]">{sup.name}</option>))}
+                      <option value="" className="dark:bg-[#0a0520]">{t('inventory.selectSupplier')}</option>
+                      {suppliers.map((sup) => (<option key={sup.id} value={sup.id} className="dark:bg-[#0a0520]">{sup.name}</option>))}
                     </ModalSelect>
                   </div>
                   <div>
@@ -627,7 +627,7 @@ export default function InventoryItemsPage() {
                   </div>
                   <div className="md:col-span-2 flex items-center gap-3">
                     <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-                      <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff] w-4 h-4" />
+                      <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-background dark:bg-[#0a0520] accent-brand-500 dark:accent-[#00f7ff] w-4 h-4" />
                       <span>{t('common.active')}</span>
                     </label>
                   </div>

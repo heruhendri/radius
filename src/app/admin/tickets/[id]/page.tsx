@@ -234,7 +234,7 @@ export default function AdminTicketDetailPage() {
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 dark:border-[#00f7ff] dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10"></div>
       </div>
     );
   }

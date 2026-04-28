@@ -229,7 +229,7 @@ export default function ODPsPage() {
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
-        <RefreshCcw className="h-12 w-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
+        <RefreshCcw className="h-12 w-12 animate-spin text-brand-500 dark:text-[#00f7ff] dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" />
       </div>
     );
   }
@@ -241,13 +241,13 @@ export default function ODPsPage() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       </div>
       <div className="relative z-10 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc] dark:drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-3">
               <Box className="h-6 w-6 text-[#00f7ff] drop-shadow-[0_0_15px_rgba(0,247,255,0.6)]" />
               ODP Management
             </h1>
@@ -587,8 +587,8 @@ export default function ODPsPage() {
                 <div>
                   <ModalLabel required>{t('olt.title')}</ModalLabel>
                   <ModalSelect value={formData.oltId} onChange={(e) => setFormData({ ...formData, oltId: e.target.value, odcId: '', parentOdpId: '' })} required>
-                    <option value="" className="bg-[#0a0520]">{t('network.selectOlt')}</option>
-                    {olts.map(olt => (<option key={olt.id} value={olt.id} className="bg-[#0a0520]">{olt.name}</option>))}
+                    <option value="" className="dark:bg-[#0a0520]">{t('network.selectOlt')}</option>
+                    {olts.map(olt => (<option key={olt.id} value={olt.id} className="dark:bg-[#0a0520]">{olt.name}</option>))}
                   </ModalSelect>
                 </div>
                 <div>
@@ -608,13 +608,13 @@ export default function ODPsPage() {
                 </div>
                 {connectionType === 'odc' ? (
                   <ModalSelect value={formData.odcId} onChange={(e) => setFormData({ ...formData, odcId: e.target.value })} required={connectionType === 'odc'}>
-                    <option value="" className="bg-[#0a0520]">{t('network.selectOdc')}</option>
-                    {filteredOdcs.map(odc => (<option key={odc.id} value={odc.id} className="bg-[#0a0520]">{odc.name}</option>))}
+                    <option value="" className="dark:bg-[#0a0520]">{t('network.selectOdc')}</option>
+                    {filteredOdcs.map(odc => (<option key={odc.id} value={odc.id} className="dark:bg-[#0a0520]">{odc.name}</option>))}
                   </ModalSelect>
                 ) : (
                   <ModalSelect value={formData.parentOdpId} onChange={(e) => setFormData({ ...formData, parentOdpId: e.target.value })} required={connectionType === 'odp'}>
-                    <option value="" className="bg-[#0a0520]">{t('network.selectParentOdp')}</option>
-                    {filteredParentOdps.map(odp => (<option key={odp.id} value={odp.id} className="bg-[#0a0520]">{odp.name}</option>))}
+                    <option value="" className="dark:bg-[#0a0520]">{t('network.selectParentOdp')}</option>
+                    {filteredParentOdps.map(odp => (<option key={odp.id} value={odp.id} className="dark:bg-[#0a0520]">{odp.name}</option>))}
                   </ModalSelect>
                 )}
               </div>
@@ -626,9 +626,9 @@ export default function ODPsPage() {
                 <div>
                   <ModalLabel>{t('common.status')}</ModalLabel>
                   <ModalSelect value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
-                    <option value="active" className="bg-[#0a0520]">{t('network.active')}</option>
-                    <option value="inactive" className="bg-[#0a0520]">{t('network.inactive')}</option>
-                    <option value="maintenance" className="bg-[#0a0520]">{t('network.maintenance')}</option>
+                    <option value="active" className="dark:bg-[#0a0520]">{t('network.active')}</option>
+                    <option value="inactive" className="dark:bg-[#0a0520]">{t('network.inactive')}</option>
+                    <option value="maintenance" className="dark:bg-[#0a0520]">{t('network.maintenance')}</option>
                   </ModalSelect>
                 </div>
               </div>
@@ -650,7 +650,7 @@ export default function ODPsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="followRoad" checked={formData.followRoad} onChange={(e) => setFormData({ ...formData, followRoad: e.target.checked })} className="w-3 h-3 rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]" />
+                <input type="checkbox" id="followRoad" checked={formData.followRoad} onChange={(e) => setFormData({ ...formData, followRoad: e.target.checked })} className="w-3 h-3 rounded border-[#bc13fe]/50 bg-background dark:bg-[#0a0520] accent-brand-500 dark:accent-[#00f7ff]" />
                 <label htmlFor="followRoad" className="text-xs text-foreground">{t('network.followRoadPath')}</label>
               </div>
             </ModalBody>

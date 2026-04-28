@@ -306,7 +306,7 @@ export default function ManagementPage() {
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
         <div className="flex flex-col items-center gap-2 relative z-10">
-          <div className="w-12 h-12 border-2 border-[#00f7ff] border-t-transparent rounded-full animate-spin drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
+          <div className="w-12 h-12 border-2 border-brand-500 dark:border-[#00f7ff] border-t-transparent rounded-full animate-spin dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
           <span className="text-xs text-muted-foreground">{t('common.loading')}</span>
         </div>
       </div>
@@ -319,13 +319,13 @@ export default function ManagementPage() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       </div>
       <div className="max-w-7xl mx-auto relative z-10 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('management.title')}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc] dark:drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('management.title')}</h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('management.subtitle')}</p>
           </div>
           {hasPermission('users.create') && (
@@ -607,7 +607,7 @@ export default function ManagementPage() {
               <div>
                 <ModalLabel required>{t('management.role')}</ModalLabel>
                 <ModalSelect value={formData.role} onChange={(e) => handleRoleChange(e.target.value)}>
-                  {ROLES.filter((role) => role.value !== 'SUPER_ADMIN' || currentUserIsSuperAdmin).map((role) => (<option key={role.value} value={role.value} className="bg-[#0a0520]">{t(`management.${role.translationKey}`)}</option>))}
+                  {ROLES.filter((role) => role.value !== 'SUPER_ADMIN' || currentUserIsSuperAdmin).map((role) => (<option key={role.value} value={role.value} className="dark:bg-[#0a0520]">{t(`management.${role.translationKey}`)}</option>))}
                 </ModalSelect>
                 <p className="text-[10px] text-muted-foreground mt-1">{t('management.roleAutoLoad')}</p>
               </div>
@@ -620,7 +620,7 @@ export default function ManagementPage() {
                       <div className="grid grid-cols-2 gap-1">
                         {perms.map((perm) => (
                           <label key={perm.id} className="flex items-center gap-1.5 cursor-pointer p-1 hover:bg-[#bc13fe]/10 rounded transition-colors">
-                            <input type="checkbox" checked={formData.permissions.includes(perm.key)} onChange={() => togglePermission(perm.key)} className="w-3 h-3 rounded border-[#bc13fe]/50 bg-background dark:bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff]" />
+                            <input type="checkbox" checked={formData.permissions.includes(perm.key)} onChange={() => togglePermission(perm.key)} className="w-3 h-3 rounded border-[#bc13fe]/50 bg-background dark:bg-background dark:bg-[#0a0520] accent-brand-500 dark:accent-[#00f7ff]" />
                             <span className="text-[10px] text-foreground">{perm.name}</span>
                           </label>
                         ))}

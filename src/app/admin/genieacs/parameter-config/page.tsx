@@ -296,12 +296,12 @@ export default function ParameterConfigPage() {
 
   return (
     <div className="bg-background relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div><div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div><div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div><div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div></div>
       <div className="relative z-10 max-w-6xl mx-auto space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
-              <Settings2 className="w-6 h-6 text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc] dark:drop-shadow-[0_0_30px_rgba(0,247,255,0.5)] flex items-center gap-2">
+              <Settings2 className="w-6 h-6 text-brand-500 dark:text-[#00f7ff] dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
               {t('genieacs.paramConfigTitle')}
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -388,7 +388,7 @@ export default function ParameterConfigPage() {
         {/* Configuration List - Card Layout */}
         {loading ? (
           <div className="flex items-center justify-center py-10">
-            <Loader2 className="w-5 h-5 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
+            <Loader2 className="w-5 h-5 animate-spin text-brand-500 dark:text-[#00f7ff] dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)]" />
           </div>
         ) : (
           <div className="bg-card rounded-lg border border-border">
@@ -714,7 +714,7 @@ export default function ParameterConfigPage() {
                     }}
                     className="w-full px-3 py-2 border-2 border-[#bc13fe]/30 rounded-lg focus:ring-1 focus:ring-[#00f7ff]/50 focus:border-[#00f7ff] bg-background dark:bg-[#0a0520] text-foreground text-sm outline-none transition-all appearance-none cursor-pointer"
                   >
-                    <option value="" className="bg-[#0a0520]">{t('genieacs.selectToAdd')}</option>
+                    <option value="" className="dark:bg-[#0a0520]">{t('genieacs.selectToAdd')}</option>
                     {virtualParameters.map((vp) => (
                       <option key={vp.id} value={vp.parameter}>
                         {vp.name} ({vp.parameter})
@@ -750,7 +750,7 @@ export default function ParameterConfigPage() {
                   <option value="datetime">{t('genieacs.formatDatetime')}</option>
                   <option value="uptime">{t('genieacs.formatUptime')}</option>
                   <option value="status">{t('genieacs.formatStatus')}</option>
-                  <option value="boolean" className="bg-[#0a0520]">{t('genieacs.formatBoolean')}</option>
+                  <option value="boolean" className="dark:bg-[#0a0520]">{t('genieacs.formatBoolean')}</option>
                 </ModalSelect>
               </div>
 

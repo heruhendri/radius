@@ -128,7 +128,7 @@ export default function SecuritySettingsPage() {
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc]">
           Security Settings
         </h1>
         <p className="text-sm text-muted-foreground mt-1">Manage your account security — Two-Factor Authentication</p>

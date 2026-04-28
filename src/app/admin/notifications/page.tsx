@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -276,11 +276,11 @@ export default function NotificationsPage() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       </div>
       <div className="relative z-10 space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#bc13fe] to-[#ff44cc] rounded-xl p-4 text-white shadow-[0_0_30px_rgba(188,19,254,0.3)]">
+      <div className="bg-brand-500 dark:bg-gradient-to-r dark:from-[#bc13fe] dark:to-[#ff44cc] rounded-xl p-4 text-white dark:shadow-[0_0_30px_rgba(188,19,254,0.3)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5" />

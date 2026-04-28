@@ -166,9 +166,9 @@ function AddPppoeUserModal({ isOpen, onClose, onSuccess, profiles, routers, area
                 </div>
               </div>
             </div>
-            <div><ModalLabel required>{t('pppoe.profile')}</ModalLabel><ModalSelect value={formData.profileId} onChange={(e) => setFormData(prev => ({ ...prev, profileId: e.target.value }))} required><option value="" className="bg-[#0a0520]">{t('common.select')}</option>{profiles.map((p) => <option key={p.id} value={p.id} className="bg-[#0a0520]">{p.name} - Rp {p.price.toLocaleString('id-ID')}</option>)}</ModalSelect></div>
-            <div><ModalLabel>NAS ({t('common.optional')})</ModalLabel><ModalSelect value={formData.routerId} onChange={(e) => setFormData(prev => ({ ...prev, routerId: e.target.value }))}><option value="" className="bg-[#0a0520]">{t('pppoe.global')}</option>{routers.map((r) => <option key={r.id} value={r.id} className="bg-[#0a0520]">{r.name} ({r.ipAddress})</option>)}</ModalSelect></div>
-            <div><ModalLabel>Area <span className="text-muted-foreground text-[10px]">({t('common.optional')})</span></ModalLabel><ModalSelect value={formData.areaId} onChange={(e) => setFormData(prev => ({ ...prev, areaId: e.target.value }))}><option value="" className="bg-[#0a0520]">-- Pilih Area --</option>{areas.map((a) => <option key={a.id} value={a.id} className="bg-[#0a0520]">{a.name}</option>)}</ModalSelect></div>
+            <div><ModalLabel required>{t('pppoe.profile')}</ModalLabel><ModalSelect value={formData.profileId} onChange={(e) => setFormData(prev => ({ ...prev, profileId: e.target.value }))} required><option value="" className="dark:bg-[#0a0520]">{t('common.select')}</option>{profiles.map((p) => <option key={p.id} value={p.id} className="dark:bg-[#0a0520]">{p.name} - Rp {p.price.toLocaleString('id-ID')}</option>)}</ModalSelect></div>
+            <div><ModalLabel>NAS ({t('common.optional')})</ModalLabel><ModalSelect value={formData.routerId} onChange={(e) => setFormData(prev => ({ ...prev, routerId: e.target.value }))}><option value="" className="dark:bg-[#0a0520]">{t('pppoe.global')}</option>{routers.map((r) => <option key={r.id} value={r.id} className="dark:bg-[#0a0520]">{r.name} ({r.ipAddress})</option>)}</ModalSelect></div>
+            <div><ModalLabel>Area <span className="text-muted-foreground text-[10px]">({t('common.optional')})</span></ModalLabel><ModalSelect value={formData.areaId} onChange={(e) => setFormData(prev => ({ ...prev, areaId: e.target.value }))}><option value="" className="dark:bg-[#0a0520]">-- Pilih Area --</option>{areas.map((a) => <option key={a.id} value={a.id} className="dark:bg-[#0a0520]">{a.name}</option>)}</ModalSelect></div>
             <div className="grid grid-cols-2 gap-3">
               <div><ModalLabel required>{t('common.name')}</ModalLabel><ModalInput type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} required /></div>
               <div><ModalLabel required>{t('common.phone')}</ModalLabel><ModalInput type="tel" value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} required /></div>
@@ -201,7 +201,7 @@ function AddPppoeUserModal({ isOpen, onClose, onSuccess, profiles, routers, area
               </div>
             </div>
             {formData.subscriptionType === 'POSTPAID' && (
-              <div><ModalLabel><Calendar className="w-3 h-3 inline mr-0.5" />{t('pppoe.billingDate')}</ModalLabel><ModalSelect value={formData.billingDay} onChange={(e) => setFormData(prev => ({ ...prev, billingDay: e.target.value }))}>{Array.from({ length: 31 }, (_, i) => i + 1).map(day => (<option key={day} value={day} className="bg-[#0a0520]">{t('pppoe.dayOf')} {day}</option>))}</ModalSelect><p className="text-[10px] text-muted-foreground mt-1">{t('pppoe.monthlyDueDateDesc')}</p></div>
+              <div><ModalLabel><Calendar className="w-3 h-3 inline mr-0.5" />{t('pppoe.billingDate')}</ModalLabel><ModalSelect value={formData.billingDay} onChange={(e) => setFormData(prev => ({ ...prev, billingDay: e.target.value }))}>{Array.from({ length: 31 }, (_, i) => i + 1).map(day => (<option key={day} value={day} className="dark:bg-[#0a0520]">{t('pppoe.dayOf')} {day}</option>))}</ModalSelect><p className="text-[10px] text-muted-foreground mt-1">{t('pppoe.monthlyDueDateDesc')}</p></div>
             )}
             {formData.subscriptionType === 'PREPAID' && (
               <div>
@@ -1171,7 +1171,7 @@ export default function PppoeUsersPage() {
       <p className="text-xs text-muted-foreground">{t('pppoe.noPermission')}</p></div>);
   }
 
-  if (loading) { return <div className="flex items-center justify-center min-h-[60vh]"><div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div></div><Loader2 className="w-12 h-12 animate-spin text-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" /></div>; }
+  if (loading) { return <div className="flex items-center justify-center min-h-[60vh]"><div className="absolute inset-0 overflow-hidden pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div></div><Loader2 className="w-12 h-12 animate-spin text-brand-500 dark:text-[#00f7ff] dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10" /></div>; }
 
   return (
     <div className="bg-background relative overflow-hidden">
@@ -1180,7 +1180,7 @@ export default function PppoeUsersPage() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       </div>
 
       <div className="relative z-10 space-y-6">
@@ -1188,7 +1188,7 @@ export default function PppoeUsersPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('pppoe.title')}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc] dark:drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">{t('pppoe.title')}</h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('pppoe.subtitle')}</p>
             </div>
             {/* Tombol Kirim Notifikasi di Header */}
@@ -1719,15 +1719,15 @@ export default function PppoeUsersPage() {
               <div>
                 <ModalLabel required>{t('pppoe.selectRouter')}</ModalLabel>
                 <ModalSelect value={syncRouterId} onChange={(e) => { setSyncRouterId(e.target.value); setSyncPreview(null); setSyncResult(null); }}>
-                  <option value="" className="bg-[#0a0520]">-- Pilih Router --</option>
-                  {routers.map((r) => <option key={r.id} value={r.id} className="bg-[#0a0520]">{r.name} ({r.ipAddress})</option>)}
+                  <option value="" className="dark:bg-[#0a0520]">-- Pilih Router --</option>
+                  {routers.map((r) => <option key={r.id} value={r.id} className="dark:bg-[#0a0520]">{r.name} ({r.ipAddress})</option>)}
                 </ModalSelect>
               </div>
               <div>
                 <ModalLabel required>{t('pppoe.targetProfile')}</ModalLabel>
                 <ModalSelect value={syncProfileId} onChange={(e) => setSyncProfileId(e.target.value)}>
-                  <option value="" className="bg-[#0a0520]">{t('pppoe.selectProfile')}</option>
-                  {profiles.map((p) => <option key={p.id} value={p.id} className="bg-[#0a0520]">{p.name} - Rp {p.price.toLocaleString('id-ID')}</option>)}
+                  <option value="" className="dark:bg-[#0a0520]">{t('pppoe.selectProfile')}</option>
+                  {profiles.map((p) => <option key={p.id} value={p.id} className="dark:bg-[#0a0520]">{p.name} - Rp {p.price.toLocaleString('id-ID')}</option>)}
                 </ModalSelect>
               </div>
             </div>
@@ -1816,7 +1816,7 @@ export default function PppoeUsersPage() {
               <div>
                 <ModalLabel required>{t('pppoe.selectPackage')}</ModalLabel>
                 <ModalSelect value={selectedProfileForExtend} onChange={(e) => setSelectedProfileForExtend(e.target.value)}>
-                  {profiles.map((p) => (<option key={p.id} value={p.id} className="bg-[#0a0520]">{p.name} - Rp {p.price.toLocaleString('id-ID')}{p.id === selectedUserForExtend.profile.id ? ` ${t('pppoe.currentPackageLabel')}` : ''}</option>))}
+                  {profiles.map((p) => (<option key={p.id} value={p.id} className="dark:bg-[#0a0520]">{p.name} - Rp {p.price.toLocaleString('id-ID')}{p.id === selectedUserForExtend.profile.id ? ` ${t('pppoe.currentPackageLabel')}` : ''}</option>))}
                 </ModalSelect>
                 <p className="text-[10px] text-muted-foreground mt-1">{selectedProfileForExtend !== selectedUserForExtend.profile.id ? `⚠️ ${t('pppoe.packageWillChange')}` : t('pppoe.extendSamePackage')}</p>
               </div>
@@ -1843,8 +1843,8 @@ export default function PppoeUsersPage() {
                 <div>
                   <ModalLabel required>{t('pppoe.statusLabel')}</ModalLabel>
                   <ModalSelect value={broadcastData.status} onChange={(e) => setBroadcastData({ ...broadcastData, status: e.target.value })}>
-                    <option value="in_progress" className="bg-[#0a0520]">🔧 {t('pppoe.outageInProgress')}</option>
-                    <option value="resolved" className="bg-[#0a0520]">✅ {t('pppoe.outageResolved')}</option>
+                    <option value="in_progress" className="dark:bg-[#0a0520]">🔧 {t('pppoe.outageInProgress')}</option>
+                    <option value="resolved" className="dark:bg-[#0a0520]">✅ {t('pppoe.outageResolved')}</option>
                   </ModalSelect>
                 </div>
                 {broadcastData.status === 'in_progress' ? (

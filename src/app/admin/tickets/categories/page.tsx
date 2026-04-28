@@ -219,13 +219,13 @@ export default function TicketCategoriesPage() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#ff44cc]/20 rounded-full blur-3xl"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="hidden dark:block absolute inset-0 bg-[linear-gradient(rgba(188,19,254,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(188,19,254,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       </div>
       <div className="relative z-10 space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#00f7ff] via-white to-[#ff44cc] bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-[#00f7ff] dark:via-white dark:to-[#ff44cc] dark:drop-shadow-[0_0_30px_rgba(0,247,255,0.5)]">
               {t('ticket.ticketCategories')}
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -248,14 +248,14 @@ export default function TicketCategoriesPage() {
               <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#bc13fe]/20 rounded-full blur-3xl animate-pulse"></div>
               <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00f7ff]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
             </div>
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00f7ff] drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 dark:border-[#00f7ff] dark:drop-shadow-[0_0_20px_rgba(0,247,255,0.6)] relative z-10"></div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {categories.map((category) => (
               <div
                 key={category.id}
-                className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-[#00f7ff]/50 transition-all hover:shadow-[0_0_20px_rgba(0,247,255,0.3)]"
+                className="bg-card dark:bg-[#1a1525]/80 backdrop-blur-sm border border-border dark:border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-primary/30 dark:hover:border-[#00f7ff]/50 transition-all dark:hover:shadow-[0_0_20px_rgba(0,247,255,0.3)]"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -310,21 +310,21 @@ export default function TicketCategoriesPage() {
 
         {/* Stats Footer */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-[#00f7ff]/50 transition-all">
+          <div className="bg-card dark:bg-[#1a1525]/80 backdrop-blur-sm border border-border dark:border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-primary/30 dark:hover:border-[#00f7ff]/50 transition-all">
             <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.totalCategories')}</p>
             <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.total}</p>
           </div>
-          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-red-500/50 transition-all">
+          <div className="bg-card dark:bg-[#1a1525]/80 backdrop-blur-sm border border-border dark:border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-red-400/50 transition-all">
             <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.networkConnection')}</p>
-            <p className="text-lg sm:text-2xl font-bold text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">{stats.network}</p>
+            <p className="text-lg sm:text-2xl font-bold text-red-500 dark:text-red-400 dark:drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">{stats.network}</p>
           </div>
-          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-green-500/50 transition-all">
+          <div className="bg-card dark:bg-[#1a1525]/80 backdrop-blur-sm border border-border dark:border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-green-500/50 transition-all">
             <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.installationTechnical')}</p>
-            <p className="text-lg sm:text-2xl font-bold text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]">{stats.technical}</p>
+            <p className="text-lg sm:text-2xl font-bold text-green-600 dark:text-green-400 dark:drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]">{stats.technical}</p>
           </div>
-          <div className="bg-[#1a1525]/80 backdrop-blur-sm border border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-cyan-500/50 transition-all">
+          <div className="bg-card dark:bg-[#1a1525]/80 backdrop-blur-sm border border-border dark:border-[#bc13fe]/30 rounded-lg p-2.5 sm:p-4 hover:border-cyan-500/50 transition-all">
             <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.billingSupport')}</p>
-            <p className="text-lg sm:text-2xl font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]">{stats.billing}</p>
+            <p className="text-lg sm:text-2xl font-bold text-brand-500 dark:text-cyan-400 dark:drop-shadow-[0_0_10px_rgba(0,247,255,0.5)]">{stats.billing}</p>
           </div>
         </div>
 
@@ -355,7 +355,7 @@ export default function TicketCategoriesPage() {
               </div>
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-                  <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-[#0a0520] text-[#00f7ff] focus:ring-[#00f7ff] w-4 h-4" />
+                  <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded border-[#bc13fe]/50 bg-background dark:bg-[#0a0520] accent-brand-500 dark:accent-[#00f7ff] w-4 h-4" />
                   <span>{t('ticket.active')}</span>
                 </label>
               </div>

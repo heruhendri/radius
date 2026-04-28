@@ -43,11 +43,11 @@ export default function SystemTicketCategoriesPage() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-cyan-500/20">
-            <Tag className="w-6 h-6 text-cyan-400" />
+          <div className="p-2 rounded-lg bg-brand-500/10 dark:bg-cyan-500/20">
+            <Tag className="w-6 h-6 text-brand-500 dark:text-cyan-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-cyan-400">
+            <h1 className="text-xl font-bold text-foreground dark:text-cyan-400">
               {t('ticket.categoriesPage.title')}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -59,9 +59,9 @@ export default function SystemTicketCategoriesPage() {
         {/* System Info Alert */}
         <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
+            <Info className="w-5 h-5 text-brand-500 dark:text-cyan-400 flex-shrink-0 mt-0.5" />
             <div>
-              <h3 className="text-sm font-medium text-cyan-400">
+              <h3 className="text-sm font-medium text-brand-600 dark:text-cyan-400">
                 {t('ticket.categoriesPage.systemInfo')}
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
@@ -76,7 +76,7 @@ export default function SystemTicketCategoriesPage() {
           {TICKET_CATEGORIES.map((category) => (
             <div
               key={category.id}
-              className="bg-[#1a1525] border border-gray-800 rounded-lg p-4 hover:border-cyan-500/30 transition-colors"
+              className="bg-card dark:bg-[#1a1525] border border-border dark:border-gray-800 rounded-lg p-4 hover:border-primary/30 dark:hover:border-cyan-500/30 transition-colors"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -99,7 +99,7 @@ export default function SystemTicketCategoriesPage() {
               
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <span>{t('ticket.categoriesPage.slaTarget')}</span>
-                <span className="text-cyan-400 font-medium">
+                <span className="text-brand-600 dark:text-cyan-400 font-medium">
                   {category.slaHours} {t('ticket.categoriesPage.hours')}
                 </span>
               </div>
@@ -108,22 +108,22 @@ export default function SystemTicketCategoriesPage() {
         </div>
 
         {/* Stats Footer */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-800">
-          <div className="bg-[#1a1525] rounded-lg p-4">
-            <p className="text-xs text-gray-500 mb-1">{t('ticket.categoriesPage.totalCategories')}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border dark:border-gray-800">
+          <div className="bg-muted dark:bg-[#1a1525] rounded-lg p-4">
+            <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.totalCategories')}</p>
             <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.total}</p>
           </div>
-          <div className="bg-[#1a1525] rounded-lg p-4">
-            <p className="text-xs text-gray-500 mb-1">{t('ticket.categoriesPage.networkConnection')}</p>
-            <p className="text-lg sm:text-2xl font-bold text-red-400">{stats.network}</p>
+          <div className="bg-muted dark:bg-[#1a1525] rounded-lg p-4">
+            <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.networkConnection')}</p>
+            <p className="text-lg sm:text-2xl font-bold text-red-500 dark:text-red-400">{stats.network}</p>
           </div>
-          <div className="bg-[#1a1525] rounded-lg p-4">
-            <p className="text-xs text-gray-500 mb-1">{t('ticket.categoriesPage.installationTechnical')}</p>
-            <p className="text-lg sm:text-2xl font-bold text-green-400">{stats.technical}</p>
+          <div className="bg-muted dark:bg-[#1a1525] rounded-lg p-4">
+            <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.installationTechnical')}</p>
+            <p className="text-lg sm:text-2xl font-bold text-green-600 dark:text-green-400">{stats.technical}</p>
           </div>
-          <div className="bg-[#1a1525] rounded-lg p-4">
-            <p className="text-xs text-gray-500 mb-1">{t('ticket.categoriesPage.billingSupport')}</p>
-            <p className="text-lg sm:text-2xl font-bold text-blue-400">{stats.billing}</p>
+          <div className="bg-muted dark:bg-[#1a1525] rounded-lg p-4">
+            <p className="text-xs text-muted-foreground mb-1">{t('ticket.categoriesPage.billingSupport')}</p>
+            <p className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.billing}</p>
           </div>
         </div>
       </div>
