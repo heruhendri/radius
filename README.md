@@ -469,6 +469,23 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 <!-- AUTO-CHANGELOG:START -->
 
+### v2.25.7 — 2026-04-29
+
+### Added
+- **Halaman Cloudflare Tunnel Setup** — Admin → Settings → Cloudflare Tunnel: panduan langkah-langkah interaktif (6 step) install cloudflared di VPS, login, buat tunnel, simpan domain ke database, konfigurasi Nginx, dan verifikasi. Domain tunnel tersimpan ke `company.baseUrl` via API `POST /api/admin/cloudflare-tunnel`. Auto-compress backup >50MB sebelum kirim ke Telegram.
+- **API `GET/POST /api/admin/cloudflare-tunnel`** — Endpoint baru untuk membaca status konfigurasi tunnel (`baseUrl`, `NEXTAUTH_URL`, `NEXT_PUBLIC_APP_URL`) dan menyimpan domain tunnel ke database.
+- **Entry nav sidebar admin: Cloudflare Tunnel** — Menu Settings admin kini memiliki sub-menu "Cloudflare Tunnel" di antara Update Sistem dan Download APK.
+
+### Fixed
+- **Admin sidebar — semua halaman tema terang (light mode) perbaikan massal** — 62 halaman admin masih menggunakan warna neon cyberpunk (`#00f7ff`, `#bc13fe`, `#ff44cc`, dll.) tanpa prefix `dark:` sehingga teks/border/card tidak terbaca di light mode. Seluruh kelas diganti ke pola TailAdmin: title `text-foreground dark:text-transparent dark:bg-clip-text`, spinner `text-brand-500 dark:text-[#00f7ff]`, border `border-border dark:border-[#bc13fe]/30`, card `bg-card dark:bg-[#1a1525]/80`.
+
+### Affected
+- `src/app/admin/AdminClientLayout.tsx`
+- `src/app/admin/settings/cloudflare-tunnel/page.tsx` *(baru)*
+- `src/app/api/admin/cloudflare-tunnel/route.ts` *(baru)*
+- `src/locales/id.json`
+- 62 halaman admin (network, settings, tickets, notifications, dll.)
+
 ### v2.25.6 — 2026-04-28
 
 ### Fixed
@@ -546,30 +563,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 - `src/app/customer/login/page.tsx`
 - `src/app/agent/page.tsx`
 - `src/app/technician/login/page.tsx`
-
-### v2.25.2 — 2026-04-26
-
-### Added
-- **WhatsApp Baileys — Native WhatsApp gateway built-in di VPS** — Provider baru `baileys` menggunakan library `@whiskeysockets/baileys` yang berjalan sebagai proses PM2 terpisah (`salfanet-wa`) di `127.0.0.1:4000`. Tidak perlu layanan pihak ketiga (Fonnte, WAHA, MPWA, dll).
-  - `GET /api/whatsapp/providers/:id/qr` — Ambil QR code untuk scan WhatsApp Web
-  - `GET /api/whatsapp/providers/:id/status` — Cek status koneksi (connected/disconnected)
-  - `POST /api/whatsapp/providers/:id/restart` — Logout session & generate QR baru
-  - `wa-service.js` — Express server standalone yang mengelola koneksi Baileys + generate QR (base64 PNG)
-  - PM2 process `salfanet-wa` ditambahkan ke `production/ecosystem.config.js`
-  - Auth session tersimpan di `/var/data/salfanet/baileys_auth` (persist across restart)
-  - `vps-install/updater.sh` otomatis setup direktori auth + start `salfanet-wa`
-- **QR Modal: success state + auto-refresh** — Setelah scan berhasil, modal WhatsApp QR menampilkan animasi centang hijau "WhatsApp Berhasil Terhubung!" beserta tombol tutup. Status provider card di-refresh otomatis tanpa reload halaman.
-
-### Fixed
-- **HTTP 400 saat QR belum siap (WAITING state)** — Saat Baileys masih inisialisasi (belum generate QR), `/qr` endpoint sebelumnya mengembalikan 400 → frontend tampil error dan tutup modal. Sekarang server balas 202 dengan `{ waiting: true }`, dan frontend otomatis retry setiap 2,5 detik dengan spinner loading tetap tampil.
-- **Spinner menghilang saat WAITING** — Bug `finally { setQrLoading(false) }` selalu dieksekusi meskipun ada `return` di `try` block. Diperbaiki dengan flag `retrying` yang dideklarasi di luar `try` — `finally` hanya stop spinner jika `!retrying`.
-- **Status tetap "terhubung" setelah device disconnect** — Saat perangkat melepas Linked Device dari HP, Baileys set status `logged_out` tapi tidak ada auto-reconnect. Klik tombol QR hanya mengembalikan WAITING tanpa pernah generate QR baru. Diperbaiki: endpoint `/qr` kini otomatis memanggil `connectToWhatsApp()` jika status `logged_out` atau `error`, sehingga QR baru muncul otomatis.
-- **"Tidak dapat menautkan" saat scan QR** — WhatsApp menolak koneksi karena fingerprint browser `macOS Desktop` memicu deteksi bot. Diperbaiki dengan mengubah ke `Browsers.ubuntu('Chrome')` + `markOnlineOnConnect: false` + `connectTimeoutMs: 60000`.
-- **`wa-service.js` crash: MODULE_NOT_FOUND `express`** — Modul `express` tidak ada di `node_modules` karena bukan dependency sebelumnya. Diperbaiki dengan menambahkan `"express": "^4.21.2"` ke `package.json` root.
-
-### Changed
-- **`whatsapp.service.ts`** — Menambahkan `'baileys'` ke union type provider dan method `sendViaBaileys()` yang memanggil `http://127.0.0.1:${WA_SERVICE_PORT}/send`
-- **Dependencies tambahan di `package.json`** — `@whiskeysockets/baileys ^7.0.0-rc.9`, `pino ^10.3.1`, `express ^4.21.2`
 
 <!-- AUTO-CHANGELOG:END -->
 
