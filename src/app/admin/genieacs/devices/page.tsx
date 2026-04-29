@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Server, RefreshCw, Wifi, WifiOff, Search, Loader2, Power, Trash2, Eye, Settings2, CheckCircle, XCircle, RotateCcw, X, Globe, Network, Activity, Smartphone, Monitor, Radio, Edit, Save, Lock, Signal, Thermometer, Info, Shield } from 'lucide-react';
+import { Server, RefreshCw, Wifi, WifiOff, Search, Loader2, Power, Trash2, Eye, Settings2, CheckCircle, XCircle, RotateCcw, X, Globe, Network, Activity, Smartphone, Monitor, Radio, Edit, Save, Lock, Signal, Thermometer, Info, Shield, List, Copy, ChevronDown, ChevronRight, Zap, Code2, Square, CheckSquare } from 'lucide-react';
 import { useToast } from '@/components/cyberpunk/CyberToast';
 import {
   SimpleModal,
@@ -33,6 +33,24 @@ interface GenieACSDevice {
   uptime: string;
   status: string;
   lastInform: string | null;
+}
+
+interface WANConnection {
+  wanDeviceIndex: number;
+  wanConnectionDeviceIndex: number;
+  connectionIndex: number;
+  connectionType: 'PPPoE' | 'IP' | 'Unknown';
+  path: string;
+  name: string;
+  enable: boolean;
+  connectionStatus: string;
+  externalIPAddress: string;
+  username: string;
+  password: string;
+  macAddress: string;
+  dnsServers: string;
+  vlanId: string;
+  serviceList: string;
 }
 
 interface WLANConfig {
@@ -91,6 +109,7 @@ interface DeviceDetail {
   memoryTotal: string;
   cpuUsage: string;
   wlanConfigs: WLANConfig[];
+  wanConnections: WANConnection[];
   connectedDevices: ConnectedHost[];
   totalConnected: number;
   isDualBand: boolean;
@@ -111,6 +130,19 @@ export default function GenieACSDevicesPage() {
   const [selectedDevice, setSelectedDevice] = useState<DeviceDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  // Parameter Browser Modal
+  const [showParamBrowser, setShowParamBrowser] = useState(false);
+  const [paramBrowserData, setParamBrowserData] = useState<{path:string;value:string;type:string;writable:boolean}[]>([]);
+  const [loadingParams, setLoadingParams] = useState(false);
+  const [paramSearch, setParamSearch] = useState('');
+  const [paramExpandedPrefixes, setParamExpandedPrefixes] = useState<Set<string>>(new Set(['InternetGatewayDevice', 'Device', 'VirtualParameters']));
+  const [paramSelected, setParamSelected] = useState<Set<string>>(new Set());
+  const [showGenModal, setShowGenModal] = useState(false);
+  const [genTarget, setGenTarget] = useState<'vp' | 'provision'>('vp');
+  const [genScript, setGenScript] = useState('');
+  const [genName, setGenName] = useState('');
+  const [genSaving, setGenSaving] = useState(false);
+
   // Edit WiFi Modal
   const [showEditWifiModal, setShowEditWifiModal] = useState(false);
   const [editWifiData, setEditWifiData] = useState({
@@ -121,6 +153,25 @@ export default function GenieACSDevicesPage() {
     enabled: true
   });
   const [savingWifi, setSavingWifi] = useState(false);
+
+  // WAN Config state
+  const [showWanModal, setShowWanModal] = useState(false);
+  const [wanModalMode, setWanModalMode] = useState<'edit' | 'add'>('edit');
+  const [editWanData, setEditWanData] = useState<{
+    connectionPath: string;
+    connectionType: string;
+    name: string;
+    username: string;
+    password: string;
+    enable: boolean;
+    currentIP: string;
+    vlanId: string;
+    vlanPriority: string;
+    serviceList: string;
+    wanDeviceIndex: number;
+    wanConnectionDeviceIndex: number;
+  }>({ connectionPath: '', connectionType: 'PPPoE', name: '', username: '', password: '', enable: true, currentIP: '', vlanId: '', vlanPriority: '0', serviceList: 'INTERNET', wanDeviceIndex: 1, wanConnectionDeviceIndex: 1 });
+  const [savingWan, setSavingWan] = useState(false);
 
   const fetchDevices = useCallback(async () => {
     try {
@@ -268,6 +319,28 @@ export default function GenieACSDevicesPage() {
     setSelectedDevice(null);
   };
 
+  const handleBrowseParameters = async (deviceId: string) => {
+    setLoadingParams(true);
+    setShowParamBrowser(true);
+    setParamSearch('');
+    setParamBrowserData([]);
+    try {
+      const res = await fetch(`/api/settings/genieacs/devices/${encodeURIComponent(deviceId)}/parameters`);
+      const data = await res.json();
+      if (data.success) {
+        setParamBrowserData(data.parameters);
+      } else {
+        addToast({ type: 'error', title: t('common.error'), description: data.error || 'Failed to load parameters' });
+        setShowParamBrowser(false);
+      }
+    } catch {
+      addToast({ type: 'error', title: t('common.error'), description: 'Failed to load parameters' });
+      setShowParamBrowser(false);
+    } finally {
+      setLoadingParams(false);
+    }
+  };
+
   // Open Edit WiFi Modal
   const openEditWifiModal = (deviceId: string, wlan?: WLANConfig) => {
     setEditWifiData({
@@ -377,6 +450,115 @@ export default function GenieACSDevicesPage() {
       } finally {
         setSavingWifi(false);
       }
+  };
+
+  const openEditWanModal = (wan: WANConnection) => {
+    setWanModalMode('edit');
+    setEditWanData({
+      connectionPath: wan.path,
+      connectionType: wan.connectionType,
+      name: wan.name,
+      username: wan.username !== '-' ? wan.username : '',
+      password: '',
+      enable: wan.enable,
+      currentIP: wan.externalIPAddress,
+      vlanId: wan.vlanId !== '-' ? wan.vlanId : '',
+      vlanPriority: '0',
+      serviceList: wan.serviceList !== '-' ? wan.serviceList : 'INTERNET',
+      wanDeviceIndex: wan.wanDeviceIndex,
+      wanConnectionDeviceIndex: wan.wanConnectionDeviceIndex,
+    });
+    setShowWanModal(true);
+  };
+
+  const openAddWanModal = () => {
+    setWanModalMode('add');
+    setEditWanData({ connectionPath: '', connectionType: 'PPPoE', name: '', username: '', password: '', enable: true, currentIP: '', vlanId: '', vlanPriority: '0', serviceList: 'INTERNET', wanDeviceIndex: 1, wanConnectionDeviceIndex: 1 });
+    setShowWanModal(true);
+  };
+
+  const handleSaveWan = async () => {
+    if (!selectedDevice) return;
+    if (!await confirm({
+      title: wanModalMode === 'add' ? 'Add WAN Connection' : 'Update WAN Configuration',
+      message: wanModalMode === 'add' ? `Type: ${editWanData.connectionType} | VLAN: ${editWanData.vlanId || 'untagged'} | Service: ${editWanData.serviceList}` : `Connection: ${editWanData.name}`,
+      confirmText: t('common.yesUpdate'),
+      cancelText: t('common.cancel'),
+      variant: 'info',
+    })) return;
+
+    setSavingWan(true);
+    try {
+      if (wanModalMode === 'add') {
+        const body: Record<string, unknown> = {
+          wanDeviceIndex: editWanData.wanDeviceIndex,
+          wanConnectionDeviceIndex: editWanData.wanConnectionDeviceIndex,
+          connectionType: editWanData.connectionType,
+          name: editWanData.name,
+          enable: editWanData.enable,
+          serviceList: editWanData.serviceList,
+        };
+        if (editWanData.vlanId) { body.vlanId = editWanData.vlanId; body.vlanPriority = editWanData.vlanPriority; }
+        if (editWanData.connectionType === 'PPPoE') { body.username = editWanData.username; body.password = editWanData.password; }
+        const res = await fetch(`/api/genieacs/devices/${encodeURIComponent(selectedDevice._id)}/wan`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          addToast({ type: 'success', title: 'WAN Added', description: data.message || 'WAN connection added', duration: 4000 });
+          setShowWanModal(false);
+          setTimeout(() => handleViewDetail(selectedDevice._id), 3000);
+        } else { throw new Error(data.error || 'Failed to add WAN'); }
+      } else {
+        const body: Record<string, unknown> = {
+          connectionPath: editWanData.connectionPath,
+          connectionType: editWanData.connectionType,
+          enable: editWanData.enable,
+          vlanId: editWanData.vlanId,
+          vlanPriority: editWanData.vlanPriority,
+          serviceList: editWanData.serviceList,
+        };
+        if (editWanData.connectionType === 'PPPoE') { if (editWanData.username) body.username = editWanData.username; if (editWanData.password) body.password = editWanData.password; }
+        const res = await fetch(`/api/genieacs/devices/${encodeURIComponent(selectedDevice._id)}/wan`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          addToast({ type: 'success', title: t('common.success'), description: data.message || 'WAN config updated', duration: 4000 });
+          setShowWanModal(false);
+          setTimeout(() => handleViewDetail(selectedDevice._id), 3000);
+        } else { throw new Error(data.error || 'Failed to update WAN'); }
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Failed to update WAN config';
+      addToast({ type: 'error', title: t('common.error'), description: msg });
+    } finally {
+      setSavingWan(false);
+    }
+  };
+
+  const handleDeleteWan = async (wan: WANConnection) => {
+    if (!selectedDevice) return;
+    if (!await confirm({
+      title: 'Delete WAN Connection',
+      message: `Delete: ${wan.name}? This action cannot be undone.`,
+      confirmText: 'Yes, Delete',
+      cancelText: t('common.cancel'),
+      variant: 'danger',
+    })) return;
+    try {
+      const res = await fetch(`/api/genieacs/devices/${encodeURIComponent(selectedDevice._id)}/wan`, {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionPath: wan.path }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast({ type: 'success', title: 'WAN Deleted', description: data.message, duration: 3000 });
+        setTimeout(() => handleViewDetail(selectedDevice._id), 2000);
+      } else { throw new Error(data.error || 'Failed to delete WAN'); }
+    } catch (error: unknown) {
+      addToast({ type: 'error', title: t('common.error'), description: error instanceof Error ? error.message : 'Failed to delete WAN' });
+    }
   };
 
   const InfoRow = ({ label, value, highlight = false }: { label: string; value: string | null | undefined; highlight?: boolean }) => (
@@ -824,6 +1006,20 @@ export default function GenieACSDevicesPage() {
                             {t('genieacs.editWifi')}
                           </button>
                         )}
+                        <button
+                          onClick={() => handleBrowseParameters(selectedDevice._id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 dark:text-teal-300 border border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/30 rounded-lg transition-colors"
+                        >
+                          <List className="w-3 h-3" />
+                          Browse All Parameters
+                        </button>
+                        <button
+                          onClick={openAddWanModal}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-300 border border-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                        >
+                          <Globe className="w-3 h-3" />
+                          Add WAN
+                        </button>
                       </div>
 
                       {/* Main Grid */}
@@ -944,6 +1140,62 @@ export default function GenieACSDevicesPage() {
                                 </div>
                               ))}
                             </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* WAN Connections */}
+                      {selectedDevice.wanConnections && selectedDevice.wanConnections.length > 0 && (
+                        <div className="bg-card rounded-lg border border-border overflow-hidden">
+                          <div className="flex items-center justify-between p-2 bg-muted border-b border-border">
+                            <div className="flex items-center gap-2">
+                              <Globe className="w-3.5 h-3.5 text-success" />
+                              <span className="text-xs font-semibold text-foreground">WAN Connections ({selectedDevice.wanConnections.length})</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted-foreground">{selectedDevice.wanConnections.filter(w => w.enable).length} enabled</span>
+                              <button onClick={openAddWanModal} className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-300 border border-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors">
+                                + Add WAN
+                              </button>
+                            </div>
+                          </div>
+                          <div className="p-3 space-y-2">
+                            {selectedDevice.wanConnections.map((wan, idx) => (
+                              <div key={idx} className="p-2 bg-muted rounded-lg">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`p-1.5 rounded-lg ${wan.enable && wan.connectionStatus === 'Connected' ? 'bg-success/20 dark:bg-green-900/30' : wan.enable ? 'bg-warning/20' : 'bg-muted'}`}>
+                                      <Globe className={`w-3 h-3 ${wan.enable && wan.connectionStatus === 'Connected' ? 'text-success' : wan.enable ? 'text-warning' : 'text-muted-foreground'}`} />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="text-xs font-medium text-foreground">{wan.name}</p>
+                                        <span className={`px-1.5 py-0.5 text-[9px] font-semibold rounded ${wan.connectionType === 'PPPoE' ? 'bg-violet-500/20 text-violet-400' : 'bg-blue-500/20 text-blue-400'}`}>{wan.connectionType}</span>
+                                        {wan.serviceList && wan.serviceList !== '-' && <span className="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-orange-500/20 text-orange-400">{wan.serviceList}</span>}
+                                        {wan.vlanId && wan.vlanId !== '-' && <span className="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-cyan-500/20 text-cyan-400">VLAN {wan.vlanId}</span>}
+                                      </div>
+                                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                                        {wan.username && wan.username !== '-' ? `User: ${wan.username}` : ''}
+                                        {wan.externalIPAddress && wan.externalIPAddress !== '-' ? (wan.username && wan.username !== '-' ? ` • ` : '') + `IP: ${wan.externalIPAddress}` : ''}
+                                        {wan.connectionStatus && wan.connectionStatus !== '-' ? ` • ${wan.connectionStatus}` : ''}
+                                      </p>
+                                      <p className="text-[10px] text-muted-foreground font-mono break-all mt-0.5 opacity-60">{wan.path}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${wan.enable ? 'bg-success/20 text-success dark:bg-green-900/30 dark:text-success' : 'bg-gray-200 text-muted-foreground dark:bg-input dark:text-muted-foreground'}`}>
+                                      {wan.enable ? 'Enabled' : 'Disabled'}
+                                    </span>
+                                    <button onClick={() => openEditWanModal(wan)} className="p-1 text-primary hover:bg-primary/10 dark:hover:bg-primary/20 rounded transition-colors" title="Edit WAN">
+                                      <Edit className="w-3 h-3" />
+                                    </button>
+                                    <button onClick={() => handleDeleteWan(wan)} className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors" title="Delete WAN">
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
@@ -1101,7 +1353,421 @@ export default function GenieACSDevicesPage() {
                 {t('common.save')}
               </ModalButton>
             </ModalFooter>
-          </SimpleModal>\n    </div>
+          </SimpleModal>
+
+      {/* WAN Add / Edit Modal */}
+      <SimpleModal isOpen={showWanModal} onClose={() => setShowWanModal(false)} size="md">
+        <ModalHeader>
+          <ModalTitle className="flex items-center gap-2"><Globe className="w-4 h-4" />{wanModalMode === 'add' ? 'Add WAN Connection' : 'Edit WAN Connection'}</ModalTitle>
+          <ModalDescription>{wanModalMode === 'edit' ? `${editWanData.name} • ${editWanData.connectionType}` : 'Create new WAN connection on device'}</ModalDescription>
+        </ModalHeader>
+        <ModalBody className="space-y-3">
+          {/* Add mode only */}
+          {wanModalMode === 'add' && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <ModalLabel>Connection Type</ModalLabel>
+                  <ModalSelect value={editWanData.connectionType} onChange={(e) => setEditWanData({ ...editWanData, connectionType: e.target.value })}>
+                    <option value="PPPoE">PPPoE</option>
+                    <option value="IP">IP (DHCP)</option>
+                  </ModalSelect>
+                </div>
+                <div>
+                  <ModalLabel>Connection Name</ModalLabel>
+                  <ModalInput type="text" value={editWanData.name} onChange={(e) => setEditWanData({ ...editWanData, name: e.target.value })} placeholder="e.g. INTERNET" autoComplete="off" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <ModalLabel>WAN Device (Port)</ModalLabel>
+                  <ModalSelect value={editWanData.wanDeviceIndex} onChange={(e) => setEditWanData({ ...editWanData, wanDeviceIndex: parseInt(e.target.value) })}>
+                    <option value={1}>WANDevice.1</option>
+                    <option value={2}>WANDevice.2</option>
+                  </ModalSelect>
+                </div>
+                <div>
+                  <ModalLabel>Connection Device (Binding)</ModalLabel>
+                  <ModalSelect value={editWanData.wanConnectionDeviceIndex} onChange={(e) => setEditWanData({ ...editWanData, wanConnectionDeviceIndex: parseInt(e.target.value) })}>
+                    {[1,2,3,4,5,6,7,8].map(i => <option key={i} value={i}>WANConnectionDevice.{i}</option>)}
+                  </ModalSelect>
+                </div>
+              </div>
+            </>
+          )}
+          {/* Edit mode: show current IP */}
+          {wanModalMode === 'edit' && editWanData.currentIP && editWanData.currentIP !== '-' && (
+            <div className="p-2 bg-muted rounded-lg text-xs text-muted-foreground">
+              Current IP: <span className="text-foreground font-medium">{editWanData.currentIP}</span>
+            </div>
+          )}
+          {/* PPPoE credentials */}
+          {editWanData.connectionType === 'PPPoE' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <ModalLabel>{wanModalMode === 'edit' ? 'PPPoE Username' : 'Username'}</ModalLabel>
+                <ModalInput type="text" value={editWanData.username} onChange={(e) => setEditWanData({ ...editWanData, username: e.target.value })} placeholder="user@isp.com" autoComplete="off" />
+              </div>
+              <div>
+                <ModalLabel>{wanModalMode === 'edit' ? 'Password (leave empty=no change)' : 'Password'}</ModalLabel>
+                <ModalInput type="text" value={editWanData.password} onChange={(e) => setEditWanData({ ...editWanData, password: e.target.value })} placeholder={wanModalMode === 'edit' ? 'Leave empty to keep' : 'password'} autoComplete="off" />
+              </div>
+            </div>
+          )}
+          {/* VLAN */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <ModalLabel>VLAN ID <span className="text-muted-foreground">(0 = untagged)</span></ModalLabel>
+              <ModalInput type="number" min={0} max={4094} value={editWanData.vlanId} onChange={(e) => setEditWanData({ ...editWanData, vlanId: e.target.value })} placeholder="e.g. 100" />
+            </div>
+            <div>
+              <ModalLabel>VLAN Priority <span className="text-muted-foreground">(0–7)</span></ModalLabel>
+              <ModalSelect value={editWanData.vlanPriority} onChange={(e) => setEditWanData({ ...editWanData, vlanPriority: e.target.value })}>
+                {[0,1,2,3,4,5,6,7].map(p => <option key={p} value={p}>{p}{p === 0 ? ' (default)' : p === 6 ? ' (high)' : p === 7 ? ' (highest)' : ''}</option>)}
+              </ModalSelect>
+            </div>
+          </div>
+          {/* Service List */}
+          <div>
+            <ModalLabel>Service Type</ModalLabel>
+            <ModalSelect value={editWanData.serviceList} onChange={(e) => setEditWanData({ ...editWanData, serviceList: e.target.value })}>
+              <option value="INTERNET">INTERNET</option>
+              <option value="TR069">TR069</option>
+              <option value="VOIP">VOIP</option>
+              <option value="IPTV">IPTV</option>
+              <option value="INTERNET_TR069">INTERNET,TR069</option>
+              <option value="OTHER">OTHER</option>
+            </ModalSelect>
+            <p className="text-[10px] text-muted-foreground mt-1">Sets X_HW_ServiceList on device (Huawei/ZTE compatible)</p>
+          </div>
+          {/* Enable toggle */}
+          <div className="flex items-center justify-between p-3 bg-muted/50 border border-border rounded-lg">
+            <div>
+              <p className="text-xs font-medium text-foreground">WAN Enable</p>
+              <p className="text-[10px] text-muted-foreground">Enable or disable this WAN connection</p>
+            </div>
+            <button type="button" onClick={() => setEditWanData({ ...editWanData, enable: !editWanData.enable })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editWanData.enable ? 'bg-success' : 'bg-muted-foreground/30'}`}>
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editWanData.enable ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+          {/* TR-069 path reference */}
+          {wanModalMode === 'edit' && (
+            <div className="p-2 bg-muted/50 rounded text-[10px] text-muted-foreground font-mono break-all">Path: {editWanData.connectionPath}</div>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <ModalButton type="button" variant="secondary" onClick={() => setShowWanModal(false)}>{t('common.cancel')}</ModalButton>
+          <ModalButton type="button" variant="primary" onClick={handleSaveWan} disabled={savingWan}>
+            {savingWan ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
+            {wanModalMode === 'add' ? 'Add WAN' : t('common.save')}
+          </ModalButton>
+        </ModalFooter>
+      </SimpleModal>
+
+      {/* Parameter Browser Modal */}
+      {showParamBrowser && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-card rounded-lg shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden mx-4 flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-teal-600 to-teal-400 p-3 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <List className="w-4 h-4" />
+                <div>
+                  <h2 className="text-sm font-semibold">Browse All Parameters</h2>
+                  <p className="text-[10px] text-teal-100">
+                    {loadingParams ? 'Loading...' : `${paramBrowserData.length} parameters · ${paramSelected.size} selected`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {paramSelected.size > 0 && (
+                  <>
+                    <button
+                      onClick={() => {
+                        const sel = paramBrowserData.filter(p => paramSelected.has(p.path));
+                        const lines = ['// Auto-generated VP script', `// ${sel.length} parameter(s) selected`, ''];
+                        if (sel.length === 1) {
+                          lines.push(`const val = declare("${sel[0].path}", { value: 1 });`);
+                          lines.push('return val.value[0];');
+                        } else {
+                          lines.push('const name = args[0].name;');
+                          for (const p of sel) {
+                            lines.push(`if (name === "${p.path}") { const v = declare("${p.path}", { value: 1 }); return v.value[0]; }`);
+                          }
+                          lines.push('return undefined;');
+                        }
+                        setGenScript(lines.join('\n'));
+                        setGenTarget('vp');
+                        setGenName(`vp-${selectedDevice?._id?.slice(0,8) ?? 'device'}`);
+                        setShowGenModal(true);
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-purple-600 hover:bg-purple-700 text-white rounded"
+                    >
+                      <Zap className="w-3 h-3" />
+                      Generate VP
+                    </button>
+                    <button
+                      onClick={() => {
+                        const sel = paramBrowserData.filter(p => paramSelected.has(p.path));
+                        const lines = ['// Auto-generated provision script', `// ${sel.length} parameter(s) selected`, ''];
+                        for (const p of sel) {
+                          const val = typeof p.value === 'string' ? JSON.stringify(p.value) : String(p.value ?? 'null');
+                          if (p.writable) {
+                            lines.push(`declare("${p.path}", { value: [${val}] });`);
+                          } else {
+                            lines.push(`// read-only: declare("${p.path}", { value: 1 });`);
+                          }
+                        }
+                        setGenScript(lines.join('\n'));
+                        setGenTarget('provision');
+                        setGenName(`provision-${selectedDevice?._id?.slice(0,8) ?? 'device'}`);
+                        setShowGenModal(true);
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-blue-600 hover:bg-blue-700 text-white rounded"
+                    >
+                      <Code2 className="w-3 h-3" />
+                      Generate Provision
+                    </button>
+                  </>
+                )}
+                <button onClick={() => { setShowParamBrowser(false); setParamSelected(new Set()); }} className="p-1 hover:bg-white/10 rounded">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Search + select actions */}
+            <div className="p-3 border-b border-border shrink-0 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search parameter path or value..."
+                  value={paramSearch}
+                  onChange={e => setParamSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs border border-border rounded-lg bg-background focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  const visible = paramSearch
+                    ? paramBrowserData.filter(p => p.path.toLowerCase().includes(paramSearch.toLowerCase()) || p.value.toLowerCase().includes(paramSearch.toLowerCase()))
+                    : paramBrowserData;
+                  const allSelected = visible.every(p => paramSelected.has(p.path));
+                  setParamSelected(prev => {
+                    const next = new Set(prev);
+                    if (allSelected) visible.forEach(p => next.delete(p.path));
+                    else visible.forEach(p => next.add(p.path));
+                    return next;
+                  });
+                }}
+                className="flex items-center gap-1 px-2 py-1.5 text-xs border border-border rounded-lg hover:bg-muted whitespace-nowrap"
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                Select All
+              </button>
+              {paramSelected.size > 0 && (
+                <button
+                  onClick={() => setParamSelected(new Set())}
+                  className="flex items-center gap-1 px-2 py-1.5 text-xs border border-border rounded-lg hover:bg-muted whitespace-nowrap text-red-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto flex-1">
+              {loadingParams ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-6 h-6 animate-spin text-teal-500" />
+                </div>
+              ) : (() => {
+                const filtered = paramSearch
+                  ? paramBrowserData.filter(p =>
+                      p.path.toLowerCase().includes(paramSearch.toLowerCase()) ||
+                      p.value.toLowerCase().includes(paramSearch.toLowerCase())
+                    )
+                  : paramBrowserData;
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <List className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-xs">No parameters found</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <table className="w-full text-[11px]">
+                    <thead className="sticky top-0 bg-muted z-10">
+                      <tr>
+                        <th className="px-3 py-2 w-8">
+                          <input
+                            type="checkbox"
+                            className="rounded w-3 h-3"
+                            checked={filtered.length > 0 && filtered.every(p => paramSelected.has(p.path))}
+                            onChange={() => {
+                              const allSel = filtered.every(p => paramSelected.has(p.path));
+                              setParamSelected(prev => {
+                                const next = new Set(prev);
+                                if (allSel) filtered.forEach(p => next.delete(p.path));
+                                else filtered.forEach(p => next.add(p.path));
+                                return next;
+                              });
+                            }}
+                          />
+                        </th>
+                        <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Parameter Path</th>
+                        <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Value</th>
+                        <th className="text-center px-3 py-2 font-semibold text-muted-foreground w-20">Type</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {filtered.map((p, i) => (
+                        <tr
+                          key={i}
+                          className={`hover:bg-muted/50 group cursor-pointer ${paramSelected.has(p.path) ? 'bg-purple-50 dark:bg-purple-900/10' : ''}`}
+                          onClick={() => setParamSelected(prev => {
+                            const next = new Set(prev);
+                            if (next.has(p.path)) next.delete(p.path); else next.add(p.path);
+                            return next;
+                          })}
+                        >
+                          <td className="px-3 py-1.5" onClick={e => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              className="rounded w-3 h-3"
+                              checked={paramSelected.has(p.path)}
+                              onChange={() => setParamSelected(prev => {
+                                const next = new Set(prev);
+                                if (next.has(p.path)) next.delete(p.path); else next.add(p.path);
+                                return next;
+                              })}
+                            />
+                          </td>
+                          <td className="px-3 py-1.5 font-mono text-[10px] text-primary break-all">
+                            <div className="flex items-center gap-1">
+                              <span>{p.path}</span>
+                              {p.writable && (
+                                <span className="shrink-0 px-1 py-0.5 rounded text-[9px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">W</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-1.5 text-foreground break-all">
+                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                              <span className="flex-1">{p.value || <span className="text-muted-foreground italic">empty</span>}</span>
+                              {p.value && (
+                                <button
+                                  onClick={() => { navigator.clipboard.writeText(p.value); }}
+                                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-primary transition-opacity shrink-0"
+                                  title="Copy value"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-1.5 text-center text-muted-foreground">
+                            <span className="px-1 py-0.5 bg-muted rounded text-[9px]">
+                              {p.type.replace('xsd:', '')}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Generate Script Modal */}
+      {showGenModal && createPortal(
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/70">
+          <div className="bg-card rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
+            <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="font-semibold text-sm">
+                  {genTarget === 'vp' ? 'Generate Virtual Parameter Script' : 'Generate Provision Script'}
+                </h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Script akan disimpan ke Prisma dan otomatis sync ke GenieACS
+                </p>
+              </div>
+              <button onClick={() => setShowGenModal(false)} className="p-1 hover:bg-muted rounded text-muted-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 overflow-y-auto flex-1">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Nama / ID</label>
+                <input
+                  value={genName}
+                  onChange={e => setGenName(e.target.value)}
+                  className="w-full border border-border rounded-md px-3 py-2 text-sm font-mono bg-background focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  placeholder={genTarget === 'vp' ? 'contoh: uptime' : 'contoh: provision-default'}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Script</label>
+                <textarea
+                  value={genScript}
+                  onChange={e => setGenScript(e.target.value)}
+                  rows={14}
+                  spellCheck={false}
+                  className="w-full font-mono text-[11px] border border-border rounded-md p-3 bg-slate-50 dark:bg-slate-800/80 dark:text-green-300 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+            <div className="p-4 border-t border-border flex justify-end gap-2 shrink-0">
+              <button
+                onClick={() => setShowGenModal(false)}
+                className="px-3 py-2 text-sm border border-border rounded-md hover:bg-muted"
+              >
+                Batal
+              </button>
+              <button
+                disabled={genSaving || !genName.trim()}
+                onClick={async () => {
+                  if (!genName.trim()) return;
+                  setGenSaving(true);
+                  try {
+                    const endpoint = genTarget === 'vp'
+                      ? '/api/genieacs/virtual-parameters'
+                      : '/api/genieacs/provisions';
+                    const res = await fetch(endpoint, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ _id: genName.trim(), script: genScript }),
+                    });
+                    const json = await res.json();
+                    if (!json.success) throw new Error(json.error ?? 'Gagal menyimpan');
+                    addToast({ type: 'success', title: 'Tersimpan', description: `${genTarget === 'vp' ? 'VP' : 'Provision'} "${genName}" disimpan & sync ke GenieACS`, duration: 3000 });
+                    setShowGenModal(false);
+                  } catch (e) {
+                    addToast({ type: 'error', title: 'Error', description: (e as Error).message });
+                  } finally {
+                    setGenSaving(false);
+                  }
+                }}
+                className="px-4 py-2 text-sm rounded-md text-white flex items-center gap-2 disabled:opacity-60 bg-purple-600 hover:bg-purple-700"
+              >
+                {genSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Simpan & Sync ke GenieACS
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+\n    </div>
       </div >
     </div >
   );

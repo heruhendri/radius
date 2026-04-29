@@ -3,6 +3,20 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { getGenieACSCredentials } from '../route';
 
+// ─── Module-level in-memory device cache ─────────────────────────────────────
+// Survives across requests within the same PM2 cluster worker process.
+// Strategy: serve stale data immediately, then trigger background refresh.
+interface DeviceListCache {
+  devices: Record<string, unknown>[];
+  count: number;
+  statistics: { total: number; online: number; offline: number };
+  timestamp: number;
+  credHash: string; // detect credential change
+}
+let _deviceCache: DeviceListCache | null = null;
+const CACHE_TTL_MS = 60_000; // 60 s – refresh at most once per minute
+let _bgRefreshRunning = false; // prevent concurrent background fetches
+
 // Helper to safely convert any value to string
 function safeString(val: any): string {
   if (val === null || val === undefined) return '-';
@@ -189,15 +203,68 @@ export async function GET(request: NextRequest) {
           devices: [],
           count: 0
         },
-        { status: 200 } // Return 200 with empty data instead of 400
+        { status: 200 }
       );
     }
 
     const { host, username, password } = credentials;
+    const credHash = `${host}:${username}`;
 
-    // Call GenieACS API with timeout
+    // ── Serve from cache if fresh ───────────────────────────────────────────
+    const now = Date.now();
+    if (_deviceCache && _deviceCache.credHash === credHash && (now - _deviceCache.timestamp) < CACHE_TTL_MS) {
+      return NextResponse.json({
+        success: true,
+        devices: _deviceCache.devices,
+        count: _deviceCache.count,
+        statistics: _deviceCache.statistics,
+        fromCache: true,
+        cacheAge: Math.round((now - _deviceCache.timestamp) / 1000),
+      });
+    }
+
+    // ── If stale cache exists, return stale data and refresh in background ──
+    if (_deviceCache && _deviceCache.credHash === credHash && !_bgRefreshRunning) {
+      _bgRefreshRunning = true;
+      fetchAndCacheDevices(host, username, password, credHash).finally(() => {
+        _bgRefreshRunning = false;
+      });
+      return NextResponse.json({
+        success: true,
+        devices: _deviceCache.devices,
+        count: _deviceCache.count,
+        statistics: _deviceCache.statistics,
+        fromCache: true,
+        cacheAge: Math.round((now - _deviceCache.timestamp) / 1000),
+      });
+    }
+
+    // ── No cache: fetch synchronously ──────────────────────────────────────
+    const result = await fetchAndCacheDevices(host, username, password, credHash);
+    return NextResponse.json(result);
+
+  } catch (error: unknown) {
+    console.error('Error fetching devices from GenieACS:', error);
+    const err = error as Error;
+    let errorMessage = 'Failed to fetch devices from GenieACS';
+    if (err.message?.includes('fetch failed') || (err as NodeJS.ErrnoException).code === 'ECONNREFUSED') {
+      errorMessage = 'Unable to connect to GenieACS server. Please check if the server is running.';
+    } else if (err.message?.includes('timeout')) {
+      errorMessage = 'Connection timeout. GenieACS server is not responding.';
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+    return NextResponse.json(
+      { success: false, error: errorMessage, devices: [], count: 0 },
+      { status: 200 }
+    );
+  }
+}
+
+// ─── Shared fetch + cache update ─────────────────────────────────────────────
+async function fetchAndCacheDevices(host: string, username: string, password: string, credHash: string) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const response = await fetch(`${host}/devices`, {
@@ -214,15 +281,7 @@ export async function GET(request: NextRequest) {
 
       if (!response.ok) {
         if (response.status === 401) {
-          return NextResponse.json(
-            { 
-              success: false,
-              error: 'Authentication failed. Invalid username or password.',
-              devices: [],
-              count: 0
-            },
-            { status: 200 }
-          );
+          return { success: false, error: 'Authentication failed. Invalid username or password.', devices: [], count: 0, statistics: { total: 0, online: 0, offline: 0 }, fromCache: false, cacheAge: 0 };
         }
         throw new Error(`GenieACS API returned ${response.status}`);
       }
@@ -287,44 +346,25 @@ export async function GET(request: NextRequest) {
       // Calculate statistics
       const onlineCount = devices.filter((d: any) => d.status === 'Online').length;
       const offlineCount = devices.filter((d: any) => d.status === 'Offline').length;
+      const statistics = { total: devices.length, online: onlineCount, offline: offlineCount };
 
-      return NextResponse.json({
+      // ── Store in cache ──────────────────────────────────────────────────
+      _deviceCache = { devices, count: devices.length, statistics, timestamp: Date.now(), credHash };
+
+      return {
         success: true,
         devices,
         count: devices.length,
-        statistics: {
-          total: devices.length,
-          online: onlineCount,
-          offline: offlineCount
-        }
-      });
-    } catch (fetchError: any) {
+        statistics,
+        fromCache: false,
+        cacheAge: 0,
+      };
+    } catch (fetchError: unknown) {
       clearTimeout(timeoutId);
-      if (fetchError.name === 'AbortError') {
+      const err = fetchError as Error;
+      if (err.name === 'AbortError') {
         throw new Error('Connection timeout. GenieACS server is not responding.');
       }
       throw fetchError;
     }
-  } catch (error: any) {
-    console.error('Error fetching devices from GenieACS:', error);
-    
-    let errorMessage = 'Failed to fetch devices from GenieACS';
-    if (error.message.includes('fetch failed') || error.cause?.code === 'ECONNREFUSED') {
-      errorMessage = 'Unable to connect to GenieACS server. Please check if the server is running.';
-    } else if (error.message.includes('timeout')) {
-      errorMessage = 'Connection timeout. GenieACS server is not responding.';
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-
-    return NextResponse.json(
-      { 
-        success: false,
-        error: errorMessage,
-        devices: [],
-        count: 0
-      },
-      { status: 200 } // Return 200 with error info
-    );
-  }
 }
