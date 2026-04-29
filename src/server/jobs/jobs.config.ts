@@ -111,7 +111,7 @@ export const CRON_JOBS: CronJobConfig[] = [
     type: 'telegram_health',
     name: 'Telegram Health Check',
     description: 'Send comprehensive system health report to Telegram (DB, RADIUS, billing status)',
-    schedule: '0 * * * *',
+    schedule: 'dynamic', // Schedule dikelola oleh startHealthCron() di runner.ts
     scheduleLabel: 'Every hour',
     handler: async () => {
       const { sendHealthCheckToTelegram } = await import('./telegram-cron');
