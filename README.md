@@ -469,6 +469,31 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 <!-- AUTO-CHANGELOG:START -->
 
+### v2.25.8 — 2026-05-02
+
+### Added
+- **WAN Management di GenieACS Device Detail** — Halaman detail perangkat GenieACS kini mendukung manajemen koneksi WAN lengkap:
+  - **Add WAN**: Tombol "Add WAN" di Quick Actions dan di header seksi WAN. Modal add menampilkan pemilihan Connection Type (PPPoE/IP), Nama koneksi, WANDevice index (port binding) 1–2, dan WANConnectionDevice index 1–8 untuk binding ke LAN port spesifik. Implementasi via GenieACS `addObject` diikuti `setParameterValues` pada instance baru.
+  - **Edit WAN**: Edit username/password PPPoE, VLAN ID (0–4094), VLAN Priority (0–7), Service Type, dan toggle Enable/Disable per koneksi WAN. Implementasi via `setParameterValues` multi-parameter.
+  - **Delete WAN**: Tombol hapus per kartu WAN, implementasi via GenieACS `deleteObject`.
+  - **VLAN Configuration**: Set `X_HW_VLAN` (Huawei), `X_ZTE-COM_VLANIDMark`, `X_CMCC_VLANIDMark`, dan `X_HW_VLANPriority` dalam satu request.
+  - **Service Type**: Pilihan INTERNET, TR069, VOIP, IPTV, INTERNET_TR069, OTHER — dikirim ke `X_HW_ServiceList` dan `X_ZTE-COM_ServiceList`.
+  - **Port Binding**: WANDevice.{N} dan WANConnectionDevice.{N} bisa dipilih saat add WAN.
+- **WAN Connection Display dengan Badge** — Kartu WAN menampilkan badge: service type (oranye), VLAN ID (cyan), connection type (abu), status connected/disconnected. Path TR-069 ditampilkan dalam teks monospace kecil.
+- **In-Memory Cache untuk Device List GenieACS** — `GET /api/settings/genieacs/devices` kini menggunakan cache di level modul (PM2 process-persistent):
+  - TTL 60 detik; response langsung dari cache saat masih fresh.
+  - **Stale-while-revalidate**: Jika cache sudah kedaluwarsa, data lama langsung dikembalikan ke client (tanpa blocking) sambil refresh dilakukan di background secara async.
+  - Cache key menggunakan hash `host:username` — otomatis invalid jika kredensial GenieACS berubah.
+  - Response menyertakan field `fromCache: boolean` dan `cacheAge: number` (ms).
+  - Strategi ini membuat halaman Perangkat GenieACS terasa instan setelah load pertama.
+
+### API Files
+- `src/app/api/settings/genieacs/devices/route.ts` — cache ditambahkan (module-level stale-while-revalidate)
+- `src/app/api/genieacs/devices/[deviceId]/wan/route.ts` — API WAN baru (POST update, PUT add, DELETE)
+
+### UI Files
+- `src/app/admin/genieacs/devices/page.tsx` — WAN modal lengkap (add/edit/delete + VLAN/service/port binding)
+
 ### v2.25.7 — 2026-04-29
 
 ### Added
@@ -545,24 +570,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 - `src/components/UserDetailModal.tsx`
 - `src/locales/id.json`
 - `src/server/services/pppoe.service.ts`
-
-### v2.25.3 — 2026-04-27
-
-### Fixed
-- **Nama perusahaan tidak terlihat di tema terang pada semua portal login role** — Beberapa halaman login menampilkan heading brand dengan gaya yang bisa kehilangan kontras di light mode (teks putih/gradient terhadap latar terang), sehingga nama perusahaan nyaris tidak terbaca. Diperbaiki dengan pola heading kontras yang konsisten (`text-slate-900` untuk light mode, `text-white` untuk dark mode) dan fallback nama perusahaan yang aman.
-
-### Changed
-- **Redesign UI login lintas role (Admin, Customer, Agent, Technician)** — Semua halaman login portal diseragamkan tata letaknya agar konsisten antar-role dan tetap responsif desktop/mobile.
-  - Panel form login diseragamkan (`lg:w-[430px]`, background `bg-card`, batas `border-border`) untuk ritme visual yang sama.
-  - Ditambahkan blok branding **"Nama Perusahaan"** di sisi form agar identitas tetap terbaca jelas pada tema terang maupun gelap.
-  - Area hero kanan diperbarui dengan heading tunggal yang tegas + accent bar gradient per role untuk visual yang lebih clean dan kontras.
-  - Gradien latar hero desktop dirapikan ke palet yang lebih lembut di light mode agar elemen teks tidak tenggelam.
-
-### Affected
-- `src/app/admin/login/page.tsx`
-- `src/app/customer/login/page.tsx`
-- `src/app/agent/page.tsx`
-- `src/app/technician/login/page.tsx`
 
 <!-- AUTO-CHANGELOG:END -->
 
