@@ -276,40 +276,68 @@ export default function NewPppoeUserPage() {
                         {Array.from({ length: 28 }, (_, i) => i + 1).map(day => <option key={day} value={day}>Tanggal {day}</option>)}
                       </ModalSelect>
                     </div>
-                    {prorateInfo && (
-                      <>
-                        <div>
-                          <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">💳 Tagihan Pertama</p>
-                          <div className="grid grid-cols-3 gap-1.5">
-                            <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'none' ? 'border-border bg-muted' : 'border-transparent bg-muted/40 hover:border-border'}`}>
-                              <input type="radio" name="firstInvoice" value="none" checked={firstInvoice === 'none'} onChange={() => setFirstInvoice('none')} className="sr-only" />
-                              <span className="text-sm mb-0.5">⏸️</span>
-                              <span className="text-[9px] font-semibold">Tidak Sekarang</span>
-                              <span className="text-[8px] text-muted-foreground leading-tight mt-0.5">Dibuat otomatis oleh sistem</span>
-                            </label>
-                            <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'prorate' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30' : 'border-transparent bg-muted/40 hover:border-emerald-300'}`}>
+                    {/* Tagihan Pertama — selalu tampil (tidak perlu profile dulu) */}
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">💳 Tagihan Pertama</p>
+                      {/* Langkah 1: kapan bayar */}
+                      <div className="grid grid-cols-2 gap-1.5 mb-2">
+                        <button
+                          type="button"
+                          onClick={() => { if (firstInvoice === 'none') setFirstInvoice('prorate'); }}
+                          className={`flex flex-col items-center gap-0.5 p-2.5 border-2 rounded-xl cursor-pointer transition-all text-center w-full ${firstInvoice !== 'none' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30' : 'border-border bg-muted/40 hover:border-emerald-400'}`}
+                        >
+                          <span className="text-base">🏠</span>
+                          <span className={`text-[9px] font-bold ${firstInvoice !== 'none' ? 'text-emerald-700 dark:text-emerald-300' : ''}`}>Bayar di Awal</span>
+                          <span className="text-[8px] text-muted-foreground leading-tight">Invoice dibuat saat pemasangan</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFirstInvoice('none')}
+                          className={`flex flex-col items-center gap-0.5 p-2.5 border-2 rounded-xl cursor-pointer transition-all text-center w-full ${firstInvoice === 'none' ? 'border-border bg-muted' : 'border-border/40 bg-muted/30 hover:border-border'}`}
+                        >
+                          <span className="text-base">⏰</span>
+                          <span className="text-[9px] font-bold">Bayar Setelah Pemakaian</span>
+                          <span className="text-[8px] text-muted-foreground leading-tight">Dibuat otomatis oleh sistem</span>
+                        </button>
+                      </div>
+                      {/* Langkah 2: jika bayar di awal, pilih metode */}
+                      {firstInvoice !== 'none' && (
+                        <div className="rounded-xl border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 p-2.5">
+                          <p className="text-[9px] font-semibold text-muted-foreground mb-1.5">Metode Perhitungan Tagihan:</p>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'prorate' ? 'border-emerald-500 bg-emerald-100 dark:bg-emerald-900/40' : 'border-border bg-background hover:border-emerald-400'}`}>
                               <input type="radio" name="firstInvoice" value="prorate" checked={firstInvoice === 'prorate'} onChange={() => setFirstInvoice('prorate')} className="sr-only" />
                               <span className="text-sm mb-0.5">📅</span>
-                              <span className="text-[9px] font-semibold text-emerald-700 dark:text-emerald-300">Prorate</span>
-                              <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">Rp {prorateInfo.prorateAmount.toLocaleString('id-ID')}</span>
-                              <span className="text-[8px] text-muted-foreground leading-tight">{prorateInfo.daysActive} hari s/d tgl {prorateInfo.nextBilling.getDate()}</span>
+                              <span className={`text-[9px] font-bold ${firstInvoice === 'prorate' ? 'text-emerald-700 dark:text-emerald-300' : ''}`}>Prorate</span>
+                              {prorateInfo ? (
+                                <>
+                                  <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">Rp {prorateInfo.prorateAmount.toLocaleString('id-ID')}</span>
+                                  <span className="text-[8px] text-muted-foreground leading-tight">{prorateInfo.daysActive} hari s/d tgl {prorateInfo.nextBilling.getDate()}</span>
+                                </>
+                              ) : (
+                                <span className="text-[8px] text-muted-foreground leading-tight">Bayar sesuai hari pakai</span>
+                              )}
                             </label>
-                            <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'full' ? 'border-primary bg-primary/10' : 'border-transparent bg-muted/40 hover:border-primary/40'}`}>
+                            <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'full' ? 'border-primary bg-primary/10' : 'border-border bg-background hover:border-primary/50'}`}>
                               <input type="radio" name="firstInvoice" value="full" checked={firstInvoice === 'full'} onChange={() => setFirstInvoice('full')} className="sr-only" />
                               <span className="text-sm mb-0.5">💰</span>
-                              <span className="text-[9px] font-semibold">Sebulan Penuh</span>
-                              <span className="text-[9px] font-bold">Rp {prorateInfo.fullPrice.toLocaleString('id-ID')}</span>
-                              <span className="text-[8px] text-muted-foreground leading-tight">Bayar 1 bulan sekarang</span>
+                              <span className={`text-[9px] font-bold ${firstInvoice === 'full' ? 'text-primary' : ''}`}>Sebulan Penuh</span>
+                              {prorateInfo ? (
+                                <span className="text-[9px] font-bold">Rp {prorateInfo.fullPrice.toLocaleString('id-ID')}</span>
+                              ) : (
+                                <span className="text-[8px] text-muted-foreground leading-tight">Bayar 1 bulan penuh</span>
+                              )}
                             </label>
                           </div>
-                          {firstInvoice !== 'none' && (
-                            <p className="text-[9px] text-muted-foreground mt-1">
-                              ℹ️ Invoice <span className="font-semibold">PENDING</span> akan dibuat dan bisa dibayar via portal pelanggan atau manual.
-                            </p>
+                          {!prorateInfo && (
+                            <p className="text-[9px] text-amber-600 dark:text-amber-400 mt-1.5">⚠️ Pilih profil paket untuk melihat estimasi tagihan</p>
                           )}
+                          <p className="text-[9px] text-muted-foreground mt-1.5">
+                            ℹ️ Invoice <span className="font-semibold">PENDING</span> dibuat saat simpan — bisa dibayar via portal pelanggan.
+                          </p>
                         </div>
-                      </>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
                 {formData.subscriptionType === 'PREPAID' && (
@@ -322,21 +350,36 @@ export default function NewPppoeUserPage() {
                     <div>
                       <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">💳 Tagihan Pertama</p>
                       <div className="grid grid-cols-2 gap-1.5">
-                        <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'none' ? 'border-border bg-muted' : 'border-transparent bg-muted/40 hover:border-border'}`}>
-                          <input type="radio" name="firstInvoice" value="none" checked={firstInvoice === 'none'} onChange={() => setFirstInvoice('none')} className="sr-only" />
-                          <span className="text-sm mb-0.5">⏸️</span>
-                          <span className="text-[9px] font-semibold">Tidak Sekarang</span>
-                          <span className="text-[8px] text-muted-foreground">Dibuat manual nanti</span>
-                        </label>
-                        <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'full' ? 'border-purple-500 bg-purple-500/10' : 'border-transparent bg-muted/40 hover:border-purple-300'}`}>
-                          <input type="radio" name="firstInvoice" value="full" checked={firstInvoice === 'full'} onChange={() => setFirstInvoice('full')} className="sr-only" />
-                          <span className="text-sm mb-0.5">💰</span>
-                          <span className="text-[9px] font-semibold text-purple-700 dark:text-purple-300">Buat Tagihan Sekarang</span>
-                          {profiles.find(p => p.id === formData.profileId) && (
-                            <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400">Rp {profiles.find(p => p.id === formData.profileId)!.price.toLocaleString('id-ID')}</span>
+                        <button
+                          type="button"
+                          onClick={() => setFirstInvoice('full')}
+                          className={`flex flex-col items-center gap-0.5 p-2.5 border-2 rounded-xl cursor-pointer transition-all text-center w-full ${firstInvoice !== 'none' ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/30' : 'border-border/40 bg-muted/30 hover:border-purple-400'}`}
+                        >
+                          <span className="text-base">🏠</span>
+                          <span className={`text-[9px] font-bold ${firstInvoice !== 'none' ? 'text-purple-700 dark:text-purple-300' : ''}`}>Bayar di Awal Pemasangan</span>
+                          {profiles.find(p => p.id === formData.profileId) ? (
+                            <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400">
+                              Rp {profiles.find(p => p.id === formData.profileId)!.price.toLocaleString('id-ID')}
+                            </span>
+                          ) : (
+                            <span className="text-[8px] text-muted-foreground">Invoice dibuat saat pemasangan</span>
                           )}
-                        </label>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFirstInvoice('none')}
+                          className={`flex flex-col items-center gap-0.5 p-2.5 border-2 rounded-xl cursor-pointer transition-all text-center w-full ${firstInvoice === 'none' ? 'border-border bg-muted' : 'border-border/40 bg-muted/30 hover:border-border'}`}
+                        >
+                          <span className="text-base">⏰</span>
+                          <span className="text-[9px] font-bold">Bayar Setelah Pemakaian</span>
+                          <span className="text-[8px] text-muted-foreground leading-tight">Tagihan dibuat manual nanti</span>
+                        </button>
                       </div>
+                      {firstInvoice !== 'none' && (
+                        <p className="text-[9px] text-muted-foreground mt-1.5">
+                          ℹ️ Invoice <span className="font-semibold">PENDING</span> dibuat saat simpan — bisa dibayar via portal pelanggan.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
