@@ -106,6 +106,7 @@ export async function GET(request: NextRequest) {
         include: {
           profile: true,
           router: true,
+          area: true,
         },
         orderBy: {
           createdAt: 'desc',
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
       });
 
       // Build CSV content with password
-      let csv = 'username,password,customerId,name,phone,email,address,ipAddress,status,profile,router,expiredAt,latitude,longitude,createdAt\n';
+      let csv = 'username,password,customerId,name,phone,email,address,area,ipAddress,subscriptionType,billingDay,status,profile,router,expiredAt,latitude,longitude,createdAt\n';
       
       users.forEach(user => {
         const row = [
@@ -124,7 +125,10 @@ export async function GET(request: NextRequest) {
           user.phone,
           user.email || '',
           (user.address || '').replace(/,/g, ';'), // Replace commas in address
+          (user as any).area?.name || '',
           user.ipAddress || '',
+          (user as any).subscriptionType || 'POSTPAID',
+          (user as any).billingDay || '',
           user.status,
           user.profile?.name || '',
           user.router?.name || 'Global',

@@ -45,6 +45,7 @@ export default function NewPppoeUserPage() {
     installationPhotos: [] as string[],
     followRoad: false,
     comment: '',
+    registeredAt: new Date().toISOString().slice(0, 10),
   });
 
   useEffect(() => {
@@ -202,6 +203,28 @@ export default function NewPppoeUserPage() {
               ))}
             </ModalSelect>
           </div>
+
+          <div>
+            <ModalLabel>Area <span className="text-muted-foreground text-[10px]">(opsional)</span></ModalLabel>
+            <ModalSelect value={formData.areaId} onChange={(e) => field('areaId', e.target.value)}>
+              <option value="">— Pilih Area —</option>
+              {areas.map(a => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </ModalSelect>
+          </div>
+
+          {formData.subscriptionType === 'POSTPAID' && (
+            <div>
+              <ModalLabel>Tanggal Tagihan (Billing Day)</ModalLabel>
+              <ModalSelect value={formData.billingDay} onChange={(e) => field('billingDay', e.target.value)}>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                  <option key={day} value={day}>Tanggal {day}</option>
+                ))}
+              </ModalSelect>
+              <p className="text-[10px] text-muted-foreground mt-1">Tanggal penagihan bulanan untuk pelanggan postpaid.</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -451,6 +474,20 @@ export default function NewPppoeUserPage() {
             <label htmlFor="assignToAgent" className="text-xs cursor-pointer">
               Assign ke Agent <span className="text-[10px] text-muted-foreground">(opsional — untuk tracking komisi reseller)</span>
             </label>
+          </div>
+        </div>
+
+        {/* Tanggal Register */}
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+          <h2 className="text-sm font-semibold text-foreground border-b border-border pb-2">Informasi Tambahan</h2>
+          <div>
+            <ModalLabel>Tanggal Register</ModalLabel>
+            <ModalInput
+              type="date"
+              value={formData.registeredAt}
+              onChange={(e) => field('registeredAt', e.target.value)}
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">Default hari ini. Ubah untuk data historis pelanggan lama.</p>
           </div>
         </div>
 
