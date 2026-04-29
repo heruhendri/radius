@@ -14,7 +14,7 @@ interface DeviceListCache {
   credHash: string; // detect credential change
 }
 let _deviceCache: DeviceListCache | null = null;
-const CACHE_TTL_MS = 60_000; // 60 s – refresh at most once per minute
+const CACHE_TTL_MS = 300_000; // 5 min – stale-while-revalidate in background
 let _bgRefreshRunning = false; // prevent concurrent background fetches
 
 // Helper to safely convert any value to string

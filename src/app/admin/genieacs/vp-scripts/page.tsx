@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
   Loader2, Plus, Trash2, RefreshCw, Save, X, Zap,
   CheckCircle2, AlertCircle, Clock, RotateCcw, ExternalLink,
+  Download, Upload,
 } from 'lucide-react';
 
 interface VpScript {
@@ -58,6 +59,8 @@ export default function VpScriptsPage() {
   const [editing, setEditing] = useState<VpScript | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -178,8 +181,43 @@ export default function VpScriptsPage() {
     }
   };
 
+  const backup = () => {
+    window.open('/api/genieacs/backup?type=vp', '_blank');
+  };
+
+  const restore = async (file: File) => {
+    setRestoring(true);
+    setError(null);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const vpScripts = Array.isArray(data) ? data : (data.vpScripts ?? []);
+      if (!Array.isArray(vpScripts) || vpScripts.length === 0) {
+        setError('File tidak valid: tidak ada data vpScripts ditemukan');
+        return;
+      }
+      const res = await fetch('/api/genieacs/backup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vpScripts }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Restore gagal');
+      const r = json.results?.vpScripts;
+      flash(`Restore selesai: ${r?.ok ?? 0} VP berhasil dipulihkan${r?.errors?.length ? `, ${r.errors.length} error` : ''}`);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setRestoring(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4">
+      <input ref={fileInputRef} type="file" accept=".json" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) restore(f); }} />
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -206,6 +244,21 @@ export default function VpScriptsPage() {
           >
             <RotateCcw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : ''}`} />
             Sync All ke GenieACS
+          </button>
+          <button
+            onClick={backup}
+            className="px-3 py-2 text-sm border border-blue-400 text-blue-700 dark:text-blue-400 rounded-md flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+          >
+            <Download className="w-4 h-4" />
+            Backup
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={restoring}
+            className="px-3 py-2 text-sm border border-orange-400 text-orange-700 dark:text-orange-400 rounded-md flex items-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-900/20 disabled:opacity-60"
+          >
+            {restoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            Restore
           </button>
           <button
             onClick={() => setEditing({ _id: '', script: SAMPLE_SCRIPT, description: '' })}
