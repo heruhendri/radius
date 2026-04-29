@@ -114,12 +114,37 @@ export async function autoIsolateExpiredUsers() {
 
         // 5. Disconnect user session (force re-authentication)  
         try {
-          // Use CoA disconnect (handles DB + CoA + API fallback internally)
+          // STEP 5a: Get current session IP BEFORE marking it stopped,
+          // so we can immediately add it to MikroTik address-list 'isolir'.
+          // This blocks internet right away even if disconnect fails.
+          const activeSession = await prisma.radacct.findFirst({
+            where: { username: user.username, acctstoptime: null },
+            select: { framedipaddress: true, nasipaddress: true },
+          });
+
+          // STEP 5b: Add current IP to MikroTik firewall address-list immediately.
+          // MikroTik firewall rule (chain=forward src-address-list=isolir action=drop)
+          // will block internet for this IP right away, before reconnect.
+          if (activeSession?.framedipaddress && activeSession.framedipaddress !== '0.0.0.0') {
+            try {
+              const { addToMikrotikAddressList } = await import('@/server/services/radius/coa-handler.service');
+              await addToMikrotikAddressList(
+                activeSession.nasipaddress || '',
+                activeSession.framedipaddress,
+                'isolir'
+              );
+              console.log(`[AUTO-ISOLATE] ✓ Added ${activeSession.framedipaddress} to MikroTik address-list 'isolir'`);
+            } catch (addrErr: any) {
+              console.log(`[AUTO-ISOLATE] ⚠️ Address-list add failed (non-fatal): ${addrErr.message}`);
+            }
+          }
+
+          // STEP 5c: CoA disconnect + MikroTik API disconnect (handles DB + CoA + API fallback)
           const { disconnectPPPoEUser } = await import('@/server/services/radius/coa-handler.service');
           await disconnectPPPoEUser(user.username);
-          console.log(`[AUTO-ISOLATE] ? Disconnected ${user.username} via CoA`);
+          console.log(`[AUTO-ISOLATE] ✓ Disconnected ${user.username} via CoA`);
         } catch (coaError: any) {
-          console.log(`[AUTO-ISOLATE] ? Disconnect failed: ${coaError.message}`);
+          console.log(`[AUTO-ISOLATE] ⚠️ Disconnect failed: ${coaError.message}`);
         }
 
         // 6. Close session in radacct

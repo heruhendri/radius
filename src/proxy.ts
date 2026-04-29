@@ -44,8 +44,48 @@ const BLOCKED_PATHS = [
 // Suspicious User-Agent substrings
 const BLOCKED_UA_PATTERNS = ['sqlmap', 'nikto', 'masscan', 'nmap', 'hydra', 'medusa'];
 
+// Subdomain → path mapping
+const SUBDOMAIN_MAP: Record<string, string> = {
+  'customer': '/customer',
+  'pelanggan': '/customer',
+  'agent': '/agent',
+  'agen': '/agent',
+  'teknisi': '/technician',
+  'technician': '/technician',
+  'admin': '/admin',
+};
+
 export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
+
+  // ============================================
+  // 0. SUBDOMAIN ROUTING
+  // Map subdomains to portal paths:
+  //   customer.domain.com  → /customer
+  //   agent.domain.com     → /agent
+  //   teknisi.domain.com   → /technician
+  //   admin.domain.com     → /admin
+  // ============================================
+  const host = req.headers.get('host') || '';
+  const hostname = host.split(':')[0]; // strip port
+  const hostParts = hostname.split('.');
+  if (hostParts.length >= 3) {
+    const subdomain = hostParts[0].toLowerCase();
+    const targetBase = SUBDOMAIN_MAP[subdomain];
+    if (targetBase) {
+      // Don't rewrite API routes, Next.js internals, or static files
+      const isSystem = pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.startsWith('/favicon');
+      const isStaticFile = /\.(ico|png|jpg|jpeg|gif|svg|js|css|woff|woff2|ttf|mp4|webp|json|txt|xml)$/.test(pathname);
+      if (!isSystem && !isStaticFile) {
+        // Only rewrite if the path doesn't already start with the target base
+        if (!pathname.startsWith(targetBase)) {
+          const url = req.nextUrl.clone();
+          url.pathname = targetBase + (pathname === '/' ? '' : pathname);
+          return NextResponse.rewrite(url);
+        }
+      }
+    }
+  }
 
   // ============================================
   // 0a. BLOCK KNOWN SCANNER/BOT PATHS

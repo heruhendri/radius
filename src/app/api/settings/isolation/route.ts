@@ -211,6 +211,17 @@ export async function PUT(request: NextRequest) {
       INSERT INTO radgroupreply (groupname, attribute, op, value)
       VALUES ('isolir', 'Framed-Pool', ':=', ${poolName})
     `;
+    // Mikrotik-Address-List: ensures user is added to the 'isolir' address-list on
+    // reconnect, so MikroTik firewall rules (src-address-list=isolir action=drop)
+    // block internet without needing manual IP range rules.
+    await prisma.$executeRaw`
+      DELETE FROM radgroupreply
+      WHERE groupname = 'isolir' AND attribute = 'Mikrotik-Address-List'
+    `;
+    await prisma.$executeRaw`
+      INSERT INTO radgroupreply (groupname, attribute, op, value)
+      VALUES ('isolir', 'Mikrotik-Address-List', ':=', 'isolir')
+    `;
 
     // Clear isolation settings cache so cron picks up new values immediately
     clearIsolationSettingsCache();

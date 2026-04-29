@@ -461,9 +461,92 @@ export async function disconnectMultiplePPPoEUsers(usernames: string[]) {
   }
 }
 
+/**
+ * Add a framed IP address to a MikroTik firewall address-list immediately.
+ * This blocks internet access for the session even before the user disconnects
+ * and reconnects (which is when RADIUS would normally apply the isolir group).
+ *
+ * Requires:
+ *   - MikroTik API credentials on the router record
+ *   - A firewall filter rule on MikroTik: chain=forward src-address-list=isolir action=drop
+ */
+export async function addToMikrotikAddressList(
+  nasIpAddress: string,
+  framedIp: string,
+  listName: string = 'isolir'
+): Promise<boolean> {
+  if (!framedIp || framedIp === '0.0.0.0') return false
+
+  // Find router with API credentials
+  let nas = await prisma.router.findFirst({ where: { nasname: nasIpAddress } })
+  if (!nas) {
+    nas = await prisma.router.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+    })
+  }
+  if (!nas || !nas.username || !nas.password) {
+    console.log(`[CoA] addToMikrotikAddressList: no NAS with API credentials for ${nasIpAddress}`)
+    return false
+  }
+
+  const targetIp = nas.ipAddress && nas.ipAddress !== nas.nasname ? nas.ipAddress : nas.nasname
+  const portsToTry = [nas.apiPort, nas.port].filter((p, i, arr) => p && arr.indexOf(p) === i) as number[]
+
+  for (const port of portsToTry) {
+    try {
+      const result = await withTimeout(
+        (async () => {
+          const apiOpts: any = {
+            host: targetIp,
+            port,
+            user: nas!.username,
+            password: nas!.password,
+            timeout: 3,
+          }
+          if (port === 8729 || port === nas!.apiPort) {
+            apiOpts.tls = { rejectUnauthorized: false }
+          }
+          const api = new RouterOSAPI(apiOpts)
+          await api.connect()
+
+          // Check if already in list
+          const existing = await api.write('/ip/firewall/address-list/print', [
+            `?list=${listName}`,
+            `?address=${framedIp}`,
+          ])
+
+          if (!existing || existing.length === 0) {
+            await api.write('/ip/firewall/address-list/add', [
+              `=list=${listName}`,
+              `=address=${framedIp}`,
+              `=comment=auto-isolated`,
+            ])
+          }
+
+          try { await api.close() } catch {}
+          return true
+        })(),
+        5000,
+        `MikroTik API AddressList ${targetIp}:${port}`
+      )
+
+      if (result) {
+        console.log(`[CoA] ✓ Added ${framedIp} to address-list '${listName}' on ${targetIp}:${port}`)
+        return true
+      }
+    } catch (err: any) {
+      console.log(`[CoA] addToMikrotikAddressList port ${port}: ${err?.message}`)
+    }
+  }
+
+  return false
+}
+
 export default {
   sendCoADisconnect,
   disconnectExpiredSessions,
   disconnectPPPoEUser,
   disconnectMultiplePPPoEUsers,
+  addToMikrotikAddressList,
 }

@@ -1,5 +1,5 @@
 ﻿'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { showSuccess, showError } from '@/lib/sweetalert';
 import { ArrowLeft, MapPin, Map, Eye, EyeOff, Loader2, X } from 'lucide-react';
@@ -128,6 +128,35 @@ export default function NewPppoeUserPage() {
   const field = (key: keyof typeof formData, val: string | boolean) =>
     setFormData(prev => ({ ...prev, [key]: val }));
 
+  // ── Prorate calculation for POSTPAID first invoice ────────────────────
+  const prorateInfo = useMemo(() => {
+    if (formData.subscriptionType !== 'POSTPAID') return null;
+    const profile = profiles.find(p => p.id === formData.profileId);
+    if (!profile) return null;
+    const billingDay = parseInt(formData.billingDay) || 1;
+    const today = formData.registeredAt
+      ? new Date(formData.registeredAt + 'T00:00:00')
+      : new Date();
+    today.setHours(0, 0, 0, 0);
+    const year = today.getFullYear();
+    const month = today.getMonth(); // 0-indexed
+    const currentDay = today.getDate();
+    // Next billing date: same or future billingDay
+    let nextBilling: Date;
+    if (currentDay < billingDay) {
+      nextBilling = new Date(year, month, billingDay);
+    } else {
+      // billing day passed (or same day) → next month
+      nextBilling = new Date(year, month + 1, billingDay);
+    }
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const daysActive = Math.max(1, Math.ceil((nextBilling.getTime() - today.getTime()) / msPerDay));
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prorateAmount = Math.ceil((daysActive / daysInMonth) * profile.price);
+    const isFullMonth = daysActive >= daysInMonth;
+    return { daysActive, daysInMonth, nextBilling, prorateAmount, fullPrice: profile.price, profileName: profile.name, isFullMonth };
+  }, [formData.subscriptionType, formData.profileId, formData.billingDay, formData.registeredAt, profiles]);
+
   return (
     <div className="p-4 max-w-3xl mx-auto space-y-6">
       {/* Header */}
@@ -223,6 +252,44 @@ export default function NewPppoeUserPage() {
                 ))}
               </ModalSelect>
               <p className="text-[10px] text-muted-foreground mt-1">Tanggal penagihan bulanan untuk pelanggan postpaid.</p>
+
+              {/* ── Payment Flow Info ─────────────────────────────────────── */}
+              <div className="mt-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-3 space-y-2">
+                <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300">📋 Alur Pembayaran — POSTPAID</p>
+                <ol className="text-[10px] text-blue-600 dark:text-blue-400 list-decimal list-inside space-y-0.5">
+                  <li>Pelanggan langsung aktif & bisa internet tanpa bayar dulu</li>
+                  <li>Invoice pertama dikirim <strong>sesuai tanggal billing di atas</strong> (prorate dari hari daftar)</li>
+                  <li>Bulan selanjutnya tagihan penuh setiap tanggal billing</li>
+                  <li>Jika tidak bayar setelah grace period → <strong>isolir otomatis</strong></li>
+                </ol>
+              </div>
+
+              {/* ── Prorate Estimate ──────────────────────────────────────── */}
+              {prorateInfo && (
+                <div className="mt-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 p-3 space-y-2">
+                  <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">💰 Estimasi Invoice Pertama (Prorate)</p>
+                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 space-y-1">
+                    <p>Paket: <strong>{prorateInfo.profileName}</strong></p>
+                    <p>Aktif mulai hari ini s/d: <strong>{prorateInfo.nextBilling.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</strong></p>
+                    <p>Masa prorate: <strong>{prorateInfo.daysActive} hari</strong> dari {prorateInfo.daysInMonth} hari bulan ini</p>
+                  </div>
+                  <div className="mt-1 rounded-md bg-emerald-100 dark:bg-emerald-900/50 p-2 text-center">
+                    {prorateInfo.isFullMonth ? (
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400">Tagihan penuh (daftar di hari billing)</p>
+                    ) : (
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                        {prorateInfo.daysActive} hari × Rp {Math.round(prorateInfo.fullPrice / prorateInfo.daysInMonth).toLocaleString('id-ID')}/hari
+                      </p>
+                    )}
+                    <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                      Rp {prorateInfo.prorateAmount.toLocaleString('id-ID')}
+                    </p>
+                    <p className="text-[9px] text-emerald-500 dark:text-emerald-500 mt-0.5">
+                      Mulai bulan berikutnya → Rp {prorateInfo.fullPrice.toLocaleString('id-ID')}/bulan
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -243,14 +310,14 @@ export default function NewPppoeUserPage() {
                   <input type="radio" name="subscriptionType" value="POSTPAID" checked={formData.subscriptionType === 'POSTPAID'} onChange={() => field('subscriptionType', 'POSTPAID')} className="w-3 h-3 accent-primary" />
                   <div className="ml-1.5">
                     <div className="text-[10px] font-medium">📅 Postpaid</div>
-                    <div className="text-[9px] text-muted-foreground">Tagihan bulanan</div>
+                    <div className="text-[9px] text-muted-foreground">Pakai dulu, bayar belakangan</div>
                   </div>
                 </label>
                 <label className={`flex items-center p-2.5 border-2 rounded-lg cursor-pointer transition-all ${formData.subscriptionType === 'PREPAID' ? 'border-primary bg-primary/10 dark:border-[#bc13fe] dark:bg-[#bc13fe]/10' : 'border-border hover:border-primary/50'}`}>
                   <input type="radio" name="subscriptionType" value="PREPAID" checked={formData.subscriptionType === 'PREPAID'} onChange={() => field('subscriptionType', 'PREPAID')} className="w-3 h-3 accent-primary" />
                   <div className="ml-1.5">
                     <div className="text-[10px] font-medium">🎫 Prepaid</div>
-                    <div className="text-[9px] text-muted-foreground">Bayar di muka</div>
+                    <div className="text-[9px] text-muted-foreground">Bayar dulu, langsung aktif</div>
                   </div>
                 </label>
               </div>
@@ -278,6 +345,17 @@ export default function NewPppoeUserPage() {
               }
               return null;
             })()}
+            {formData.subscriptionType === 'PREPAID' && (
+              <div className="mt-3 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 p-3 space-y-2">
+                <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-300">📋 Alur Pembayaran — PREPAID</p>
+                <ol className="text-[10px] text-purple-600 dark:text-purple-400 list-decimal list-inside space-y-0.5">
+                  <li>Invoice dibuat saat pelanggan didaftarkan</li>
+                  <li>Pelanggan <strong>harus bayar dulu</strong> sebelum internet aktif</li>
+                  <li>Setelah lunas → akun aktif otomatis hingga tanggal expired</li>
+                  <li>Menjelang expired → tagihan perpanjangan dikirim otomatis</li>
+                </ol>
+              </div>
+            )}
           </div>
         </div>
 
