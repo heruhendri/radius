@@ -4,6 +4,7 @@ import { logActivity } from '@/server/services/activity-log.service';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { formatWIB } from '@/lib/timezone';
+import { randomBytes } from 'crypto';
 import { WhatsAppService } from '@/server/services/notifications/whatsapp.service';
 import { EmailService } from '@/server/services/notifications/email.service';
 
@@ -84,6 +85,18 @@ export async function POST(request: NextRequest) {
     ]);
 
     const bankAccountsText = formatBankAccountsForWA(company.bankAccounts);
+    const baseUrl = company.baseUrl || 'http://localhost:3000';
+
+    // Auto-generate paymentToken/paymentLink for invoices that are missing them
+    const invoicesWithoutLink = invoices.filter(inv => !inv.paymentLink);
+    if (invoicesWithoutLink.length > 0) {
+      await Promise.all(invoicesWithoutLink.map(async (inv) => {
+        const paymentToken = randomBytes(32).toString('hex');
+        const paymentLink = `${baseUrl}/pay/${paymentToken}`;
+        await prisma.invoice.update({ where: { id: inv.id }, data: { paymentToken, paymentLink } });
+        inv.paymentLink = paymentLink; // mutate in-memory so map below picks it up
+      }));
+    }
 
     // Calculate invoice data once
     const invoiceDataList = invoices.map(invoice => {

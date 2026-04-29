@@ -8,6 +8,7 @@ import { logActivity } from '@/server/services/activity-log.service';
 import { sendAdminCreateUser } from '@/server/services/notifications/whatsapp-templates.service';
 import { changePPPoERateLimit } from '@/server/services/mikrotik/rate-limit';
 import { generateUniqueReferralCode } from '@/server/services/referral.service';
+import { randomBytes } from 'crypto';
 import type { NextRequest } from 'next/server';
 import type { Session } from 'next-auth';
 
@@ -324,6 +325,10 @@ export async function createPppoeUser(
       const invoiceMonth = String(new Date().getMonth() + 1).padStart(2, '0');
       const invoiceId = crypto.randomUUID();
       const invoiceNumber = `INV-${invoiceYear}${invoiceMonth}-${invoiceId.slice(0, 8).toUpperCase()}`;
+      const company = await prisma.company.findFirst({ select: { baseUrl: true } });
+      const baseUrl = company?.baseUrl || 'http://localhost:3000';
+      const paymentToken = randomBytes(32).toString('hex');
+      const paymentLink = `${baseUrl}/pay/${paymentToken}`;
       await prisma.invoice.create({
         data: {
           id: invoiceId,
@@ -337,6 +342,8 @@ export async function createPppoeUser(
           customerName: resolvedName,
           customerPhone: resolvedPhone,
           customerUsername: username,
+          paymentToken,
+          paymentLink,
           createdAt: new Date(),
         },
       });

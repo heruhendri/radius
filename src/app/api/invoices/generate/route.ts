@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/server/auth/config';
 import { prisma } from '@/server/db/client';
 import { nanoid } from 'nanoid';
+import { randomBytes } from 'crypto';
 import { badRequest, unauthorized } from '@/lib/api-response';
 
 /**
@@ -57,6 +58,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, generated: 0, skipped: 0, errors: [], message: 'Tidak ada pelanggan ditemukan' });
     }
 
+    // Fetch company baseUrl for payment links
+    const company = await prisma.company.findFirst({ select: { baseUrl: true, name: true, phone: true } });
+    const baseUrl = company?.baseUrl || 'http://localhost:3000';
+
     // Month range for duplicate check: from 1st to last day of targetMonth
     const monthStart = new Date(year, month - 1, 1, 0, 0, 0, 0);
     const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
@@ -101,6 +106,8 @@ export async function POST(request: NextRequest) {
 
         const invoiceId = nanoid();
         const invoiceNumber = `INV-${year}${String(month).padStart(2, '0')}-${invoiceId.slice(0, 8).toUpperCase()}`;
+        const paymentToken = randomBytes(32).toString('hex');
+        const paymentLink = `${baseUrl}/pay/${paymentToken}`;
 
         await prisma.invoice.create({
           data: {
@@ -117,6 +124,8 @@ export async function POST(request: NextRequest) {
             customerPhone: user.phone,
             customerEmail: user.email || null,
             customerUsername: user.username,
+            paymentToken,
+            paymentLink,
             createdAt: new Date(),
           },
         });
@@ -125,7 +134,6 @@ export async function POST(request: NextRequest) {
         if (sendWa && user.phone) {
           try {
             const { sendInvoiceReminder } = await import('@/server/services/notifications/whatsapp-templates.service');
-            const company = await prisma.company.findFirst({ select: { name: true, phone: true } });
             await sendInvoiceReminder({
               phone: user.phone,
               customerName: user.name,
@@ -133,7 +141,7 @@ export async function POST(request: NextRequest) {
               invoiceNumber,
               amount,
               dueDate,
-              paymentLink: '',
+              paymentLink,
               companyName: company?.name || '',
               companyPhone: company?.phone || '',
             });

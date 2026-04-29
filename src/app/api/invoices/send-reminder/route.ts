@@ -2,6 +2,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/server/auth/config'
 import { prisma } from '@/server/db/client'
+import { randomBytes } from 'crypto'
 import { sendInvoiceReminder } from '@/server/services/notifications/whatsapp-templates.service'
 import { EmailService } from '@/server/services/notifications/email.service'
 
@@ -79,6 +80,18 @@ export async function POST(request: NextRequest) {
       daysOverdue = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     }
 
+    // Auto-generate paymentLink if missing (for invoices created without one)
+    let paymentLink = invoice.paymentLink || '';
+    if (!paymentLink) {
+      const baseUrl = company.baseUrl || 'http://localhost:3000';
+      const paymentToken = randomBytes(32).toString('hex');
+      paymentLink = `${baseUrl}/pay/${paymentToken}`;
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { paymentToken, paymentLink },
+      });
+    }
+
     // Prepare common data
     const reminderData = {
       customerName: invoice.customerName || invoice.customerUsername || 'Customer',
@@ -87,7 +100,7 @@ export async function POST(request: NextRequest) {
       invoiceNumber: invoice.invoiceNumber,
       amount: invoice.amount,
       dueDate: dueDate,
-      paymentLink: invoice.paymentLink || '',
+      paymentLink,
       companyName: company.name,
       companyPhone: company.phone || '',
       isOverdue,
