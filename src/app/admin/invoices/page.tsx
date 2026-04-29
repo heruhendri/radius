@@ -710,24 +710,6 @@ export default function InvoicesPage() {
     finally { setGenLoadingUsers(false); }
   };
 
-  // Search users for generate single scope
-  const searchUsersForGenerate = async (q: string) => {
-    if (!q || q.length < 2) { setGenUsers([]); return; }
-    setGenLoadingUsers(true);
-    try {
-      const res = await fetch(`/api/pppoe/users?status=active`);
-      const data = await res.json();
-      const all = (data.users || []) as { id: string; name: string; username: string; phone: string; profile: { name: string } | null }[];
-      const filtered = all.filter(u =>
-        u.name?.toLowerCase().includes(q.toLowerCase()) ||
-        u.username?.toLowerCase().includes(q.toLowerCase()) ||
-        u.phone?.includes(q)
-      ).slice(0, 20);
-      setGenUsers(filtered);
-    } catch { setGenUsers([]); }
-    finally { setGenLoadingUsers(false); }
-  };
-
   const handleGenerate = async () => {
     if (genScope === 'single' && !genUserId) { await showError('Pilih pelanggan terlebih dahulu'); return; }
     setGenerating(true);
