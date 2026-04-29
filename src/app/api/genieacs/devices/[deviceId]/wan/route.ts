@@ -30,7 +30,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { deviceId } = await params;
     const body = await request.json();
-    const { connectionPath, connectionType, username, password, enable, vlanId, vlanPriority, serviceList } = body;
+    const { connectionPath, connectionType, username, password, enable, vlanId, vlanPriority, serviceList, natEnabled } = body;
 
     if (!connectionPath) {
       return NextResponse.json({ success: false, error: 'Connection path is required' }, { status: 400 });
@@ -53,6 +53,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
     if (enable !== undefined) {
       parameterValues.push([`${connectionPath}.Enable`, Boolean(enable), 'xsd:boolean']);
+    }
+    // NAT Enable/Disable
+    if (natEnabled !== undefined) {
+      parameterValues.push([`${connectionPath}.NATEnabled`, Boolean(natEnabled), 'xsd:boolean']);
     }
     // VLAN ID — try Huawei/ZTE/generic paths
     if (vlanId !== undefined && vlanId !== '') {
@@ -105,6 +109,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       vlanPriority,
       serviceList = 'INTERNET',
       enable = true,
+      natEnabled = true,
       name,
     } = body;
 
@@ -146,6 +151,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Step 2: setParameterValues on new object
     const parameterValues: [string, string | boolean | number, string][] = [
       [`${newPath}.Enable`, Boolean(enable), 'xsd:boolean'],
+      [`${newPath}.NATEnabled`, Boolean(natEnabled), 'xsd:boolean'],
     ];
 
     if (name) parameterValues.push([`${newPath}.Name`, name, 'xsd:string']);

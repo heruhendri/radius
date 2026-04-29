@@ -143,14 +143,18 @@ export default function GenieACSDevicesPage() {
   const [genName, setGenName] = useState('');
   const [genSaving, setGenSaving] = useState(false);
 
-  // Edit WiFi Modal
+  // Edit/Add WiFi Modal
   const [showEditWifiModal, setShowEditWifiModal] = useState(false);
+  const [wifiModalMode, setWifiModalMode] = useState<'edit' | 'add'>('edit');
   const [editWifiData, setEditWifiData] = useState({
     deviceId: '',
     wlanIndex: 1,
     ssid: '',
     password: '',
-    enabled: true
+    enabled: true,
+    securityMode: 'WPA2-PSK',
+    band: '2.4GHz',
+    channel: '',
   });
   const [savingWifi, setSavingWifi] = useState(false);
 
@@ -164,13 +168,14 @@ export default function GenieACSDevicesPage() {
     username: string;
     password: string;
     enable: boolean;
+    natEnabled: boolean;
     currentIP: string;
     vlanId: string;
     vlanPriority: string;
     serviceList: string;
     wanDeviceIndex: number;
     wanConnectionDeviceIndex: number;
-  }>({ connectionPath: '', connectionType: 'PPPoE', name: '', username: '', password: '', enable: true, currentIP: '', vlanId: '', vlanPriority: '0', serviceList: 'INTERNET', wanDeviceIndex: 1, wanConnectionDeviceIndex: 1 });
+  }>({ connectionPath: '', connectionType: 'PPPoE', name: '', username: '', password: '', enable: true, natEnabled: true, currentIP: '', vlanId: '', vlanPriority: '0', serviceList: 'INTERNET', wanDeviceIndex: 1, wanConnectionDeviceIndex: 1 });
   const [savingWan, setSavingWan] = useState(false);
 
   const fetchDevices = useCallback(async () => {
@@ -343,12 +348,31 @@ export default function GenieACSDevicesPage() {
 
   // Open Edit WiFi Modal
   const openEditWifiModal = (deviceId: string, wlan?: WLANConfig) => {
+    setWifiModalMode('edit');
     setEditWifiData({
       deviceId,
       wlanIndex: wlan?.index || 1,
       ssid: wlan?.ssid || '',
       password: '',  // Always start empty for security
-      enabled: wlan?.enabled ?? true
+      enabled: wlan?.enabled ?? true,
+      securityMode: wlan?.security && !wlan.security.toLowerCase().includes('none') ? wlan.security : 'WPA2-PSK',
+      band: wlan?.band || '2.4GHz',
+      channel: wlan?.channel !== '-' ? (wlan?.channel || '') : '',
+    });
+    setShowEditWifiModal(true);
+  };
+
+  const openAddWifiModal = (deviceId: string) => {
+    setWifiModalMode('add');
+    setEditWifiData({
+      deviceId,
+      wlanIndex: 1,
+      ssid: '',
+      password: '',
+      enabled: true,
+      securityMode: 'WPA2-PSK',
+      band: '2.4GHz',
+      channel: '',
     });
     setShowEditWifiModal(true);
   };
@@ -360,7 +384,10 @@ export default function GenieACSDevicesPage() {
       wlanIndex: 1,
       ssid: '',
       password: '',
-      enabled: true
+      enabled: true,
+      securityMode: 'WPA2-PSK',
+      band: '2.4GHz',
+      channel: '',
     });
   };
 
@@ -373,7 +400,9 @@ export default function GenieACSDevicesPage() {
         wlanIndex: newIndex,
         ssid: wlan.ssid || '',
         password: '', // Always clear password for security
-        enabled: wlan.enabled ?? true
+        enabled: wlan.enabled ?? true,
+        securityMode: wlan.security && !wlan.security.toLowerCase().includes('none') ? wlan.security : 'WPA2-PSK',
+        band: wlan.band || '2.4GHz',
       });
     } else {
       // Fallback jika data WLAN tidak ditemukan
@@ -395,61 +424,77 @@ export default function GenieACSDevicesPage() {
       return;
     }
 
-    // Trim password untuk cek apakah benar-benar ada isinya
     const trimmedPassword = (editWifiData.password || '').trim();
+    const isOpen = editWifiData.securityMode === 'None';
 
-    // Password validation HANYA jika user benar-benar mengisi password
-    if (trimmedPassword.length > 0) {
-      if (trimmedPassword.length < 8 || trimmedPassword.length > 63) {
+    // Password validation for secured networks
+    if (!isOpen) {
+      if (wifiModalMode === 'add' && trimmedPassword.length < 8) {
+        addToast({ type: 'warning', title: 'Password diperlukan', description: 'Password WiFi harus minimal 8 karakter untuk jaringan terenkripsi' });
+        return;
+      }
+      if (trimmedPassword.length > 0 && trimmedPassword.length < 8) {
         addToast({ type: 'warning', title: t('genieacs.passwordValidation'), description: `${t('genieacs.passwordLength')} (${t('genieacs.currentPasswordLength').replace('{length}', String(trimmedPassword.length))})` });
         return;
       }
     }
 
     if (!await confirm({
-      title: t('genieacs.updateWifiConfig'),
-      message: `SSID: ${editWifiData.ssid} | WLAN Index: ${editWifiData.wlanIndex}`,
+      title: wifiModalMode === 'add' ? 'Add New SSID' : t('genieacs.updateWifiConfig'),
+      message: wifiModalMode === 'add'
+        ? `SSID: ${editWifiData.ssid} | Band: ${editWifiData.band} | Security: ${editWifiData.securityMode}`
+        : `SSID: ${editWifiData.ssid} | WLAN Index: ${editWifiData.wlanIndex}`,
       confirmText: t('common.yesUpdate'),
       cancelText: t('common.cancel'),
       variant: 'info',
     })) return;
-      setSavingWifi(true);
-      try {
-        const response = await fetch(`/api/genieacs/devices/${encodeURIComponent(editWifiData.deviceId)}/wifi`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            wlanIndex: editWifiData.wlanIndex,
-            ssid: editWifiData.ssid,
-            password: trimmedPassword.length > 0 ? trimmedPassword : undefined, // Only send if not empty
-            enabled: editWifiData.enabled
-          })
+
+    setSavingWifi(true);
+    try {
+      const isAddMode = wifiModalMode === 'add';
+      const response = await fetch(`/api/genieacs/devices/${encodeURIComponent(editWifiData.deviceId)}/wifi`, {
+        method: isAddMode ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(isAddMode ? {
+          ssid: editWifiData.ssid,
+          password: trimmedPassword.length > 0 ? trimmedPassword : undefined,
+          enabled: editWifiData.enabled,
+          securityMode: editWifiData.securityMode,
+          band: editWifiData.band,
+          channel: editWifiData.channel ? parseInt(editWifiData.channel) : undefined,
+        } : {
+          wlanIndex: editWifiData.wlanIndex,
+          ssid: editWifiData.ssid,
+          password: trimmedPassword.length > 0 ? trimmedPassword : undefined,
+          enabled: editWifiData.enabled,
+          securityMode: editWifiData.securityMode,
+        })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        const isExecuted = data.taskStatus && data.taskStatus !== 'pending';
+        addToast({
+          type: isExecuted ? 'success' : 'info',
+          title: isExecuted ? t('common.success') : t('genieacs.taskSent'),
+          description: data.message || t('genieacs.wifiConfigSent'),
+          duration: isExecuted ? 3000 : 5000,
         });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          const isExecuted = data.taskStatus && data.taskStatus !== 'pending';
-          addToast({
-            type: isExecuted ? 'success' : 'info',
-            title: isExecuted ? t('common.success') : t('genieacs.taskSent'),
-            description: data.message || t('genieacs.wifiConfigSent'),
-            duration: isExecuted ? 3000 : 5000,
-          });
-          if (!isExecuted) {
-            setTimeout(() => { window.location.href = '/admin/genieacs/tasks'; }, 3000);
-          }
-          closeEditWifiModal();
-          if (selectedDevice) {
-            setTimeout(() => handleViewDetail(selectedDevice._id), isExecuted ? 3000 : 5000);
-          }
-        } else {
-          throw new Error(data.error || 'Gagal update WiFi config');
+        if (!isExecuted && !isAddMode) {
+          setTimeout(() => { window.location.href = '/admin/genieacs/tasks'; }, 3000);
         }
-      } catch (error: unknown) {
-        const msg = error instanceof Error ? error.message : t('genieacs.failedUpdateWifi');
-        addToast({ type: 'error', title: t('common.error'), description: msg });
-      } finally {
-        setSavingWifi(false);
+        closeEditWifiModal();
+        if (selectedDevice) {
+          setTimeout(() => handleViewDetail(selectedDevice._id), isExecuted ? 3000 : 5000);
+        }
+      } else {
+        throw new Error(data.error || 'Gagal update WiFi config');
       }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : t('genieacs.failedUpdateWifi');
+      addToast({ type: 'error', title: t('common.error'), description: msg });
+    } finally {
+      setSavingWifi(false);
+    }
   };
 
   const openEditWanModal = (wan: WANConnection) => {
@@ -461,6 +506,7 @@ export default function GenieACSDevicesPage() {
       username: wan.username !== '-' ? wan.username : '',
       password: '',
       enable: wan.enable,
+      natEnabled: true,
       currentIP: wan.externalIPAddress,
       vlanId: wan.vlanId !== '-' ? wan.vlanId : '',
       vlanPriority: '0',
@@ -473,7 +519,7 @@ export default function GenieACSDevicesPage() {
 
   const openAddWanModal = () => {
     setWanModalMode('add');
-    setEditWanData({ connectionPath: '', connectionType: 'PPPoE', name: '', username: '', password: '', enable: true, currentIP: '', vlanId: '', vlanPriority: '0', serviceList: 'INTERNET', wanDeviceIndex: 1, wanConnectionDeviceIndex: 1 });
+    setEditWanData({ connectionPath: '', connectionType: 'PPPoE', name: '', username: '', password: '', enable: true, natEnabled: true, currentIP: '', vlanId: '', vlanPriority: '0', serviceList: 'INTERNET', wanDeviceIndex: 1, wanConnectionDeviceIndex: 1 });
     setShowWanModal(true);
   };
 
@@ -496,6 +542,7 @@ export default function GenieACSDevicesPage() {
           connectionType: editWanData.connectionType,
           name: editWanData.name,
           enable: editWanData.enable,
+          natEnabled: editWanData.natEnabled,
           serviceList: editWanData.serviceList,
         };
         if (editWanData.vlanId) { body.vlanId = editWanData.vlanId; body.vlanPriority = editWanData.vlanPriority; }
@@ -514,6 +561,7 @@ export default function GenieACSDevicesPage() {
           connectionPath: editWanData.connectionPath,
           connectionType: editWanData.connectionType,
           enable: editWanData.enable,
+          natEnabled: editWanData.natEnabled,
           vlanId: editWanData.vlanId,
           vlanPriority: editWanData.vlanPriority,
           serviceList: editWanData.serviceList,
@@ -1007,6 +1055,13 @@ export default function GenieACSDevicesPage() {
                           </button>
                         )}
                         <button
+                          onClick={() => selectedDevice && openAddWifiModal(selectedDevice._id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-700 dark:text-violet-300 border border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition-colors"
+                        >
+                          <Wifi className="w-3 h-3" />
+                          Add SSID
+                        </button>
+                        <button
                           onClick={() => handleBrowseParameters(selectedDevice._id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 dark:text-teal-300 border border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/30 rounded-lg transition-colors"
                         >
@@ -1102,8 +1157,14 @@ export default function GenieACSDevicesPage() {
                             <div className="flex items-center gap-2">
                               <Radio className="w-3.5 h-3.5 text-info" />
                               <span className="text-xs font-semibold text-foreground">{t('genieacs.wifiNetworks')} ({selectedDevice.wlanConfigs.length})</span>
+                              <span className="text-[10px] text-muted-foreground">{selectedDevice.totalConnected} {t('genieacs.devicesConnected')}</span>
                             </div>
-                            <span className="text-[10px] text-muted-foreground">{selectedDevice.totalConnected} {t('genieacs.devicesConnected')}</span>
+                            <button
+                              onClick={() => openAddWifiModal(selectedDevice._id)}
+                              className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300 border border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded transition-colors"
+                            >
+                              + Add SSID
+                            </button>
                           </div>
                           <div className="p-3">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -1287,61 +1348,72 @@ export default function GenieACSDevicesPage() {
             document.body
           )}
 
-          {/* Edit WiFi Modal */}
+          {/* Edit / Add WiFi Modal */}
           <SimpleModal isOpen={showEditWifiModal} onClose={closeEditWifiModal} size="md">
             <ModalHeader>
-              <ModalTitle className="flex items-center gap-2"><Wifi className="w-4 h-4" />{t('genieacs.editWifiConfiguration')}</ModalTitle>
-              <ModalDescription>{t('genieacs.configureWlan')}</ModalDescription>
+              <ModalTitle className="flex items-center gap-2"><Wifi className="w-4 h-4" />{wifiModalMode === 'add' ? 'Add New SSID' : t('genieacs.editWifiConfiguration')}</ModalTitle>
+              <ModalDescription>{wifiModalMode === 'add' ? 'Create a new wireless network on this device' : t('genieacs.configureWlan')}</ModalDescription>
             </ModalHeader>
-            <ModalBody className="space-y-4">
-              <div>
-                <ModalLabel>{t('genieacs.wlanIndex')}</ModalLabel>
-                <ModalSelect value={editWifiData.wlanIndex} onChange={(e) => handleWlanIndexChange(parseInt(e.target.value))}>
-                  {selectedDevice?.wlanConfigs?.map((wlan) => (<option key={wlan.index} value={wlan.index} className="dark:bg-[#0a0520]">WLAN {wlan.index} - {wlan.ssid || t('genieacs.noSsid')} ({wlan.band})</option>)) || (<><option value={1} className="dark:bg-[#0a0520]">WLAN 1 (2.4GHz)</option><option value={2} className="dark:bg-[#0a0520]">WLAN 2</option><option value={3} className="dark:bg-[#0a0520]">WLAN 3</option><option value={4} className="dark:bg-[#0a0520]">WLAN 4</option><option value={5} className="dark:bg-[#0a0520]">WLAN 5 (5GHz)</option></>)}
-                </ModalSelect>
-              </div>
+            <ModalBody className="space-y-3">
+              {/* Edit mode: WLAN index selector */}
+              {wifiModalMode === 'edit' && (
+                <div>
+                  <ModalLabel>{t('genieacs.wlanIndex')}</ModalLabel>
+                  <ModalSelect value={editWifiData.wlanIndex} onChange={(e) => handleWlanIndexChange(parseInt(e.target.value))}>
+                    {selectedDevice?.wlanConfigs?.map((wlan) => (<option key={wlan.index} value={wlan.index} className="dark:bg-[#0a0520]">WLAN {wlan.index} — {wlan.ssid || t('genieacs.noSsid')} ({wlan.band})</option>)) || (<><option value={1} className="dark:bg-[#0a0520]">WLAN 1 (2.4GHz)</option><option value={2} className="dark:bg-[#0a0520]">WLAN 2 (5GHz)</option></>)}
+                  </ModalSelect>
+                </div>
+              )}
+              {/* Add mode: band + channel */}
+              {wifiModalMode === 'add' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <ModalLabel>Band</ModalLabel>
+                    <ModalSelect value={editWifiData.band} onChange={(e) => setEditWifiData({ ...editWifiData, band: e.target.value })}>
+                      <option value="2.4GHz">2.4 GHz</option>
+                      <option value="5GHz">5 GHz</option>
+                    </ModalSelect>
+                  </div>
+                  <div>
+                    <ModalLabel>Channel <span className="text-muted-foreground">(0 = auto)</span></ModalLabel>
+                    <ModalInput type="number" min={0} max={165} value={editWifiData.channel} onChange={(e) => setEditWifiData({ ...editWifiData, channel: e.target.value })} placeholder="0 (auto)" />
+                  </div>
+                </div>
+              )}
+              {/* SSID Name */}
               <div>
                 <ModalLabel required>{t('genieacs.ssidName')}</ModalLabel>
                 <ModalInput type="text" value={editWifiData.ssid} onChange={(e) => setEditWifiData({ ...editWifiData, ssid: e.target.value })} maxLength={32} placeholder={t('genieacs.wifiName')} autoComplete="off" />
-                <p className="text-[10px] text-muted-foreground mt-1">1-32 {t('common.characters')}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">1–32 {t('common.characters')}</p>
               </div>
-              {(() => {
-                const currentWlan = selectedDevice?.wlanConfigs?.find(w => w.index === editWifiData.wlanIndex);
-                const currentSecurity = currentWlan?.security || t('common.unknown');
-                const isOpenNetwork = currentSecurity.toLowerCase().includes('none') || currentSecurity.toLowerCase().includes('open') || currentSecurity === '';
-                return (
-                  <div className="p-3 bg-[#0a0520]/50 rounded-lg border border-[#bc13fe]/30">
-                    <div className="flex items-center gap-2 text-xs">
-                      <Shield className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="font-medium text-foreground">{t('genieacs.currentSecurity')}</span>
-                      <span className={`px-2 py-0.5 rounded ${isOpenNetwork ? 'bg-[#ff8c00]/20 text-[#ff8c00]' : 'bg-[#00ff88]/20 text-[#00ff88]'}`}>{currentSecurity}</span>
-                    </div>
-                    {isOpenNetwork && (<p className="text-[10px] text-muted-foreground mt-1">⚠️ {t('genieacs.openNetworkWarning')}</p>)}
+              {/* Security Mode */}
+              <div>
+                <ModalLabel>Security / Encryption</ModalLabel>
+                <ModalSelect value={editWifiData.securityMode} onChange={(e) => setEditWifiData({ ...editWifiData, securityMode: e.target.value })}>
+                  <option value="None">None (Open — no password)</option>
+                  <option value="WPA-PSK">WPA-PSK (WPA / TKIP)</option>
+                  <option value="WPA2-PSK">WPA2-PSK (WPA2 / AES) — Recommended</option>
+                  <option value="WPA-WPA2-PSK">WPA/WPA2-PSK Mixed (TKIP+AES)</option>
+                </ModalSelect>
+              </div>
+              {/* Password — only if not open */}
+              {editWifiData.securityMode !== 'None' && (
+                <div>
+                  <ModalLabel>{t('genieacs.wifiPassword')}{wifiModalMode === 'edit' ? ' (kosong = tidak diubah)' : ''}</ModalLabel>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                    <ModalInput type="text" value={editWifiData.password} onChange={(e) => setEditWifiData({ ...editWifiData, password: e.target.value })} maxLength={63} placeholder={wifiModalMode === 'add' ? 'Min. 8 karakter' : t('genieacs.passwordPlaceholder')} autoComplete="off" className="pl-10" />
                   </div>
-                );
-              })()}
-              {(() => {
-                const currentWlan = selectedDevice?.wlanConfigs?.find(w => w.index === editWifiData.wlanIndex);
-                const currentSecurity = currentWlan?.security || '';
-                const isOpenNetwork = currentSecurity.toLowerCase().includes('none') || currentSecurity.toLowerCase().includes('open') || currentSecurity === '';
-                if (isOpenNetwork) return null;
-                return (
-                  <div>
-                    <ModalLabel>{t('genieacs.wifiPassword')}</ModalLabel>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#e0d0ff]/40" />
-                      <ModalInput type="text" value={editWifiData.password} onChange={(e) => setEditWifiData({ ...editWifiData, password: e.target.value })} maxLength={63} placeholder={t('genieacs.passwordPlaceholder')} autoComplete="off" className="pl-10" />
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-1">💡 {t('genieacs.leaveEmptyNoChange')}</p>
-                  </div>
-                );
-              })()}
-              <div className="flex items-center justify-between p-3 bg-[#0a0520]/50 border border-[#bc13fe]/30 rounded-lg">
+                  <p className="text-[10px] text-muted-foreground mt-1">8–63 karakter{wifiModalMode === 'edit' ? ' · kosongkan jika tidak ingin mengubah' : ''}</p>
+                </div>
+              )}
+              {/* Enable toggle */}
+              <div className="flex items-center justify-between p-3 bg-muted/50 border border-border rounded-lg">
                 <div>
                   <p className="text-xs font-medium text-foreground">{t('genieacs.wifiStatus')}</p>
                   <p className="text-[10px] text-muted-foreground">{t('genieacs.enableDisableWifi')}</p>
                 </div>
-                <button type="button" onClick={() => setEditWifiData({ ...editWifiData, enabled: !editWifiData.enabled })} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editWifiData.enabled ? 'bg-[#00f7ff] shadow-[0_0_10px_rgba(0,247,255,0.4)]' : 'bg-[#bc13fe]/30'}`}>
+                <button type="button" onClick={() => setEditWifiData({ ...editWifiData, enabled: !editWifiData.enabled })} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editWifiData.enabled ? 'bg-success' : 'bg-muted-foreground/30'}`}>
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editWifiData.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
               </div>
@@ -1350,7 +1422,7 @@ export default function GenieACSDevicesPage() {
               <ModalButton type="button" variant="secondary" onClick={closeEditWifiModal}>{t('common.cancel')}</ModalButton>
               <ModalButton type="button" variant="primary" onClick={handleSaveWifi} disabled={savingWifi}>
                 {savingWifi ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
-                {t('common.save')}
+                {wifiModalMode === 'add' ? 'Add SSID' : t('common.save')}
               </ModalButton>
             </ModalFooter>
           </SimpleModal>
@@ -1440,20 +1512,41 @@ export default function GenieACSDevicesPage() {
             </ModalSelect>
             <p className="text-[10px] text-muted-foreground mt-1">Sets X_HW_ServiceList on device (Huawei/ZTE compatible)</p>
           </div>
-          {/* Enable toggle */}
-          <div className="flex items-center justify-between p-3 bg-muted/50 border border-border rounded-lg">
-            <div>
-              <p className="text-xs font-medium text-foreground">WAN Enable</p>
-              <p className="text-[10px] text-muted-foreground">Enable or disable this WAN connection</p>
+          {/* Enable + NAT toggles */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between p-3 bg-muted/50 border border-border rounded-lg">
+              <div>
+                <p className="text-xs font-medium text-foreground">WAN Enable</p>
+                <p className="text-[10px] text-muted-foreground">Aktifkan koneksi</p>
+              </div>
+              <button type="button" onClick={() => setEditWanData({ ...editWanData, enable: !editWanData.enable })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editWanData.enable ? 'bg-success' : 'bg-muted-foreground/30'}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editWanData.enable ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
             </div>
-            <button type="button" onClick={() => setEditWanData({ ...editWanData, enable: !editWanData.enable })}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editWanData.enable ? 'bg-success' : 'bg-muted-foreground/30'}`}>
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editWanData.enable ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
+            <div className="flex items-center justify-between p-3 bg-muted/50 border border-border rounded-lg">
+              <div>
+                <p className="text-xs font-medium text-foreground">NAT Enable</p>
+                <p className="text-[10px] text-muted-foreground">Network Address Translation</p>
+              </div>
+              <button type="button" onClick={() => setEditWanData({ ...editWanData, natEnabled: !editWanData.natEnabled })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editWanData.natEnabled ? 'bg-success' : 'bg-muted-foreground/30'}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editWanData.natEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
           </div>
           {/* TR-069 path reference */}
           {wanModalMode === 'edit' && (
             <div className="p-2 bg-muted/50 rounded text-[10px] text-muted-foreground font-mono break-all">Path: {editWanData.connectionPath}</div>
+          )}
+          {/* Port binding info */}
+          {wanModalMode === 'add' && (
+            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-[10px] text-blue-700 dark:text-blue-300">
+              <p className="font-medium mb-1">Port Binding Info</p>
+              <p>WANDevice = antarmuka WAN fisik (1=ETH/xDSL, 2=2nd WAN).</p>
+              <p>WANConnectionDevice = GEM port / sub-interface (1–8). Tiap VLAN/LAN port mapping pakai index berbeda.</p>
+              <p>Untuk dual-stack: buat 2 koneksi dengan WanConnDev berbeda dan VLAN berbeda.</p>
+            </div>
           )}
         </ModalBody>
         <ModalFooter>

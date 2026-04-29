@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { deviceId } = await params;
     const body = await request.json();
-    const { wlanIndex = 1, ssid, password, enabled = true } = body;
+    const { wlanIndex = 1, ssid, password, enabled = true, securityMode } = body;
 
     // Validation
     if (!ssid || ssid.length < 1 || ssid.length > 32) {
@@ -38,8 +38,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Password validation - only if password is provided
-    if (password && password.trim()) {
+    // Password validation - required if security mode is not None
+    const isOpen = !securityMode || securityMode === 'None';
+    if (!isOpen && password && password.trim()) {
       if (password.trim().length < 8 || password.trim().length > 63) {
         return NextResponse.json(
           { success: false, error: 'Password harus 8-63 karakter' },
@@ -76,11 +77,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Like gembok-bill: Send SEPARATE tasks for SSID and password
     const taskUrl = `${host}/devices/${encodeURIComponent(deviceId)}/tasks?timeout=3000&connection_request`;
 
-    // Task 1: Update SSID (always)
+    // Task 1: Update SSID + enable (always)
     const ssidTask = {
       name: 'setParameterValues',
       parameterValues: [
-        [`${basePath}.SSID`, ssid, 'xsd:string']
+        [`${basePath}.SSID`, ssid, 'xsd:string'],
+        [`${basePath}.Enable`, Boolean(enabled), 'xsd:boolean'],
       ]
     };
 
@@ -103,9 +105,31 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const ssidResult = await ssidResponse.json();
     console.log('[Admin WiFi] SSID task created:', ssidResult._id);
 
+    // Task 2: Security mode (if changed)
+    if (securityMode && securityModeMap[securityMode]) {
+      const { beaconType, authMode, encryptionMode } = securityModeMap[securityMode];
+      const secTask = {
+        name: 'setParameterValues',
+        parameterValues: [
+          [`${basePath}.BeaconType`, beaconType, 'xsd:string'],
+          [`${basePath}.WPAAuthenticationMode`, authMode, 'xsd:string'],
+          [`${basePath}.WPAEncryptionModes`, encryptionMode, 'xsd:string'],
+          [`${basePath}.IEEE11iAuthenticationMode`, authMode, 'xsd:string'],
+          [`${basePath}.IEEE11iEncryptionModes`, encryptionMode, 'xsd:string'],
+        ]
+      };
+      const secRes = await fetchWithTimeout(taskUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${authHeader}` },
+        body: JSON.stringify(secTask)
+      });
+      if (!secRes.ok) console.warn('[Admin WiFi] Security mode task failed:', await secRes.text());
+      else console.log('[Admin WiFi] Security mode task sent:', securityMode);
+    }
+
     // Task 2: Update password if provided (dual path like gembok-bill)
     let passwordResult = null;
-    if (password && password.trim()) {
+    if (!isOpen && password && password.trim()) {
       const passwordTask = {
         name: 'setParameterValues',
         parameterValues: [
@@ -279,5 +303,96 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { success: false, error: error instanceof Error ? error.message : 'Terjadi kesalahan' },
       { status: 500 }
     );
+  }
+}
+
+// PUT - Add new SSID via addObject + setParameterValues
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { deviceId } = await params;
+    const body = await request.json();
+    const {
+      ssid,
+      password,
+      enabled = true,
+      securityMode = 'WPA2-PSK',
+      band = '2.4GHz', // '2.4GHz' | '5GHz'
+      channel,
+    } = body;
+
+    if (!ssid || ssid.length < 1 || ssid.length > 32) {
+      return NextResponse.json({ success: false, error: 'SSID harus 1-32 karakter' }, { status: 400 });
+    }
+    if (securityMode !== 'None' && (!password || password.trim().length < 8)) {
+      return NextResponse.json({ success: false, error: 'Password harus minimal 8 karakter' }, { status: 400 });
+    }
+
+    const credentials = await getGenieACSCredentials();
+    if (!credentials?.host) {
+      return NextResponse.json({ success: false, error: 'GenieACS belum dikonfigurasi' }, { status: 400 });
+    }
+    const { host, username, password: geniePass } = credentials;
+    const authHeader = Buffer.from(`${username}:${geniePass}`).toString('base64');
+    const taskUrl = `${host}/devices/${encodeURIComponent(deviceId)}/tasks?timeout=5000&connection_request`;
+
+    const wlanBase = 'InternetGatewayDevice.LANDevice.1.WLANConfiguration';
+
+    // Step 1: addObject to create new WLANConfiguration entry
+    const addRes = await fetchWithTimeout(taskUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${authHeader}` },
+      body: JSON.stringify({ name: 'addObject', objectName: wlanBase }),
+    });
+    if (!addRes.ok) throw new Error(`addObject failed: ${await addRes.text()}`);
+    let newIndex = 1;
+    try {
+      const parsed = await addRes.json();
+      if (parsed?.instanceNumber) newIndex = parseInt(String(parsed.instanceNumber));
+    } catch { newIndex = 1; }
+
+    const newPath = `${wlanBase}.${newIndex}`;
+    const secMap = securityModeMap[securityMode] || securityModeMap['WPA2-PSK'];
+
+    // Step 2: setParameterValues on new entry
+    const parameterValues: [string, string | boolean | number, string][] = [
+      [`${newPath}.Enable`, Boolean(enabled), 'xsd:boolean'],
+      [`${newPath}.SSID`, ssid, 'xsd:string'],
+      [`${newPath}.BeaconType`, secMap.beaconType, 'xsd:string'],
+      [`${newPath}.WPAAuthenticationMode`, secMap.authMode, 'xsd:string'],
+      [`${newPath}.WPAEncryptionModes`, secMap.encryptionMode, 'xsd:string'],
+      [`${newPath}.IEEE11iAuthenticationMode`, secMap.authMode, 'xsd:string'],
+      [`${newPath}.IEEE11iEncryptionModes`, secMap.encryptionMode, 'xsd:string'],
+    ];
+    if (securityMode !== 'None' && password?.trim()) {
+      parameterValues.push([`${newPath}.KeyPassphrase`, password.trim(), 'xsd:string']);
+      parameterValues.push([`${newPath}.PreSharedKey.1.KeyPassphrase`, password.trim(), 'xsd:string']);
+    }
+    if (channel) parameterValues.push([`${newPath}.Channel`, parseInt(String(channel)) || 0, 'xsd:unsignedInt']);
+    // Frequency band (vendor-specific for Huawei)
+    if (band === '5GHz') {
+      parameterValues.push([`${newPath}.OperatingFrequencyBand`, '5GHz', 'xsd:string']);
+      parameterValues.push([`${newPath}.Standard`, 'ac', 'xsd:string']);
+    } else {
+      parameterValues.push([`${newPath}.OperatingFrequencyBand`, '2.4GHz', 'xsd:string']);
+      parameterValues.push([`${newPath}.Standard`, 'n', 'xsd:string']);
+    }
+
+    const setRes = await fetchWithTimeout(taskUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${authHeader}` },
+      body: JSON.stringify({ name: 'setParameterValues', parameterValues }),
+    });
+    if (!setRes.ok) throw new Error(`setParameterValues failed: ${await setRes.text()}`);
+
+    return NextResponse.json({
+      success: true,
+      message: `SSID baru "${ssid}" berhasil ditambahkan (WLAN index ${newIndex})`,
+      newPath,
+      newIndex,
+    });
+
+  } catch (error) {
+    console.error('[Add SSID] Error:', error);
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }
