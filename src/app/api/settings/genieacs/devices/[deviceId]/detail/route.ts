@@ -88,6 +88,116 @@ function getNestedValue(device: Record<string, unknown>, path: string): unknown 
   return value;
 }
 
+// Interface for WAN Connection
+interface WANConnection {
+  wanDeviceIndex: number;
+  wanConnectionDeviceIndex: number;
+  connectionIndex: number;
+  connectionType: 'PPPoE' | 'IP' | 'Unknown';
+  path: string;
+  name: string;
+  enable: boolean;
+  connectionStatus: string;
+  externalIPAddress: string;
+  username: string;
+  password: string;
+  macAddress: string;
+  dnsServers: string;
+  vlanId: string;
+  serviceList: string;
+}
+
+// Extract WAN connections from device
+function extractWANConnections(device: Record<string, unknown>): WANConnection[] {
+  const connections: WANConnection[] = [];
+
+  const wanDevice = getNestedValue(device, 'InternetGatewayDevice.WANDevice') as Record<string, unknown>;
+  if (!wanDevice || typeof wanDevice !== 'object') return connections;
+
+  for (const wanDevKey of Object.keys(wanDevice)) {
+    if (isNaN(parseInt(wanDevKey))) continue;
+    const wanDev = wanDevice[wanDevKey] as Record<string, unknown>;
+    if (!wanDev || typeof wanDev !== 'object') continue;
+
+    const wanConnDev = wanDev['WANConnectionDevice'] as Record<string, unknown>;
+    if (!wanConnDev || typeof wanConnDev !== 'object') continue;
+
+    for (const wanConnDevKey of Object.keys(wanConnDev)) {
+      if (isNaN(parseInt(wanConnDevKey))) continue;
+      const connDev = wanConnDev[wanConnDevKey] as Record<string, unknown>;
+      if (!connDev || typeof connDev !== 'object') continue;
+
+      // Check PPP connections
+      const pppConns = connDev['WANPPPConnection'] as Record<string, unknown>;
+      if (pppConns && typeof pppConns === 'object') {
+        for (const connKey of Object.keys(pppConns)) {
+          if (isNaN(parseInt(connKey))) continue;
+          const conn = pppConns[connKey] as Record<string, unknown>;
+          if (!conn || typeof conn === 'undefined') continue;
+
+          const basePath = `InternetGatewayDevice.WANDevice.${wanDevKey}.WANConnectionDevice.${wanConnDevKey}.WANPPPConnection.${connKey}`;
+          const name = safeString(conn['Name']) !== '-' ? safeString(conn['Name']) : `PPPoE-${wanDevKey}.${wanConnDevKey}.${connKey}`;
+          connections.push({
+            wanDeviceIndex: parseInt(wanDevKey),
+            wanConnectionDeviceIndex: parseInt(wanConnDevKey),
+            connectionIndex: parseInt(connKey),
+            connectionType: 'PPPoE',
+            path: basePath,
+            name,
+            enable: isTruthyValue(conn['Enable']),
+            connectionStatus: safeString(conn['ConnectionStatus']),
+            externalIPAddress: safeString(conn['ExternalIPAddress']),
+            username: safeString(conn['Username']),
+            password: safeString(conn['Password']),
+            macAddress: safeString(conn['MACAddress']),
+            dnsServers: safeString(conn['DNSServers']),
+            vlanId: safeString(getNestedValue(conn, 'X_HW_VLAN') as unknown) !== '-' 
+              ? safeString(getNestedValue(conn, 'X_HW_VLAN') as unknown)
+              : safeString(getNestedValue(conn, 'X_CMCC_VLANIDMark') as unknown),
+            serviceList: safeString(conn['X_HW_ServiceList']) !== '-' 
+              ? safeString(conn['X_HW_ServiceList'])
+              : safeString(conn['ServiceList']),
+          });
+        }
+      }
+
+      // Check IP connections
+      const ipConns = connDev['WANIPConnection'] as Record<string, unknown>;
+      if (ipConns && typeof ipConns === 'object') {
+        for (const connKey of Object.keys(ipConns)) {
+          if (isNaN(parseInt(connKey))) continue;
+          const conn = ipConns[connKey] as Record<string, unknown>;
+          if (!conn || typeof conn === 'undefined') continue;
+
+          const basePath = `InternetGatewayDevice.WANDevice.${wanDevKey}.WANConnectionDevice.${wanConnDevKey}.WANIPConnection.${connKey}`;
+          const name = safeString(conn['Name']) !== '-' ? safeString(conn['Name']) : `DHCP-${wanDevKey}.${wanConnDevKey}.${connKey}`;
+          connections.push({
+            wanDeviceIndex: parseInt(wanDevKey),
+            wanConnectionDeviceIndex: parseInt(wanConnDevKey),
+            connectionIndex: parseInt(connKey),
+            connectionType: 'IP',
+            path: basePath,
+            name,
+            enable: isTruthyValue(conn['Enable']),
+            connectionStatus: safeString(conn['ConnectionStatus']),
+            externalIPAddress: safeString(conn['ExternalIPAddress']),
+            username: '-',
+            password: '-',
+            macAddress: safeString(conn['MACAddress']),
+            dnsServers: safeString(conn['DNSServers']),
+            vlanId: safeString(getNestedValue(conn, 'X_HW_VLAN') as unknown),
+            serviceList: safeString(conn['X_HW_ServiceList']) !== '-'
+              ? safeString(conn['X_HW_ServiceList'])
+              : safeString(conn['ServiceList']),
+          });
+        }
+      }
+    }
+  }
+
+  return connections;
+}
+
 // Helper to extract IP from ConnectionRequestURL
 function extractIPFromURL(url: string): string {
   if (!url || url === '-') return '-';
@@ -693,6 +803,7 @@ export async function GET(
 
     // Extract WLAN configs and connected devices
     const wlanConfigs = extractWLANConfigs(deviceRaw);
+    const wanConnections = extractWANConnections(deviceRaw);
     
     // AssociatedDevice is the PRIMARY and ONLY source for WiFi clients (real-time connected devices)
     const wifiClients = extractAssociatedDevices(deviceRaw, wlanConfigs);
@@ -760,6 +871,7 @@ export async function GET(
       cpuUsage: getParameterValue(deviceRaw, parameterPaths.cpuUsage),
       // WiFi & Connected devices
       wlanConfigs,
+      wanConnections,
       connectedDevices: allConnectedDevices,
       totalConnected,
       isDualBand,

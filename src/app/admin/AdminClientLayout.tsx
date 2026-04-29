@@ -209,6 +209,12 @@ const menuGroups: MenuGroup[] = [
           { titleKey: 'nav.tasks', href: '/admin/genieacs/tasks', requiredPermission: 'settings.genieacs' },
           { titleKey: 'nav.virtualParameters', href: '/admin/genieacs/virtual-parameters', requiredPermission: 'settings.genieacs' },
           { titleKey: 'nav.parameterConfig', href: '/admin/genieacs/parameter-config', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.presets', href: '/admin/genieacs/presets', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.vpScripts', href: '/admin/genieacs/vp-scripts', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.provisions', href: '/admin/genieacs/provisions', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.faults', href: '/admin/genieacs/faults', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.config', href: '/admin/genieacs/config', requiredPermission: 'settings.genieacs' },
+          { titleKey: 'nav.autoProvision', href: '/admin/genieacs/auto-provision', requiredPermission: 'settings.genieacs' },
         ],
       },
       {

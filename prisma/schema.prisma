@@ -1503,6 +1503,54 @@ model genieacsVirtualParameter {
   @@map("genieacs_virtual_parameters")
 }
 
+// GenieACS config stored in Prisma as source-of-truth, auto-synced to GenieACS via NBI
+model genieacsProvision {
+  id          String   @id @default(cuid())
+  name        String   @unique // provision _id in GenieACS
+  script      String   @db.LongText
+  description String?  @db.Text
+  syncedAt    DateTime? // last successful sync to GenieACS
+  syncError   String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdAt])
+  @@map("genieacs_provisions")
+}
+
+model genieacsPreset {
+  id          String   @id @default(cuid())
+  name        String   @unique // preset _id in GenieACS
+  weight      Int      @default(100)
+  channel     String?
+  schedule    String?  @db.Text // cron expression
+  events      String?  @db.Text // JSON array of events
+  precondition String? @db.Text // GenieACS query string
+  provisions  String   @db.Text // JSON array of [provisionName, ...args]
+  description String?  @db.Text
+  syncedAt    DateTime? // last successful sync to GenieACS
+  syncError   String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdAt])
+  @@map("genieacs_presets")
+}
+
+model genieacsVpScript {
+  id          String   @id @default(cuid())
+  name        String   @unique // VP _id in GenieACS
+  script      String   @db.LongText
+  description String?  @db.Text
+  syncedAt    DateTime? // last successful sync to GenieACS
+  syncError   String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdAt])
+  @@map("genieacs_vp_scripts")
+}
+
 model parameterDisplayConfig {
   id              Int      @id @default(autoincrement())
   configType      ConfigType
