@@ -469,6 +469,17 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 <!-- AUTO-CHANGELOG:START -->
 
+### v2.25.10 — 2026-05-01
+
+### Changed
+- **Redesign Form Tambah Pelanggan — 4 Tab Layout** — Form dibagi menjadi 4 tab: 📡 Akun RADIUS, 👤 Data Pelanggan, 🔧 Instalasi, ⚙️ Pengaturan. Navigasi via tombol Sebelumnya/Berikutnya + dot indicator. Tidak perlu scroll panjang. Tab menampilkan tanda hijau jika field wajib sudah terisi.
+- **Support Pelanggan Tanpa Akun PPPoE** — Toggle "Punya Akun PPPoE / Tanpa Akun PPPoE" di tab Akun RADIUS. Jika dimatikan, username & password tidak wajib diisi — sistem auto-generate username `STATIC-{customerId}`. Cocok untuk pelanggan IP statis atau MAC-based. RADIUS sync dilewati kecuali `Framed-IP-Address` jika IP statis diisi.
+
+### Files
+- `src/app/admin/pppoe/users/new/page.tsx` — Rewritten with 4-tab layout
+- `src/app/api/pppoe/users/route.ts` — Validation updated for optional PPPoE credentials
+- `src/server/services/pppoe.service.ts` — Auto-generate username + skip RADIUS sync for static customers
+
 ### v2.25.9 — 2026-04-30
 
 ### Added
@@ -559,12 +570,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 - `src/app/agent/vouchers/page.tsx`
 - `src/app/agent/sessions/page.tsx`
 - `src/app/agent/tickets/page.tsx`
-
-### v2.25.5 — 2026-04-28
-
-### Added
-- **APK Android: notifikasi native dengan suara, getaran & floating** — APK WebView kini menyertakan `NotificationChannel` (Android 8+), JavaScript bridge (`Android.showNotificationWithTag`) yang terhubung ke service worker push event (`PUSH_RECEIVED`), serta `NotificationWorker` berbasis WorkManager yang polling `/api/notifications` setiap 15 menit di background. Notifikasi tampil dengan prioritas HIGH, suara default, getaran, dan heads-up notification bahkan saat aplikasi ditutup.
-- **Logo square 1:1 di semua halaman** — Semua container logo (login Admin/Customer/Technician/Agent, sidebar admin, settings company, download APK, halaman isolated) kini menggunakan rasio persegi (1:1) dengan `object-contain` sehingga logo 512×200 ditampilkan dalam kanvas 512×512 dengan letterbox — tidak distretch.
 
 <!-- AUTO-CHANGELOG:END -->
 
