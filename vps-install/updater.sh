@@ -35,6 +35,57 @@ TARGET_VERSION=""
 USE_BRANCH=""
 SKIP_BACKUP=false
 ARCH="amd64"
+GENIEACS_BACKUP_SQL="/tmp/genieacs-data-backup-$$.sql"
+
+# ─── GenieACS data backup/restore helpers ──────────────────────────────────
+# Backup tabel genieacs_provisions, genieacs_presets, genieacs_vp_scripts
+# ke file SQL sementara sebelum prisma db push. Ini mencegah data terhapus
+# ketika prisma db push --accept-data-loss melakukan DROP TABLE akibat perubahan schema.
+_parse_db_parts() {
+    local db_url=""
+    if [ -f "$APP_DIR/.env" ]; then
+        db_url=$(grep '^DATABASE_URL=' "$APP_DIR/.env" | cut -d= -f2- | tr -d '"' | head -1)
+    fi
+    [ -z "$db_url" ] && return 1
+    [[ "$db_url" != mysql* ]] && return 1
+
+    local without_scheme="${db_url#mysql://}"
+    local userpass="${without_scheme%%@*}"
+    _DB_USER="${userpass%%:*}"
+    _DB_PASS="${userpass#*:}"
+    local hostport_db="${without_scheme#*@}"
+    local hostport="${hostport_db%%/*}"
+    _DB_NAME="${hostport_db#*/}"
+    _DB_NAME="${_DB_NAME%%\?*}"
+    _DB_HOST="${hostport%%:*}"
+    _DB_PORT="${hostport##*:}"
+    [[ "$_DB_PORT" == "$_DB_HOST" ]] && _DB_PORT="3306"
+    return 0
+}
+
+backup_genieacs_data() {
+    command -v mysqldump &>/dev/null || return 0
+    _parse_db_parts || return 0
+
+    mysqldump -h"$_DB_HOST" -P"$_DB_PORT" -u"$_DB_USER" -p"$_DB_PASS" \
+        --no-create-info --replace --single-transaction \
+        "$_DB_NAME" genieacs_provisions genieacs_presets genieacs_vp_scripts \
+        > "$GENIEACS_BACKUP_SQL" 2>/dev/null \
+        && print_success "GenieACS data backed up ($(wc -l < "$GENIEACS_BACKUP_SQL" 2>/dev/null || echo 0) lines)" \
+        || { print_info "GenieACS backup skipped (tables may not exist yet)"; rm -f "$GENIEACS_BACKUP_SQL"; }
+}
+
+restore_genieacs_data() {
+    [ -f "$GENIEACS_BACKUP_SQL" ] && [ -s "$GENIEACS_BACKUP_SQL" ] || return 0
+    command -v mysql &>/dev/null || return 0
+    _parse_db_parts || return 0
+
+    mysql -h"$_DB_HOST" -P"$_DB_PORT" -u"$_DB_USER" -p"$_DB_PASS" "$_DB_NAME" \
+        < "$GENIEACS_BACKUP_SQL" 2>/dev/null \
+        && print_success "GenieACS data restored from backup" \
+        || print_info "GenieACS restore: check manually if data is missing"
+    rm -f "$GENIEACS_BACKUP_SQL"
+}
 
 # Detect architecture
 if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
@@ -152,7 +203,13 @@ if [ -n "$USE_BRANCH" ]; then
 
     git fetch origin
     git reset --hard "origin/$USE_BRANCH"
-    git clean -fd
+    # -e: exclude file/direktori penting yang mungkin ada secara lokal (tidak di-gitignore)
+    # File .env dan yang ada di .gitignore sudah aman (git clean tanpa -x tidak menyentuhnya)
+    git clean -fd \
+        -e 'ecosystem.config.js' \
+        -e 'freeradius-config/' \
+        -e '*.local' \
+        -e '.env.production'
 
     # ── Update ecosystem.config.js (untracked by git) ─────────────────────
     # ecosystem.config.js is untracked — git clean removes it, must be restored.
@@ -200,7 +257,9 @@ if [ -n "$USE_BRANCH" ]; then
     node_modules/.bin/prisma generate
 
     print_step "Running database migrations"
+    backup_genieacs_data
     node_modules/.bin/prisma db push --accept-data-loss 2>/dev/null || node_modules/.bin/prisma db push
+    restore_genieacs_data
 
     # ── Auth self-heal for legacy installs ────────────────────────────────
     # Migrate legacy admin_user -> admin_users if needed and ensure
@@ -476,9 +535,11 @@ if [ -f "$APP_DIR/.env" ]; then
 fi
 
 node_modules/.bin/prisma generate 2>/dev/null || true
+backup_genieacs_data
 node_modules/.bin/prisma db push --accept-data-loss 2>/dev/null || \
     node_modules/.bin/prisma db push || \
     print_info "DB push skipped (check manually)"
+restore_genieacs_data
 
 print_step "Applying seed data (new templates & config)"
 npm run db:seed 2>/dev/null || print_info "Seed skipped (check manually)"
