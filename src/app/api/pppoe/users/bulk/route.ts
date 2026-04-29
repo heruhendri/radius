@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
           latitude: '-6.200000',
           longitude: '106.816666',
           autoIsolationEnabled: 'true',
+          firstInvoice: 'prorate',
         },
         {
           customerId: '',
@@ -58,6 +59,7 @@ export async function GET(request: NextRequest) {
           latitude: '',
           longitude: '',
           autoIsolationEnabled: 'true',
+          firstInvoice: 'full',
         },
       ];
 
@@ -78,6 +80,7 @@ export async function GET(request: NextRequest) {
           { key: 'latitude', header: 'Latitude', width: 14 },
           { key: 'longitude', header: 'Longitude', width: 14 },
           { key: 'autoIsolationEnabled', header: 'Auto Isolasi (true/false)', width: 22 },
+          { key: 'firstInvoice', header: 'Tagihan Pertama (none/prorate/full)', width: 30 },
           { key: 'registeredAt', header: 'Tanggal Register (YYYY-MM-DD)', width: 26 },
         ];
         const buffer = await generateExcelBuffer(sampleData as any, columns, 'PPPoE Template');
@@ -90,9 +93,9 @@ export async function GET(request: NextRequest) {
       }
 
       // CSV fallback
-      const template = `ID Pelanggan (kosongkan = auto),Username *,Password *,Nama Lengkap *,No. Telepon *,Email,Alamat,Area/Wilayah,IP Address,Tipe Langganan (POSTPAID/PREPAID),Tanggal Expired (YYYY-MM-DD),Hari Tagihan (1-31),Latitude,Longitude,Tanggal Register (YYYY-MM-DD)
-,user001,pass123,Budi Santoso,08123456789,budi@example.com,Jl. Merdeka No. 10,Cluster A,10.10.10.2,POSTPAID,,1,-6.200000,106.816666,
-,user002,pass456,Siti Rahayu,08987654321,siti@example.com,Jl. Sudirman No. 5,,, PREPAID,2026-12-31,,,,`;
+      const template = `ID Pelanggan (kosongkan = auto),Username *,Password *,Nama Lengkap *,No. Telepon *,Email,Alamat,Area/Wilayah,IP Address,Tipe Langganan (POSTPAID/PREPAID),Tanggal Expired (YYYY-MM-DD),Hari Tagihan (1-31),Latitude,Longitude,Auto Isolasi (true/false),Tagihan Pertama (none/prorate/full),Tanggal Register (YYYY-MM-DD)
+,user001,pass123,Budi Santoso,08123456789,budi@example.com,Jl. Merdeka No. 10,Cluster A,10.10.10.2,POSTPAID,,1,-6.200000,106.816666,true,prorate,
+,user002,pass456,Siti Rahayu,08987654321,siti@example.com,Jl. Sudirman No. 5,,, PREPAID,2026-12-31,,,,true,full,`;
 
       return new NextResponse(template, {
         headers: {
@@ -114,7 +117,7 @@ export async function GET(request: NextRequest) {
       });
 
       // Build CSV content with password
-      let csv = 'username,password,customerId,name,phone,email,address,area,ipAddress,subscriptionType,billingDay,status,profile,router,expiredAt,latitude,longitude,createdAt\n';
+      let csv = 'username,password,customerId,name,phone,email,address,area,ipAddress,subscriptionType,billingDay,status,profile,router,expiredAt,latitude,longitude,autoIsolationEnabled,createdAt\n';
       
       users.forEach(user => {
         const row = [
@@ -135,6 +138,7 @@ export async function GET(request: NextRequest) {
           user.expiredAt ? new Date(user.expiredAt).toISOString().split('T')[0] : '',
           user.latitude || '',
           user.longitude || '',
+          (user as any).autoIsolationEnabled !== false ? 'true' : 'false',
           new Date(user.createdAt).toISOString().split('T')[0],
         ];
         csv += row.map(field => `"${field}"`).join(',') + '\n';
@@ -250,6 +254,11 @@ export async function POST(request: NextRequest) {
       'tanggal terdaftar': 'createdat',
       'registered at': 'createdat',
       'registeredat': 'createdat',
+      // Tagihan pertama
+      'tagihan pertama (none/prorate/full)': 'firstinvoice',
+      'tagihan pertama': 'firstinvoice',
+      'first invoice': 'firstinvoice',
+      'firstinvoice': 'firstinvoice',
     };
 
     // Parse file: support both CSV and XLSX/XLS
@@ -530,6 +539,50 @@ export async function POST(request: NextRequest) {
           where: { id: newUser.id },
           data: { syncedToRadius: true },
         });
+
+        // Create first invoice if requested (none/prorate/full)
+        const rawFirstInvoice = (rowData.firstinvoice || '').toLowerCase().trim();
+        const doFirstInvoice = rawFirstInvoice === 'prorate' || rawFirstInvoice === 'full';
+        if (doFirstInvoice && newUser.expiredAt) {
+          try {
+            let invoiceAmount = rowProfile.price;
+            if (rawFirstInvoice === 'prorate' && subscriptionType !== 'PREPAID') {
+              const regDate = userData.createdAt ? new Date(userData.createdAt) : new Date();
+              regDate.setHours(0, 0, 0, 0);
+              const year = regDate.getFullYear(); const month = regDate.getMonth(); const currentDay = regDate.getDate();
+              const bd = userData.billingDay ? Math.min(Math.max(Number(userData.billingDay), 1), 28) : 1;
+              let nextBilling: Date;
+              if (currentDay < bd) { nextBilling = new Date(year, month, bd); }
+              else { nextBilling = new Date(year, month + 1, bd); }
+              const msPerDay = 1000 * 60 * 60 * 24;
+              const daysActive = Math.max(1, Math.ceil((nextBilling.getTime() - regDate.getTime()) / msPerDay));
+              const daysInMonth = new Date(year, month + 1, 0).getDate();
+              invoiceAmount = Math.ceil((daysActive / daysInMonth) * rowProfile.price);
+            }
+            const invYear = new Date().getFullYear();
+            const invMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+            const invId = randomUUID();
+            const invNumber = `INV-${invYear}${invMonth}-${invId.slice(0, 8).toUpperCase()}`;
+            await prisma.invoice.create({
+              data: {
+                id: invId,
+                invoiceNumber: invNumber,
+                userId: newUser.id,
+                amount: invoiceAmount,
+                baseAmount: invoiceAmount,
+                dueDate: newUser.expiredAt,
+                status: 'PENDING',
+                invoiceType: 'MONTHLY',
+                customerName: newUser.name,
+                customerPhone: newUser.phone,
+                customerUsername: newUser.username,
+                createdAt: new Date(),
+              },
+            });
+          } catch (invoiceErr) {
+            console.error(`Invoice creation failed for row ${i + 2}:`, invoiceErr);
+          }
+        }
 
         results.success++;
       } catch (error: any) {

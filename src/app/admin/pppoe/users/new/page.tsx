@@ -29,6 +29,7 @@ export default function NewPppoeUserPage() {
   const [uploadingIdCard, setUploadingIdCard] = useState(false);
   const [uploadingInstallation, setUploadingInstallation] = useState(false);
   const [hasPppoeAccount, setHasPppoeAccount] = useState(true);
+  const [firstInvoice, setFirstInvoice] = useState<'none' | 'prorate' | 'full'>('prorate');
 
   const [formData, setFormData] = useState({
     username: '',
@@ -110,6 +111,7 @@ export default function NewPppoeUserPage() {
         username: hasPppoeAccount ? formData.username : '',
         password: hasPppoeAccount ? formData.password : '',
         noPppoeAccount: !hasPppoeAccount,
+        firstInvoice,
         ...(formData.expiredAt && {
           expiredAt: (() => {
             const raw = formData.expiredAt;
@@ -135,8 +137,16 @@ export default function NewPppoeUserPage() {
     finally { setSaving(false); }
   };
 
-  const field = (key: keyof typeof formData, val: string | boolean) =>
-    setFormData(prev => ({ ...prev, [key]: val }));
+  const field = (key: keyof typeof formData, val: string | boolean) => {
+    setFormData(prev => {
+      const next = { ...prev, [key]: val };
+      // Auto-reset firstInvoice when subscriptionType changes
+      if (key === 'subscriptionType') {
+        setFirstInvoice(val === 'PREPAID' ? 'full' : 'prorate');
+      }
+      return next;
+    });
+  };
 
   const tabDone = [
     !!formData.profileId && (hasPppoeAccount ? !!(formData.username && formData.password) : true),
@@ -267,24 +277,67 @@ export default function NewPppoeUserPage() {
                       </ModalSelect>
                     </div>
                     {prorateInfo && (
-                      <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 p-2.5">
-                        <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 mb-1">💰 Estimasi Invoice Pertama (Prorate)</p>
-                        <div className="flex items-center justify-between">
-                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                            <p>{prorateInfo.daysActive} hari aktif s/d {prorateInfo.nextBilling.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
-                            <p className="text-[9px] opacity-70">Bulan selanjutnya: Rp {prorateInfo.fullPrice.toLocaleString('id-ID')}/bln</p>
+                      <>
+                        <div>
+                          <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">💳 Tagihan Pertama</p>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'none' ? 'border-border bg-muted' : 'border-transparent bg-muted/40 hover:border-border'}`}>
+                              <input type="radio" name="firstInvoice" value="none" checked={firstInvoice === 'none'} onChange={() => setFirstInvoice('none')} className="sr-only" />
+                              <span className="text-sm mb-0.5">⏸️</span>
+                              <span className="text-[9px] font-semibold">Tidak Sekarang</span>
+                              <span className="text-[8px] text-muted-foreground leading-tight mt-0.5">Dibuat otomatis oleh sistem</span>
+                            </label>
+                            <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'prorate' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30' : 'border-transparent bg-muted/40 hover:border-emerald-300'}`}>
+                              <input type="radio" name="firstInvoice" value="prorate" checked={firstInvoice === 'prorate'} onChange={() => setFirstInvoice('prorate')} className="sr-only" />
+                              <span className="text-sm mb-0.5">📅</span>
+                              <span className="text-[9px] font-semibold text-emerald-700 dark:text-emerald-300">Prorate</span>
+                              <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">Rp {prorateInfo.prorateAmount.toLocaleString('id-ID')}</span>
+                              <span className="text-[8px] text-muted-foreground leading-tight">{prorateInfo.daysActive} hari s/d tgl {prorateInfo.nextBilling.getDate()}</span>
+                            </label>
+                            <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'full' ? 'border-primary bg-primary/10' : 'border-transparent bg-muted/40 hover:border-primary/40'}`}>
+                              <input type="radio" name="firstInvoice" value="full" checked={firstInvoice === 'full'} onChange={() => setFirstInvoice('full')} className="sr-only" />
+                              <span className="text-sm mb-0.5">💰</span>
+                              <span className="text-[9px] font-semibold">Sebulan Penuh</span>
+                              <span className="text-[9px] font-bold">Rp {prorateInfo.fullPrice.toLocaleString('id-ID')}</span>
+                              <span className="text-[8px] text-muted-foreground leading-tight">Bayar 1 bulan sekarang</span>
+                            </label>
                           </div>
-                          <p className="text-base font-bold text-emerald-700 dark:text-emerald-300">Rp {prorateInfo.prorateAmount.toLocaleString('id-ID')}</p>
+                          {firstInvoice !== 'none' && (
+                            <p className="text-[9px] text-muted-foreground mt-1">
+                              ℹ️ Invoice <span className="font-semibold">PENDING</span> akan dibuat dan bisa dibayar via portal pelanggan atau manual.
+                            </p>
+                          )}
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
                 )}
                 {formData.subscriptionType === 'PREPAID' && (
-                  <div>
-                    <ModalLabel>Tanggal Expired</ModalLabel>
-                    <ModalInput type="date" value={formData.expiredAt ? formData.expiredAt.slice(0, 10) : ''} onChange={(e) => field('expiredAt', e.target.value)} />
-                    <p className="text-[10px] text-muted-foreground mt-1">Kosongkan untuk hitung otomatis dari validitas paket.</p>
+                  <div className="space-y-2">
+                    <div>
+                      <ModalLabel>Tanggal Expired</ModalLabel>
+                      <ModalInput type="date" value={formData.expiredAt ? formData.expiredAt.slice(0, 10) : ''} onChange={(e) => field('expiredAt', e.target.value)} />
+                      <p className="text-[10px] text-muted-foreground mt-1">Kosongkan untuk hitung otomatis dari validitas paket.</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">💳 Tagihan Pertama</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'none' ? 'border-border bg-muted' : 'border-transparent bg-muted/40 hover:border-border'}`}>
+                          <input type="radio" name="firstInvoice" value="none" checked={firstInvoice === 'none'} onChange={() => setFirstInvoice('none')} className="sr-only" />
+                          <span className="text-sm mb-0.5">⏸️</span>
+                          <span className="text-[9px] font-semibold">Tidak Sekarang</span>
+                          <span className="text-[8px] text-muted-foreground">Dibuat manual nanti</span>
+                        </label>
+                        <label className={`flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all text-center ${firstInvoice === 'full' ? 'border-purple-500 bg-purple-500/10' : 'border-transparent bg-muted/40 hover:border-purple-300'}`}>
+                          <input type="radio" name="firstInvoice" value="full" checked={firstInvoice === 'full'} onChange={() => setFirstInvoice('full')} className="sr-only" />
+                          <span className="text-sm mb-0.5">💰</span>
+                          <span className="text-[9px] font-semibold text-purple-700 dark:text-purple-300">Buat Tagihan Sekarang</span>
+                          {profiles.find(p => p.id === formData.profileId) && (
+                            <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400">Rp {profiles.find(p => p.id === formData.profileId)!.price.toLocaleString('id-ID')}</span>
+                          )}
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

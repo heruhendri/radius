@@ -37,6 +37,8 @@ export interface CreatePppoeUserInput {
   installationPhotos?: unknown;
   followRoad?: boolean;
   registeredAt?: string;
+  autoIsolationEnabled?: boolean;
+  firstInvoice?: 'none' | 'prorate' | 'full';
 }
 
 export interface UpdatePppoeUserInput {
@@ -252,6 +254,7 @@ export async function createPppoeUser(
       installationPhotos: installationPhotos ?? null,
       followRoad: !!followRoad,
       referralCode: await generateUniqueReferralCode(),
+      ...((data as any).autoIsolationEnabled !== undefined && { autoIsolationEnabled: !!(data as any).autoIsolationEnabled }),
       ...(registeredAt ? { createdAt: new Date(registeredAt) } : {}),
       ...(pppoeCustomerId ? { pppoeCustomerId } : {}),
     } as never,
@@ -293,6 +296,52 @@ export async function createPppoeUser(
       });
     } catch (syncError) {
       console.error('Static IP sync error:', syncError);
+    }
+  }
+
+  // Create first invoice if requested
+  const firstInvoice = (data as any).firstInvoice as 'none' | 'prorate' | 'full' | undefined;
+  if (firstInvoice && firstInvoice !== 'none') {
+    try {
+      let invoiceAmount = profile.price;
+      if (firstInvoice === 'prorate' && subscriptionType !== 'PREPAID') {
+        // Calculate prorate: days from today to next billing date
+        const registrationDate = registeredAt ? new Date(registeredAt + 'T00:00:00') : new Date();
+        registrationDate.setHours(0, 0, 0, 0);
+        const year = registrationDate.getFullYear();
+        const month = registrationDate.getMonth();
+        const currentDay = registrationDate.getDate();
+        const bd = billingDay ? Math.min(Math.max(parseInt(String(billingDay)), 1), 28) : 1;
+        let nextBilling: Date;
+        if (currentDay < bd) { nextBilling = new Date(year, month, bd); }
+        else { nextBilling = new Date(year, month + 1, bd); }
+        const msPerDay = 1000 * 60 * 60 * 24;
+        const daysActive = Math.max(1, Math.ceil((nextBilling.getTime() - registrationDate.getTime()) / msPerDay));
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        invoiceAmount = Math.ceil((daysActive / daysInMonth) * profile.price);
+      }
+      const invoiceYear = new Date().getFullYear();
+      const invoiceMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+      const invoiceId = crypto.randomUUID();
+      const invoiceNumber = `INV-${invoiceYear}${invoiceMonth}-${invoiceId.slice(0, 8).toUpperCase()}`;
+      await prisma.invoice.create({
+        data: {
+          id: invoiceId,
+          invoiceNumber,
+          userId: user.id,
+          amount: invoiceAmount,
+          baseAmount: invoiceAmount,
+          dueDate: finalExpiredAt,
+          status: 'PENDING',
+          invoiceType: 'MONTHLY',
+          customerName: resolvedName,
+          customerPhone: resolvedPhone,
+          customerUsername: username,
+          createdAt: new Date(),
+        },
+      });
+    } catch (invoiceError) {
+      console.error('First invoice creation error:', invoiceError);
     }
   }
 
