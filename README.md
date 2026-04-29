@@ -469,6 +469,37 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 <!-- AUTO-CHANGELOG:START -->
 
+### v2.25.9 — 2026-04-30
+
+### Added
+- **Subdomain Routing Frontend UI** — Admin → Settings → Subdomain Routing: halaman panduan interaktif untuk mengatur subdomain per portal (`customer.domain.com`, `agent.domain.com`, `teknisi.domain.com`, `admin.domain.com`). Input domain dinamis (auto-detect dari Base URL), tampilkan DNS records yang perlu ditambahkan, Nginx config siap pakai (bisa di-download .conf), panduan Certbot SSL, dan perintah test curl. Semua script bisa disalin dengan satu klik.
+- **Subdomain Routing di Middleware (`proxy.ts`)** — Next.js middleware membaca header `Host`, parse subdomain, lalu `NextResponse.rewrite()` ke path portal yang sesuai tanpa redirect (URL tetap). Map: `customer`/`pelanggan` → `/customer`, `agent`/`agen` → `/agent`, `teknisi`/`technician` → `/technician`, `admin` → `/admin`.
+- **Prorate Billing di Form Tambah Pelanggan PPPoE** — Untuk tipe POSTPAID: estimasi tagihan prorate dihitung otomatis (live) berdasarkan profil, tanggal jatuh tempo, dan tanggal daftar. Ditampilkan dalam kotak hijau "Estimasi Tagihan Pertama (Prorate)".
+- **Info Alur Pembayaran di Form Tambah Pelanggan** — Kotak biru (POSTPAID) dan ungu (PREPAID) menjelaskan alur pembayaran 4-langkah, muncul otomatis sesuai pilihan tipe langganan.
+- **Field Aksi Jatuh Tempo di Form Tambah Pelanggan** — Dropdown "⚡ Aksi Jatuh Tempo" di section Informasi Tambahan: pilih antara `ISOLIR INTERNET (Suspend)` atau `TETAP TERHUBUNG (No Action)`. Default: ISOLIR. Field ini sebelumnya tidak ada di form tambah pelanggan baru.
+- **Entri nav sidebar: Subdomain Routing** — Menu Settings admin memiliki sub-menu baru "Subdomain Routing" di bawah Cloudflare Tunnel.
+
+### Fixed
+- **Isolasi PPPoE — user tetap online setelah expired** — Sebelumnya, user expired hanya diubah grup RADIUS ke `isolir` tapi session PPP lama tetap jalan. Fix 3-layer:
+  1. **Langsung** (sebelum disconnect): API MikroTik tambahkan IP aktif ke address-list `isolir` → firewall `src-address-list=isolir action=drop` blokir internet saat itu juga.
+  2. **CoA/disconnect**: disconnect PPP paksa re-auth.
+  3. **Reconnect**: RADIUS kirim atribut `Mikrotik-Address-List=isolir` → MikroTik auto-add IP baru ke address-list.
+- **Script MikroTik Setup Page — gunakan address-list bukan subnet** — Firewall filter dan NAT rules di halaman Setup MikroTik diubah dari `src-address=192.168.200.0/24` (subnet) ke `src-address-list=isolir` (address-list dinamis). Lebih presisi dan langsung efektif tanpa menunggu reconnect. PPP profile ditambah `use-mpls=no use-compression=no use-encryption=no`.
+- **Export CSV PPPoE — kolom area, subscriptionType, billingDay hilang** — Export CSV kini menyertakan kolom `area`, `subscriptionType`, dan `billingDay`.
+- **Form Tambah Pelanggan — field area, billingDay, registeredAt tidak ada** — Form tambah pelanggan baru kini menyertakan semua field yang diperlukan API.
+
+### Files
+- `src/proxy.ts` — subdomain routing middleware
+- `src/app/admin/settings/subdomain/page.tsx` *(baru)* — UI panduan subdomain routing
+- `src/app/admin/pppoe/users/new/page.tsx` — prorate billing, payment flow info, Aksi Jatuh Tempo field
+- `src/app/api/pppoe/users/bulk/route.ts` — export CSV + kolom area/subscriptionType/billingDay
+- `src/server/jobs/auto-isolation.ts` — isolasi langsung via address-list sebelum disconnect
+- `src/server/services/radius/coa-handler.service.ts` — fungsi baru `addToMikrotikAddressList()`
+- `src/app/api/settings/isolation/route.ts` — tambah `Mikrotik-Address-List` ke radgroupreply isolir
+- `src/app/admin/settings/isolation/mikrotik/page.tsx` — script firewall/NAT pakai `src-address-list=isolir`
+- `src/app/admin/AdminClientLayout.tsx` — nav entry Subdomain Routing
+- `src/locales/id.json` — translation key `subdomainRouting`
+
 ### v2.25.8 — 2026-05-02
 
 ### Added
@@ -534,42 +565,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 ### Added
 - **APK Android: notifikasi native dengan suara, getaran & floating** — APK WebView kini menyertakan `NotificationChannel` (Android 8+), JavaScript bridge (`Android.showNotificationWithTag`) yang terhubung ke service worker push event (`PUSH_RECEIVED`), serta `NotificationWorker` berbasis WorkManager yang polling `/api/notifications` setiap 15 menit di background. Notifikasi tampil dengan prioritas HIGH, suara default, getaran, dan heads-up notification bahkan saat aplikasi ditutup.
 - **Logo square 1:1 di semua halaman** — Semua container logo (login Admin/Customer/Technician/Agent, sidebar admin, settings company, download APK, halaman isolated) kini menggunakan rasio persegi (1:1) dengan `object-contain` sehingga logo 512×200 ditampilkan dalam kanvas 512×512 dengan letterbox — tidak distretch.
-
-### v2.25.4 — 2026-04-28
-
-### Added
-- **Input lokasi GPS di form tiket pelanggan** — Halaman pembuatan tiket pelanggan kini mendukung tag lokasi, pengambilan koordinat GPS dari browser, dan penyisipan link Google Maps otomatis ke deskripsi tiket agar teknisi lebih mudah menemukan rumah pelanggan.
-- **Tanggal Register editable untuk user PPPoE** — Form tambah dan edit user PPPoE kini menyediakan field `Tanggal Register` yang tersimpan ke `createdAt`, sehingga data historis pelanggan bisa dikoreksi tanpa manipulasi database manual.
-- **Logo perusahaan di sidebar admin** — Sidebar admin kini menampilkan logo perusahaan secara langsung dengan fallback ke inisial jika logo belum tersedia.
-
-### Fixed
-- **CSV import/export PPPoE belum mendukung `registeredAt`** — Template CSV/XLSX, normalization map import, dan parsing data bulk kini mendukung `Tanggal Register` / `registeredAt` sehingga tanggal registrasi historis tidak lagi hilang saat impor massal.
-- **Penyimpanan rate limit isolir ke tabel RADIUS tidak pernah update** — Endpoint pengaturan isolasi sebelumnya memakai `ON DUPLICATE KEY UPDATE` pada tabel `radgroupreply` yang tidak memiliki UNIQUE constraint. Diperbaiki ke pola `DELETE + INSERT` untuk atribut `Mikrotik-Rate-Limit`, `Mikrotik-Group`, dan `Framed-Pool`.
-- **Label tanggal isolasi PPPoE masih memakai istilah kedaluwarsa** — Teks UI terkait `expiredAt` di form PPPoE dan detail user kini diseragamkan menjadi `Tanggal Isolir`.
-- **Preview/logo branding belum konsisten di semua halaman** — Login Admin, Customer, Technician, Agent, halaman Isolated, Settings Company, dan Download APK kini memakai pola logo dinamis dengan `object-contain` dan batas layout ideal agar logo horizontal maupun vertikal tetap proporsional.
-
-### Changed
-- **Upload logo kini mendukung lebih banyak format** — Upload logo perusahaan sekarang menerima PNG, JPG, SVG, WebP, AVIF, dan GIF, dengan mapping ekstensi berbasis MIME type agar nama file hasil upload lebih konsisten.
-- **Download APK memakai preview logo full-area** — Kartu logo pada halaman download APK kini memakai container preview lebih besar agar admin bisa melihat hasil branding secara proporsional sebelum build APK.
-- **Versi aplikasi disinkronkan dengan changelog** — Metadata versi project dinaikkan ke `2.25.4` agar badge versi, package metadata, dan changelog tetap selaras.
-
-### Affected
-- `src/app/admin/AdminClientLayout.tsx`
-- `src/app/admin/download-apk/page.tsx`
-- `src/app/admin/login/page.tsx`
-- `src/app/admin/pppoe/users/page.tsx`
-- `src/app/admin/settings/company/page.tsx`
-- `src/app/agent/page.tsx`
-- `src/app/api/pppoe/users/bulk/route.ts`
-- `src/app/api/settings/isolation/route.ts`
-- `src/app/api/upload/logo/route.ts`
-- `src/app/customer/login/page.tsx`
-- `src/app/customer/tickets/create/page.tsx`
-- `src/app/isolated/page.tsx`
-- `src/app/technician/login/page.tsx`
-- `src/components/UserDetailModal.tsx`
-- `src/locales/id.json`
-- `src/server/services/pppoe.service.ts`
 
 <!-- AUTO-CHANGELOG:END -->
 
