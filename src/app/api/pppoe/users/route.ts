@@ -32,9 +32,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { username, password, profileId, name, phone, pppoeCustomerId } = body;
-    if (!username || !password || !profileId) {
-      return badRequest('Missing required fields: username, password, profileId');
+    const { profileId, name, phone, pppoeCustomerId, noPppoeAccount } = body;
+    if (!profileId) {
+      return badRequest('Missing required field: profileId');
+    }
+    if (!noPppoeAccount && (!body.username || !body.password)) {
+      return badRequest('Username dan password wajib diisi untuk akun PPPoE');
     }
     if (!pppoeCustomerId && (!name || !phone)) {
       return badRequest('Nama dan No. HP wajib diisi jika tidak menghubungkan ke pelanggan');

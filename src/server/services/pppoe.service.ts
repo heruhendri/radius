@@ -139,16 +139,17 @@ export async function getPppoeUserById(id: string) {
 // ─── Create ───────────────────────────────────────────────────────────────────
 
 export async function createPppoeUser(
-  data: CreatePppoeUserInput,
+  data: CreatePppoeUserInput & { noPppoeAccount?: boolean },
   session: Session | null,
   request: NextRequest
 ) {
   const {
-    username, password, profileId, pppoeCustomerId, routerId, areaId,
+    password, profileId, pppoeCustomerId, routerId, areaId,
     email, address, latitude, longitude, ipAddress, macAddress, comment,
     expiredAt, subscriptionType, billingDay, idCardNumber, idCardPhoto,
     installationPhotos, followRoad, registeredAt,
   } = data;
+  const noPppoeAccount = !!(data as any).noPppoeAccount;
 
   // Resolve name/phone: prefer explicit values, fall back to linked customer
   let resolvedName = data.name || '';
@@ -163,14 +164,7 @@ export async function createPppoeUser(
       resolvedPhone = resolvedPhone || linkedCustomer.phone;
     }
   }
-  if (!resolvedName) resolvedName = username;
   if (!resolvedPhone) resolvedPhone = '-';
-
-  // Check duplicate
-  const existingUser = await prisma.pppoeUser.findUnique({ where: { username } });
-  if (existingUser) {
-    throw Object.assign(new Error(`Username "${username}" already exists`), { code: 'DUPLICATE_USERNAME' });
-  }
 
   // Generate unique customer ID (with company prefix if configured)
   const company = await prisma.company.findFirst({ select: { customerIdPrefix: true } });
@@ -181,6 +175,20 @@ export async function createPppoeUser(
     customerId = prefix + Math.floor(10000000 + Math.random() * 90000000).toString();
     const existing = await prisma.pppoeUser.findUnique({ where: { customerId } });
     if (!existing) isUnique = true;
+  }
+
+  // Resolve username: auto-generate for static/MAC-only customers
+  let username = data.username || '';
+  if (noPppoeAccount || !username) {
+    // Generate a placeholder username: STATIC-{customerId} or STATIC-{random}
+    username = 'STATIC-' + customerId;
+  }
+  if (!resolvedName) resolvedName = username;
+
+  // Check duplicate
+  const existingUser = await prisma.pppoeUser.findUnique({ where: { username } });
+  if (existingUser) {
+    throw Object.assign(new Error(`Username "${username}" already exists`), { code: 'DUPLICATE_USERNAME' });
   }
 
   // Load profile
@@ -249,43 +257,43 @@ export async function createPppoeUser(
     } as never,
   });
 
-  // RADIUS sync
+  // RADIUS sync - skip for static/MAC-only customers
   let radiusSynced = false;
-  try {
-    let router = null;
-    if (routerId) {
-      router = await prisma.router.findUnique({
-        where: { id: routerId },
-        select: { id: true, nasname: true },
+  if (!noPppoeAccount && password) {
+    try {
+      await prisma.radcheck.create({
+        data: { username, attribute: 'Cleartext-Password', op: ':=', value: password },
       });
+
+      await prisma.radusergroup.create({
+        data: { username, groupname: profile.groupName, priority: 0 },
+      });
+
+      if (ipAddress) {
+        await prisma.radreply.create({
+          data: { username, attribute: 'Framed-IP-Address', op: ':=', value: ipAddress },
+        });
+      }
+
+      await prisma.pppoeUser.update({
+        where: { id: user.id },
+        data: { syncedToRadius: true, lastSyncAt: new Date() },
+      });
+      radiusSynced = true;
+    } catch (syncError) {
+      console.error('RADIUS sync error:', syncError);
     }
-
-    await prisma.radcheck.create({
-      data: { username, attribute: 'Cleartext-Password', op: ':=', value: password },
-    });
-
-    // NOTE: NAS-IP-Address is NOT stored in radcheck.
-    // FreeRADIUS treats radcheck as check items � if NAS-IP-Address doesn't match
-    // the incoming request (VPN, NAT, different source IP), auth fails entirely.
-    // NAS restriction is handled at the app level via REST authorize hook.
-
-    await prisma.radusergroup.create({
-      data: { username, groupname: profile.groupName, priority: 0 },
-    });
-
-    if (ipAddress) {
+  } else if (noPppoeAccount && ipAddress) {
+    try {
       await prisma.radreply.create({
         data: { username, attribute: 'Framed-IP-Address', op: ':=', value: ipAddress },
       });
+      await prisma.radusergroup.create({
+        data: { username, groupname: profile.groupName, priority: 0 },
+      });
+    } catch (syncError) {
+      console.error('Static IP sync error:', syncError);
     }
-
-    await prisma.pppoeUser.update({
-      where: { id: user.id },
-      data: { syncedToRadius: true, lastSyncAt: new Date() },
-    });
-    radiusSynced = true;
-  } catch (syncError) {
-    console.error('RADIUS sync error:', syncError);
   }
 
   // Notifications
