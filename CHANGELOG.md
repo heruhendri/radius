@@ -6,6 +6,19 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.25.10] — 2026-05-01
+
+### Changed
+- **Redesign Form Tambah Pelanggan — 4 Tab Layout** — Form dibagi menjadi 4 tab: 📡 Akun RADIUS, 👤 Data Pelanggan, 🔧 Instalasi, ⚙️ Pengaturan. Navigasi via tombol Sebelumnya/Berikutnya + dot indicator. Tidak perlu scroll panjang. Tab menampilkan tanda hijau jika field wajib sudah terisi.
+- **Support Pelanggan Tanpa Akun PPPoE** — Toggle "Punya Akun PPPoE / Tanpa Akun PPPoE" di tab Akun RADIUS. Jika dimatikan, username & password tidak wajib diisi — sistem auto-generate username `STATIC-{customerId}`. Cocok untuk pelanggan IP statis atau MAC-based. RADIUS sync dilewati kecuali `Framed-IP-Address` jika IP statis diisi.
+
+### Files
+- `src/app/admin/pppoe/users/new/page.tsx` — Rewritten with 4-tab layout
+- `src/app/api/pppoe/users/route.ts` — Validation updated for optional PPPoE credentials
+- `src/server/services/pppoe.service.ts` — Auto-generate username + skip RADIUS sync for static customers
+
+---
+
 ## [2.25.9] — 2026-04-30
 
 ### Added
