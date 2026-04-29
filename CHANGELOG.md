@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.25.11] — 2026-05-02
+
+### Added
+- **Generate Tagihan Manual di Halaman Tagihan** — Tombol "Generate Tagihan" baru di header halaman `/admin/invoices`. Membuka dialog dengan opsi:
+  - **Target**: Semua Pelanggan POSTPAID aktif, atau Satu Pelanggan (dengan pencarian nama/username/HP)
+  - **Bulan Tagihan**: Picker bulan (`YYYY-MM`), default bulan berjalan
+  - **Opsi**: Lewati jika tagihan bulan tersebut sudah ada (default aktif), Kirim notifikasi WhatsApp setelah generate
+  - Setelah generate: tampilkan ringkasan (dibuat / dilewati / gagal) + detail error jika ada
+- **API POST `/api/invoices/generate`** — Endpoint baru untuk generate tagihan manual. Mendukung `scope: 'all' | 'single'`, `targetMonth (YYYY-MM)`, `userId`, `skipExisting`, `sendWa`. Menghitung PPN otomatis sesuai profil. Due date = hari terakhir bulan target.
+
+### Files
+- `src/app/admin/invoices/page.tsx` — Dialog + tombol Generate Tagihan ditambahkan
+- `src/app/api/invoices/generate/route.ts` — API endpoint baru
+
+---
+
 ## [2.25.10] — 2026-05-01
 
 ### Changed

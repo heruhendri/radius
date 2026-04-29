@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, DollarSign, FileText, CheckCircle, CheckCircle2, Clock, Eye, AlertCircle, Copy, Check, ExternalLink, MessageCircle, Trash2, Search, Download, Printer, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, DollarSign, FileText, CheckCircle, CheckCircle2, Clock, Eye, AlertCircle, Copy, Check, ExternalLink, MessageCircle, Trash2, Search, Download, Printer, Upload, ChevronLeft, ChevronRight, PlusSquare, Users, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 
 interface Invoice {
@@ -94,6 +94,21 @@ export default function InvoicesPage() {
   const [exportDateFrom, setExportDateFrom] = useState('');
   const [exportDateTo, setExportDateTo] = useState('');
   const [invoiceMonth, setInvoiceMonth] = useState<string>(''); // '' = all-time, 'YYYY-MM' = filtered
+
+  // Generate Invoice dialog
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [genMonth, setGenMonth] = useState<string>(() => {
+    const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [genScope, setGenScope] = useState<'all' | 'single'>('all');
+  const [genUserId, setGenUserId] = useState('');
+  const [genUserSearch, setGenUserSearch] = useState('');
+  const [genUsers, setGenUsers] = useState<{ id: string; name: string; username: string; phone: string; profile: { name: string } | null }[]>([]);
+  const [genLoadingUsers, setGenLoadingUsers] = useState(false);
+  const [genSkipExisting, setGenSkipExisting] = useState(true);
+  const [genSendWa, setGenSendWa] = useState(false);
+  const [genResult, setGenResult] = useState<{ generated: number; skipped: number; errors: { username: string; error: string }[]; message: string } | null>(null);
 
   const MONTH_NAMES_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   const getMonthLabel = (ym: string) => {
@@ -677,6 +692,69 @@ export default function InvoicesPage() {
     } catch (error) { console.error('Print thermal error:', error); await showError(t('invoices.failedPrintInvoice')); }
   };
 
+  // Search users for generate single scope
+  const searchUsersForGenerate = async (q: string) => {
+    if (!q || q.length < 2) { setGenUsers([]); return; }
+    setGenLoadingUsers(true);
+    try {
+      const res = await fetch(`/api/pppoe/users?status=active`);
+      const data = await res.json();
+      const all = (data.users || []) as { id: string; name: string; username: string; phone: string; profile: { name: string } | null }[];
+      const filtered = all.filter(u =>
+        u.name?.toLowerCase().includes(q.toLowerCase()) ||
+        u.username?.toLowerCase().includes(q.toLowerCase()) ||
+        u.phone?.includes(q)
+      ).slice(0, 20);
+      setGenUsers(filtered);
+    } catch { setGenUsers([]); }
+    finally { setGenLoadingUsers(false); }
+  };
+
+  // Search users for generate single scope
+  const searchUsersForGenerate = async (q: string) => {
+    if (!q || q.length < 2) { setGenUsers([]); return; }
+    setGenLoadingUsers(true);
+    try {
+      const res = await fetch(`/api/pppoe/users?status=active`);
+      const data = await res.json();
+      const all = (data.users || []) as { id: string; name: string; username: string; phone: string; profile: { name: string } | null }[];
+      const filtered = all.filter(u =>
+        u.name?.toLowerCase().includes(q.toLowerCase()) ||
+        u.username?.toLowerCase().includes(q.toLowerCase()) ||
+        u.phone?.includes(q)
+      ).slice(0, 20);
+      setGenUsers(filtered);
+    } catch { setGenUsers([]); }
+    finally { setGenLoadingUsers(false); }
+  };
+
+  const handleGenerate = async () => {
+    if (genScope === 'single' && !genUserId) { await showError('Pilih pelanggan terlebih dahulu'); return; }
+    setGenerating(true);
+    setGenResult(null);
+    try {
+      const res = await fetch('/api/invoices/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetMonth: genMonth,
+          scope: genScope,
+          userId: genScope === 'single' ? genUserId : undefined,
+          skipExisting: genSkipExisting,
+          sendWa: genSendWa,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGenResult(data);
+        loadInvoices();
+      } else {
+        await showError(data.error || 'Gagal generate tagihan');
+      }
+    } catch { await showError('Gagal generate tagihan'); }
+    finally { setGenerating(false); }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   };
@@ -765,6 +843,12 @@ export default function InvoicesPage() {
                 <Upload className="h-3 w-3 mr-1" />Import CSV
               </button>
             </Link>
+            <button
+              onClick={() => { setShowGenerateDialog(true); setGenResult(null); }}
+              className="inline-flex items-center px-2 py-1.5 text-xs border border-blue-500 text-blue-400 rounded hover:bg-blue-500/10"
+            >
+              <PlusSquare className="h-3 w-3 mr-1" />Generate Tagihan
+            </button>
 
           </div>
         </div>
@@ -1244,6 +1328,186 @@ export default function InvoicesPage() {
                   </Button>
                 </div>
               </form>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Generate Invoice Dialog */}
+        <Dialog open={showGenerateDialog} onOpenChange={(open) => { if (!open) { setShowGenerateDialog(false); setGenResult(null); } }}>
+          <DialogContent className="max-w-sm p-0 overflow-hidden gap-0">
+            <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-cyan-400" />
+            <div className="p-5">
+              <DialogHeader className="mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-full bg-blue-500/15 border border-blue-500/30">
+                    <PlusSquare className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-sm font-bold">Generate Tagihan Manual</DialogTitle>
+                    <DialogDescription className="text-[11px] mt-0.5">
+                      Buat tagihan bulanan untuk pelanggan POSTPAID
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              {genResult ? (
+                /* Result view */
+                <div className="space-y-3">
+                  <div className={`rounded-xl border p-3 ${genResult.errors.length === 0 ? 'border-success/30 bg-success/10' : 'border-warning/30 bg-warning/10'}`}>
+                    <p className="text-xs font-semibold mb-2">{genResult.message}</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-center">
+                        <p className="text-lg font-bold text-success">{genResult.generated}</p>
+                        <p className="text-[10px] text-muted-foreground">Dibuat</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-lg font-bold text-muted-foreground">{genResult.skipped}</p>
+                        <p className="text-[10px] text-muted-foreground">Dilewati</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-lg font-bold text-destructive">{genResult.errors.length}</p>
+                        <p className="text-[10px] text-muted-foreground">Gagal</p>
+                      </div>
+                    </div>
+                  </div>
+                  {genResult.errors.length > 0 && (
+                    <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 max-h-32 overflow-y-auto">
+                      <p className="text-[10px] font-semibold text-destructive mb-1.5">Error detail:</p>
+                      {genResult.errors.map((e, i) => (
+                        <p key={i} className="text-[10px] text-muted-foreground"><span className="font-mono text-foreground">{e.username}</span>: {e.error}</p>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <Button type="button" variant="outline" size="sm" className="flex-1 h-9 text-xs" onClick={() => setGenResult(null)}>
+                      Generate Lagi
+                    </Button>
+                    <Button type="button" size="sm" className="flex-1 h-9 text-xs" onClick={() => setShowGenerateDialog(false)}>
+                      Selesai
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* Form view */
+                <div className="space-y-3">
+                  {/* Scope toggle */}
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Target</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setGenScope('all'); setGenUserId(''); setGenUserSearch(''); setGenUsers([]); }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs transition-all ${genScope === 'all' ? 'border-blue-500 bg-blue-500/10 text-blue-400 font-medium' : 'border-border text-muted-foreground hover:border-border/80'}`}
+                      >
+                        <Users className="w-3.5 h-3.5 flex-shrink-0" />Semua Pelanggan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGenScope('single')}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs transition-all ${genScope === 'single' ? 'border-blue-500 bg-blue-500/10 text-blue-400 font-medium' : 'border-border text-muted-foreground hover:border-border/80'}`}
+                      >
+                        <UserIcon className="w-3.5 h-3.5 flex-shrink-0" />Satu Pelanggan
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* User search (single mode) */}
+                  {genScope === 'single' && (
+                    <div>
+                      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Cari Pelanggan</label>
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <input
+                          type="text"
+                          placeholder="Nama / username / no. HP..."
+                          value={genUserSearch}
+                          onChange={e => { setGenUserSearch(e.target.value); setGenUserId(''); searchUsersForGenerate(e.target.value); }}
+                          className="w-full pl-8 pr-3 py-2 text-xs bg-muted/50 border border-border rounded-xl focus:outline-none focus:border-blue-500/60"
+                        />
+                      </div>
+                      {genLoadingUsers && <p className="text-[10px] text-muted-foreground mt-1">Mencari...</p>}
+                      {genUsers.length > 0 && !genUserId && (
+                        <div className="mt-1 rounded-xl border border-border bg-card/80 shadow-lg max-h-36 overflow-y-auto">
+                          {genUsers.map(u => (
+                            <button
+                              key={u.id}
+                              type="button"
+                              onClick={() => { setGenUserId(u.id); setGenUserSearch(`${u.name} (${u.username})`); setGenUsers([]); }}
+                              className="w-full flex items-start gap-2 px-3 py-2 hover:bg-muted/50 text-left border-b border-border/40 last:border-0"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium truncate">{u.name}</p>
+                                <p className="text-[10px] text-muted-foreground font-mono">{u.username} · {u.profile?.name || '-'}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {genUserId && (
+                        <p className="text-[10px] text-success mt-1">✓ Pelanggan dipilih</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Month picker */}
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Bulan Tagihan</label>
+                    <input
+                      type="month"
+                      value={genMonth}
+                      onChange={e => setGenMonth(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-muted/50 border border-border rounded-xl focus:outline-none focus:border-blue-500/60"
+                    />
+                  </div>
+
+                  {/* Options */}
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={genSkipExisting}
+                        onChange={e => setGenSkipExisting(e.target.checked)}
+                        className="rounded border-border"
+                      />
+                      <span className="text-xs">Lewati jika tagihan bulan ini sudah ada</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={genSendWa}
+                        onChange={e => setGenSendWa(e.target.checked)}
+                        className="rounded border-border"
+                      />
+                      <span className="text-xs">Kirim notifikasi WhatsApp setelah generate</span>
+                    </label>
+                  </div>
+
+                  {genScope === 'all' && (
+                    <div className="flex items-start gap-2 bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2.5">
+                      <AlertCircle className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-[11px] text-blue-300 leading-snug">
+                        Generate untuk <strong>semua pelanggan POSTPAID aktif</strong>. Pelanggan yang sudah punya tagihan bulan tersebut akan dilewati secara otomatis.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <Button type="button" variant="outline" size="sm" className="flex-1 h-9 text-xs" onClick={() => setShowGenerateDialog(false)} disabled={generating}>
+                      Batal
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="flex-1 h-9 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={handleGenerate}
+                      disabled={generating || (genScope === 'single' && !genUserId)}
+                    >
+                      {generating ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Generating...</> : <><PlusSquare className="h-3.5 w-3.5 mr-1.5" />Generate Tagihan</>}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
