@@ -6,6 +6,39 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.25.9] — 2026-04-30
+
+### Added
+- **Subdomain Routing Frontend UI** — Admin → Settings → Subdomain Routing: halaman panduan interaktif untuk mengatur subdomain per portal (`customer.domain.com`, `agent.domain.com`, `teknisi.domain.com`, `admin.domain.com`). Input domain dinamis (auto-detect dari Base URL), tampilkan DNS records yang perlu ditambahkan, Nginx config siap pakai (bisa di-download .conf), panduan Certbot SSL, dan perintah test curl. Semua script bisa disalin dengan satu klik.
+- **Subdomain Routing di Middleware (`proxy.ts`)** — Next.js middleware membaca header `Host`, parse subdomain, lalu `NextResponse.rewrite()` ke path portal yang sesuai tanpa redirect (URL tetap). Map: `customer`/`pelanggan` → `/customer`, `agent`/`agen` → `/agent`, `teknisi`/`technician` → `/technician`, `admin` → `/admin`.
+- **Prorate Billing di Form Tambah Pelanggan PPPoE** — Untuk tipe POSTPAID: estimasi tagihan prorate dihitung otomatis (live) berdasarkan profil, tanggal jatuh tempo, dan tanggal daftar. Ditampilkan dalam kotak hijau "Estimasi Tagihan Pertama (Prorate)".
+- **Info Alur Pembayaran di Form Tambah Pelanggan** — Kotak biru (POSTPAID) dan ungu (PREPAID) menjelaskan alur pembayaran 4-langkah, muncul otomatis sesuai pilihan tipe langganan.
+- **Field Aksi Jatuh Tempo di Form Tambah Pelanggan** — Dropdown "⚡ Aksi Jatuh Tempo" di section Informasi Tambahan: pilih antara `ISOLIR INTERNET (Suspend)` atau `TETAP TERHUBUNG (No Action)`. Default: ISOLIR. Field ini sebelumnya tidak ada di form tambah pelanggan baru.
+- **Entri nav sidebar: Subdomain Routing** — Menu Settings admin memiliki sub-menu baru "Subdomain Routing" di bawah Cloudflare Tunnel.
+
+### Fixed
+- **Isolasi PPPoE — user tetap online setelah expired** — Sebelumnya, user expired hanya diubah grup RADIUS ke `isolir` tapi session PPP lama tetap jalan. Fix 3-layer:
+  1. **Langsung** (sebelum disconnect): API MikroTik tambahkan IP aktif ke address-list `isolir` → firewall `src-address-list=isolir action=drop` blokir internet saat itu juga.
+  2. **CoA/disconnect**: disconnect PPP paksa re-auth.
+  3. **Reconnect**: RADIUS kirim atribut `Mikrotik-Address-List=isolir` → MikroTik auto-add IP baru ke address-list.
+- **Script MikroTik Setup Page — gunakan address-list bukan subnet** — Firewall filter dan NAT rules di halaman Setup MikroTik diubah dari `src-address=192.168.200.0/24` (subnet) ke `src-address-list=isolir` (address-list dinamis). Lebih presisi dan langsung efektif tanpa menunggu reconnect. PPP profile ditambah `use-mpls=no use-compression=no use-encryption=no`.
+- **Export CSV PPPoE — kolom area, subscriptionType, billingDay hilang** — Export CSV kini menyertakan kolom `area`, `subscriptionType`, dan `billingDay`.
+- **Form Tambah Pelanggan — field area, billingDay, registeredAt tidak ada** — Form tambah pelanggan baru kini menyertakan semua field yang diperlukan API.
+
+### Files
+- `src/proxy.ts` — subdomain routing middleware
+- `src/app/admin/settings/subdomain/page.tsx` *(baru)* — UI panduan subdomain routing
+- `src/app/admin/pppoe/users/new/page.tsx` — prorate billing, payment flow info, Aksi Jatuh Tempo field
+- `src/app/api/pppoe/users/bulk/route.ts` — export CSV + kolom area/subscriptionType/billingDay
+- `src/server/jobs/auto-isolation.ts` — isolasi langsung via address-list sebelum disconnect
+- `src/server/services/radius/coa-handler.service.ts` — fungsi baru `addToMikrotikAddressList()`
+- `src/app/api/settings/isolation/route.ts` — tambah `Mikrotik-Address-List` ke radgroupreply isolir
+- `src/app/admin/settings/isolation/mikrotik/page.tsx` — script firewall/NAT pakai `src-address-list=isolir`
+- `src/app/admin/AdminClientLayout.tsx` — nav entry Subdomain Routing
+- `src/locales/id.json` — translation key `subdomainRouting`
+
+---
+
 ## [2.25.8] — 2026-05-02
 
 ### Added
