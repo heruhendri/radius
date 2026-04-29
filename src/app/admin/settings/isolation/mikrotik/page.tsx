@@ -142,7 +142,22 @@ add name=isolir \\
     local-address=${getGatewayIp(settings.isolationIpPool)} \\
     remote-address=pool-isolir \\
     rate-limit=${settings.isolationRateLimit} \\
+    use-mpls=no use-compression=no use-encryption=no \\
     comment="Profile untuk user yang diisolir"`;
+
+  // Script 2b: RADIUS Attributes — address-list agar IP langsung masuk ke isolir list
+  // Ini penting! Tanpa ini, user yang belum reconnect bisa masih akses internet penuh.
+  const addressListScript = `/ip firewall address-list
+# Catatan: address-list 'isolir' akan diisi otomatis oleh RADIUS via Mikrotik-Address-List
+# attribute saat user login ulang dengan profile isolir.
+# Untuk user yang SEDANG ONLINE saat diisolir, sistem menambahkan IP secara langsung via API.
+# Script ini hanya untuk verifikasi — tidak perlu dijalankan manual.
+
+# Cek isi address-list isolir saat ini:
+/ip firewall address-list print where list=isolir
+
+# Hapus manual (jika perlu):
+# /ip firewall address-list remove [find list=isolir]`;
 
   // Script 3: Firewall Filter (Allow DNS & Payment)
   // Get server IP: use stored isolationServerIp first, fall back to extracting from baseUrl
@@ -160,30 +175,34 @@ add name=isolir \\
   const firewallFilterScript = `/ip firewall filter
 # PENTING: Tambahkan rule-rule berikut SEBELUM rule DROP yang sudah ada!
 # Gunakan: /ip firewall filter move [rule-baru] destination=[posisi-sebelum-drop]
+#
+# Strategi: Gunakan src-address-list=isolir (lebih akurat dari subnet)
+# RADIUS akan otomatis memasukkan IP user ke address-list 'isolir' via Mikrotik-Address-List attribute.
+# Sistem juga menambahkan IP via API saat isolasi aktif, tanpa menunggu reconnect.
 
 # [1] Allow ESTABLISHED & RELATED — return traffic dari payment gateway
 add chain=forward \\
-    src-address=${getNetworkAddress(settings.isolationIpPool)} \\
+    src-address-list=isolir \\
     connection-state=established,related \\
     action=accept \\
     comment="Allow established/related for isolated users"
 
 add chain=forward \\
-    dst-address=${getNetworkAddress(settings.isolationIpPool)} \\
+    dst-address-list=isolir \\
     connection-state=established,related \\
     action=accept \\
     comment="Allow return traffic to isolated users"
 
 # [2] Allow DNS untuk user isolir
 add chain=forward \\
-    src-address=${getNetworkAddress(settings.isolationIpPool)} \\
+    src-address-list=isolir \\
     protocol=udp dst-port=53 \\
     action=accept \\
     comment="Allow DNS for isolated users"
 
 # [3] Allow ICMP (ping)
 add chain=forward \\
-    src-address=${getNetworkAddress(settings.isolationIpPool)} \\
+    src-address-list=isolir \\
     protocol=icmp \\
     action=accept \\
     comment="Allow ping for isolated users"
@@ -192,21 +211,21 @@ add chain=forward \\
 # IMPORTANT: Ganti ${getServerIp()} dengan IP ADDRESS server Anda!
 # MikroTik firewall tidak support hostname, hanya IP!
 add chain=forward \\
-    src-address=${getNetworkAddress(settings.isolationIpPool)} \\
+    src-address-list=isolir \\
     dst-address=${getServerIp()} \\
     action=accept \\
     comment="Allow access to billing server - GANTI DENGAN IP!"
 
 # [5] Allow akses ke payment gateway
 add chain=forward \\
-    src-address=${getNetworkAddress(settings.isolationIpPool)} \\
+    src-address-list=isolir \\
     dst-address-list=payment-gateways \\
     action=accept \\
     comment="Allow access to payment gateways"
 
 # [6] Block semua akses internet lainnya
 add chain=forward \\
-    src-address=${getNetworkAddress(settings.isolationIpPool)} \\
+    src-address-list=isolir \\
     action=drop \\
     comment="Block internet for isolated users"`;
 
@@ -290,8 +309,9 @@ add list=payment-gateways address=api.qris.id comment="QRIS API"
   const firewallNatScript = `/ip firewall nat
 # Redirect HTTP ke landing page isolir
 # IMPORTANT: Ganti ${getServerIp()} dengan IP ADDRESS server Anda!
+# Gunakan src-address-list=isolir (bukan subnet) agar lebih presisi
 add chain=dstnat \\
-    src-address=${getNetworkAddress(settings.isolationIpPool)} \\
+    src-address-list=isolir \\
     protocol=tcp dst-port=80 \\
     dst-address=!${getServerIp()} \\
     dst-address-list=!payment-gateways \\
@@ -302,7 +322,7 @@ add chain=dstnat \\
 
 # Redirect HTTPS ke landing page isolir
 add chain=dstnat \\
-    src-address=${getNetworkAddress(settings.isolationIpPool)} \\
+    src-address-list=isolir \\
     protocol=tcp dst-port=443 \\
     dst-address=!${getServerIp()} \\
     dst-address-list=!payment-gateways \\
@@ -325,6 +345,8 @@ add chain=dstnat \\
 #    Contoh: 103.xxx.xxx.xxx (IP Public router/server)
 # 2. MikroTik firewall TIDAK support hostname, hanya IP!
 # 3. Payment gateway akan auto-resolve domain ke IP
+# 4. Firewall menggunakan src-address-list=isolir (bukan subnet)
+#    RADIUS akan mengisi list ini otomatis via Mikrotik-Address-List attribute
 # 
 # ============================================
 
@@ -343,20 +365,22 @@ ${firewallNatScript}
 # ============================================
 # 
 # Setelah menjalankan script ini:
-# 1. User yang diisolir akan dapat IP dari pool-isolir (${getNetworkAddress(settings.isolationIpPool)})
-# 2. Bandwidth dibatasi: ${settings.isolationRateLimit}
-# 3. User hanya bisa akses:
+# 1. User yang diisolir akan masuk ke address-list 'isolir' otomatis via RADIUS
+# 2. Sistem juga menambahkan IP via API saat isolasi aktif (tanpa tunggu reconnect)
+# 3. Bandwidth dibatasi: ${settings.isolationRateLimit}
+# 4. User hanya bisa akses:
 #    - DNS (port 53)
 #    - ICMP (ping)
 #    - Billing server (${getServerIp()}) - GANTI DENGAN IP!
 #    - Payment gateway (Midtrans, Xendit, Duitku)
-# 4. Semua HTTP/HTTPS request akan di-redirect ke billing server
+# 5. Semua HTTP/HTTPS request akan di-redirect ke billing server
 # 
 # CARA TEST:
 # 1. Login PPPoE dengan user yang diisolir
 # 2. Cek IP: /ppp active print (harus dapat IP dari pool-isolir)
-# 3. Buka browser, akses sembarang website
-# 4. Harus ter-redirect ke halaman /isolated
+# 3. Cek address-list: /ip firewall address-list print where list=isolir
+# 4. Buka browser, akses sembarang website
+# 5. Harus ter-redirect ke halaman /isolated
 # 
 # TROUBLESHOOTING:
 # - Jika user bisa akses semua site: Cek firewall filter order
