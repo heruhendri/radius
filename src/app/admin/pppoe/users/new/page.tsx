@@ -46,6 +46,7 @@ export default function NewPppoeUserPage() {
     followRoad: false,
     comment: '',
     registeredAt: new Date().toISOString().slice(0, 10),
+    autoIsolationEnabled: true,
   });
 
   useEffect(() => {
@@ -555,9 +556,24 @@ export default function NewPppoeUserPage() {
           </div>
         </div>
 
-        {/* Tanggal Register */}
+        {/* Tanggal Register + Aksi Jatuh Tempo */}
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <h2 className="text-sm font-semibold text-foreground border-b border-border pb-2">Informasi Tambahan</h2>
+
+          {/* Aksi Jatuh Tempo */}
+          <div>
+            <ModalLabel>⚡ Aksi Jatuh Tempo</ModalLabel>
+            <select
+              value={formData.autoIsolationEnabled ? 'isolate' : 'keep'}
+              onChange={(e) => field('autoIsolationEnabled', e.target.value === 'isolate')}
+              className="w-full px-3 py-2 text-xs border border-border rounded-lg bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="isolate">ISOLIR INTERNET (Suspend) — isolir otomatis saat expired</option>
+              <option value="keep">TETAP TERHUBUNG (No Action) — tidak isolir meski expired</option>
+            </select>
+            <p className="text-[10px] text-muted-foreground mt-1">Pilih tindakan otomatis saat tanggal tagihan / expired terlewati.</p>
+          </div>
+
           <div>
             <ModalLabel>Tanggal Register</ModalLabel>
             <ModalInput
