@@ -6,6 +6,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.25.12] — 2026-04-30
+
+### Added
+- **Backup & Restore GenieACS Config** — Tombol Backup dan Restore di halaman VP Scripts, Provisions, dan Presets. Format JSON, mendukung export per-tipe maupun backup semua sekaligus via `GET /api/genieacs/backup?type=all|vp|provisions|presets`. Restore via `POST /api/genieacs/backup`.
+
+### Changed
+- **Cache device list GenieACS 5 menit** — TTL cache device list ditingkatkan dari 60 detik ke 5 menit (stale-while-revalidate). Mengurangi load ke GenieACS NBI ~5x, response tetap instan.
+
+### Files
+- `src/app/admin/genieacs/vp-scripts/page.tsx` — Tombol Backup + Restore ditambahkan
+- `src/app/admin/genieacs/provisions/page.tsx` — Tombol Backup + Restore ditambahkan
+- `src/app/admin/genieacs/presets/page.tsx` — Tombol Backup + Restore ditambahkan
+- `src/app/api/genieacs/backup/route.ts` — API endpoint baru (GET + POST)
+- `src/app/api/settings/genieacs/devices/route.ts` — Cache TTL 60s → 300s
+
+---
+
 ## [2.25.11] — 2026-05-02
 
 ### Added
