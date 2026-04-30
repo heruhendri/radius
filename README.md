@@ -469,6 +469,21 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 <!-- AUTO-CHANGELOG:START -->
 
+### v2.25.12 — 2026-04-30
+
+### Added
+- **Backup & Restore GenieACS Config** — Tombol Backup dan Restore di halaman VP Scripts, Provisions, dan Presets. Format JSON, mendukung export per-tipe maupun backup semua sekaligus via `GET /api/genieacs/backup?type=all|vp|provisions|presets`. Restore via `POST /api/genieacs/backup`.
+
+### Changed
+- **Cache device list GenieACS 5 menit** — TTL cache device list ditingkatkan dari 60 detik ke 5 menit (stale-while-revalidate). Mengurangi load ke GenieACS NBI ~5x, response tetap instan.
+
+### Files
+- `src/app/admin/genieacs/vp-scripts/page.tsx` — Tombol Backup + Restore ditambahkan
+- `src/app/admin/genieacs/provisions/page.tsx` — Tombol Backup + Restore ditambahkan
+- `src/app/admin/genieacs/presets/page.tsx` — Tombol Backup + Restore ditambahkan
+- `src/app/api/genieacs/backup/route.ts` — API endpoint baru (GET + POST)
+- `src/app/api/settings/genieacs/devices/route.ts` — Cache TTL 60s → 300s
+
 ### v2.25.11 — 2026-05-02
 
 ### Added
@@ -549,23 +564,6 @@ Bagian ini otomatis sinkron dari `CHANGELOG.md` saat file changelog berubah di G
 
 ### UI Files
 - `src/app/admin/genieacs/devices/page.tsx` — WAN modal lengkap (add/edit/delete + VLAN/service/port binding)
-
-### v2.25.7 — 2026-04-29
-
-### Added
-- **Halaman Cloudflare Tunnel Setup** — Admin → Settings → Cloudflare Tunnel: panduan langkah-langkah interaktif (6 step) install cloudflared di VPS, login, buat tunnel, simpan domain ke database, konfigurasi Nginx, dan verifikasi. Domain tunnel tersimpan ke `company.baseUrl` via API `POST /api/admin/cloudflare-tunnel`. Auto-compress backup >50MB sebelum kirim ke Telegram.
-- **API `GET/POST /api/admin/cloudflare-tunnel`** — Endpoint baru untuk membaca status konfigurasi tunnel (`baseUrl`, `NEXTAUTH_URL`, `NEXT_PUBLIC_APP_URL`) dan menyimpan domain tunnel ke database.
-- **Entry nav sidebar admin: Cloudflare Tunnel** — Menu Settings admin kini memiliki sub-menu "Cloudflare Tunnel" di antara Update Sistem dan Download APK.
-
-### Fixed
-- **Admin sidebar — semua halaman tema terang (light mode) perbaikan massal** — 62 halaman admin masih menggunakan warna neon cyberpunk (`#00f7ff`, `#bc13fe`, `#ff44cc`, dll.) tanpa prefix `dark:` sehingga teks/border/card tidak terbaca di light mode. Seluruh kelas diganti ke pola TailAdmin: title `text-foreground dark:text-transparent dark:bg-clip-text`, spinner `text-brand-500 dark:text-[#00f7ff]`, border `border-border dark:border-[#bc13fe]/30`, card `bg-card dark:bg-[#1a1525]/80`.
-
-### Affected
-- `src/app/admin/AdminClientLayout.tsx`
-- `src/app/admin/settings/cloudflare-tunnel/page.tsx` *(baru)*
-- `src/app/api/admin/cloudflare-tunnel/route.ts` *(baru)*
-- `src/locales/id.json`
-- 62 halaman admin (network, settings, tickets, notifications, dll.)
 
 <!-- AUTO-CHANGELOG:END -->
 
